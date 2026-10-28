@@ -25,11 +25,37 @@ from pydantic import BaseModel, Field
 from alyr.core import team
 from alyr.core.auth import Staff
 from alyr.core.media import MediaService
-from alyr.modules.items import access, clock, columns, exports, imports, photos, service
+from alyr.modules.items import (
+    access,
+    clock,
+    columns,
+    costs,
+    exports,
+    features,
+    imports,
+    photos,
+    service,
+)
+from alyr.modules.items.import_plan import COSTS
 from alyr.modules.items.xlsx import SheetError
 from alyr.routes.deps import current_staff
 
-router = APIRouter(prefix="/api/items", tags=["items"])
+
+async def _may_see_costs(request: Request, staff: Staff = Depends(current_staff)) -> None:
+    """Costs are the owner's and the admins' alone (ALY-150). Whether this person may see them in
+    a file is decided here, once for the request: the export, the template and the import's plan
+    all read it, so a cost reaches nobody else. (An async dependency, so what it sets is seen by
+    the route.)"""
+    allowed = False
+    if access.is_manager(staff):
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            allowed = (await features.load(conn)).on("cost_margin")
+    COSTS.set(allowed)
+
+
+router = APIRouter(
+    prefix="/api/items", tags=["items"], dependencies=[Depends(_may_see_costs)]
+)
 
 Lang = Literal["en", "ar"]
 Format = Literal["xlsx", "csv"]
@@ -103,7 +129,12 @@ async def export_items(
             str(item_id): [p["urls"]["large"] for p in found if p.get("urls")]
             for item_id, found in by_item.items()
         }
-        data, name, content_type = exports.export_file(entries, shop_clock, covers, lang, format)
+        keys = await features.file_columns(conn, costs=COSTS.get())
+        own = await features.own_fields(conn)
+        kept = await costs.kept(conn) if "cost" in keys else None
+        data, name, content_type = exports.export_file(
+            entries, shop_clock, covers, lang, format, keys, own, kept
+        )
     return _download(data, name, content_type)
 
 
@@ -122,14 +153,17 @@ async def import_kinds(
 
 @router.get("/import/template")
 async def import_template(
-    kind: str = "generic", lang: Lang = "en", format: Format = "xlsx",
+    request: Request, kind: str = "generic", lang: Lang = "en", format: Format = "xlsx",
     staff: Staff = Depends(current_staff),
 ) -> Response:
     """An empty file for one type of business, with its columns in the chosen language and
     three made-up example rows."""
     if kind not in columns.KIND_BY_KEY:
         raise HTTPException(status_code=404, detail="no such template")
-    data, name, content_type = exports.template_file(kind, lang, format)
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        allowed = await features.file_columns(conn, costs=COSTS.get())
+        own = await features.own_fields(conn)
+    data, name, content_type = exports.template_file(kind, lang, format, allowed, own)
     return _download(data, name, content_type)
 
 

@@ -70,8 +70,8 @@ async def build(
 ) -> dict:
     lang = "ar" if lang == "ar" else "en"
     f = await facts_.gather(conn, staff, now)
-    if "catalog" in f.modules:
-        f.stock = await workspace.counts(conn, f.modules, f.now)
+    if "catalog" in f.modules or "documents" in f.modules:
+        f.stock = await workspace.counts(conn, f.modules, f.now, staff)
     snoozed = {
         r["insight_key"]: r["fingerprint"]
         for r in await conn.fetch(
@@ -99,6 +99,7 @@ def render(f: Facts, lang: str, snoozed: dict | None = None) -> dict:
         "kpis": [] if empty else _kpis(f, main, state, lang),
         "kpi_caption": None if empty or state == "first_week" else _caption(f, lang),
         "catalog": _catalog(f, lang),
+        "documents": _documents(f, lang),
         "placeholders": _placeholders(f, lang) if empty else [],
         "suggestions": [] if empty else _suggestions(f, main, state, lang, snoozed or {}),
         "done": _done(f, lang),
@@ -520,17 +521,31 @@ def _catalog(f: Facts, lang: str) -> dict | None:
     how many are low, each the number of rows in the Catalog list it opens (`href`, the
     list's own filter). They are declared with the module (`catalog.py`), not here. With none
     to show, the card is a number and no link: there is no list to open."""
-    if f.stock is None:
+    return _module_cards(f, lang, "catalog", T(lang, "Catalog", "الكتالوج"))
+
+
+def _documents(f: Facts, lang: str) -> dict | None:
+    """The Documents' cards (ALY-146): unpaid invoices and documents not delivered, each the
+    size of the list it opens. Left off for an agent (it is the owner's money) and for a shop
+    without the module."""
+    block = _module_cards(f, lang, "documents", T(lang, "Documents", "المستندات"))
+    return block if block and block["cards"] else None
+
+
+def _module_cards(f: Facts, lang: str, key: str, title: str) -> dict | None:
+    if f.stock is None or key not in f.modules:
         return None
-    module = shop_catalog.MODULE_BY_KEY["catalog"]
+    module = shop_catalog.MODULE_BY_KEY[key]
     cards = []
     for card in module.cards:
+        if card.count in f.stock.get(workspace.HIDDEN, ()):
+            continue  # the shop's features say this card has nothing to count
         value = f.stock[card.count]
         cards.append({
             "key": card.key, "label": card.label.get(lang), "value": value, "text": f"{value:,}",
             "href": card.href if value else None,
         })
-    return {"title": T(lang, "Catalog", "الكتالوج"), "cards": cards}
+    return {"title": title, "cards": cards}
 
 
 def _placeholders(f: Facts, lang: str) -> list[dict]:
@@ -692,14 +707,14 @@ def _week(f: Facts, main: str, lang: str) -> dict | None:
         elif day < started:
             state = "before"  # before the business was on ALYR: nothing to draw (P1-10)
         else:
-            state = "past" if day < f.today else "today" if day == f.today else "coming"
+            state = "past" if day < f.today else "today" if day == f.today else "ahead"
         value = data.get(day, 0) if state in ("past", "today") else None
         last = data.get(day - timedelta(days=7), 0)
         if day - timedelta(days=7) < started:
             last = None
         # last week to this time, only when the business was on ALYR on that day
         by_now = f.last_by_now.get(key) if state == "today" and last is not None else None
-        n_booked = booked.get(day) if state in ("today", "coming") else None
+        n_booked = booked.get(day) if state in ("today", "ahead") else None
         days.append({
             "date": day.isoformat(),
             "label": DAY_SHORT[lang][i],

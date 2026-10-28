@@ -46,3 +46,7 @@ next-env.d.ts
 
 # the published public site, built by scripts/build-site.sh
 /out-site/
+
+# screenshots from pnpm site:shots (never commit screenshots)
+/.shots/
+/.open-next/

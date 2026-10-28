@@ -7,10 +7,12 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { formatPrice, type Lang } from "../price";
-import { missing, most, next, smallest, step, unitPrice } from "./cart";
+import { missing, most, next, problem, smallest, step, unitPrice, type Problem } from "./cart";
+import { cmpQty, fmtQty, fmtQtyUnit, lineTotal, maxQty, minQty, readQty, subQty, unitFor, unitShort } from "../qty";
 import { say, T } from "./copy";
 import { PriceLine, StatusLine } from "./ItemCard";
 import type { Group, Item } from "./types";
+import { Glyph } from "../Frame";
 import { Dialog, DialogHead, Price, Stepper, Tile } from "./ui";
 
 export type Chosen = { variantId: string | null; optionIds: string[]; qty: number };
@@ -58,10 +60,15 @@ function Choice({
 }
 
 export function ItemSheet({
-  item, lang, canOrder, fetchFull, onAdd, onClose, onLimit,
+  item, lang, canOrder, showSku = true, fetchFull, onAdd, onClose, onLimit, whatsapp,
 }: {
   item: Item; lang: Lang; canOrder: boolean; fetchFull: (id: string) => Promise<Item | null>;
+  /** The shop's "show the item code" feature. */
+  showSku?: boolean;
   onAdd: (item: Item, pick: Chosen) => void; onClose: () => void; onLimit: (item: Item) => void;
+  /** A visitor with no link of their own, to a shop with a WhatsApp number: the sheet offers to
+   *  send this item (with the size and quantity chosen) as a message. `href` is the link. */
+  whatsapp?: (item: Item, pick: Chosen) => string;
 }) {
   const t = T[lang];
   const name = say(lang, item.name, item.name_ar);
@@ -72,6 +79,11 @@ export function ItemSheet({
   const [variantId, setVariantId] = useState<string | null>(only);
   const [optionIds, setOptionIds] = useState<string[]>([]);
   const [qty, setQty] = useState(() => smallest(item));
+  // Something sold by weight or volume (0.25 kg, 50 ml) also has quick amounts and a typed amount.
+  const fractions = Boolean(item.quantity?.show_unit);
+  const [typed, setTyped] = useState(() => fmtQty(smallest(item)));
+  const [amountError, setAmountError] = useState("");
+  const amountRef = useRef<HTMLInputElement>(null);
   const [errors, setErrors] = useState<Errors>(NONE);
   const [summary, setSummary] = useState("");
   const body = useRef<HTMLDivElement>(null);
@@ -88,11 +100,40 @@ export function ItemSheet({
   const cap = most(item, variantId);
   const sized = item.variants.length > 1;
 
+  /** One sentence for why an amount cannot be ordered. */
+  const describe = (p: Problem): string => {
+    const u = (n: number) => fmtQtyUnit(n, unitFor(item), lang);
+    if (p.code === "not_whole") return t.notWhole(name);
+    if (p.code === "below_minimum") return t.amountBelow(name, u(p.minimum ?? 0));
+    if (p.code === "off_step") return t.amountOffStep(name, u(p.step ?? 1), u(p.suggest ?? 1));
+    if (p.code === "not_enough") return t.amountTooMuch(name, u(p.left ?? 0));
+    return t.amountBad(name);
+  };
+  /** The amount is now `q`: the stepper, the quick amounts and the box all say the same. */
+  const setAmount = (q: number) => { setQty(q); setTyped(fmtQty(q)); setAmountError(""); };
+  function typeAmount(text: string) {
+    setTyped(text);
+    const q = readQty(text);
+    if (q === null) { setAmountError(t.amountBad(name)); return; }
+    const p = problem(item, q, variantId);
+    if (p) { setAmountError(describe(p)); return; }
+    setQty(q);
+    setAmountError("");
+  }
+  const chips = (item.quantity?.chips ?? []).filter((c) => cmpQty(c, cap) <= 0);
+  const minus = () => setAmount(maxQty(smallest(item), subQty(qty, step(item))));
+  const plus = () => { const to = next(item, qty, 1, variantId); if (to === qty) onLimit(item); else setAmount(to); };
+
   const labels = useMemo(() => ({
     minus: `${t.remove}: ${name}`, plus: `${t.moreOne}: ${name}`, quantity: `${t.quantity}: ${name}`,
   }), [t, name]);
+  const stepper = (
+    <Stepper qty={qty} text={fmtQtyUnit(qty, unitFor(item), lang)} atMax={cmpQty(qty, cap) >= 0} labels={labels}
+      onMinus={minus} onPlus={plus} />
+  );
 
-  function add() {
+  /** Is everything that must be chosen chosen? If not, name what is missing (and say false). */
+  function validate(): boolean {
     const found = missing(item, variantId, optionIds);
     if (found.variant || found.groups.length || found.tooMany.length) {
       setErrors(found);
@@ -105,11 +146,19 @@ export function ItemSheet({
       setSummary(lines.join(" "));
       // Take the customer to the first thing to fix.
       requestAnimationFrame(() => body.current?.querySelector<HTMLElement>(".ox-field.bad input, .ox-field.bad")?.focus());
-      return;
+      return false;
     }
     setErrors(NONE);
-    onAdd(item, { variantId, optionIds, qty: Math.min(qty, cap) });
+    return true;
   }
+
+  function add() {
+    if (amountError) { amountRef.current?.focus(); return; }
+    if (validate()) onAdd(item, { variantId, optionIds, qty: minQty(qty, cap) });
+  }
+
+  const chosenAll = (() => { const f = missing(item, variantId, optionIds); return !(f.variant || f.groups.length || f.tooMany.length); })();
+  const waLink = whatsapp && chosenAll && !amountError ? whatsapp(item, { variantId, optionIds, qty: minQty(qty, cap) }) : "";
 
   const groupError = (g: Group): string => {
     if (errors.groups.includes(g.id)) return t.chooseGroup(say(lang, g.name, g.name_ar), name);
@@ -140,17 +189,54 @@ export function ItemSheet({
           <StatusLine item={item} lang={lang} />
           {description && <p className="ox-long" dir="auto">{description}</p>}
           {item.tags.length > 0 && <ul className="ox-tags">{item.tags.map((tag) => <li key={tag} dir="auto">{tag}</li>)}</ul>}
+          {item.fields && item.fields.length > 0 && (
+            <dl className="ox-fieldlist">
+              {item.fields.map((x) => (
+                <div key={x.key}><dt dir="auto">{say(lang, x.label, x.label_ar)}</dt><dd><bdi>{say(lang, x.text, x.text_ar)}</bdi></dd></div>
+              ))}
+            </dl>
+          )}
           <p className="ox-meta">
             {[
               item.unit && item.unit !== "piece" ? t.units[item.unit] ?? item.unit : "",
-              item.pack_size && item.pack_size > 1 ? t.pack(item.pack_size) : "",
-              item.min_order > 1 ? t.minimum(item.min_order) : "",
-              item.sku ? `${t.sku} ${item.sku}` : "",
+              item.quantity?.show_unit && !(canOrder && item.orderable)
+                ? t.amountHint(fmtQtyUnit(item.quantity.step, unitFor(item), lang), fmtQtyUnit(item.min_order, unitFor(item), lang))
+                : "",
+              !item.quantity?.show_unit && item.pack_size && item.pack_size > 1 ? t.pack(fmtQty(item.pack_size)) : "",
+              !item.quantity?.show_unit && item.min_order > 1 ? t.minimum(fmtQty(item.min_order)) : "",
+              showSku && item.code !== null ? t.itemCode(item.code) : "",
+              showSku && item.sku ? `${t.sku} ${item.sku}` : "",
             ].filter(Boolean).join(" · ")}
           </p>
         </div>
 
         {summary && <p className="ox-err summary" role="alert">{t.fixBelow} {summary}</p>}
+
+        {fractions && canOrder && item.orderable && (
+          <fieldset className={`ox-field ox-how ${amountError ? "bad" : ""}`}>
+            <legend>
+              <span>{t.howMuch}</span>
+              <small>{t.amountHint(fmtQtyUnit(item.quantity?.step ?? 1, unitFor(item), lang), fmtQtyUnit(item.min_order, unitFor(item), lang))}</small>
+            </legend>
+            {chips.length > 0 && (
+              <div className="ox-quick" role="group" aria-label={t.quickAmounts}>
+                {chips.map((c) => (
+                  <button key={c} type="button" className={`ox-chip ${cmpQty(c, qty) === 0 ? "on" : ""}`}
+                    aria-pressed={cmpQty(c, qty) === 0} onClick={() => setAmount(c)}>
+                    <bdi className="num">{fmtQtyUnit(c, unitFor(item), lang)}</bdi>
+                  </button>
+                ))}
+              </div>
+            )}
+            <label className="ox-amount">
+              <span>{t.typeAmount(unitShort(unitFor(item), lang))}</span>
+              <input ref={amountRef} className="cx-input" inputMode="decimal" dir="ltr" autoComplete="off" value={typed}
+                onChange={(e) => typeAmount(e.target.value)} aria-invalid={amountError ? true : undefined}
+                aria-describedby={amountError ? `${sizeId}-amount` : undefined} />
+            </label>
+            {amountError && <p className="ox-err" id={`${sizeId}-amount`} role="alert">{amountError}</p>}
+          </fieldset>
+        )}
 
         {sized && (
           <fieldset className={`ox-field ${errors.variant ? "bad" : ""}`} role="radiogroup" aria-labelledby={`${sizeId}-l`}
@@ -160,12 +246,14 @@ export function ItemSheet({
               <label key={v.id} className={`ox-opt ${variantId === v.id ? "on" : ""} ${v.sold_out ? "gone" : ""}`}>
                 {canOrder
                   ? <input type="radio" name={`${sizeId}-v`} checked={variantId === v.id} disabled={v.sold_out}
-                      onChange={() => { setVariantId(v.id); setQty((q) => Math.max(smallest(item), Math.min(q, most(item, v.id)))); }} />
+                      onChange={() => { setVariantId(v.id); setAmount(maxQty(smallest(item), minQty(qty, most(item, v.id)))); }} />
                   : null}
-                <span className="ox-opt-name" dir="auto">{say(lang, v.name, v.name_ar)}</span>
+                <span className="ox-opt-name" dir="auto">{say(lang, v.name, v.name_ar)}
+                  {v.fields && v.fields.length > 0 && <small className="ox-opt-fields" dir="auto">{v.fields.map((x, k) => <span key={x.key}>{k > 0 && " · "}{say(lang, x.label, x.label_ar)}: <bdi>{say(lang, x.text, x.text_ar)}</bdi></span>)}</small>}
+                </span>
                 {v.sold_out
                   ? <span className="ox-pill off">{t.sizeSoldOut}</span>
-                  : v.left !== null && v.left > 0 ? <span className="ox-pill few">{item.daily ? t.onlyLeftToday(v.left) : t.onlyLeft(v.left)}</span> : null}
+                  : v.left !== null && v.left > 0 ? <span className="ox-pill few">{item.daily ? t.onlyLeftToday(fmtQtyUnit(v.left, unitFor(item), lang)) : t.onlyLeft(fmtQtyUnit(v.left, unitFor(item), lang))}</span> : null}
                 <Price value={v.price} lang={lang} className="ox-opt-price" />
               </label>
             ))}
@@ -182,15 +270,29 @@ export function ItemSheet({
         ))}
       </div>
 
-      {canOrder && item.orderable && (
+      {canOrder && item.orderable && whatsapp && (
+        <footer className="ox-dfoot wa">
+          {stepper}
+          {waLink ? (
+            <a className="cx-btn ox-addbtn" href={waLink} target="_blank" rel="noopener noreferrer">
+              <Glyph name="wa" /><span>{t.startOrder}</span>
+            </a>
+          ) : (
+            <button type="button" className="cx-btn ox-addbtn" onClick={() => void validate()}>
+              <Glyph name="wa" /><span>{t.startOrder}</span>
+            </button>
+          )}
+          <button type="button" className="ox-link ox-listbtn" onClick={add}>{t.addToList}</button>
+          <p className="ox-quiet center ox-hint">{t.waHint}</p>
+        </footer>
+      )}
+      {canOrder && item.orderable && !whatsapp && (
         <footer className="ox-dfoot">
-          <Stepper qty={qty} atMax={qty >= cap} labels={labels}
-            onMinus={() => setQty((q) => Math.max(smallest(item), q - step(item)))}
-            onPlus={() => { const to = next(item, qty, 1, variantId); if (to === qty) onLimit(item); else setQty(to); }} />
+          {stepper}
           <button type="button" className="cx-btn ox-addbtn" onClick={add}
-            aria-label={`${t.addToOrder}: ${formatPrice(unit * qty, lang)}`}>
+            aria-label={`${t.addToOrder}: ${formatPrice(lineTotal(unit, qty), lang)}`}>
             <span>{t.addShort}</span><span aria-hidden="true">·</span>
-            <Price value={unit * qty} lang={lang} />
+            <Price value={lineTotal(unit, qty)} lang={lang} />
           </button>
         </footer>
       )}

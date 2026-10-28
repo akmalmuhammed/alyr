@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Symbol } from "./brand";
+import { Icon, Symbol } from "./brand";
 
 // The frames the homepage draws product screens in. No words of their own and no import
 // of `copy.ts`, so the hero's client component can use them without shipping the copy.
@@ -12,6 +12,14 @@ export function Phone({ children, className, live = false }: { children: ReactNo
       <div className="d-screen">{children}</div>
     </div>
   );
+}
+
+/** The small "Sample" mark a drawing carries in its own chrome (its window's title bar, its
+ * phone's header, its tab row), once per drawing, in place of a FIG caption (site audit,
+ * 24 Oct 2026). It travels with the drawing when someone screenshots it. Screen readers and
+ * crawlers hear the figure's own first line instead, so the mark itself is hidden from them. */
+export function SampleMark({ label, className }: { label: string; className?: string }) {
+  return <span className={`mark-sample${className ? ` ${className}` : ""}`} aria-hidden="true">{label}</span>;
 }
 
 /** The top of a customer page: the shop's monogram with its Volt corner, its name, which
@@ -45,5 +53,16 @@ export function TickPath() {
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="M5 12.5l4.5 4.5L19 7.5" />
     </svg>
+  );
+}
+
+/** A file in a WhatsApp chat, as a document message: a page glyph from ALYR's icon grid,
+ * the file's name and "1 page · PDF", above its caption. No WhatsApp logo. */
+export function WaDoc({ name, meta }: { name: string; meta: string }) {
+  return (
+    <span className="wa-doc">
+      <span className="wa-doc-ico"><Icon name="document" /></span>
+      <span className="wa-doc-t"><b dir="ltr">{name}</b><small dir="auto">{meta}</small></span>
+    </span>
   );
 }

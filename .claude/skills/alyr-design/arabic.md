@@ -81,8 +81,9 @@ headline is MSA: «تحوّل رقمياً.»
 - Names stay in Latin, case kept, in both languages, never broken across lines (`.pname`),
   each with its plain descriptor (D-035, `catalog.py`):
   ALYR Chat «طلبات واتساب وصندوق الفريق» · ALYR Bookings «المواعيد والتذكيرات» ·
-  ALYR Agent «نشاطك بالأرقام» · ALYR Accounts «الحسابات الآجلة» · ALYR Payroll «الرواتب
-  ووثائق الموظفين».
+  ALYR Agent «نشاطك بالأرقام» · ALYR Accounts «الحسابات الآجلة» · ALYR Shelf «الأصناف
+  والمخزون» · ALYR Docs «الإيصالات والفواتير». Never translate "Shelf" («رفّ») or "Docs" as a
+  name; «المستندات» stays the workspace section's name.
 - **"Agent" is never translated.** Not «وكيل» (a registered commercial agent; also "AI
   agent"), not «مساعد» (the inbox already calls automatic replies that, and «مساعد ذكي» is
   "AI assistant"), not «مدير أعمال» or «مستشار». The company's "on your behalf" is «نيابةً عنك».
@@ -104,7 +105,8 @@ headline is MSA: «تحوّل رقمياً.»
 | Regular customer | زبون دائم | |
 | Needs you now; Done for you | يحتاجك الآن؛ أنجزته ALYR لك | |
 | Rule | القاعدة | خوارزمية |
-| Early access; coming; not yet | إطلاق مبكر؛ قريباً؛ لم يتوفر بعد | وصول مبكر |
+| Set up for you (a product's state); with every product | نجهّزه لك؛ مع كل منتج | إطلاق مبكر (retired 20 Oct 2026), وصول مبكر |
+| Coming; not yet | قريباً (never at go-live, D-039)؛ لم يتوفر بعد | |
 | Fictional | غير حقيقي | افتراضي (also "default", "virtual") |
 | Owner-run businesses; your business | المنشآت التي يديرها أصحابها؛ نشاطك | |
 | The shop | المحل | المتجر (only where the product prints it) |

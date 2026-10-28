@@ -21,7 +21,7 @@ export type Kpi = {
 export type Day = {
   date: string;
   label: string;
-  state: "past" | "today" | "coming" | "closed" | "before";
+  state: "past" | "today" | "ahead" | "closed" | "before";
   value: number | null;
   value_text: string | null;
   last: number | null;
@@ -59,6 +59,13 @@ export type AgentView = {
    * many are low, each the number of rows in the Catalog list its `href` opens (`href` is null
    * when there is nothing to open). Absent on the public site's samples. */
   catalog?: {
+    title: string;
+    cards: { key: string; label: string; value: number; text: string; href: string | null }[];
+  } | null;
+  /** The Documents' cards, for a shop with Documents and a person who may see them (an agent
+   * does not): unpaid invoices and documents not delivered, each the size of the list its `href`
+   * opens. Same shape as `catalog`. */
+  documents?: {
     title: string;
     cards: { key: string; label: string; value: number; text: string; href: string | null }[];
   } | null;

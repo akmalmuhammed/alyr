@@ -16,7 +16,7 @@ from uuid import UUID, uuid4
 
 import asyncpg
 
-from alyr import catalog, presets
+from alyr import catalog, presets, shop_templates
 from alyr.channels.base import InboundMessage
 from alyr.config import get_settings
 from alyr.core import auth, pricing, team
@@ -43,8 +43,8 @@ def _text(value) -> dict:
 
 
 def catalog_on() -> bool:
-    """Do new businesses get their type's Catalog? One setting (`catalog_for_new_shops`),
-    which the go-live sweep switches on (ALY-113, D-039)."""
+    """Do new businesses get their type's Catalog? One setting (`catalog_for_new_shops`), on
+    since the go-live sweep (ALY-113, D-039) and still there to turn it off."""
     return get_settings().catalog_for_new_shops
 
 
@@ -158,7 +158,9 @@ async def create_business(
         if "catalog" in modules and preset.catalog is not None:
             # Its words are by type; its starting values, categories and sample items are
             # written now, and are the owner's to change (`modules/items/template.py`).
-            await template.apply(conn, preset.catalog, await shop_clock.load(conn))
+            await template.apply(
+                conn, shop_templates.builtin_for(preset.key), await shop_clock.load(conn)
+            )
         if way == "assisted":
             await conn.execute(
                 "insert into setup_requests (product_key, step_key, note, requested_by) "

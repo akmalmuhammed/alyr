@@ -9,6 +9,7 @@ import { memo } from "react";
 import { Glyph } from "../Frame";
 import type { Lang } from "../price";
 import { most, next } from "./cart";
+import { cmpQty, fmtQtyUnit, unitFor, unitShort } from "../qty";
 import { say, T } from "./copy";
 import type { Item } from "./types";
 import { Price, PriceRange, Stepper, Tile } from "./ui";
@@ -25,6 +26,9 @@ export type CardProps = {
   simpleQty: number;
   /** Someone with their own link: they may order. Anyone else is only looking. */
   canOrder: boolean;
+  /** The shop's "quick quantity" feature: a plus and a stepper on the row. Off, the row's button
+   *  opens the item and the customer adds from there. */
+  quick?: boolean;
   onOpen: (item: Item) => void;
   onSet: (item: Item, qty: number) => void;
   onLimit: (item: Item) => void;
@@ -42,6 +46,7 @@ export function PriceLine({ item, lang }: { item: Item; lang: Lang }) {
       {!ranged && item.list_price !== null && (
         <s className="ox-was"><span className="ox-sr">{lang === "ar" ? "بدلاً من " : "instead of "}</span><Price value={item.list_price} lang={lang} /></s>
       )}
+      {item.quantity?.show_unit && <span className="ox-per">{t.perUnit(unitShort(unitFor(item), lang))}</span>}
       {item.price_source === "group"
         ? <span className="ox-tag">{t.yourPrice}</span>
         : !ranged && item.list_price !== null ? <span className="ox-tag sale">{t.sale}</span> : null}
@@ -54,7 +59,10 @@ export function StatusLine({ item, lang }: { item: Item; lang: Lang }) {
   const t = T[lang];
   const bits: { text: string; tone: string }[] = [];
   if (item.sold_out) bits.push({ text: t.soldOut, tone: "off" });
-  else if (item.left !== null && item.left > 0) bits.push({ text: item.daily ? t.onlyLeftToday(item.left) : t.onlyLeft(item.left), tone: "few" });
+  else if (item.left !== null && item.left > 0) {
+    const left = fmtQtyUnit(item.left, unitFor(item), lang);
+    bits.push({ text: item.daily ? t.onlyLeftToday(left) : t.onlyLeft(left), tone: "few" });
+  }
   if (item.note && !item.sold_out) bits.push({ text: say(lang, item.note.en, item.note.ar), tone: item.orderable ? "when" : "later" });
   if (bits.length === 0) return null;
   return (
@@ -64,12 +72,15 @@ export function StatusLine({ item, lang }: { item: Item; lang: Lang }) {
   );
 }
 
-function Card({ item, lang, look, inOrder, simpleQty, canOrder, onOpen, onSet, onLimit }: CardProps) {
+const cmpAtMax = (qty: number, item: Item) => cmpQty(qty, most(item)) >= 0;
+
+function Card({ item, lang, look, inOrder, simpleQty, canOrder, quick = true, onOpen, onSet, onLimit }: CardProps) {
   const t = T[lang];
   const name = say(lang, item.name, item.name_ar);
   const description = say(lang, item.description, item.description_ar);
-  const choose = item.needs_choice;
-  const atMax = simpleQty >= most(item);
+  // Something sold by weight or volume (0.25 kg, 50 ml at a time) is chosen in its sheet, with quick
+  // amounts and a typed amount, not by tapping + on the row.
+  const choose = item.needs_choice || !quick || Boolean(item.quantity?.show_unit);
   return (
     <li className={`ox-card ${item.orderable ? "" : "off"}`}>
       <button type="button" className="ox-open" onClick={() => onOpen(item)}
@@ -80,6 +91,7 @@ function Card({ item, lang, look, inOrder, simpleQty, canOrder, onOpen, onSet, o
           {description && look !== "list" && <span className="ox-desc" dir="auto">{description}</span>}
           <PriceLine item={item} lang={lang} />
           <StatusLine item={item} lang={lang} />
+          {item.code !== null && <span className="ox-codeline">{t.code} <bdi className="num">{item.code}</bdi></span>}
         </span>
       </button>
       <div className="ox-act">
@@ -90,7 +102,7 @@ function Card({ item, lang, look, inOrder, simpleQty, canOrder, onOpen, onSet, o
               {t.choose}
             </button>
           ) : simpleQty > 0 ? (
-            <Stepper qty={simpleQty} atMax={atMax}
+            <Stepper qty={simpleQty} text={fmtQtyUnit(simpleQty, unitFor(item), lang)} atMax={cmpAtMax(simpleQty, item)}
               labels={{ minus: `${t.remove}: ${name}`, plus: `${t.moreOne}: ${name}`, quantity: `${t.quantity}: ${name}` }}
               onMinus={() => onSet(item, next(item, simpleQty, -1))}
               onPlus={() => { const to = next(item, simpleQty, 1); if (to === simpleQty) onLimit(item); else onSet(item, to); }} />

@@ -18,6 +18,7 @@ from zoneinfo import ZoneInfo
 
 import asyncpg
 
+from alyr import shop_templates
 from alyr.core import consent
 from alyr.core.media import MediaService
 from alyr.core.team import Actor
@@ -76,8 +77,8 @@ async def ensure_tenant(conn: asyncpg.Connection, shop: Shop, now: datetime) -> 
     )
     if not await conn.fetchval("select client_id from tenants where id = $1", shop.tenant_id):
         client_id = await conn.fetchval(
-            "insert into clients (name, contact_name, contact_email) values ($1, $2, $3) "
-            "returning id", shop.name, shop.owner[1], shop.owner[0],
+            "insert into clients (name, contact_name, contact_email, access_from, payment_waived_at, access_note) "
+            "values ($1, $2, $3, now(), now(), 'Demo shop') returning id", shop.name, shop.owner[1], shop.owner[0],
         )
         await conn.execute(
             "update tenants set client_id = $2 where id = $1", shop.tenant_id, client_id
@@ -201,6 +202,7 @@ async def start(conn: asyncpg.Connection, shop: Shop, now: datetime, history_sta
     """Modules, settings, categories, groups, the team and their phones."""
     preset = PRESET_BY_KEY[shop.kind]
     setup = setup_for(shop.kind)
+    tpl = shop_templates.builtin_for(shop.kind)
     await conn.execute(
         "insert into tenant_modules (module_key, enabled_at, enabled_by) "
         "select unnest($1::text[]), $2::timestamptz, 'demo setup'",
@@ -208,10 +210,10 @@ async def start(conn: asyncpg.Connection, shop: Shop, now: datetime, history_sta
     )
     clock = ShopClock(now, TZ)
     # The type's starting values, its categories, and no sample items: these are real items.
-    await template.apply(conn, setup, clock, samples_too=False)
+    await template.apply(conn, tpl, clock, samples_too=False)
     await conn.execute(
         "update shop_settings set whatsapp_number = $1, day_starts = $2::text::time, "
-        "weekly_report = true",
+        "weekly_report = true, whatsapp_mode = 'chat'",
         shop.whatsapp, shop.day_starts,
     )
     categories = [{"name": n, "name_ar": a} for n, a in (*setup.categories, *shop.extra_categories)]

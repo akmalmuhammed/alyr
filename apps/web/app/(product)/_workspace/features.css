@@ -1,0 +1,32 @@
+/* The Features screen, custom fields and the change-of-type preview (ALY-148). It builds on the
+   Catalog's own patterns (catalog.css) and takes every colour, size and radius from the
+   workspace tokens, so light, dark and right-to-left come for free. Nothing here is a colour
+   or a size of its own. */
+
+.ct-feat-intro { max-width: 60ch; }
+.ct-feats h3 + .ct-hint { margin-top: -4px; }
+
+/* one feature: the name and what it is for, the switch, what it changes and where */
+.ct-feat { display: grid; gap: 10px; padding: 14px; border-radius: 12px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair) inset; min-width: 0; }
+.ct-feat.off { background: transparent; box-shadow: 0 0 0 1px var(--hair-2) inset; }
+.ct-feat-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; min-width: 0; }
+.ct-feat-top .ct-toggle-text b { font-size: var(--ui-body-sm); font-weight: 600; }
+.ct-feat-switch { display: inline-flex; align-items: center; gap: 8px; flex: none; min-height: 44px; }
+.ct-feat-switch .ct-state { min-width: 2.5ch; }
+.ct-feat-changes { margin: 0; font-size: var(--ui-caption); line-height: 1.5; color: var(--ink-2); }
+.ct-feat-changes b { color: var(--ink); font-weight: 600; margin-inline-end: 4px; }
+.ct-feat-places { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.ct-feat-use { color: var(--ink); }
+
+/* a part of a form inside a card: the choices of a field of your own */
+.ct-subsec { display: grid; gap: 10px; min-width: 0; }
+.ct-subsec h3 { margin: 0; font-size: var(--ui-small); font-weight: 600; color: var(--ink-2); }
+.ct-fieldform { box-shadow: 0 0 0 1px var(--hair-2) inset; }
+
+/* the always-on list */
+.ct-core { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ct-core li { font-size: var(--ui-small); line-height: 1.45; }
+
+/* the name and layout part sits above the features, a little apart */
+.ct-shape .ct-choices { margin-top: 4px; }
+.ct-shape .ct-choices legend { margin-bottom: 6px; font-size: var(--ui-small); font-weight: 600; color: var(--ink); }

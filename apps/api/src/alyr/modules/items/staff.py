@@ -55,6 +55,25 @@ async def listing(conn: asyncpg.Connection) -> list[dict]:
     return [_shown(r) for r in rows]
 
 
+async def get(conn: asyncpg.Connection, contact_id: UUID) -> dict | None:
+    """One staff number as the screens show it, or None if it is not a staff number."""
+    row = await conn.fetchrow(
+        f"select {_FIELDS} from contacts where id = $1 and role = 'staff'", contact_id
+    )
+    return _shown(row) if row else None
+
+
+async def find(conn: asyncpg.Connection, phone: str) -> dict | None:
+    """The staff number that has this phone, or None (no such number, or it is a customer's)."""
+    number = clean_phone(phone)
+    if number is None:
+        return None
+    row = await conn.fetchrow(
+        f"select {_FIELDS} from contacts where phone = $1 and role = 'staff'", number
+    )
+    return _shown(row) if row else None
+
+
 async def _agree_to_notices(conn: asyncpg.Connection, contact_id: UUID) -> None:
     """The owner registering a number is the agreement to be told about the shop's own
     stock and money. Without it the outbound layer would refuse the alerts."""

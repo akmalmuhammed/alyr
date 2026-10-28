@@ -10,8 +10,8 @@ from uuid import UUID
 
 import asyncpg
 
-from alyr import catalog, presets_catalog
-from alyr.core import pricing
+from alyr import catalog
+from alyr.core import pricing, readiness
 from alyr.core.auth import Staff
 from alyr.core.normalise import fmt_qar
 from alyr.db import Database
@@ -92,11 +92,10 @@ def _same_name(screen: catalog.Screen, section: catalog.Text | None) -> bool:
 
 async def _section(conn: asyncpg.Connection) -> catalog.Text:
     """What this shop calls its Catalog ("Menu", "Products", "Price list"), by its type."""
-    kind = await conn.fetchval(
-        "select business_type from tenants "
-        "where id = nullif(current_setting('app.tenant_id', true), '')::uuid"
-    )
-    return presets_catalog.setup_for(kind or "").section
+    # (imported here: the Catalog's code builds on this package, not the other way round)
+    from alyr.modules.items import template
+
+    return await template.section(conn)
 
 
 def _catalog_step(step: dict, section: catalog.Text) -> dict:
@@ -205,21 +204,40 @@ async def state(conn: asyncpg.Connection, staff: Staff) -> dict:
     }
 
 
+HIDDEN = "hidden_cards"
+
+
 async def counts(
-    conn: asyncpg.Connection, modules: set[str] | frozenset[str], now: datetime | None = None
+    conn: asyncpg.Connection, modules: set[str] | frozenset[str], now: datetime | None = None,
+    staff: Staff | None = None,
 ) -> dict[str, int]:
-    """The numbers a module works out for itself (`Card.count`): today, the Catalog's. They
-    are the numbers on the filter chips of the list the card opens, so the two always agree."""
+    """The numbers a module works out for itself (`Card.count`): today, the Catalog's and the
+    Documents'. They are the numbers on the filter chips of the list the card opens, so the two
+    always agree. `staff` is who is looking (None: the shop's own view, as an owner's)."""
     found: dict[str, int] = {}
+    hidden: list[str] = []
     if "catalog" in modules:
         # (imported here: the Catalog's code builds on this package, not the other way round)
-        from alyr.modules.items import clock, listing
+        from alyr.modules.items import clock, features, listing
 
         found |= await listing.counts(conn, await clock.load(conn, now))
+        # A card about stock is left off a shop whose features say nothing runs out or is
+        # counted (ALY-148): the screens read this list and draw only the others.
+        hidden += list(features.hidden_cards(await features.load(conn)))
+    if "documents" in modules:
+        from alyr.modules.documents import listing as documents_listing
+
+        found |= await documents_listing.counts(conn, staff)
+        # What is owed and what did not arrive are the owner's to see; an agent's list holds
+        # only the papers they made, and the cards would be a number that is not the shop's.
+        if staff is not None and staff.role not in catalog.MANAGERS:
+            hidden += list(documents_listing.PRESETS)
+    if hidden:
+        found[HIDDEN] = hidden  # type: ignore[assignment]
     return found
 
 
-async def home(conn: asyncpg.Connection) -> list[dict]:
+async def home(conn: asyncpg.Connection, staff: Staff | None = None) -> list[dict]:
     """The dashboard numbers, one card per number each switched-on module offers."""
     modules = await enabled_modules(conn)
     cards = []
@@ -230,7 +248,9 @@ async def home(conn: asyncpg.Connection) -> list[dict]:
         for card in module.cards:
             if card.count:
                 if worked_out is None:
-                    worked_out = await counts(conn, modules)
+                    worked_out = await counts(conn, modules, staff=staff)
+                if card.count in worked_out.get(HIDDEN, ()):
+                    continue
                 value = worked_out[card.count]
             else:
                 value = int(await conn.fetchval(f"select {card.value}") or 0)
@@ -261,8 +281,6 @@ async def enable_product(conn: asyncpg.Connection, staff: Staff, key: str) -> li
         raise LookupError("no such product")
     if product.status == "included":
         raise WorkspaceError(f"{product.name.en} is included for every business")
-    if product.status != "available":
-        raise WorkspaceError("this product is not available yet")
     for module in product.modules:
         await conn.execute(
             "insert into tenant_modules (module_key, enabled, enabled_at, enabled_by) "
@@ -322,6 +340,8 @@ async def ask_alyr(
         note.strip()[:500],
         staff.name,
     )
+    # ALYR now owns the step on the readiness check and the onboarding board (ALY-165).
+    await readiness.handed_over(conn, step_key, staff.name)
     return str(request_id)
 
 

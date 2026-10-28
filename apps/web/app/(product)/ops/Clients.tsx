@@ -9,6 +9,8 @@ import {
   api, appliesLabel, fromDirhams, qar, STATUS_LABEL, STEP_NAME, toDirhams, totals,
   type ClientDetail, type ClientSummary, type Kind, type Line, type Pricing, type Quote,
 } from "./api";
+import { BusinessTemplate } from "./BusinessTemplate";
+import { ClientAccess } from "./ClientAccess";
 
 type DraftLine = Line & { priceText: string };
 type Draft = { period_months: number; discount_pct: number; show_promise: boolean; note: string; lines: DraftLine[] };
@@ -34,6 +36,7 @@ function progress(b: ClientSummary["businesses"][number]) {
 export function Clients({ pricing, onChange, initialClient }: { pricing: Pricing | null; onChange: () => void; initialClient?: string }) {
   const [list, setList] = useState<ClientSummary[]>([]);
   const [openId, setOpenId] = useState("");
+  const [templateFor, setTemplateFor] = useState<string | null>(null);
   const [detail, setDetail] = useState<ClientDetail | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -159,7 +162,7 @@ export function Clients({ pricing, onChange, initialClient }: { pricing: Pricing
                   {c.quote ? (
                     <>
                       <b className="num">{c.quote.totals.monthly_total_text}</b><small> /mo</small><br />
-                      <span className={`sh-pill ${c.quote.status === "accepted" ? "active" : c.quote.status === "published" ? "wait" : "coming"}`}>
+                      <span className={`sh-pill ${c.quote.status === "accepted" ? "active" : c.quote.status === "published" ? "wait" : "idle"}`}>
                         {c.quote.status === "draft" ? "Draft" : c.quote.status === "published" ? "Waiting for owner" : "Accepted"}
                       </span>
                     </>
@@ -181,7 +184,7 @@ export function Clients({ pricing, onChange, initialClient }: { pricing: Pricing
                 <h2 className="ops-title">{detail.name}</h2>
               </div>
               <span className="ops-head-actions">
-                <span className={`sh-pill ${detail.effective_price_mode === "automatic" ? "active" : "coming"}`}>
+                <span className={`sh-pill ${detail.effective_price_mode === "automatic" ? "active" : "idle"}`}>
                   Price {detail.effective_price_mode === "automatic" ? "shown automatically" : "prepared by ALYR"}
                 </span>
                 <a className="btn small ghost" href={`/ops/audit?client=${detail.id}`}>History</a>
@@ -190,9 +193,14 @@ export function Clients({ pricing, onChange, initialClient }: { pricing: Pricing
             {message && <p className="ops-ok" role="status">{message}</p>}
             {error && <p className="ops-error" role="alert">{error}</p>}
 
+            {detail.access && <>
+              <h3>Payment and access</h3>
+              <ClientAccess clientId={detail.id} access={detail.access} onDone={() => { openClient(detail.id); loadList(); onChange(); }} />
+            </>}
+
             <h3>Businesses</h3>
             <div className="tablewrap"><table>
-              <thead><tr><th>Business</th><th>Type · area</th><th>Products</th><th>Onboarding</th><th>WhatsApp</th></tr></thead>
+              <thead><tr><th>Business</th><th>Type · area</th><th>Products</th><th>Onboarding</th><th>WhatsApp</th><th>Catalog</th></tr></thead>
               <tbody>
                 {detail.businesses.map((b) => (
                   <tr key={b.id} className="norow">
@@ -200,17 +208,21 @@ export function Clients({ pricing, onChange, initialClient }: { pricing: Pricing
                     <td>{b.type_name || "—"}<br /><small>{b.area || "—"}{b.way === "assisted" ? " · with ALYR" : ""}</small></td>
                     <td>{b.products.join(", ") || "none"}</td>
                     <td>{progress(b)}</td>
-                    <td><span className={`sh-pill ${b.whatsapp_connected ? "active" : "coming"}`}>{b.whatsapp_connected ? "Connected" : "Not yet"}</span></td>
+                    <td><span className={`sh-pill ${b.whatsapp_connected ? "active" : "idle"}`}>{b.whatsapp_connected ? "Connected" : "Not connected"}</span></td>
+                    <td><button type="button" className="btn small ghost" aria-expanded={templateFor === b.id} onClick={() => setTemplateFor(templateFor === b.id ? null : b.id)}>Template</button></td>
                   </tr>
                 ))}
               </tbody>
             </table></div>
+            {templateFor && detail.businesses.some((b) => b.id === templateFor) && (
+              <BusinessTemplate key={templateFor} businessId={templateFor} businessName={businessName[templateFor]} onDone={onChange} onClose={() => setTemplateFor(null)} />
+            )}
 
             <h3>Price</h3>
             {open && draft && sums ? (
               <div className="ops-quote">
                 <div className="ops-quote-top">
-                  <span className={`sh-pill ${open.status === "published" ? "wait" : "coming"}`}>Quote {open.number} · {STATUS_LABEL[open.status]}</span>
+                  <span className={`sh-pill ${open.status === "published" ? "wait" : "idle"}`}>Quote {open.number} · {STATUS_LABEL[open.status]}</span>
                   <small>Last change {new Date(open.updated_at).toLocaleString("en-GB")} by {open.updated_by || "—"}</small>
                 </div>
                 <div className="tablewrap"><table className="ops-lines">

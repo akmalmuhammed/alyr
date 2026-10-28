@@ -340,7 +340,8 @@ li:has(> .ct-ptile.up.failed) { grid-column: 1 / -1; }
 .ct-diff { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 12px 14px; border-radius: 12px; font-size: var(--ui-body-sm); background: var(--volt-wash); color: var(--ink); }
 .ct-diff .sh-ico { margin-top: 2px; flex: none; }
 .ct-diff.up { background: var(--ok-soft); color: var(--ok); }
-.ct-diff.down { background: var(--warn-soft); color: var(--warn); }
+.ct-diff.down { background: var(--warn-soft); color: var(--ink); }
+.ct-diff.down .sh-ico { color: var(--warn); }
 
 /* ── bulk preview ── */
 .ct-preview { list-style: none; margin: 0; padding: 0; border-radius: 14px; box-shadow: 0 0 0 1px var(--hair) inset; overflow: hidden; background: var(--sheet); }
@@ -446,3 +447,24 @@ li:has(> .ct-ptile.up.failed) { grid-column: 1 / -1; }
 .ct-imp-recent li { display: grid; gap: 2px; padding: 10px 12px; }
 .ct-imp-file { font-size: var(--ui-body-sm); font-weight: 600; overflow-wrap: anywhere; }
 .ct-imp-recent small { font-size: var(--ui-caption); color: var(--ink-2); }
+
+/* ── item codes and how customers order (ALY-136) ── */
+.ct-code { font-weight: 600; color: var(--ink); }
+.ct-codebox { display: grid; gap: 6px; margin: 0 0 4px; padding: 12px 14px; border-radius: 12px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair) inset; }
+.ct-codehead { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ct-codehead h3 { margin: 0; flex: 1 1 auto; font-size: var(--ui-body-sm); font-weight: 600; letter-spacing: 0; text-transform: none; font-family: var(--face); color: var(--ink); }
+.ct-codenum { font-family: var(--font-ui-mono); font-size: var(--ui-heading-lg); font-weight: 600; letter-spacing: 0.02em; line-height: 1; }
+.ct-codenum.small { font-size: var(--ui-body); }
+.ct-codelist { list-style: none; margin: 0; padding: 0; display: grid; max-height: 14rem; overflow-y: auto; border-radius: 12px; background: var(--sheet); box-shadow: 0 0 0 1px var(--hair) inset; }
+.ct-codelist li { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 6px 0 12px; }
+.ct-codelist li + li { border-top: 1px solid var(--hair); }
+.ct-codename { flex: 1 1 auto; min-width: 0; font-size: var(--ui-body-sm); overflow-wrap: anywhere; }
+.ct-how legend { padding: 0 0 6px; font-size: var(--ui-small); font-weight: 500; color: var(--ink-2); }
+.ct-how-ways { display: grid; gap: 2px 0; margin: 0; }
+.ct-how-ways dt { margin-top: 8px; font-size: var(--ui-body-sm); font-weight: 600; }
+.ct-how-ways dd { margin: 0; font-size: var(--ui-small); line-height: 1.5; color: var(--ink-2); }
+@media print {
+  .ct-pcode { display: grid; gap: 1.5mm; width: 100%; }
+  .ct-pcode p { margin: 0; display: grid; gap: 0.5mm; font-size: 8.5pt; line-height: 1.35; }
+  .ct-pcode b { font-size: 20pt; font-weight: 600; }
+}

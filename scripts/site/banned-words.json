@@ -1,0 +1,274 @@
+{
+  "$comment": "Words the public site must not use, besides the AI words, which scripts/site/banned-words.mjs reads from .claude/skills/alyr-design/honesty.md section 1 itself so the prose and the check cannot drift. Sources: honesty.md section 2 (nothing 'coming', no 'Early access' or beta wording at go-live, D-039), the founder taking Payroll off the site (20 Oct 2026), and section 6 (prices only behind NEXT_PUBLIC_ALYR_OFFER=on, D-034). The 'rule' terms: the founder took the word off the public site (25 Oct 2026, docs/content-audit/02-decisions.md); the product keeps its rule lines. 'style' holds the content audit's mechanical pattern rules (docs/content-audit/01-audit.md section 4, alyr-site-page 'Words that read as written by a machine'). A true use goes in allow/banned.json with its reason, never here.",
+  "terms": [
+    {
+      "term": "coming",
+      "lang": "en",
+      "why": "Nothing is shown as coming (D-039, honesty.md section 2)"
+    },
+    {
+      "term": "coming soon",
+      "lang": "en",
+      "why": "Nothing is shown as coming (D-039)"
+    },
+    {
+      "term": "soon",
+      "lang": "en",
+      "why": "'Coming soon' wording (D-039). Allowed only on the pending-contact and offer-off lines (honesty.md section 7)"
+    },
+    {
+      "term": "under development",
+      "lang": "en",
+      "why": "Hide what is not ready (D-039)"
+    },
+    {
+      "term": "beta",
+      "lang": "en",
+      "why": "Hide what is not ready (D-039)"
+    },
+    {
+      "term": "early access",
+      "lang": "en",
+      "why": "Not offered; nothing is shown as coming (D-039)"
+    },
+    {
+      "term": "Payroll",
+      "lang": "en",
+      "why": "Payroll is off the site until it is built (founder, 20 Oct 2026)"
+    },
+    {
+      "term": "قريباً",
+      "lang": "ar",
+      "why": "'Soon': the Arabic of 'coming soon' (D-039). Allowed only on the pending-contact and offer-off lines (honesty.md section 7). Matched with or without the tanween"
+    },
+    {
+      "term": "وصول مبكر",
+      "lang": "ar",
+      "why": "'Early access'"
+    },
+    {
+      "term": "تجريبي",
+      "lang": "ar",
+      "why": "'Beta / trial version'. A 'test page' for payment links is true (اختبار), a beta product is not"
+    },
+    {
+      "term": "الرواتب",
+      "lang": "ar",
+      "why": "'Payroll': off the site until it is built"
+    },
+    {
+      "term": "rule",
+      "lang": "en",
+      "why": "No 'rule' on the public site (founder, 25 Oct 2026: 'a new user will not understand what's rule'). Say 'reason', 'what it counted', 'what it compares'; WhatsApp's 24-hour rule is 'the 24-hour window'"
+    },
+    {
+      "term": "rules",
+      "lang": "en",
+      "why": "No 'rule' on the public site (founder, 25 Oct 2026)"
+    },
+    {
+      "term": "قاعدة",
+      "lang": "ar",
+      "why": "'Rule' (founder, 25 Oct 2026). «قاعدة البيانات» (the database) is allowed in allow/banned.json"
+    },
+    {
+      "term": "قاعدته",
+      "lang": "ar",
+      "why": "'Its rule' (founder, 25 Oct 2026)"
+    },
+    {
+      "term": "قاعدتها",
+      "lang": "ar",
+      "why": "'Its rule' (founder, 25 Oct 2026)"
+    },
+    {
+      "term": "قواعد",
+      "lang": "ar",
+      "why": "'Rules' (founder, 25 Oct 2026)"
+    }
+  ],
+  "prices": {
+    "$comment": "Shapes of ALYR's own prices (honesty.md section 6). Sample figures in the drawings carry amounts too (QAR 8,520 in a fictional bakery's week); those are samples, not prices, so the shapes below are ALYR's: a monthly price, a 'from' price, a setup price, the money-back first month.",
+    "patterns": [
+      "QAR\\s?[\\d,]+(?:\\.\\d+)?\\s*(?:a|per|/|each)\\s*month",
+      "QAR\\s?[\\d,]+(?:\\.\\d+)?\\s+a\\s+month",
+      "\\bfrom\\s+QAR\\s?\\d",
+      "\\bsetup\\s+(?:from|is|costs?)\\s+QAR",
+      "QAR\\s?[\\d,]+\\s+(?:for\\s+)?setup",
+      "money[- ]back",
+      "subscription\\s+back",
+      "[\\d,٬]+\\s*ر\\.ق\\s*شهري",
+      "من\\s+[\\d,٬]+\\s*ر\\.ق",
+      "تجهيز[^.،]{0,20}[\\d,٬]+\\s*ر\\.ق"
+    ]
+  },
+  "style": {
+    "$comment": "The content audit's patterns that a regular expression can find (01-audit.md section 4), checked in the copy only, by path. 'label' patterns apply to labels: a string whose last key is in labelKeys ('items' only inside inside.groups), outside the skip paths (questions and answers, chat and sample data, drawings of screens). 'all' patterns apply to every copy string outside the skip paths; 'body' to leads and bodies. Each pattern is a JavaScript regular expression with the u flag, and i where flags says so. A line kept on purpose goes in allow/banned.json under 'style', with its path, the pattern's name and its reason; an entry that matches nothing fails.",
+    "labelKeys": [
+      "title",
+      "eyebrow",
+      "facts",
+      "factsNoOffer",
+      "factsOffer",
+      "tags",
+      "tab",
+      "name",
+      "line",
+      "label",
+      "descriptor",
+      "callouts",
+      "items",
+      "heads",
+      "more",
+      "link"
+    ],
+    "skip": [
+      "**.faq.**",
+      "**.chat**",
+      "**.scene.**",
+      "**.panel.**",
+      "**.record**",
+      "**.sheet.**",
+      "**.page.**",
+      "**.rows[*].who",
+      "**.rows[*].what",
+      "**.rows[*].text",
+      "**.rows[*].status",
+      "**.rows[*].by",
+      "**.rows[*].ref",
+      "**.chats[*].**",
+      "**.orders[*].**",
+      "**.work[*]",
+      "**.prefill",
+      "**.subject",
+      "contact.**",
+      "agent.samples.**",
+      "home.sample.**",
+      "home.suite.frame.**",
+      "report.**",
+      "**.stock.**",
+      "**.moment.label",
+      "**.moment.page.**",
+      "**.moment.item.**",
+      "**.moment.a.**",
+      "**.moment.b.**",
+      "**.moment.bar.**",
+      "**.links[*]**",
+      "**.xray.path[*]",
+      "**.split.**",
+      "**.log.**",
+      "**.paper.**",
+      "**.doc.**",
+      "**.lines[*].**",
+      "**.agreement.**"
+    ],
+    "patterns": [
+      {
+        "name": "question",
+        "scope": "label",
+        "re": "[?؟]",
+        "why": "No questions outside the Questions section (pattern 4)"
+      },
+      {
+        "name": "stacked",
+        "scope": "label",
+        "re": "^(?:[^.?!\\n]{1,32}[.!]\\s+)+[^.?!\\n]{1,32}[.!]?$",
+        "why": "Two or more short sentences stacked as one label: 'Check. Set up. See.', 'New company. No shortcuts.' (patterns 3 and 5). A list item may be two plain sentences",
+        "except": [
+          "items"
+        ]
+      },
+      {
+        "name": "one-one-one",
+        "scope": "all",
+        "flags": "i",
+        "re": "\\b(?:one|every|no)\\s+\\w+,\\s+(?:and\\s+)?(?:one|every|no|two)\\s+\\w+,\\s+(?:and\\s+)?(?:one|every|no)\\s+\\w+",
+        "why": "'One X, one Y, one Z' (pattern 5)"
+      },
+      {
+        "name": "colon",
+        "scope": "label",
+        "re": "^[^:\\n]{2,40}:\\s+\\S",
+        "except": [
+          "callouts",
+          "heads",
+          "items"
+        ],
+        "why": "A colon reveal in a label (pattern 6). Callouts name a part of the screen and then say what it shows, and a list item may use a colon for its example, so those two are left to the reader"
+      },
+      {
+        "name": "means",
+        "scope": "all",
+        "flags": "i",
+        "re": "\\b(\\w+)\\s+means\\s+\\1\\b",
+        "why": "'X means X' (pattern 1)"
+      },
+      {
+        "name": "means-ar",
+        "scope": "all",
+        "re": "(?<![\\p{L}])(\\p{L}+)\\s+يعني\\s+\\1(?![\\p{L}])",
+        "why": "«X يعني X» (pattern 1)"
+      },
+      {
+        "name": "filler",
+        "scope": "all",
+        "flags": "i",
+        "re": "\\b(?:polite(?:ly)?|honest(?:ly)?|simply|easily|effortless(?:ly)?|truly|powerful|beautiful(?:ly)?)\\b",
+        "why": "Filler words (pattern 8)"
+      },
+      {
+        "name": "filler-ar",
+        "scope": "all",
+        "re": "(?<![\\p{L}])(?:ال)?لبق[ةا]?(?![\\p{L}])|بلباقة|بصراحة|بكل سهولة",
+        "why": "Arabic filler (pattern 8)"
+      },
+      {
+        "name": "grand",
+        "scope": "all",
+        "flags": "i",
+        "re": "\\b(?:businesses that win|game[- ]chang\\w*|next[- ]level|transform\\w*|everything you need)\\b",
+        "why": "Grandiosity (pattern 9)"
+      },
+      {
+        "name": "denial",
+        "scope": "body",
+        "flags": "i",
+        "re": "^(?:No|Not)\\s+\\w+(?:\\s+\\w+)?\\s+(?:and|or|but)\\s+(?:no|not)\\b",
+        "why": "A denial opener (pattern 7)"
+      },
+      {
+        "name": "person",
+        "scope": "all",
+        "flags": "i",
+        "re": "\\b(?:steps?\\s+back|goes?\\s+quiet|seals?|sealed)\\b",
+        "why": "Personification beyond what the product does (pattern 10)"
+      },
+      {
+        "name": "person-ar",
+        "scope": "all",
+        "re": "تتنحى|ويثبته",
+        "why": "Arabic personification (pattern 10). Matched without diacritics, as the check reads the copy"
+      },
+      {
+        "name": "stage",
+        "scope": "all",
+        "flags": "i",
+        "re": "\\bFollow one \\w+ through\\b",
+        "why": "A stage direction (pattern 11)"
+      },
+      {
+        "name": "stage-ar",
+        "scope": "all",
+        "re": "تابع\\s+\\p{L}+\\s+واحد[اة]?\\s+من\\s+(?:أوله|البداية)",
+        "why": "Arabic stage direction (pattern 11)"
+      },
+      {
+        "name": "punchline",
+        "scope": "all",
+        "flags": "i",
+        "re": "(?:^|[.!]\\s)(?:You decide|Nothing lost|Issued means final)\\.",
+        "why": "A punchline closer (pattern 9)"
+      }
+    ]
+  }
+}

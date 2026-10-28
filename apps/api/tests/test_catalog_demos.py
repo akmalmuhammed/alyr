@@ -193,6 +193,14 @@ def test_the_tiles_are_drawn_the_same_every_time_small_and_accepted_by_the_photo
 # ── what each shop has ────────────────────────────────────────────────────────────────────
 
 
+def test_the_demo_shops_are_on_chat_explicitly_so_their_test_lines_read_codes(shops):
+    """A shop starts on `link` (it keeps its own number); the demo shops' numbers are
+    simulator lines, which ALYR answers, so they say `chat` (ALY-136)."""
+    for shop in SHOPS:
+        assert scalar("select count(*) as n from shop_settings where tenant_id = $1 "
+                      "and whatsapp_mode = 'chat'", shop.tenant_id) == 1, shop.key
+
+
 def test_each_shop_has_its_items_in_two_languages_with_a_tile_and_the_catalog_on(shops):
     for shop in SHOPS:
         made = shops[shop.key][0]
@@ -221,8 +229,10 @@ def test_each_shop_has_its_items_in_two_languages_with_a_tile_and_the_catalog_on
                       shop.tenant_id) >= 3
 
 
-def test_the_catalog_is_on_for_the_demo_shops_only_and_stays_off_for_everyone_else(shops):
-    assert get_settings().catalog_for_new_shops is False  # new shops still start without it
+def test_the_demo_shops_have_the_catalog_and_the_old_demo_shop_is_left_as_it_is(shops):
+    # New shops start with it (the setting is on since ALY-113); the seeding of the Al Noor demo
+    # shop itself writes no catalog row (the live databases got it from migration 0032).
+    assert get_settings().catalog_for_new_shops is True
     assert scalar("select count(*) as n from tenant_modules where tenant_id = $1 "
                   "and module_key = 'catalog'", DEMO_TENANT_ID) == 0
     assert not any("catalog" in presets.PRESET_BY_KEY[s.kind].modules for s in SHOPS)

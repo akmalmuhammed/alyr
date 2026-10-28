@@ -175,6 +175,8 @@ def test_every_message_has_both_languages_and_fills_in_its_details(lang):
     sample = {
         "value": "abc", "max": 5, "max_tags": 20, "low": 1, "high": 9, "rows": "4, 5", "limit": 7,
         "other": "Tea", "start": "=", "group": "unit", "message": "m", "message_ar": "م",
+        "detail": "Concentration must be one of the choices.",
+        "detail_ar": "التركيز يجب أن يكون من الخيارات.",
     }
     for code in import_words.MESSAGES:
         found = import_words.issue(code, "price", **sample)

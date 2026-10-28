@@ -214,7 +214,7 @@ def test_formula_injection_everything_a_spreadsheet_could_run_is_neutralised_on_
             for value in r:
                 if isinstance(value, str) and value:
                     assert not value.startswith(dangerous), (fmt, value)
-        names_out = {r[1] for r in rows[1:]}
+        names_out = {r[columns.ORDER.index("name")] for r in rows[1:]}
         assert "'=1+1" in names_out and "'@SUM(1,1)" in names_out and "Plain" in names_out
     with zipfile.ZipFile(io.BytesIO(client.get("/api/items/export").content)) as z:
         sheet_xml = z.read("xl/worksheets/sheet1.xml").decode()

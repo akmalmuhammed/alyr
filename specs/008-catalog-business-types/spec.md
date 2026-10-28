@@ -1,8 +1,8 @@
 # Spec 008: Business-type templates for the Catalog (what each type of business starts with)
 
-Status: built in ALY-107 (package 6 of the Catalog, ALY-101). Decision: D-039 ("As built (ALY-107)"), with D-031 (self-serve onboarding and its starting setups per type). The engine is `specs/001-catalog-engine/spec.md`, the screens `specs/002-catalog-screens/spec.md`, price groups and SKU `specs/003-price-groups-and-sku/spec.md`, WhatsApp `specs/004-catalog-whatsapp/spec.md`. **This page is what the import and export (ALY-108), the customer order page (ALY-112) and the reports (ALY-109) read** to learn what a shop's type calls its Catalog and how it is laid out: the section "For the other packages" lists the fields and says which are stable.
+Status: built in ALY-107 (package 6 of the Catalog, ALY-101). **Superseded in part by `specs/012-feature-engine/spec.md` (ALY-148):** a type is now one built-in *template* of the feature engine; the four layout flags and `report_lines` below were declared per type and never read, and are replaced by the shop's features (every type starts with the four on, which is what the page always did; the report's lines follow the features). Where this page and spec 011 differ, spec 011 is true. Decision: D-039 ("As built (ALY-107)"), with D-031 (self-serve onboarding and its starting setups per type). The engine is `specs/001-catalog-engine/spec.md`, the screens `specs/002-catalog-screens/spec.md`, price groups and SKU `specs/003-price-groups-and-sku/spec.md`, WhatsApp `specs/004-catalog-whatsapp/spec.md`. **This page is what the import and export (ALY-108), the customer order page (ALY-112) and the reports (ALY-109) read** to learn what a shop's type calls its Catalog and how it is laid out: the section "For the other packages" lists the fields and says which are stable.
 
-**Hidden until go-live, by one setting.** Nothing here shows until `Settings.catalog_for_new_shops` (`ALYR_CATALOG_FOR_NEW_SHOPS`, default **false**) is switched on, which is the go-live sweep's one step (ALY-113). With it off, onboarding of every type behaves exactly as before the Catalog: no `catalog` module, no samples, no categories, no starting values, and the three types that exist only for the Catalog (bakery, grocery, fashion) are not offered. With it on, every business created from then on gets its type's catalog. It decides for new businesses only: it never switches anything on for a shop that exists. Nothing on any screen says "coming" or "beta" (a test reads the words).
+**On since the go-live sweep (ALY-113 part 1, 18 Oct 2026), by one setting.** `Settings.catalog_for_new_shops` (`ALYR_CATALOG_FOR_NEW_SHOPS`) now defaults to **true**; set to false, onboarding of every type behaves exactly as before the Catalog: no `catalog` module, no samples, no categories, no starting values, and the three types that exist only for the Catalog (bakery, grocery, fashion) are not offered. With it on, every business created from then on gets its type's catalog. The setting decides for new businesses only; the shops that already existed got the module from migration 0032 (every business except travel and documents, and `orders` for a wholesaler), and the back office can switch it off for one business. Nothing on any screen says "coming" or "beta" (`tests/test_no_unfinished_wording.py` reads the words). Every sentence of `gets` was proved on the finished pages in a real browser (`scripts/golive-truth-check.mjs`); three were corrected and are written as they now stand.
 
 ## What a type brings
 
@@ -11,11 +11,11 @@ Status: built in ALY-107 (package 6 of the Catalog, ALY-101). Decision: D-039 ("
 | Type (key) | The section is called | A new item runs out as | Low stock at | A sold-out item on the order page | Alerts on | Order page layout | Starts with |
 |---|---|---|---|---|---|---|---|
 | Restaurant and café (`restaurant`) | **Menu** «القائمة» | on or off (`switch`) | 3 | greyed | sold out | `menu` | 4 categories, 6 sample dishes: sizes and extras, halal and vegetarian tags |
-| Bakery and home kitchen (`bakery`, new) | **Menu** | a number each day (`daily_limit`), ordered 1 day ahead before 18:00 | 3 | greyed | low stock, sold out | `menu` with a pickup date | 5 categories, 6 samples: a cake with two sizes and daily limits, a made-to-order cake, savouries, pastries, sweets, bread |
-| Grocery and baqala (`grocery`, new) | **Products** «المنتجات» | counted (`count`) | 10 | left out | low stock, sold out | `list` with quick quantity | 5 categories, 6 samples by kilo, piece and pack |
+| Bakery and home kitchen (`bakery`, new) | **Menu** | a number each day (`daily_limit`), ordered 1 day ahead before 18:00 | 3 | greyed | low stock, sold out | `menu` | 5 categories, 6 samples: a cake with two sizes and daily limits, a made-to-order cake, savouries, pastries, sweets, bread |
+| Grocery and baqala (`grocery`, new) | **Products** «المنتجات» | counted (`count`) | 10 | left out | low stock, sold out | `list` | 5 categories, 6 samples by kilo, piece and pack |
 | Fashion and gifts (`fashion`, new) | **Products** | counted | 2 | greyed | low stock, sold out | `grid` | 5 categories, 6 samples: sizes and colours each with its own stock, a pre-order gift box |
 | Shop and retail (`shop`) | **Products** | counted | 5 | greyed | low stock, sold out | `grid` | 4 categories, 6 samples, some with sizes |
-| Wholesale and trading (`wholesale`) | **Price list** «قائمة الأسعار» | counted, sold by the pack | 20 | greyed | low stock, sold out | `table` with quick quantity, "same as last order", the SKU | 4 categories, 6 samples with pack sizes and minimum orders; **also the `orders` module**, so customers have an order page |
+| Wholesale and trading (`wholesale`) | **Price list** «قائمة الأسعار» | counted, sold by the pack | 20 | greyed | low stock, sold out | `table` | 4 categories, 6 samples with pack sizes and minimum orders; **also the `orders` module**, so customers have an order page |
 | Salon, spa, clinic, home services | **Products** (optional) | on or off | 3 | greyed | none | `grid` | 1 to 2 categories, 2 to 3 samples of products sold at the counter |
 | Travel and documents | none | | | | | | no catalog: no module, no screen, no navigation entry, no mention |
 
@@ -45,13 +45,12 @@ Additions only; nothing was renamed or removed.
   "type": "bakery",
   "section": {"name": "Menu", "name_ar": "القائمة", "sub": "...", "sub_ar": "..."},
   "optional": false,
-  "layout": {"style": "menu", "pickup_date": true, "quick_quantity": false, "same_as_last": false, "show_sku": false},
+  "layout": {"style": "menu", "pickup_date": true, "quick_quantity": true, "same_as_last": true, "show_sku": true},
   "sold_out": "grey",
   "new_item": {"rule": "daily_limit", "unit": "piece", "lead_days": 1, "cutoff": "18:00"},
   "low_stock_at": 3,
   "alerts": {"low_stock": true, "sold_out": true},
   "focus": ["schedule"],
-  "report_lines": ["make_tomorrow", "sold_out_now", "top_items"],
   "samples": 6
 }
 ```
@@ -61,13 +60,13 @@ Additions only; nothing was renamed or removed.
 | `type` | the shop's business type, or `""` | all |
 | `section` | what the shop calls its Catalog, with the line under the title; a shop with no type of its own gets "Catalog" | ALY-108 (the template's name and sheet titles), ALY-112 (the page's heading), the workspace |
 | `layout.style` | `menu` photos by category with the dish's options, `grid` photo grid, `list` compact rows, `table` a table | ALY-112 |
-| `layout.pickup_date` | the customer is asked for the day the order is for (items ordered for a date) | ALY-112 |
-| `layout.quick_quantity`, `same_as_last`, `show_sku` | a plus and minus on each row; "same as last order" one tap away; the code beside the name | ALY-112 |
+| `layout.pickup_date` | the customer is asked for the day the order is for (items ordered for a date); a feature, on for every type (ALY-148) | ALY-112 |
+| `layout.quick_quantity`, `same_as_last`, `show_sku` | a plus and minus on each row; "same as last order" one tap away; the code beside the name; features, on for every type, and read by the order page (ALY-148) | ALY-112 |
 | `sold_out` | `grey`: a sold-out item stays visible, greyed; `hide`: it is left out. The shop's own setting | ALY-112 |
 | `new_item` | how a new item starts: its rule, what it is sold by, and a bakery's notice and cutoff (`lead_days` and `cutoff` are null unless the shop's new-item rule is the type's own) | the item form |
 | `low_stock_at`, `alerts` | the starting values, as the shop has them now | settings |
 | `focus` | the folded parts of the item form that start open on a new item: `options`, `schedule`, `variants`, `groups` | the item form |
-| `report_lines` | what the weekly report should say for this type (`sold_out_now`, `top_items`, `never_ordered`, `make_tomorrow`, `reorder`, `low_stock`, `back_in_stock`, `fast_movers`, `dead_stock`, `bookings_only`). **Nothing reads it yet**; it is for ALY-109 | ALY-109 |
+| `report_lines` | removed (ALY-148): it was never read. The report's lines follow the shop's features (`modules/items/report.py` `shown_lines`) | |
 | `samples` | how many items are still samples | the list |
 
 `PUT /api/items/setup` (owners and admins) changes what the type started the shop with and nothing else: `{"sold_out": "grey"|"hide", "new_item_rule": "always"|"switch"|"count"|"daily_limit", "alerts": {"low_stock": bool, "sold_out": bool}}`; only what is sent changes; an unknown value is refused with 422.
@@ -114,4 +113,4 @@ Not checked: a real phone and its keyboard; the Arabic by a native speaker (ALY-
 * **Import and export (ALY-108)**: read `section.name`/`name_ar` for the template's name, `layout.show_sku` to put SKU, pack size and minimum order first, `new_item` for the default rule and unit of a row that leaves them empty, and the type's starting categories (`GET /api/onboarding/state` `catalog.starting_categories`, or `GET /api/items/categories`). An imported item is never a sample.
 * **The order page (ALY-112)**: read `catalog` on `GET /api/store/{slug}`: the heading, the layout style and its flags, and `sold_out`. A sample is never in `products` or `unavailable` (they list live items only).
 * **Reports and alerts (ALY-109)**: `report_lines` per type; the two alerts are the owner's switches (`shop_settings.alert_low_stock`, `alert_sold_out`; `template.alert_on`). A sample is a draft, so it is out of every count of live items.
-* **The go-live sweep (ALY-113)**: flip `ALYR_CATALOG_FOR_NEW_SHOPS`; check the order-page sentences in `gets`; decide for shops that exist (`template.apply`).
+* **The go-live sweep (ALY-113), done in part 1**: `ALYR_CATALOG_FOR_NEW_SHOPS` is on; the order-page sentences in `gets` were checked in a browser; the shops that exist got the module from migration 0032 (the starting values, categories and samples of `template.apply` are for new shops only, and no screen applies them to an existing one).

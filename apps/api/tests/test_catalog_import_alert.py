@@ -15,7 +15,16 @@ from catalog_wa import (  # noqa: F401  (the autouse fixture is used by name)
     catalog_module_on,
     window_closed,
 )
-from test_catalog_alerts import QATAR, midday, open_window, sell, told  # noqa: F401
+from test_catalog_alerts import (  # noqa: F401
+    QATAR,
+    TOMORROW,
+    TONIGHT,
+    at,
+    midday,
+    open_window,
+    sell,
+    told,
+)
 from test_catalog_import import apply_import, by_name, do_import, preview_of, table, xlsx_of
 from test_consent import owner_sql
 from test_items import on_shop
@@ -135,15 +144,15 @@ def test_outside_the_managers_window_nothing_is_sent_and_nothing_is_recorded(cli
 def test_at_night_it_waits_for_the_morning_and_says_so_once(client, monkeypatch):
     open_window()
     shelf(client)
-    night = datetime(2026, 10, 20, 23, 30, tzinfo=QATAR)
+    night = at(TONIGHT, 23, 30)
     monkeypatch.setattr(alerts, "utc_now", lambda: night)
     done = recount(client, Alert_Dates=3, Alert_Figs=0)
     assert told(client) == []
     [job] = owner_sql(
         "select run_at from jobs where kind = 'catalog.import_alert' and status = 'queued'"
     )
-    assert job["run_at"].astimezone(QATAR) == datetime(2026, 10, 21, 7, 0, tzinfo=QATAR)
-    morning = datetime(2026, 10, 21, 7, 30, tzinfo=QATAR)
+    assert job["run_at"].astimezone(QATAR) == at(TOMORROW, 7, 0)
+    morning = at(TOMORROW, 7, 30)
     import_id = UUID(done["id"])
     assert on_shop(client, ImportAlertAt(client, morning).check, import_id) == 1
     assert [m["body"] for m in told(client)] == ["After your import, 2 items are low or sold out."]
@@ -152,11 +161,11 @@ def test_at_night_it_waits_for_the_morning_and_says_so_once(client, monkeypatch)
 def test_an_import_undone_before_the_morning_says_nothing(client, monkeypatch):
     open_window()
     shelf(client)
-    night = datetime(2026, 10, 20, 23, 30, tzinfo=QATAR)
+    night = at(TONIGHT, 23, 30)
     monkeypatch.setattr(alerts, "utc_now", lambda: night)
     done = recount(client, Alert_Dates=3)
     assert client.post("/api/items/import/undo").status_code == 200
-    morning = datetime(2026, 10, 21, 7, 30, tzinfo=QATAR)
+    morning = at(TOMORROW, 7, 30)
     import_id = UUID(done["id"])
     assert on_shop(client, ImportAlertAt(client, morning).check, import_id) is None
     assert told(client) == []

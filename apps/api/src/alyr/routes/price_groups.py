@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 
 from alyr.core import team
 from alyr.core.auth import Staff
-from alyr.modules.items import access, groups
+from alyr.modules.items import access, features, groups
 from alyr.modules.items.service import ItemError
 from alyr.routes.deps import current_staff
 
@@ -32,9 +32,10 @@ class CustomerGroup(BaseModel):
 
 
 def _fail(error: ItemError) -> HTTPException:
-    return HTTPException(
-        status_code=422, detail={"code": error.code, "message": str(error)}
-    )
+    detail = {"code": error.code, "message": str(error)}
+    if getattr(error, "message_ar", None):
+        detail["message_ar"] = error.message_ar
+    return HTTPException(status_code=422, detail=detail)
 
 
 @router.get("")
@@ -51,7 +52,10 @@ async def add_group(
     access.require_manager(staff)
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
-            return {"group": await groups.create_group(conn, body.name, body.name_ar)}
+            await features.require(conn, "price_groups")  # a new group needs its feature (ALY-148)
+            return {"group": await groups.create_group(
+                conn, body.name, body.name_ar, team.actor_of(staff)
+            )}
     except ItemError as error:
         raise _fail(error) from error
 
@@ -67,6 +71,8 @@ async def set_customer_group(
     access.require_manager(staff)
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            if body.group_id is not None:  # (back to the normal price is always allowed)
+                await features.require(conn, "price_groups")
             group = await groups.set_customer_group(
                 conn, contact_id, body.group_id, team.actor_of(staff)
             )
@@ -84,7 +90,9 @@ async def rename_group(
     access.require_manager(staff)
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
-            group = await groups.rename_group(conn, group_id, body.name, body.name_ar)
+            group = await groups.rename_group(
+                conn, group_id, body.name, body.name_ar, team.actor_of(staff)
+            )
     except ItemError as error:
         raise _fail(error) from error
     if group is None:

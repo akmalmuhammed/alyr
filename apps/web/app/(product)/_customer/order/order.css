@@ -123,6 +123,11 @@ html.ox-locked { overflow: hidden; }
 .ox-tags { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .ox-tags li { padding: 3px 10px; border-radius: 12px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair) inset; font-size: var(--ui-small); color: var(--ink-2); }
 .ox-meta { margin: 0; font-size: var(--ui-small); color: var(--ink-2); }
+.ox-fieldlist { margin: 0; display: grid; gap: 6px; }
+.ox-fieldlist div { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: var(--ui-small); }
+.ox-fieldlist dt { color: var(--ink-2); }
+.ox-fieldlist dd { margin: 0; color: var(--ink); font-weight: 600; }
+.ox-opt-fields { display: block; font-size: var(--ui-caption); font-weight: 400; color: var(--ink-2); }
 .ox-meta:empty { display: none; }
 
 /* sizes and choices: the whole row is the target, and a missing one is marked and named */
@@ -169,7 +174,7 @@ html.ox-locked { overflow: hidden; }
 .ox-alts { grid-column: 1 / -1; display: grid; gap: 6px; }
 .ox-alt { min-height: 44px; width: 100%; padding: 6px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 0; border-radius: 12px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair-2) inset; font-size: var(--ui-small); font-weight: 500; text-align: start; }
 .ox-lqty { align-self: center; }
-.ox-lqty .ox-step button { width: 40px; height: 44px; }
+.ox-lqty .ox-step button { width: 44px; height: 44px; }
 .ox-sum { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: var(--ui-body-sm); color: var(--ink-2); }
 .ox-total { font-size: var(--ui-title); font-weight: 600; color: var(--ink); letter-spacing: -0.02em; }
 .ox-field.days { margin-top: 4px; }
@@ -193,13 +198,65 @@ html.ox-locked { overflow: hidden; }
 .ox-wprice { grid-area: price; display: flex; align-items: baseline; gap: 6px; font-size: var(--ui-body); font-weight: 600; justify-self: end; }
 .ox-wqty { grid-area: qty; justify-self: end; }
 .ox-wrow.off .ox-wopen, .ox-wrow.off .ox-wprice { color: var(--ink-2); }
+@media (max-width: 39.99rem) {
+  .ox-wtable.nosku .ox-wrow { grid-template-areas: "name price" "name qty"; }
+}
 @media (min-width: 40rem) {
   .ox-whead, .ox-wrow { display: grid; grid-template-columns: 7rem minmax(0, 1fr) 8rem 9.5rem; grid-template-areas: none; gap: 12px; }
   .ox-whead { padding: 10px 16px; font-size: var(--ui-caption); font-weight: 600; color: var(--ink-2); text-transform: none; border-bottom: 1px solid var(--hair); }
   .ox-wsku, .ox-wname, .ox-wprice, .ox-wqty { grid-area: auto; }
   .ox-whead > :nth-child(3), .ox-whead > :nth-child(4) { justify-self: end; }
+  .ox-wtable.nosku .ox-whead, .ox-wtable.nosku .ox-wrow { grid-template-columns: minmax(0, 1fr) 8rem 9.5rem; }
+  .ox-wtable.nosku .ox-whead > :nth-child(2) { justify-self: end; }
   .ox-dialog { margin: auto; max-width: 34rem; max-height: 86dvh; border-radius: 22px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .ox-add, .ox-step button { transition: none; }
 }
+
+/* ── discount codes and what came off (ALY-150; only while the shop has discounts on) ── */
+.ox-coupon { display: grid; gap: 8px; }
+.ox-coupon label { font-size: var(--ui-body); font-weight: 600; }
+.ox-coupon-row { display: flex; gap: 8px; align-items: stretch; }
+.ox-coupon-row .cx-input { flex: 1; min-width: 0; height: 48px; font-size: var(--ui-input); letter-spacing: 0.04em; text-transform: uppercase; }
+.ox-coupon.bad .cx-input { box-shadow: 0 0 0 1.5px var(--bad) inset; }
+.ox-apply { flex: none; width: auto; height: 48px; padding-inline: 20px; }
+.ox-codes { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.ox-codechip { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding-inline: 14px 2px; border-radius: 22px; background: var(--volt-wash); color: var(--volt-ink); font-size: var(--ui-body-sm); }
+.ox-codechip b { font-weight: 600; letter-spacing: 0.04em; overflow-wrap: anywhere; }
+.ox-chipoff { font-weight: 500; white-space: nowrap; }
+.ox-codechip button { width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: inherit; }
+.ox-codechip button svg { width: 16px; height: 16px; }
+.ox-brk { display: grid; gap: 6px; padding-top: 12px; border-top: 1px solid var(--hair); }
+.ox-sum.off > span { min-width: 0; display: grid; gap: 1px; overflow-wrap: anywhere; }
+.ox-sum.off small { font-size: var(--ui-caption); color: var(--ink-2); }
+.ox-lafter { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; font-size: var(--ui-body-sm); }
+.ox-lafter s { color: var(--ink-2); }
+.ox-offers { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: var(--ui-body-sm); color: var(--ink-2); }
+.ox-offers li { overflow-wrap: anywhere; }
+.ox-discount-line { margin: 0; font-size: var(--ui-body-sm); color: var(--ink-2); }
+
+/* ── item codes and Order on WhatsApp (ALY-136) ── */
+.ox-codeline { font-size: var(--ui-caption); font-weight: 500; color: var(--ink-2); }
+.ox-codeline .num { font-family: var(--font-ui-mono); letter-spacing: 0.02em; color: var(--ink); }
+.ox-dfoot.wa { flex-wrap: wrap; }
+.ox-dfoot.wa .ox-addbtn { flex: 1 1 11rem; }
+.ox-dfoot.wa .ox-listbtn { flex: 1 1 100%; justify-content: center; text-align: center; text-decoration: underline; }
+.ox-dfoot.wa .ox-hint { flex: 1 1 100%; margin: 0; }
+.ox-seelist { justify-self: center; }
+.ox-lqty.full .ox-step button { width: 44px; }
+.cx-bar-in .ox-quiet.center { margin: 0; }
+.ox-lact .ox-link { min-width: 44px; }
+
+/* Sold by weight or volume (ALY-149): "per kg" beside a price, a quantity that carries its unit, quick amounts
+   and a typed amount in the item sheet, and the line's own total in the review. */
+.ox-per { font-size: var(--ui-small); font-weight: 400; color: var(--ink-2); }
+.ox-step .ox-stepnum { min-width: 3.4ch; padding-inline: 4px; white-space: nowrap; }
+.ox-quick { display: flex; flex-wrap: wrap; gap: 8px; }
+.ox-chip { min-height: 44px; min-width: 44px; padding-inline: 14px; border: 0; border-radius: 12px; background: var(--raise); color: var(--ink); box-shadow: 0 0 0 1px var(--hair-2) inset; font-weight: 600; font-size: var(--ui-body-sm); cursor: pointer; }
+.ox-chip.on { box-shadow: 0 0 0 2px var(--ink) inset; background: var(--card); }
+.ox-chip:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.ox-amount { display: grid; gap: 4px; font-size: var(--ui-small); color: var(--ink-2); }
+.ox-amount .cx-input { height: 48px; }
+.ox-field.bad .ox-amount .cx-input { box-shadow: 0 0 0 2px var(--bad) inset; }
+.ox-ltotal { display: block; margin-top: 4px; text-align: end; font-size: var(--ui-body-sm); font-weight: 600; }

@@ -22,17 +22,27 @@ How a file is read
 import hashlib
 import json
 import re
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import date, datetime, time
+from decimal import Decimal
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
+from alyr import capabilities
 from alyr.core.media import parse_photo_ref
 from alyr.core.normalise import fmt_qar, has_arabic
-from alyr.modules.items import columns, import_words, service, values
+from alyr.modules.items import columns, import_words, qty, service, values
+from alyr.modules.items import costs as costs_module
+from alyr.modules.items import fields as owner_fields
 from alyr.modules.items.import_words import Issue, issue
 from alyr.modules.items.values import CellError
 from alyr.modules.items.xlsx import Sheet
+
+# May the person asking see and import costs (an owner or admin of a shop that keeps costs)? The
+# import routes set it for each request (`routes/items_import.py`); the plan reads it, so a
+# cost never reaches a preview that someone else may open (ALY-150).
+COSTS: ContextVar[bool] = ContextVar("import_costs", default=False)
 
 MAX_DATA_ROWS = 3000
 MAX_VARIANTS = 100
@@ -75,6 +85,18 @@ class Snapshot:
     assets: dict[str, UUID] = field(default_factory=dict)
     # Photos already on the items that exist, by item ID.
     attached: dict[UUID, set[UUID]] = field(default_factory=dict)
+    # The columns the shop's features allow (None: all of them). A column of a feature the shop
+    # has switched off is read, noted and left out (ALY-148).
+    allowed: frozenset[str] | None = None
+    # The shop's own fields that are active (ALY-148): their columns are read too.
+    fields: list[dict] = field(default_factory=list)
+    # "Sold by weight or volume" is on: a unit other than the kilo, or a fraction, may be added.
+    decimal_ok: bool = True
+    # The costs kept, when the file may carry them (ALY-150: an owner or admin, a shop that keeps
+    # costs); None otherwise, and the cost column is then left out. `cost_note` says why when the
+    # shop does keep costs and this person may not import them.
+    costs: dict | None = None
+    cost_note: str = ""
 
 
 @dataclass
@@ -98,6 +120,7 @@ class VariantOp:
     stock: int | None
     per_day: int | None
     sku: str | None = None
+    custom: dict | None = None  # the owner's own fields for this size (what the file changes)
 
 
 @dataclass
@@ -112,6 +135,9 @@ class ItemPlan:
     variants: list[VariantOp] = field(default_factory=list)
     photos: list[dict] = field(default_factory=list)  # {"zip": entry} or {"asset": id}
     diff: list[dict] = field(default_factory=list)    # what an update changes, for the preview
+    # What the cost column sets: [{row, variant, variant_id, cost}] (dirhams). Only ever filled
+    # for a person who may see costs.
+    costs: list[dict] = field(default_factory=list)
     draft: bool = False
     stock_moves: int = 0
 
@@ -129,7 +155,8 @@ class ItemPlan:
             "photos": len(self.photos), "stock_moves": self.stock_moves,
             "price": price, "price_text": fmt_qar(price) if price else None,
             "category": (self.data.get("category") or None) if creating else None,
-            "diff": self.diff,
+            "diff": [d for d in self.diff if COSTS.get() or d["column"] != "cost"],
+            **({"costs": self.costs} if self.costs and COSTS.get() else {}),
             "issues": [{**import_words.view(n), "row": row} for row, n in self.notes],
         }
 
@@ -138,7 +165,7 @@ class ItemPlan:
         return {
             "rows": self.rows, "action": self.action, "target": str(self.target),
             "data": self.data, "variants": [vars(v) for v in self.variants],
-            "photos": self.photos, "diff": self.diff,
+            "photos": self.photos, "diff": self.diff, "costs": self.costs,
             "notes": [(row, n.code, n.args) for row, n in self.notes],
         }
 
@@ -199,7 +226,10 @@ def _blank(raw: object) -> bool:
     return raw is None or (isinstance(raw, str) and not raw.strip())
 
 
-def find_header(sheet: Sheet) -> tuple[int, dict[int, str], list[Issue]]:
+def find_header(
+    sheet: Sheet, allowed: frozenset[str] | None = None, own: dict[str, str] | None = None,
+    cost_note: str = "",
+) -> tuple[int, dict[int, str], list[Issue]]:
     """The row that holds the column names, which column is which, and notes about columns
     that are not understood. Looks in the first rows, so a file may have a title above."""
     best: tuple[int, dict[int, str]] | None = None
@@ -207,6 +237,8 @@ def find_header(sheet: Sheet) -> tuple[int, dict[int, str], list[Issue]]:
         found: dict[int, str] = {}
         for col, cell in enumerate(row):
             key = columns.column_for(cell) if not _blank(cell) else None
+            if not key and own and not _blank(cell):
+                key = own.get(values.squash(values.as_text(cell)))
             if key:
                 found[col] = key
         if {"name", "name_ar", "id"} & set(found.values()) and (
@@ -227,6 +259,17 @@ def find_header(sheet: Sheet) -> tuple[int, dict[int, str], list[Issue]]:
             notes.append(issue("duplicate_column", value=values.as_text(sheet.rows[index][col])))
             continue
         seen.add(key)
+        if allowed is not None and not key.startswith("custom:") and key not in allowed:
+            if key == "cost" and cost_note == "owner_only":
+                notes.append(issue("column_owner_only", key,
+                                   value=values.as_text(sheet.rows[index][col])[:60]))
+                continue
+            cap = capabilities.BY_KEY[columns.NEEDS[key].split("|")[0]]
+            notes.append(issue(
+                "column_off", key, feature=cap.name.en, feature_ar=cap.name.ar,
+                value=values.as_text(sheet.rows[index][col])[:60],
+            ))
+            continue
         mapping[col] = key
     unknown = [
         values.as_text(c) for col, c in enumerate(sheet.rows[index])
@@ -271,7 +314,18 @@ def _add(parsed: Parsed, code: str, column: str | None = None, **args: object) -
     parsed.notes.append((parsed.row, issue(code, column, **args)))
 
 
-def parse_row(raw: RawRow) -> Parsed:
+def _parse_custom(field_: dict, cell: object):
+    """A cell of one of the shop's own fields, as the value it holds, or a `FieldError`."""
+    if field_["kind"] == "date" and not isinstance(cell, str):
+        cell = values.parse_date(cell)
+        cell = cell.isoformat() if cell else None
+    elif field_["kind"] == "date":
+        parsed = values.parse_date(cell)
+        cell = parsed.isoformat() if parsed else cell
+    return owner_fields.clean_value(field_, cell)
+
+
+def parse_row(raw: RawRow, defs: dict[str, dict] | None = None) -> Parsed:
     parsed = Parsed(raw.number)
     for key in raw.formulas:
         value = raw.cells.get(key)
@@ -280,6 +334,20 @@ def parse_row(raw: RawRow) -> Parsed:
         else:
             _add(parsed, "formula_value", key, value=values.as_text(value)[:60])
     for key, cell in raw.cells.items():
+        if key.startswith("custom:"):
+            found_field = (defs or {}).get(key[7:])
+            if found_field is None:
+                continue
+            try:
+                value = _parse_custom(found_field, cell)
+            except (owner_fields.FieldError, CellError) as error:
+                en = str(error) if isinstance(error, owner_fields.FieldError) else str(error.code)
+                _add(parsed, "custom_bad", None, detail=en,
+                     detail_ar=getattr(error, "message_ar", en))
+                continue
+            if value is not None:
+                parsed.values[key] = value
+            continue
         column = columns.BY_KEY[key]
         try:
             value = _parse_cell(column, cell)
@@ -311,6 +379,8 @@ def _parse_cell(column: columns.Column, cell: object) -> object:
             return UUID(text)
         except ValueError as error:
             raise CellError("bad_id", value=text[:60]) from error
+    if kind == "readonly":
+        return None  # the item's code (ALY-136): in the file to be read, never to be written
     if kind == "text":
         text = values.clean(cell, multiline=key.startswith("description"))
         if len(text) > LIMITS[key]:
@@ -321,11 +391,15 @@ def _parse_cell(column: columns.Column, cell: object) -> object:
     if kind == "signed_money":
         return values.parse_money(cell, signed=True)
     if kind == "whole":
+        return values.parse_int(cell, 0, 99_999)  # the item code column is read only
+    if kind == "quantity":
+        # A whole number, or up to three decimals for something sold by weight or volume; the
+        # item's unit decides whether a fraction is allowed (`_check_quantities`).
         low, high = {
-            "pack_size": (1, 100_000), "min_order": (1, 999), "stock": (0, 1_000_000),
-            "low_stock": (0, 100_000), "per_day": (0, 1_000_000),
+            "pack_size": (Decimal("0.001"), 100_000), "min_order": (Decimal("0.001"), 999),
+            "stock": (0, 1_000_000), "low_stock": (0, 100_000), "per_day": (0, 1_000_000),
         }[key]
-        return values.parse_int(cell, low, high)
+        return values.parse_qty(cell, low, high)
     if kind == "yesno":
         return values.parse_bool(cell)
     if kind == "date":
@@ -427,7 +501,10 @@ def build(
     an item list at all (`no_header`, `no_items`, `too_many_rows`)."""
     mode = options.get("on_duplicate", "create")
     plan = Plan(options={"on_duplicate": mode})
-    header, mapping, notes = find_header(sheet)
+    own = columns.custom_columns(snapshot.fields)
+    header, mapping, notes = find_header(
+        sheet, snapshot.allowed, columns.custom_index(own), snapshot.cost_note
+    )
     if header < 0:
         raise ValueError("no_header")
     plan.notes.extend(notes)
@@ -450,9 +527,11 @@ def build(
     cat_seen: dict[str, str] = {}
 
     blocks = group_rows(rows)
+    defs = owner_fields.by_key(snapshot.fields)
     for block in blocks:
         item = _plan_item(
             block, mode, snapshot, by_name, by_id, known_categories, claimed, zip_view, skus,
+            defs,
         )
         # The same name twice in one file is warned about, never merged.
         if item.action in ("create", "update") and item.name:
@@ -519,9 +598,10 @@ def build(
 def _plan_item(
     block: list[RawRow], mode: str, snapshot: Snapshot, by_name: dict, by_id: dict,
     known_categories: dict[str, str], claimed: dict[UUID, int], zip_view: ZipView | None,
-    skus: "Skus",
+    skus: "Skus", defs: dict[str, dict] | None = None,
 ) -> ItemPlan:
-    parsed = [parse_row(r) for r in block]
+    defs = defs or {}
+    parsed = [parse_row(r, defs) for r in block]
     plan = ItemPlan(rows=[r.number for r in block])
     for p in parsed:
         plan.notes.extend(p.notes)
@@ -553,8 +633,14 @@ def _plan_item(
     if (_squash(name), _squash(name_ar)) in columns.EXAMPLE_PAIRS:
         plan.notes.append((first.row, issue("example_row")))
 
+    # The owner's own fields: the item's from the first row that has them, each size's from its row.
+    item_custom = {
+        k: v for k, f in defs.items() if f["applies_to"] == "item" and not f["archived"]
+        for v in [pick(f"custom:{k}")] if v is not None
+    }
+
     # Sizes and colours
-    variants = _variants(block, parsed, plan, merged)
+    variants = _variants(block, parsed, plan, merged, defs)
     if plan.errors:
         plan.action = "error"
         return plan
@@ -602,15 +688,19 @@ def _plan_item(
         plan.target = target
 
     if entry is None:
-        _create(plan, merged, variants, clear_sale, first, known_categories, snapshot)
+        _create(plan, merged, variants, clear_sale, first, known_categories, snapshot,
+                item_custom, defs)
     else:
-        _update(plan, entry, merged, variants, clear_sale, first, known_categories, snapshot)
+        _update(plan, entry, merged, variants, clear_sale, first, known_categories, snapshot,
+                item_custom, defs)
     _check_skus(plan, parsed, skus)
     if plan.errors:
         plan.action = "error"
         return plan
+    _costs(plan, parsed, entry, snapshot)
     _photos(plan, parsed, snapshot, zip_view)
-    if plan.action == "update" and not plan.diff and not plan.photos and not plan.stock_moves:
+    if plan.action == "update" and not plan.diff and not plan.photos and not plan.stock_moves \
+            and not plan.costs:
         plan.action = "unchanged"
         plan.notes.append((first.row, issue("nothing_to_change")))
     return plan
@@ -619,7 +709,8 @@ def _plan_item(
 # ── sizes and colours ─────────────────────────────────────
 
 def _variants(
-    block: list[RawRow], parsed: list[Parsed], plan: ItemPlan, merged: dict
+    block: list[RawRow], parsed: list[Parsed], plan: ItemPlan, merged: dict,
+    defs: dict[str, dict] | None = None,
 ) -> list[VariantOp]:
     ops: list[VariantOp] = []
     first = parsed[0].values
@@ -639,9 +730,13 @@ def _variants(
                 )
                 continue
             seen[key] = p.row
+        mine = {
+            k: p.values[f"custom:{k}"] for k, f in (defs or {}).items()
+            if f["applies_to"] == "variant" and f"custom:{k}" in p.values
+        }
         ops.append(VariantOp(
             p.row, name or name_ar, name_ar, p.values.get("price_diff"), p.values.get("stock"),
-            p.values.get("per_day"), p.values.get("variant_sku"),
+            p.values.get("per_day"), p.values.get("variant_sku"), mine or None,
         ))
     if len(ops) > MAX_VARIANTS:
         plan.notes.append((block[0].number, issue("too_many_variants", max=MAX_VARIANTS)))
@@ -724,9 +819,69 @@ def _snap_category(text: str | None, known: dict[str, str]) -> str:
     return known.get(values.squash(text), text)
 
 
+def _custom_required(
+    plan: ItemPlan, row: int, defs: dict[str, dict], item_values: dict, variants: list[VariantOp],
+) -> bool:
+    """A required field of the shop with no value: noted, and the item is saved as a draft
+    (returns True), as one without a price is."""
+    short = False
+    for f in defs.values():
+        if f["archived"] or not f["required"]:
+            continue
+        if f["applies_to"] == "item":
+            gap = f["key"] not in item_values
+        else:
+            gap = any(f["key"] not in (v.custom or {}) for v in variants) if variants else True
+        if gap:
+            error = owner_fields.required_error(f)
+            plan.notes.append((row, issue(
+                "custom_missing", None, detail=str(error), detail_ar=error.message_ar)))
+            short = True
+    return short
+
+
+def _fraction(value: object) -> bool:
+    return value is not None and value != int(value)  # type: ignore[call-overload]
+
+
+def _check_quantities(
+    plan: ItemPlan, row: int, unit: str, wanted: dict, variants: list[VariantOp],
+    snapshot: Snapshot, current: dict,
+) -> None:
+    """A fraction needs a unit that is measured (kg, g, litre, ml, metre, tola), and a unit or
+    fraction the shop has not switched on ("Sold by weight or volume") cannot be added. Both are
+    errors on the item, said in the preview, so the apply never meets them (ALY-149)."""
+    keys = ("pack_size", "min_order", "low_stock")
+    fractional = [k for k in keys if _fraction(wanted.get(k))]
+    fractional += ["stock" for v in variants if _fraction(v.stock) or _fraction(v.per_day)]
+    if fractional and not qty.is_measure(unit):
+        # A counted unit (a piece, a box...) takes whole numbers: say which cell, as a whole-number
+        # column always has.
+        for k in keys:
+            if _fraction(wanted.get(k)):
+                plan.notes.append((row, issue("not_whole", k, value=qty.fmt(wanted[k]))))
+        for v in variants:
+            if _fraction(v.stock):
+                plan.notes.append((v.row, issue("not_whole", "stock", value=qty.fmt(v.stock))))
+            if _fraction(v.per_day):
+                plan.notes.append((v.row, issue("not_whole", "per_day", value=qty.fmt(v.per_day))))
+        return
+    if snapshot.decimal_ok:
+        return
+    new_unit = unit != current.get("unit", "piece") and unit not in qty.LEGACY_UNITS
+    new_fraction = any(
+        _fraction(wanted.get(k)) and wanted.get(k) != current.get(k if k != "low_stock" else
+                                                                   "low_stock_at")
+        for k in keys
+    ) or any(_fraction(v.stock) or _fraction(v.per_day) for v in variants)
+    if new_unit or new_fraction:
+        plan.notes.append((row, issue("decimal_off")))
+
+
 def _create(
     plan: ItemPlan, merged: dict, variants: list[VariantOp], clear_sale: bool, first: Parsed,
-    known: dict[str, str], snapshot: Snapshot,
+    known: dict[str, str], snapshot: Snapshot, item_custom: dict | None = None,
+    defs: dict[str, dict] | None = None,
 ) -> None:
     row = first.row
     name, name_ar = str(merged.get("name") or ""), str(merged.get("name_ar") or "")
@@ -741,6 +896,9 @@ def _create(
     plan.name, plan.name_ar = name, name_ar
 
     rule = _rule_of(merged, variants)
+    _check_quantities(
+        plan, row, str(merged.get("unit") or "piece"), merged, variants, snapshot, {}
+    )
     price = merged.get("price")
     status = str(merged.get("status") or "live")
     sale = merged.get("sale_price")
@@ -777,6 +935,8 @@ def _create(
         draft = True
     if rule == "daily_limit" and any(v.per_day is None for v in variants):
         plan.notes.append((row, issue("per_day_needed")))
+    if status == "live" and defs and _custom_required(plan, row, defs, item_custom or {}, variants):
+        draft = True
     if draft:
         status = "draft"
     plan.draft = status == "draft" and merged.get("status") != "draft"
@@ -800,6 +960,8 @@ def _create(
         plan.notes.append((row, issue("sale_dates")))
     if rule == "always":
         data["available"] = True
+    if item_custom:
+        data["custom"] = item_custom
     plan.data = data
     plan.variants = variants
     plan.stock_moves = sum(1 for v in variants if v.stock)
@@ -821,7 +983,7 @@ def _diff(plan: ItemPlan, key: str, before: object, after: object, variant: str 
 def _show(key: str, value: object) -> str:
     if value is None or value == "":
         return ""
-    if key in ("price", "sale_price", "price_diff"):
+    if key in ("price", "sale_price", "price_diff", "cost"):
         return fmt_qar(int(value))  # type: ignore[arg-type]
     if key in ("unit", "status", "rule"):
         return columns.word_for(key, str(value), "en")
@@ -834,9 +996,21 @@ def _show(key: str, value: object) -> str:
     return str(value)
 
 
+def _diff_custom(
+    plan: ItemPlan, field_: dict, before: object, after: object, variant: str = ""
+) -> None:
+    plan.diff.append({
+        "column": f"custom:{field_['key']}", "label": field_["label"] or field_["label_ar"],
+        "label_ar": field_["label_ar"] or field_["label"], "variant": variant,
+        "before": owner_fields.say(field_, before, "en"),
+        "after": owner_fields.say(field_, after, "en"),
+    })
+
+
 def _update(
     plan: ItemPlan, entry: service.Loaded, merged: dict, variants: list[VariantOp],
     clear_sale: bool, first: Parsed, known: dict[str, str], snapshot: Snapshot,
+    item_custom: dict | None = None, defs: dict[str, dict] | None = None,
 ) -> None:
     row = first.row
     item = entry.item
@@ -872,12 +1046,27 @@ def _update(
     set_("unit", "unit", merged.get("unit"))
     set_("pack_size", "pack_size", merged.get("pack_size"))
     set_("min_order", "min_order", merged.get("min_order"))
+    _check_quantities(
+        plan, row, str(changes.get("unit") or item["unit"]),
+        {"pack_size": changes.get("pack_size", item["pack_size"]),
+         "min_order": changes.get("min_order", item["min_order"]),
+         "low_stock": merged.get("low_stock")},
+        variants, snapshot, item,
+    )
     if merged.get("tags") is not None and merged["tags"] != list(item["tags"]):
         changes["tags"] = merged["tags"]
         _diff(plan, "tags", list(item["tags"]), merged["tags"])
     if "available" in merged and merged["available"] != item["available"]:
         changes["available"] = merged["available"]
         _diff(plan, "available", item["available"], merged["available"])
+
+    # The owner's own fields on the item: what the file says and the shop has not.
+    now_custom = dict(item["custom"] or {})
+    custom_changes = {k: v for k, v in (item_custom or {}).items() if now_custom.get(k) != v}
+    for k, v in custom_changes.items():
+        _diff_custom(plan, (defs or {})[k], now_custom.get(k), v)
+    if custom_changes:
+        changes["custom"] = custom_changes
 
     # Price and sale
     price = merged.get("price")
@@ -992,9 +1181,17 @@ def _update(
         if v.sku is not None and v.sku != existing["sku"]:
             _diff(plan, "variant_sku", existing["sku"], v.sku, label)
             touched = True
+        mine = {
+            k: val for k, val in (v.custom or {}).items()
+            if (existing["custom"] or {}).get(k) != val
+        }
+        for k, val in mine.items():
+            _diff_custom(plan, (defs or {})[k], (existing["custom"] or {}).get(k), val, label)
+            touched = True
         if touched:
             ops.append(VariantOp(
-                v.row, existing["name"], v.name_ar, v.price_diff, None, v.per_day, v.sku
+                v.row, existing["name"], v.name_ar, v.price_diff, None, v.per_day, v.sku,
+                mine or None,
             ))
         if v.stock is not None and v.stock != existing["on_hand"]:
             _diff(plan, "stock", existing["on_hand"], v.stock, label)
@@ -1003,9 +1200,65 @@ def _update(
     # A number each day needs a number for every size (the engine refuses a size without).
     if rule == "daily_limit" and (unnumbered_new or any(n is None for n in limits.values())):
         plan.notes.append((row, issue("per_day_needed")))
+    # A required field must not be left empty on an item that is for sale.
+    final_status = changes.get("status", item["status"])
+    if final_status == "live" and defs and (custom_changes or "status" in changes):
+        final = {**now_custom, **custom_changes}
+        for f in defs.values():
+            if f["required"] and not f["archived"] and f["applies_to"] == "item" \
+                    and f["key"] not in final:
+                error = owner_fields.required_error(f)
+                plan.notes.append((row, issue(
+                    "custom_required", None, detail=str(error), detail_ar=error.message_ar)))
     plan.variants = ops
     plan.stock_moves = moves
     plan.data = changes
+
+
+# ── cost ──────────────────────────────────────────────────
+
+def _costs(plan: ItemPlan, parsed: list[Parsed], entry: service.Loaded | None,
+           snapshot: Snapshot) -> None:
+    """The cost column (ALY-150): what each row says one unit costs. A row of a named size sets
+    that size's own cost (not when it is what the size already costs, by itself or from the
+    item); any other row sets the item's. Only for a person who may see costs: for anyone else
+    the column was left out of the file's mapping and there is nothing here."""
+    if snapshot.costs is None:
+        return
+    kept = snapshot.costs
+    item_id = entry.item["id"] if entry is not None else None
+    sizes = {
+        _squash(v["name"] or v["name_ar"]): v
+        for v in (entry.variants if entry is not None else []) if v["active"]
+        and (v["name"] or v["name_ar"])
+    }
+    named = len(parsed) > 1 or any(
+        p.values.get("variant") or p.values.get("variant_ar") for p in parsed
+    )
+    for p in parsed:
+        cost = p.values.get("cost")
+        if cost is None:
+            continue
+        name = str(p.values.get("variant") or p.values.get("variant_ar") or "")
+        if named and name:
+            existing = sizes.get(_squash(name))
+            now = costs_module.effective(kept, item_id, existing["id"]) if existing else None
+            if existing is not None and now == cost:
+                continue
+            label = existing["name"] if existing else name
+            plan.costs.append({
+                "row": p.row, "variant": label,
+                "variant_id": str(existing["id"]) if existing else None, "cost": cost,
+            })
+            if entry is not None:
+                _diff(plan, "cost", now, cost, label)
+        else:
+            now = kept.get((item_id, None)) if entry is not None else None
+            if entry is not None and now == cost:
+                continue
+            plan.costs.append({"row": p.row, "variant": "", "variant_id": None, "cost": cost})
+            if entry is not None:
+                _diff(plan, "cost", now, cost)
 
 
 # ── photos ────────────────────────────────────────────────

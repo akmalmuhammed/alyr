@@ -150,3 +150,44 @@
   .ops-toolbar .ops-field { flex: 1 1 8rem; min-width: 0; }
   .ops-meter-top b { font-size: var(--ui-heading); }
 }
+
+/* templates: the quick start, the editor, a business's change of template (ALY-148) */
+.ops-quick { display: grid; gap: 8px; padding: 18px; border-radius: 16px; background: var(--volt-wash); color: var(--volt-ink); }
+.ops-quick h2, .ops-quick p, .ops-quick ol { margin: 0; }
+.ops-quick ol { padding-inline-start: 1.3em; display: grid; gap: 4px; font-size: var(--ui-body-sm); }
+.ops-quick a { color: inherit; text-decoration: underline; }
+.ops-row-actions { white-space: nowrap; }
+.ops-row-actions .btn + .btn { margin-inline-start: 6px; }
+.ops-editor { display: grid; gap: 12px; scroll-margin-top: 16px; }
+.ops-editor h3 { margin: 6px 0 0; font-size: var(--ui-small); font-weight: 600; color: var(--ink-2); font-family: var(--font-ui-mono); text-transform: uppercase; letter-spacing: 0.06em; }
+.ops-editor h3 small { text-transform: none; letter-spacing: 0; font-family: var(--face); }
+.ops-editor textarea { padding: 10px 12px; border: 0; border-radius: 10px; background: var(--sheet); color: var(--ink); box-shadow: var(--lift); font: inherit; font-size: var(--ui-body-sm); resize: vertical; min-height: 5rem; }
+.ops-features { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr)); gap: 12px; }
+.ops-featgroup { margin: 0; padding: 12px 14px; border: 0; border-radius: 12px; background: var(--sheet); box-shadow: 0 0 0 1px var(--hair) inset; display: grid; gap: 4px; min-width: 0; }
+.ops-featgroup legend { padding: 0 6px; font-size: var(--ui-small); font-weight: 600; }
+.ops-featgroup .ops-check { align-items: flex-start; }
+.ops-featgroup .ops-check small { display: block; color: var(--ink-2); font-size: var(--ui-caption); }
+.ops .ops-tpl-table th, .ops .ops-tpl-table td small, .ops .ops-tpl small { color: var(--ink-2); }
+.ops-seeds { display: grid; gap: 10px; }
+.ops-seed { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 11rem), 1fr)); gap: 10px 12px; align-items: end; padding: 12px; border-radius: 12px; background: var(--sheet); box-shadow: 0 0 0 1px var(--hair) inset; }
+.ops-tpl { display: grid; gap: 8px; max-width: 40rem; padding: 10px; border-radius: 12px; background: var(--sheet); box-shadow: 0 0 0 1px var(--hair) inset; }
+.ops-tpl-plan ul { margin: 0; padding-inline-start: 1.2em; display: grid; gap: 3px; font-size: var(--ui-small); }
+.ops-tpl-plan p { margin: 4px 0 0; font-size: var(--ui-small); }
+
+/* The onboarding board (ALY-165): one line per step left, with its controls. */
+.ops-step { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 0; }
+.ops-step b { min-width: 160px; }
+.ops-step input { flex: 1 1 220px; min-height: 32px; padding: 0 10px; border-radius: 8px; border: 0; box-shadow: 0 0 0 1px var(--hair-2) inset; background: transparent; color: inherit; font: inherit; }
+/* A business's WhatsApp setup on the onboarding board (ALY-217). */
+.ops-wa { padding: 8px 0 12px; margin-bottom: 8px; border-bottom: 1px solid var(--hair-2); }
+.ops-wa p { margin: 0 0 6px; }
+.ops-wa ul { list-style: none; margin: 0 0 6px; padding: 0; display: grid; gap: 2px; color: var(--ink-3); font-size: var(--ui-small); }
+.ops-wa li.done { color: var(--ink-2); }
+/* A client's payment and access (ALY-212). */
+.ops-access { display: grid; gap: 8px; margin-bottom: 8px; }
+.ops-access p { margin: 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+.ops-access select, .ops-access input[type="date"] { min-height: 32px; padding: 0 8px; border-radius: 8px; border: 0; box-shadow: 0 0 0 1px var(--hair-2) inset; background: transparent; color: inherit; font: inherit; }
+
+/* The onboarding funnel (ALY-169) */
+.ops-funnel { margin: 0 0 14px; color: var(--ink-2); }
+.ops-funnel p { margin: 0 0 8px; }

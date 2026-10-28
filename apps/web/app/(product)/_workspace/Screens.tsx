@@ -2,6 +2,16 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { fmtQtyUnit, lineUnit } from "../_customer/qty";
+import { formatPrice } from "../_customer/price";
+import { OrderMargin, useOrderMargins } from "./Margin";
+import { OrderSum } from "./OrderSum";
+import { MarkPaid, PayWays } from "./OrderPay";
+import { FulfilDetails, FulfilFilters, FulfilPill, matchesFilter, type FulfilFilter } from "./OrderFulfil";
+import type { Fulfilment } from "../_customer/fulfil";
+import { DELIVERY } from "./deliveryCopy";
+import { PRICING } from "./pricingCopy";
+import "./pricing.css";
 
 type Choice = { id: string; title: string };
 type Message = {
@@ -35,15 +45,27 @@ type BookingRow = {
   id: string; number: number; service: string; when_text: string; status: string;
   customer: string; note: string; starts_at: string; assigned: Person | null;
 };
+// What an order was given off (ALY-150): only on an order that had a discount, so an order
+// without one has none of these keys and is drawn exactly as before.
+type OrderDiscount = {
+  kind: "coupon" | "auto"; code: string; name: string; name_ar: string; text: string; text_ar: string;
+  amount: number; amount_text: string; returned: boolean;
+};
 type OrderRow = {
-  id: string; number: number; status: string; payment: string; total_text: string;
-  customer: string; items: { name: string; quantity: number; line_text: string; sku?: string }[];
+  id: string; number: number; status: string; payment: string; total: number; total_text: string;
+  subtotal?: number; discount_total?: number; discounts?: OrderDiscount[];
+  // How it reaches the customer (ALY-150 part 2): only on an order made while Delivery and pickup was on.
+  fulfilment?: Fulfilment;
+  customer: string; items: { name: string; quantity: number; unit?: string; unit_shown?: boolean; line_text: string; sku?: string; discount?: number }[];
   assigned: Person | null;
   // The table the order is for, from a QR code on a table ("" for none).
   table?: string;
   // The price group the order was charged under, as named then (null for orders before groups).
   price_group?: { name: string; name_ar: string; is_default: boolean } | null;
+  // The receipt or invoice the order made, for a shop with Documents on (ALY-146).
+  document?: DocumentRef;
 };
+type DocumentRef = { id: string; kind: string; number: string; status: string };
 type PriceGroupOption = { id: string; name: string; name_ar: string; is_default: boolean };
 type InboxRow = {
   id: string; name: string; phone: string | null; username: string | null;
@@ -62,7 +84,7 @@ type Thread = {
 type SavedReply = { id: string; title: string; body: string };
 type Me = { signed_in: boolean; id: string | null; name: string; email: string; role: string };
 type Member = { id: string; name: string; email: string; role: string };
-type Entry = { kind: string; amount_text: string; note: string; created_at: string };
+type Entry = { kind: string; amount_text: string; note: string; created_at: string; document?: DocumentRef };
 // `key` is what the simulator addresses the phone by: its number, or its WhatsApp user ID
 // when the customer uses a username and shows no number.
 type Persona = {
@@ -107,6 +129,7 @@ const T = {
     bk: { booked: "Booked", completed: "Came", cancelled: "Cancelled", no_show: "No-show" } as Record<string, string>,
     tabLedger: "Credit ledger", tabOrders: "Orders", ordersSub: "Placed through the order link",
     noOrders: "No orders yet. In the chat, tap \"Place an order\" as a customer.", table: (label: string) => `Table ${label}`,
+    docLink: (kind: string, number: string, status: string) => `${({ receipt: "Receipt", invoice: "Invoice", deposit_receipt: "Deposit receipt" } as Record<string, string>)[kind] ?? "Document"} ${number}${status === "void" ? " (cancelled)" : ""}`,
     orderNo: "Order", items: "Items", payment: "Payment", status: "Status",
     pay: { unpaid: "Not paid", paid: "Paid", on_account: "On account" } as Record<string, string>,
     st: { new: "New", confirmed: "Confirmed", ready: "Ready", done: "Done", cancelled: "Cancelled" } as Record<string, string>,
@@ -137,6 +160,7 @@ const T = {
         case "no_show": return `${who} marked booking${n}: no-show`;
         case "moved": return `${who} moved booking${n}`;
         case "price_group": return `${who} changed the price group from ${a.detail.from} to ${a.detail.to}`;
+        case "asked_person": return `${who} needs a person to reply (the chat could not read or help with the message)`;
         default: return `${who}: ${thing} ${a.action}`;
       }
     },
@@ -175,6 +199,7 @@ const T = {
     bk: { booked: "محجوز", completed: "حضر", cancelled: "ملغي", no_show: "لم يحضر" } as Record<string, string>,
     tabLedger: "دفتر الديون", tabOrders: "الطلبات", ordersSub: "الطلبات الواردة من رابط الطلب",
     noOrders: "لا توجد طلبات بعد. في المحادثة اضغط \"اطلب الآن\" كعميل.", table: (label: string) => `طاولة ${label}`,
+    docLink: (kind: string, number: string, status: string) => `${({ receipt: "إيصال", invoice: "فاتورة", deposit_receipt: "إيصال عربون" } as Record<string, string>)[kind] ?? "مستند"} ${number}${status === "void" ? " (ملغى)" : ""}`,
     orderNo: "الطلب", items: "الأصناف", payment: "الدفع", status: "الحالة",
     pay: { unpaid: "غير مدفوع", paid: "مدفوع", on_account: "على الحساب" } as Record<string, string>,
     st: { new: "جديد", confirmed: "مؤكد", ready: "جاهز", done: "منجز", cancelled: "ملغي" } as Record<string, string>,
@@ -205,6 +230,7 @@ const T = {
         case "no_show": return `${who}: العميل لم يحضر${n ? ` (الحجز${n})` : ""}`;
         case "moved": return `${who} غيّر موعد الحجز${n}`;
         case "price_group": return `${who} غيّر مجموعة الأسعار من ${a.detail.from} إلى ${a.detail.to}`;
+        case "asked_person": return `${who} يحتاج رداً من موظف (لم تستطع المحادثة قراءة الرسالة أو مساعدته)`;
         default: return `${who}: ${thing} ${a.action}`;
       }
     },
@@ -339,6 +365,9 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
   const [now, setNow] = useState(0);
   const threadEnd = useRef<HTMLDivElement>(null);
   const [orders, setOrders] = useState<OrderRow[]>([]);
+  const [fulfilFilter, setFulfilFilter] = useState<FulfilFilter>("all");
+  // The estimated margin of each order (ALY-150): only for an owner or admin of a shop that keeps costs.
+  const orderMargins = useOrderMargins(canManage, orders);
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [langState, setLang] = useState<"en" | "ar">("en");
   const lang = langProp ?? langState;
@@ -606,6 +635,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
         && now - new Date(r.last.created_at).getTime() > 10 * 60_000)
     : inboxRows;
   const shownOrders = orders.filter((o) => {
+    if (!matchesFilter(o, fulfilFilter)) return false;
     if (filter === "unconfirmed") return o.status === "new";
     if (filter === "ready") return o.status === "ready";
     if (filter === "unpaid") return o.payment === "unpaid" && !["cancelled", "done"].includes(o.status);
@@ -912,7 +942,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                       {composeMode === "reply" && savedReplies.map((r) => (
                         <span key={r.id} className="quickchip">
                           <button dir="auto" title={r.body} onClick={() => setReplyDraft(r.body)}>{r.title}</button>
-                          <button aria-label={`${t.remove}: ${r.title}`} onClick={() => deleteQuickReply(r.id)}>×</button>
+                          {canManage && <button aria-label={`${t.remove}: ${r.title}`} onClick={() => deleteQuickReply(r.id)}>×</button>}
                         </span>
                       ))}
                     </div>
@@ -1037,10 +1067,12 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
             )
           )}
 
+          {tab === "orders" && canManage && <PayWays lang={lang} />}
           {tab === "orders" && filterLine}
+          {tab === "orders" && <FulfilFilters value={fulfilFilter} onChange={setFulfilFilter} lang={lang} show={orders.some((o) => o.fulfilment)} />}
           {tab === "orders" && (
             shownOrders.length === 0 ? (
-              <p className="empty-note">{t.noOrders}</p>
+              <p className="empty-note">{orders.length > 0 && fulfilFilter !== "all" ? DELIVERY[lang].order.none : t.noOrders}</p>
             ) : (
               <div className="tablewrap">
                 <table>
@@ -1063,12 +1095,25 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                             <><br /><span className="pill none">{lang === "ar" ? o.price_group.name_ar || o.price_group.name : o.price_group.name}</span></>
                           )}
                           {o.table && <><br /><span className="pill p1">{t.table(o.table)}</span></>}
+                          {o.document && embedded && canManage && (
+                            <><br /><a className="doc-link" href={`/app/documents?d=${o.document.id}`}>{t.docLink(o.document.kind, o.document.number, o.document.status)}</a></>
+                          )}
+                          {o.fulfilment && <><br /><FulfilPill fulfilment={o.fulfilment} lang={lang} /></>}
                         </td>
                         <td>{o.items.map((i, k) => (
-                          <div key={k}>{i.quantity} × {i.name}{i.sku ? <> <small className="mono" dir="ltr">{i.sku}</small></> : null}</div>
-                        ))}</td>
+                          <div key={k}><bdi>{fmtQtyUnit(i.quantity, lineUnit(i.quantity, i.unit ?? "piece", Boolean(i.unit_shown)), lang)}</bdi> × {i.name}{i.sku ? <> <small className="mono" dir="ltr">{i.sku}</small></> : null}
+                            {i.discount ? <small className="pr-lineoff">{PRICING[lang].order.lineOff(formatPrice(i.discount, lang))}</small> : null}</div>
+                        ))}
+                          {o.fulfilment && <FulfilDetails fulfilment={o.fulfilment} lang={lang} />}
+                          {o.discount_total || o.fulfilment?.mode === "delivery" ? <OrderSum order={o} lang={lang} /> : null}
+                          {orderMargins && <OrderMargin lang={lang} margin={orderMargins[o.id]} />}</td>
                         <td className="r num" dir="ltr">{o.total_text}</td>
-                        <td><span className={`pill ${o.payment === "unpaid" ? "p1" : "p0"}`}>{t.pay[o.payment]}</span></td>
+                        <td>
+                          <span className={`pill ${o.payment === "unpaid" ? "p1" : "p0"}`}>{t.pay[o.payment]}</span>
+                          {o.payment === "unpaid" && o.status !== "cancelled" && canManage && (
+                            <MarkPaid orderId={o.id} lang={lang} onDone={refresh} />
+                          )}
+                        </td>
                         <td>
                           <AssignSelect value={o.assigned} members={members} label={t.assignedTo} nobody={t.nobody}
                             onChange={(id) => giveTo(`/api/orders/${o.id}/assign`, id)} />
@@ -1117,8 +1162,12 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
               </div>
 
               <div className="actions">
-                <button className="btn primary" onClick={remind} disabled={busy}>{t.remind}</button>
-                <span style={{ color: "var(--muted)", fontSize: 13.5 }}>{t.remindHint}</span>
+                {canManage && (
+                  <>
+                    <button className="btn primary" onClick={remind} disabled={busy}>{t.remind}</button>
+                    <span style={{ color: "var(--muted)", fontSize: 13.5 }}>{t.remindHint}</span>
+                  </>
+                )}
                 {note && <span className="note">{note}</span>}
               </div>
 
@@ -1178,7 +1227,12 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                         <span className="mono" dir="ltr">
                           {new Date(e.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
                         </span>
-                        <span>{t.kinds[e.kind]}{e.note ? ` · ${e.note}` : ""}</span>
+                        <span>
+                          {t.kinds[e.kind]}{e.note ? ` · ${e.note}` : ""}
+                          {e.document && embedded && canManage && (
+                            <> · <a className="doc-link" href={`/app/documents?d=${e.document.id}`}>{t.docLink(e.document.kind, e.document.number, e.document.status)}</a></>
+                          )}
+                        </span>
                         <b className={`num ${e.kind === "payment" || e.kind === "reversal" ? "minus" : "plus"}`} dir="ltr">
                           {e.kind === "payment" || e.kind === "reversal" ? "−" : "+"}{e.amount_text}
                         </b>

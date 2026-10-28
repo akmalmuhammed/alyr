@@ -12,7 +12,9 @@
 
 import {
   Fragment,
+  createContext,
   createElement,
+  useContext,
   useEffect,
   useId,
   useLayoutEffect,
@@ -46,8 +48,28 @@ export type AgentDashboardProps = {
   /** The summary's heading level (default 1 in the workspace, 2 in showcase); section
    * titles sit one below it and suggestion titles two below. */
   headingLevel?: 1 | 2 | 3 | 4;
+  /** False draws the titles as plain text, not headings: the public site's drawings of a
+   * fictional business, so a sample's numbers never read as the page's own outline to a
+   * screen reader or a crawler (site audit 03, A1). The workspace keeps its headings. */
+  headings?: boolean;
+  /** False hides the "RULE · …" lines (under each suggestion, and as a need's tooltip):
+   * the public site's showcase only, where the founder took the word "rule" off the site
+   * (25 Oct 2026). The workspace and `/agent-sample` keep them (default true). */
+  ruleLines?: boolean;
   /** The host's link component. In showcase mode links are plain text unless one is given. */
   link?: AgentLink;
+  /** The public site's continuously moving sample (`_site/AgentFigure.tsx`; `alyr-design`
+   * motion.md, "The live Agent figure"): "roll", a number that changes rolls to its new value
+   * (a short rise, transforms and opacity only, and one Volt mark under a count that went up,
+   * fading back); "hush", the numbers change without rolling (the figure going back to its
+   * opening while it fades). Drawn the same way on the server, so nothing moves at hydration.
+   * Its styles come with the site's figure (`_site/liveStyle.ts`), not agent.css; the
+   * workspace leaves it off. */
+  live?: "roll" | "hush";
+  /** With `live`: the other sentences the summary will show, drawn unseen in its place, so the
+   * header always keeps the height of the longest and nothing under it moves when the words
+   * change (the Arabic dual becoming a count can take one more line on a phone). */
+  summaryRoom?: AgentView["header"]["summary"][];
   /** The first load of a session: the numbers rise once along the 45° diagonal. In showcase
    * mode the figure rises once, when it first comes into view, and this is ignored. */
   animate?: boolean;
@@ -79,15 +101,103 @@ function Text({ text }: { text: string }) {
   );
 }
 
-/** Text whose figures and names stay whole: each `{ b }` goes in a <bdi>. */
-export function Rich({ parts }: { parts: RichParts | null | undefined }) {
+/** Text whose figures and names stay whole: each `{ b }` goes in a <bdi>. With `roll` (inside
+ * a live dashboard) its figures roll when they change; "quiet" ones change in place. */
+export function Rich({ parts, roll }: { parts: RichParts | null | undefined; roll?: "roll" | "quiet" }) {
+  const live = useContext(Live);
   if (!parts) return null;
+  if (live && roll) {
+    return (
+      <>
+        {parts.map((part, i) =>
+          typeof part === "string" ? <RollText key={i} text={part} quiet={roll === "quiet"} />
+            : <bdi key={i}><RollText text={part.b} quiet={roll === "quiet"} /></bdi>,
+        )}
+      </>
+    );
+  }
   return (
     <>
       {parts.map((part, i) =>
         typeof part === "string" ? <Text key={i} text={part} /> : <bdi key={i}>{part.b}</bdi>,
       )}
     </>
+  );
+}
+
+// ── the live figure's rolls (the public site only) ─────────────────────────
+
+const Live = createContext<"roll" | "hush" | null>(null);
+
+/** Figures in a piece of text: counts, money, times. A percent sign stays outside the figure's
+ * box, so an Arabic line orders it as the plain text does. */
+const FIGURES = /(\d+(?:[,:.]\d+)*)/;
+const skeleton = (text: string) => text.replace(new RegExp(FIGURES.source, "g"), "#");
+
+/**
+ * A piece of text whose figures roll when it changes (`live="roll"`): the old figure rises out
+ * and the new one rises in, transforms and opacity only, each figure in its own inline box so
+ * nothing around it moves (tabular digits keep the width). When the words change too (the
+ * Arabic dual becoming a count), the whole piece fades in instead. `mark`: a Volt rule under a
+ * figure that went up, fading back. `quiet`: it changes in place (a wait, the caption's time).
+ * Outside a live dashboard it is plain text.
+ */
+function RollText({ text, mark = false, quiet = false }: { text: string; mark?: boolean; quiet?: boolean }) {
+  const live = useContext(Live);
+  const [seen, setSeen] = useState({ cur: text, prev: text, n: 0, rolled: false });
+  if (seen.cur !== text) {
+    // derived from the previous render (react.dev, "storing information from previous renders")
+    setSeen({ cur: text, prev: seen.cur, n: seen.n + 1, rolled: live === "roll" && !quiet });
+  }
+  if (!live) return <>{text}</>;
+  // A quiet piece is plain text, drawn afresh when it changes, so a longer wait is a new line
+  // of text rather than an old one moving.
+  if (quiet) return <Fragment key={text}>{text}</Fragment>;
+  const { cur, prev, n, rolled } = seen;
+  if (rolled && skeleton(cur) !== skeleton(prev)) {
+    return <span key={n} className="ag-fade-in">{cur}</span>;
+  }
+  // Word by word: a word holding a figure stays whole (its figure's own box would otherwise
+  // let the line break inside it, «بـ» from «13%»).
+  const now = cur.split(/(\s+)/);
+  const was = prev.split(/(\s+)/);
+  return (
+    <>
+      {now.map((word, w) => {
+        if (!FIGURES.test(word)) return word ? <Fragment key={w}>{word}</Fragment> : null;
+        const pieces = word.split(FIGURES);
+        const before = (was[w] ?? "").split(FIGURES);
+        return (
+          <span key={w} className="ag-word">
+            {pieces.map((piece, i) => {
+              if (i % 2 === 0) return piece ? <Fragment key={i}>{piece}</Fragment> : null;
+              const changed = rolled && before[i] !== piece;
+              const up = changed && Number(piece.replace(/[^\d.]/g, "")) > Number((before[i] ?? "").replace(/[^\d.]/g, ""));
+              return (
+                <span key={i} className="ag-roll" data-mark={(mark && up) || undefined}>
+                  <span key={changed ? n : 0} className={changed ? "ag-roll-in" : undefined}>{piece}</span>
+                  {changed && <span key={`o${n}`} className="ag-roll-out" aria-hidden="true">{before[i]}</span>}
+                </span>
+              );
+            })}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
+/** A bar or booked part whose height grows in a live dashboard: drawn at its new height and
+ * scaled up from the old one (a transform), so the chart around it never moves. */
+function Grow({ className, style, height }: { className: string; style?: CSSProperties; height: string }) {
+  const live = useContext(Live);
+  const [seen, setSeen] = useState({ cur: height, prev: height, n: 0, rolled: false });
+  if (seen.cur !== height) setSeen({ cur: height, prev: seen.cur, n: seen.n + 1, rolled: live === "roll" });
+  const from = parseFloat(seen.prev) / Math.max(parseFloat(seen.cur), 0.01);
+  const growing = seen.rolled && from < 1;
+  return (
+    <span key={growing ? seen.n : 0} className={growing ? `${className} ag-grow` : className}
+      style={{ ...style, height, ...(growing ? { "--from": from.toFixed(3) } : {}) } as CSSProperties} />
   );
 }
 
@@ -118,10 +228,10 @@ function Tick() {
 /** ▲ 5% for the eye, "up 5%" for a screen reader (P1-11). */
 function ChangeLine({ change, className }: { change: Change; className: string }) {
   if (!change) return null;
-  if (!change.said) return <span className={className}><Rich parts={change.text} /></span>;
+  if (!change.said) return <span className={className}><Rich parts={change.text} roll="roll" /></span>;
   return (
     <span className={`${className} ${change.dir ?? ""}`}>
-      <span aria-hidden="true"><Rich parts={change.text} /></span>
+      <span aria-hidden="true"><Rich parts={change.text} roll="roll" /></span>
       <span className="ag-sr">{change.said}</span>
     </span>
   );
@@ -132,14 +242,22 @@ function Figure({ value, unit, unitFirst }: { value: string; unit: string | null
   return (
     <bdi className="ag-figure">
       {unit && unitFirst && <span className="ag-unit">{unit}{"\u00a0"}</span>}
-      {value}
+      <RollText text={value} mark />
       {unit === "%" ? "%" : unit && !unitFirst && <span className="ag-unit">{`\u00a0${unit}`}</span>}
     </bdi>
   );
 }
 
 function Heading({ level, className, id, children }: { level: number; className?: string; id?: string; children: ReactNode }) {
-  return createElement(`h${Math.min(Math.max(level, 1), 6)}`, { className, id }, children);
+  // level 0: a title that is not a heading (`headings={false}`)
+  return createElement(level <= 0 ? "p" : `h${Math.min(level, 6)}`, { className, id }, children);
+}
+
+/** A summary sentence after the first opens with its space, inside its own text: when the
+ * sentence changes, the space changes with it and nothing before it moves. */
+function spaced(parts: RichParts, index: number): RichParts {
+  if (index === 0) return parts;
+  return typeof parts[0] === "string" ? [` ${parts[0]}`, ...parts.slice(1)] : [" ", ...parts];
 }
 
 function reducedMotion() {
@@ -207,12 +325,14 @@ function useRiseInView(enabled: boolean, ref: RefObject<HTMLDivElement | null>):
 }
 
 export function AgentDashboard({
-  view, labels, mode = "workspace", headingLevel, link, animate = false, stale, onNotNow, setup, className = "",
+  view, labels, mode = "workspace", headingLevel, headings = true, ruleLines = true, link, animate = false, stale, onNotNow, setup, className = "",
+  live, summaryRoom,
 }: AgentDashboardProps) {
   const t: AgentLabels = { ...AGENT_LABELS[view.lang], ...labels };
   const showcase = mode === "showcase";
   const L: AgentLink = link ?? (showcase ? NoLink : PlainLink);
-  const level = headingLevel ?? (showcase ? 2 : 1);
+  // without headings every title is drawn at "level 0", which Heading renders as plain text
+  const level = headings ? headingLevel ?? (showcase ? 2 : 1) : -9;
   const id = useId();
   const root = useRef<HTMLDivElement>(null);
   const phase = useRiseInView(showcase, root);
@@ -226,20 +346,36 @@ export function AgentDashboard({
   const empty = view.state === "empty";
   const needs = showcase ? view.needs.items.filter((item) => item.key !== "setup") : view.needs.items;
   const hasSetup = Array.isArray(setup) ? setup.length > 0 : !!setup;
-  const states = [rising && "is-rising", phase === "waiting" && "is-waiting", showcase && "is-showcase", className];
+  const states = [rising && "is-rising", phase === "waiting" && "is-waiting", showcase && "is-showcase", live && "is-live", className];
+
+  const summary = (
+    <Heading level={level} className="ag-summary">
+      {view.header.summary.map((s, i) => (
+        <span key={i} className={s.muted ? "is-muted" : undefined}><Rich parts={spaced(s.text, i)} roll="roll" /></span>
+      ))}
+    </Heading>
+  );
 
   return (
+    <Live.Provider value={live ?? null}>
     <div ref={root} className={["ag", ...states].filter(Boolean).join(" ")}
       dir={view.dir} lang={view.lang} data-state={view.state}>
       {!showcase && stale && <p className="ag-stale" role="status">{stale}</p>}
 
       <header className="ag-head">
-        <p className="ag-eyebrow">{showcase ? view.header.when : view.header.eyebrow}</p>
-        <Heading level={level} className="ag-summary">
-          {view.header.summary.map((s, i) => (
-            <Fragment key={i}>{i > 0 && " "}<span className={s.muted ? "is-muted" : undefined}><Rich parts={s.text} /></span></Fragment>
-          ))}
-        </Heading>
+        <p className="ag-eyebrow">{showcase ? <RollText text={view.header.when} /> : view.header.eyebrow}</p>
+        {summaryRoom?.length ? (
+          <div className="ag-room">
+            {summary}
+            {summaryRoom.map((sentences, r) => (
+              <p key={r} className="ag-summary ag-room-ghost" aria-hidden="true">
+                {sentences.map((s, i) => (
+                  <span key={i} className={s.muted ? "is-muted" : undefined}><Rich parts={spaced(s.text, i)} /></span>
+                ))}
+              </p>
+            ))}
+          </div>
+        ) : summary}
       </header>
 
       {!showcase && hasSetup && <div className="ag-slot">{setup}</div>}
@@ -255,11 +391,11 @@ export function AgentDashboard({
                 const Row = item.href ? L : NoLink;
                 return (
                   <li key={item.key}>
-                    <Row href={item.href ?? ""} className="ag-need" title={item.rule}>
-                      <span className="ag-need-count"><bdi>{item.count}</bdi></span>
+                    <Row href={item.href ?? ""} className="ag-need" title={ruleLines ? item.rule : undefined}>
+                      <span className="ag-need-count"><bdi><RollText text={String(item.count)} /></bdi></span>
                       <span className="ag-need-words">
                         <span><Rich parts={item.words} /></span>
-                        {item.detail && <small><Rich parts={item.detail} /></small>}
+                        {item.detail && <small><Rich parts={item.detail} roll="quiet" /></small>}
                       </span>
                       {!showcase && item.href && <Arrow />}
                     </Row>
@@ -279,10 +415,11 @@ export function AgentDashboard({
               {view.done.rows.map((row) => (
                 <li key={row.key}>
                   <L href={row.href} className="ag-ledger-row">
-                    <span className="ag-ledger-value"><bdi>{row.value}</bdi></span>
+                    <span className="ag-ledger-value"><bdi><RollText text={row.value} mark /></bdi></span>
                     <span className="ag-ledger-label">
                       {row.label}
-                      {ticked.has(row.key) && <span className="ag-done-tick small" role="img" aria-label={t.doneTick}><Tick /></span>}
+                      {/* a live figure marks the count itself, and its mark fades */}
+                      {ticked.has(row.key) && !live && <span className="ag-done-tick small" role="img" aria-label={t.doneTick}><Tick /></span>}
                     </span>
                   </L>
                 </li>
@@ -317,15 +454,17 @@ export function AgentDashboard({
                 </li>
               ))}
             </ul>
-            {view.kpi_caption && <p className="ag-caption">{view.kpi_caption}</p>}
+            {view.kpi_caption && <p className="ag-caption"><RollText text={view.kpi_caption} quiet /></p>}
           </div>
         )}
 
-        {!showcase && view.catalog && (
-          <section className="ag-span-12 ag-stock" aria-labelledby={`${id}-stock`}>
-            <Heading level={level + 1} className="ag-label" id={`${id}-stock`}>{view.catalog.title}</Heading>
+        {/* The Catalog's two numbers and, for a shop with Documents, its two (ALY-109, ALY-146):
+            each card is the size of the list its link opens. */}
+        {!showcase && ([["stock", view.catalog], ["docs", view.documents]] as const).map(([part, block]) => block && (
+          <section key={part} className="ag-span-12 ag-stock" aria-labelledby={`${id}-${part}`}>
+            <Heading level={level + 1} className="ag-label" id={`${id}-${part}`}>{block.title}</Heading>
             <ul className="ag-stock-cards">
-              {view.catalog.cards.map((c) => {
+              {block.cards.map((c) => {
                 const Cell = c.href ? L : NoLink;
                 return (
                   <li key={c.key}>
@@ -341,7 +480,7 @@ export function AgentDashboard({
               })}
             </ul>
           </section>
-        )}
+        ))}
 
         {cards.length > 0 && (
           <section className={`${view.week ? "ag-span-8" : "ag-span-12"} ag-cards`} aria-labelledby={`${id}-cards`}>
@@ -364,7 +503,7 @@ export function AgentDashboard({
                   </div>
                   <div className="ag-card-body" id={body}>
                     <p className="ag-card-line"><Rich parts={card.line} /></p>
-                    <p className="ag-rule">{card.rule}</p>
+                    {ruleLines && <p className="ag-rule">{card.rule}</p>}
                     {listOpen === card.key && card.rows.length > 0 && (
                       <ul className="ag-rows">
                         {card.rows.map((row) => <li key={row.id}><bdi>{row.label}</bdi></li>)}
@@ -373,7 +512,7 @@ export function AgentDashboard({
                     )}
                     <div className="ag-card-foot">
                       {card.action ? (
-                        <L href={card.action.href} className={`ag-btn ${card.primary ? "is-volt" : ""}`}>
+                        <L href={card.action.href} className={`ag-btn ${card.primary && !showcase ? "is-volt" : ""}`}>
                           {card.action.label}{!showcase && <Arrow />}
                         </L>
                       ) : (
@@ -491,6 +630,7 @@ export function AgentDashboard({
         )}
       </div>
     </div>
+    </Live.Provider>
   );
 }
 
@@ -525,13 +665,13 @@ function Week({ week, wide, id, level, t }: {
             {said(day) && <span className="ag-sr">{said(day)}</span>}
             <span className="ag-col" aria-hidden="true">
               {day.last != null && day.state !== "closed" && day.state !== "before" && (
-                <span className={`ag-ghost ${day.state === "coming" ? "is-dashed" : ""}`} style={{ height: pct(day.last) }} />
+                <span className={`ag-ghost ${day.state === "ahead" ? "is-dashed" : ""}`} style={{ height: pct(day.last) }} />
               )}
               {(day.state === "past" || day.state === "today") && (
-                <span className="ag-bar" style={{ "--i": i, height: pct(day.value) } as CSSProperties} />
+                <Grow className="ag-bar" style={{ "--i": i } as CSSProperties} height={pct(day.value)} />
               )}
               {day.booked != null && day.booked > 0 && (
-                <span className="ag-booked" style={{ bottom: day.state === "today" ? pct(day.value) : 0, height: pct(day.booked) }} />
+                <Grow className="ag-booked" style={{ bottom: day.state === "today" ? pct(day.value) : 0 }} height={pct(day.booked)} />
               )}
               {day.state === "today" && day.last_by_now != null && (
                 <span className="ag-by-now" style={{ bottom: pct(day.last_by_now) }} />
@@ -540,8 +680,8 @@ function Week({ week, wide, id, level, t }: {
             <span className="ag-day-label" aria-hidden="true">{day.label}</span>
             <span className="ag-day-value" aria-hidden="true">
               {day.state === "closed" ? week.legend.closed
-                : day.state === "today" ? <bdi>{day.value_text}</bdi>
-                : day.booked ? <bdi>{day.booked}</bdi>
+                : day.state === "today" ? <bdi><RollText text={day.value_text ?? ""} /></bdi>
+                : day.booked ? <bdi><RollText text={String(day.booked)} /></bdi>
                 : "\u00a0"}
             </span>
           </li>

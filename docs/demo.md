@@ -40,7 +40,7 @@ The web app is at `http://localhost:3100` (`scripts/demo.sh up` starts it). Go t
 - `owner@demo-<key>.example`, for example `owner@demo-bakery.example`
 - `agent@demo-<key>.example` (an agent can look but not change prices or stock settings)
 
-The workspace opens at `/app/catalog`. The Catalog is switched on for these seven shops only. A new shop still gets it only once the go-live sweep (ALY-113) turns it on; this command does not change that.
+The workspace opens at `/app/catalog`. The Catalog is switched on for these seven shops by this command. Since the go-live sweep (ALY-113 part 1) a new shop gets it from onboarding and the shops that existed got it from migration 0032; this command changes neither.
 
 ## What a customer sees
 
@@ -50,7 +50,7 @@ Photos are drawn tiles made at run time (a plate, a loaf, a bottle and so on, in
 
 ## The WhatsApp simulator
 
-The simulator at `/whatsapp` and the demo chat are wired to the original sample shop (Al Noor) only. The seven demo shops cannot be talked to through it, so a live WhatsApp walk-through of the Catalog (add an item by message, "what is low?") is done in the Al Noor shop. The demo shops are for the workspace and the order page. This is a known gap, tracked in the ALY-110 report.
+The simulator page at `/whatsapp` is wired to the original sample shop (Al Noor). Since ALY-136 the simulator's API takes a shop's address, so any shop with a private test line (the seven demo shops, a shop made in onboarding) can be talked to: `POST /sim/messages` with `{"from_number": "97455500555", "text": "101 x2, 103", "shop": "demo-restaurant"}`, `GET /sim/conversations/<phone>?shop=demo-restaurant`, `GET /sim/personas?shop=...`, and `shop` on `POST /sim/photos`. The seven demo shops and Al Noor are on `chat` mode explicitly (the setting "How customers order"); every other shop starts on `link`, where the order page's message is a readable order for a person. A walk-through: send an item's code (shown on its card in the workspace and on the order page), tap Confirm, tap Place order. The page at `/whatsapp` itself still shows Al Noor only.
 
 ## Wholesale
 

@@ -130,6 +130,10 @@ def refusal(contact: asyncpg.Record, message: OutboundMessage) -> str | None:
     asked for that item.
     """
     if message.kind != "template":
+        # A document is something ALYR sends, not a reply to what the customer just said, so
+        # a customer who said stop gets none even inside the window (ALY-139).
+        if message.kind == "document" and contact["consent_service"] == "revoked":
+            return "opted_out"
         # Free-form text is only allowed as a reply, inside the 24-hour window.
         return None if contact["window_open"] else "window_closed"
     if message.template_category == "marketing":

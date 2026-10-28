@@ -18,7 +18,7 @@ from uuid import UUID
 import asyncpg
 
 from alyr.core.normalise import fmt_qar
-from alyr.modules.items import availability, schedule, text
+from alyr.modules.items import availability, qty, schedule, text
 from alyr.modules.items import service as items
 from alyr.modules.items.clock import ShopClock
 from alyr.modules.items.stock import Take
@@ -33,7 +33,7 @@ MAX_LINES_WITH_ALTERNATIVES = 5
 @dataclass(frozen=True)
 class CartLine:
     item_id: UUID
-    quantity: int
+    quantity: "qty.Qty"
     variant_id: UUID | None = None
     option_ids: tuple[UUID, ...] = ()
     # The price of one the customer was shown (variant and choices included, dirhams).
@@ -82,6 +82,11 @@ def _problem(
     c.ok, c.code = False, code
     if entry is not None:
         c.words["name"], c.words["name_ar"] = _label(entry, variant)
+        item = entry.item
+        if qty.shown(item["unit"], item["pack_size"], item["min_order"]):
+            # An item sold in fractions: numbers in the sentence carry the unit ("Only 2.5 kg of
+            # Dates left"). One sold in whole numbers keeps the plain number.
+            c.words["unit"] = c.data["unit"] = item["unit"]
     for key, value in more.items():
         c.words[key] = value
         c.data[key] = value.isoformat() if hasattr(value, "isoformat") else value
@@ -114,8 +119,10 @@ def _check_line(
     if entry is None:
         return _problem(c, "unavailable", None)
     item = entry.item
-    if not 1 <= line.quantity <= items.MAX_QUANTITY:
-        return _problem(c, "bad_quantity", entry)
+    unit = item["unit"]
+    wrong = qty.check_range(line.quantity, unit)
+    if wrong is not None:
+        return _problem(c, wrong[0], entry)
     state = entry.state(clock, for_date)
     if state.reason in ("hidden", "off"):
         return _problem(c, "unavailable", entry)
@@ -141,13 +148,11 @@ def _check_line(
         return c  # _choices wrote the problem
     c.options = chosen
 
-    if line.quantity < item["min_order"]:
-        return _problem(c, "below_minimum", entry, variant, minimum=item["min_order"])
-    pack = item["pack_size"]
-    if pack and pack > 1 and item["unit"] not in ("box", "pack") and line.quantity % pack:
-        # Sold by the pack (pieces, kilos or hours in lots): the next whole pack up.
-        suggest = -(-line.quantity // pack) * pack
-        return _problem(c, "not_pack_multiple", entry, variant, pack=pack, suggest=suggest)
+    refused = qty.check_lots(line.quantity, unit, item["pack_size"], item["min_order"])
+    if refused is not None:
+        # Under the smallest order, or not a whole number of packs or steps (the next one up
+        # is suggested).
+        return _problem(c, refused[0], entry, variant, **refused[1])
 
     c.fulfil_on = state.for_date if state.dated else None
     day = state.day
@@ -304,8 +309,8 @@ async def report(
         if c.ok:
             line |= {
                 "unit_price": c.unit_price, "unit_price_text": fmt_qar(c.unit_price),
-                "line_total": c.unit_price * c.line.quantity,
-                "line_total_text": fmt_qar(c.unit_price * c.line.quantity),
+                "line_total": qty.line_total(c.unit_price, c.line.quantity),
+                "line_total_text": fmt_qar(qty.line_total(c.unit_price, c.line.quantity)),
                 "fulfil_on": c.fulfil_on.isoformat() if c.fulfil_on else None,
                 "price_source": "group" if c.from_group else "normal",
             }

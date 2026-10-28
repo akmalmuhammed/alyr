@@ -19,9 +19,10 @@ class SendResult:
     blocked: str | None = None
 
 
-def _has_image_header(name: str) -> bool:
+def _header_of(name: str) -> str:
+    """What a template opens with: "image", "document", or "" for text only."""
     template = templates.CATALOGUE.get(name)
-    return template is not None and template.header == "image"
+    return template.header if template is not None else ""
 
 
 class Outbound:
@@ -54,7 +55,7 @@ class Outbound:
         if contact is None:
             raise LookupError("no such contact for this tenant")
         blocked = consent.refusal(contact, message)
-        kind, body, image = message.kind, message.body, message.image
+        kind, body, image, document = message.kind, message.body, message.image, message.document
         payload: dict = {}
         if message.choices:
             payload["choices"] = [
@@ -73,8 +74,9 @@ class Outbound:
             # original, so a customer who said stop still gets nothing. Marketing always
             # stays a template, so every offer is counted and can be opted out of.
             if contact["window_open"] and message.template_category != "marketing":
-                # With an image, the ordinary message is that image with the text under it.
-                kind = "image" if image else "text"
+                # With an image, the ordinary message is that image with the text under it;
+                # with a document (a receipt), that file with the text as its caption.
+                kind = "document" if document else "image" if image else "text"
                 payload["sent_as"] = kind
             else:
                 if message.template_params:
@@ -84,21 +86,27 @@ class Outbound:
                     # Record the wording the customer will actually receive, which is the
                     # approved template's, not the module's own.
                     body = templates.render(message.template_name, message.lang, params) or body
-                # A template without an image header cannot carry the image.
-                if not _has_image_header(message.template_name):
+                # A template without that header cannot carry the picture or the file.
+                header = _header_of(message.template_name)
+                if header != "image":
                     image = b""
+                if header != "document":
+                    document = b""
+        if document:
+            payload["filename"] = message.filename
         message_id = await conn.fetchval(
             "insert into messages (contact_id, direction, kind, body, payload, status, error) "
             "values ($1, 'out', $2, $3, $4, $5, $6) returning id",
             message.to, kind, body, payload,
             "blocked" if blocked else "queued", blocked,
         )
-        if image and not blocked:
+        if (image or document) and not blocked:
             # Kept beside the message; the delivering job uploads it to the channel.
             await conn.execute(
                 "insert into message_media (message_id, content_type, data) "
                 "values ($1, $2, $3)",
-                message_id, message.image_type, image,
+                message_id, "application/pdf" if document else message.image_type,
+                document or image,
             )
         if not blocked:
             await jobs.enqueue(conn, SEND, {"message_id": str(message_id)})
@@ -148,7 +156,7 @@ class Outbound:
             template_category=stored.get("category"),
             template_params=tuple(stored.get("params", [])),
             lang=stored.get("lang", "en"),
-            media_id=media_id,
+            media_id=media_id, filename=stored.get("filename", ""),
         )
         provider_id = await channel.send(
             number["number_id"], message,
@@ -164,11 +172,17 @@ class Outbound:
     async def gave_up(self, tenant_id: UUID, payload: dict) -> None:
         """Job dead-letter handler: the message could not be sent after every retry."""
         async with self._db.tenant(tenant_id) as conn:
-            await conn.execute(
+            changed = await conn.execute(
                 "update messages set status = 'failed', error = 'could not be delivered' "
                 "where id = $1 and status = 'queued'",
                 UUID(payload["message_id"]),
             )
+            if changed == "UPDATE 1":
+                # A document that never arrived is news to the shop's other system (ALY-142).
+                from alyr.modules.documents import delivery
+
+                await delivery.on_message_failed(
+                    conn, UUID(payload["message_id"]), "could not be delivered")
 
     async def record_status(
         self, conn: asyncpg.Connection, provider_id: str, status: str, error: str = ""

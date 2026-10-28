@@ -19,8 +19,12 @@ from alyr.core.auth import Staff
 from alyr.modules.items import (
     access,
     bulk,
+    changes,
     clock,
+    costs,
     drafts,
+    features,
+    fields,
     groups,
     listing,
     photos,
@@ -29,12 +33,13 @@ from alyr.modules.items import (
     template,
 )
 from alyr.modules.items import service as items
+from alyr.modules.items.qty import quantity_field
 from alyr.routes.deps import current_staff
 
 router = APIRouter(prefix="/api/items", tags=["items"])
 
 Rule = Literal["always", "switch", "count", "daily_limit"]
-Unit = Literal["piece", "kg", "box", "pack", "portion", "hour"]
+Unit = Literal["piece", "kg", "box", "pack", "portion", "hour", "g", "l", "ml", "m", "tola"]
 Status = Literal["draft", "live", "hidden", "archived"]
 Filter = Literal["draft", "sold_out", "low_stock", "stocked", "archived", "sample"]
 Weekday = Annotated[int, Field(ge=0, le=6)]
@@ -44,6 +49,10 @@ NULLABLE = {
     "sale_price", "sale_starts_at", "sale_ends_at", "pack_size", "daily_limit", "sku",
     "low_stock_at",
 }
+
+
+# Values of the owner's own fields, by the field's key (ALY-148).
+FieldValues = dict[str, str | int | float | bool | None]
 
 
 class GroupPriceIn(BaseModel):
@@ -73,9 +82,12 @@ class VariantIn(BaseModel):
                     "an empty one to clear it",
     )
     price_delta: int = Field(default=0, ge=-10_000_000, le=10_000_000)
-    daily_limit: int | None = Field(default=None, ge=0, le=1_000_000)
+    daily_limit: quantity_field(ge=0, le=1_000_000) | None = None
     active: bool = True
-    opening_stock: int | None = Field(default=None, ge=0, le=1_000_000)
+    opening_stock: quantity_field(ge=0, le=1_000_000) | None = None
+    custom: FieldValues | None = Field(
+        default=None, description="The owner's own fields for this size (key to value; null "
+                                  "removes one)")
 
 
 class OptionIn(BaseModel):
@@ -133,30 +145,32 @@ class ItemChanges(BaseModel):
     sale_starts_at: AwareDatetime | None = None
     sale_ends_at: AwareDatetime | None = None
     unit: Unit | None = None
-    pack_size: int | None = Field(default=None, gt=0, le=100_000)
-    min_order: int | None = Field(default=None, ge=1, le=999)
-    low_stock_at: int | None = Field(
-        default=None, ge=0, le=100_000,
-        description="This item's own low-stock number; null uses the shop's",
+    pack_size: quantity_field(gt=0, le=100_000) | None = None
+    min_order: quantity_field(gt=0, le=999) | None = None
+    low_stock_at: quantity_field(ge=0, le=100_000) | None = Field(
+        default=None, description="This item's own low-stock number; null uses the shop's",
     )
     tags: list[Annotated[str, Field(max_length=30)]] | None = Field(default=None, max_length=20)
     stock_rule: Rule | None = None
     available: bool | None = None
     status: Status | None = None
     sort: int | None = Field(default=None, ge=0, le=100_000)
-    daily_limit: int | None = Field(default=None, ge=0, le=1_000_000)
+    daily_limit: quantity_field(ge=0, le=1_000_000) | None = None
     variants: list[VariantIn] | None = Field(default=None, max_length=100)
     option_groups: list[GroupIn] | None = Field(default=None, max_length=20)
     schedule: list[WindowIn] | None = Field(default=None, max_length=30)
+    custom: FieldValues | None = Field(
+        default=None, max_length=fields.MAX_FIELDS,
+        description="The owner's own fields for this item (key to value; null removes one)",
+    )
     reason: str = Field(default="", max_length=200, description="Why the price changed")
 
 
 class NewItem(ItemChanges):
     name: str = Field(min_length=1, max_length=120)
     price: int = Field(ge=0, le=100_000_000, description="In dirhams; zero only for a draft")
-    opening_stock: int | None = Field(
-        default=None, ge=0, le=1_000_000,
-        description="For an item without variants counted in stock",
+    opening_stock: quantity_field(ge=0, le=1_000_000) | None = Field(
+        default=None, description="For an item without variants counted in stock",
     )
 
 
@@ -170,9 +184,9 @@ class Switch(BaseModel):
 
 class StockChange(BaseModel):
     kind: Literal["opening", "received", "wasted", "counted", "adjusted"]
-    quantity: int = Field(
-        ge=-1_000_000, le=1_000_000,
-        description="A number above zero; for adjusted, plus or minus; for counted, the count",
+    quantity: quantity_field(ge=-1_000_000, le=1_000_000) = Field(
+        description="A number above zero, a whole number or up to three decimals (12.5); for "
+                    "adjusted, plus or minus; for counted, the count. A JSON number or a string",
     )
     reason: str = Field(default="", max_length=200)
     variant_id: UUID | None = None
@@ -180,7 +194,7 @@ class StockChange(BaseModel):
 
 
 class Count(BaseModel):
-    counted: int = Field(ge=0, le=1_000_000)
+    counted: quantity_field(ge=0, le=1_000_000)
     reason: str = Field(default="", max_length=200)
     variant_id: UUID | None = None
     day: date | None = None
@@ -192,8 +206,8 @@ class StockSettings(BaseModel):
     agents_edit_items: bool | None = Field(
         default=None, description="Agents may add and edit items and photos"
     )
-    low_stock_at: int | None = Field(
-        default=None, ge=0, le=100_000, description="Counted stock at or below this is low"
+    low_stock_at: quantity_field(ge=0, le=100_000) | None = Field(
+        default=None, description="Counted stock at or below this is low"
     )
     wholesale_layout: bool | None = Field(
         default=None, description="Every customer gets the compact wholesale table"
@@ -201,6 +215,11 @@ class StockSettings(BaseModel):
     whatsapp_number: str | None = Field(
         default=None, max_length=40,
         description="The number customers message to start an order; empty clears it",
+    )
+    whatsapp_mode: str | None = Field(
+        default=None, pattern="^(chat|link)$",
+        description="link (the default): the shop keeps its own number and answers itself. "
+                    "chat: the number runs on ALYR and the chat reads item codes",
     )
 
 
@@ -222,6 +241,17 @@ class SetupChange(BaseModel):
         default=None, description="How a new item runs out until its form says otherwise"
     )
     alerts: AlertsIn | None = Field(default=None, description="Which alerts are on")
+    section_name: str | None = Field(
+        default=None, max_length=40,
+        description="What the shop calls its Catalog, in English; empty goes back to the "
+                    "template's name",
+    )
+    section_name_ar: str | None = Field(
+        default=None, max_length=40, description="The same in Arabic"
+    )
+    layout_style: Literal["", "menu", "grid", "list", "table"] | None = Field(
+        default=None, description="How the order page lays items out; empty is the template's"
+    )
 
 
 class CategoryIn(BaseModel):
@@ -263,6 +293,15 @@ class BulkApply(BulkIn):
     preview: str = Field(min_length=1, max_length=64, description="The preview's hash")
 
 
+async def _with_warnings(conn, staff: Staff, feats, result: dict) -> dict:
+    """For an owner or admin of a shop that keeps costs: a price under the cost is a warning,
+    never a block (ALY-150). Nobody else is told anything about costs."""
+    if not (feats.on("cost_margin") and access.is_manager(staff)):
+        return result
+    found = await costs.warnings(conn, await clock.load(conn), UUID(str(result["item"]["id"])))
+    return {**result, "cost_warnings": found} if found else result
+
+
 def _media(request: Request):
     return request.app.state.media
 
@@ -271,7 +310,21 @@ def _fail(error: Exception) -> HTTPException:
     if isinstance(error, LookupError):
         return HTTPException(status_code=404, detail="item not found")
     code = getattr(error, "code", "bad_request")
-    return HTTPException(status_code=422, detail={"code": code, "message": str(error)})
+    detail = {"code": code, "message": str(error)}
+    if getattr(error, "message_ar", None):  # a feature that is off says so in both languages
+        detail["message_ar"] = error.message_ar
+    return HTTPException(status_code=422, detail=detail)
+
+
+async def _settings(conn) -> dict:
+    """The shop's Catalog settings, with how a sold-out item looks, which is a feature."""
+    feats = await features.load(conn)
+    return {**await items.settings(conn), "sold_out_display": feats.sold_out_mode}
+
+
+def _category_names(rows: list[dict]) -> list[dict]:
+    """The shop's categories as the activity record keeps them: names and order."""
+    return [{"name": r["name"], "name_ar": r["name_ar"]} for r in rows]
 
 
 def _bulk_fail(error: bulk.BulkError) -> HTTPException:
@@ -327,10 +380,17 @@ async def add_item(
             await access.require_edit(conn, staff)
             # A shop at its item limit is told so plainly and loses nothing (ALY-103).
             await _media(request).assert_can_add_item(conn)
+            data = _changes(body)
+            # A feature that is switched off does not apply to a new item (ALY-148).
+            feats = await features.load(conn)
+            features.guard_new_item(feats, data)
+            if "stock_rule" not in data and not feats.allows_rule("switch"):
+                data["stock_rule"] = "always"  # the usual start is off in this shop
             result = await items.create_item(
-                conn, _changes(body), team.actor_of(staff), await clock.load(conn)
+                conn, data, team.actor_of(staff), await clock.load(conn)
             )
             await photos.add_to_views(conn, _media(request), [result["item"]])
+            result = await _with_warnings(conn, staff, feats, result)
     except (items.ItemError, stock.StockError) as error:
         raise _fail(error) from error
     return {"id": result["item"]["id"], **result}
@@ -353,7 +413,7 @@ async def make_drafts(
 @router.get("/settings")
 async def get_settings(request: Request, staff: Staff = Depends(current_staff)) -> dict:
     async with request.app.state.db.tenant(staff.tenant_id) as conn:
-        return await items.settings(conn)
+        return await _settings(conn)
 
 
 @router.get("/share")
@@ -385,12 +445,32 @@ async def put_settings(
     access.require_manager(staff)
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
-            return await items.save_settings(
+            before = await items.settings(conn)
+            await items.save_settings(
                 conn, body.hold_minutes, body.day_starts, body.agents_edit_items,
                 body.low_stock_at, body.wholesale_layout, body.whatsapp_number,
+                body.whatsapp_mode,
             )
+            after = await _settings(conn)
+            fields = {k: after[k] for k in changes.SETTING_FIELDS}
+            await changes.settings_changed(
+                conn, team.actor_of(staff), {k: before[k] for k in fields}, fields
+            )
+            return after
     except items.ItemError as error:
         raise _fail(error) from error
+
+
+@router.get("/settings/activity")
+async def settings_activity(
+    request: Request, limit: int = Query(default=50, ge=1, le=200),
+    staff: Staff = Depends(current_staff),
+) -> dict:
+    """Who changed the Catalog's settings, staff numbers and price groups, and what they
+    changed: the record nobody can edit. Owners and admins only."""
+    access.require_manager(staff)
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        return {"activity": await changes.listing(conn, limit)}
 
 
 @router.get("/setup")
@@ -411,10 +491,18 @@ async def put_setup(
     access.require_manager(staff)
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
-            return await template.save(
-                conn, sold_out=body.sold_out, new_item_rule=body.new_item_rule,
+            before = changes.flat_setup(await template.hints(conn))
+            after = await template.save(
+                conn, team.actor_of(staff), sold_out=body.sold_out,
+                new_item_rule=body.new_item_rule,
                 alerts=body.alerts.model_dump(exclude_none=True) if body.alerts else None,
+                section_name=body.section_name, section_name_ar=body.section_name_ar,
+                layout_style=body.layout_style,
             )
+            await changes.settings_changed(
+                conn, team.actor_of(staff), before, changes.flat_setup(after)
+            )
+            return after
     except items.ItemError as error:
         raise _fail(error) from error
 
@@ -441,7 +529,12 @@ async def put_categories(
     access.require_manager(staff)
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            before = await items.categories(conn)
             rows = await items.save_categories(conn, [c.model_dump() for c in body])
+            await changes.settings_changed(
+                conn, team.actor_of(staff), {"categories": _category_names(before)},
+                {"categories": _category_names(rows)},
+            )
     except items.ItemError as error:
         raise _fail(error) from error
     return {"categories": rows}
@@ -536,13 +629,19 @@ async def save_item(
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
             await access.require_edit(conn, staff)
+            data = _changes(body)
+            # An edit may keep what the item has but not add a part whose feature is off.
+            features.guard_item_change(
+                await features.load(conn), await features.item_parts(conn, item_id), data
+            )
             # The owner saving a sample makes it theirs (`samples.py`).
             result = await items.update_item(
-                conn, item_id, _changes(body), team.actor_of(staff), await clock.load(conn),
+                conn, item_id, data, team.actor_of(staff), await clock.load(conn),
                 reason=body.reason, adopt=True,
             )
             if result is not None:
                 await photos.add_to_views(conn, _media(request), [result["item"]])
+                result = await _with_warnings(conn, staff, await features.load(conn), result)
     except (items.ItemError, stock.StockError) as error:
         raise _fail(error) from error
     if result is None:

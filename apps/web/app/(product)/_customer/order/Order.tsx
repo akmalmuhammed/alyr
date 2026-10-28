@@ -18,18 +18,21 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Done, Frame, Glyph, Who } from "../Frame";
 import { formatPrice, type Lang } from "../price";
 import { matches, searchWords } from "../fold";
+import { addQty, fmtQtyUnit, minQty, unitFor } from "../qty";
 import { ApiError, loadItem, loadLive, loadStore, orderAgain } from "./api";
 import { count, keyOf, most, total as totalOf, unitPrice, type Line } from "./cart";
-import { say, T } from "./copy";
+import { say, T, waysText } from "./copy";
 import { ItemCard } from "./ItemCard";
 import type { Chosen } from "./ItemSheet";
 import type { Checked, Item, Live, LiveItem, Placed, Store } from "./types";
 import { Price } from "./ui";
+import { waParts, type WaFulfilment, type WaLine, type WaPart } from "./wa";
 import { Wholesale, rowsOf } from "./Wholesale";
 import "./order.css";
 
 const ItemSheet = dynamic(() => import("./ItemSheet").then((m) => m.ItemSheet), { ssr: false });
 const ReviewSheet = dynamic(() => import("./ReviewSheet").then((m) => m.ReviewSheet), { ssr: false });
+const ListSheet = dynamic(() => import("./ListSheet").then((m) => m.ListSheet), { ssr: false });
 
 type Props = {
   slug: string;
@@ -89,7 +92,17 @@ function makeLine(item: Item, variantId: string | null, optionIds: string[], qty
     unit: unitPrice(item, variantId, optionIds),
     name: item.name, name_ar: item.name_ar, variant: variant?.name ?? "", variant_ar: variant?.name_ar ?? "",
     extras: extras.map((o) => ({ name: o.name, name_ar: o.name_ar })), src: photo.state === "ready" ? photo.src : "",
+    code: item.code, unitKey: unitFor(item),
   };
+}
+
+/** The cart's lines as the WhatsApp message needs them. A line saved before codes existed gets
+ *  its code from the item if the page has it. */
+function toWaLines(lines: Line[], lookup: (id: string) => Item | undefined): WaLine[] {
+  return lines.map((l) => ({
+    code: l.code ?? lookup(l.itemId)?.code ?? null, qty: l.qty, name: l.name, name_ar: l.name_ar,
+    variant: l.variant, variant_ar: l.variant_ar, extras: l.extras, unit: l.unit, unitKey: l.unitKey,
+  }));
 }
 
 // ── the page ──────────────────────────────────────────────
@@ -117,6 +130,7 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
   const [said, setSaid] = useState("");
   const [offline, setOffline] = useState(false);
   const [gone, setGone] = useState(false);
+  const [listOpen, setListOpen] = useState(false);
   // Every item seen so far (newest version): the review needs the rules and the days of what
   // is in the order even when a search has moved it off the list.
   const seenRef = useRef(new Map<string, Item>());
@@ -125,6 +139,11 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
 
   const canOrder = Boolean(token && store.customer);
   const shopName = say(lang, store.shop.name, store.shop.name_ar);
+  // Someone with no link of their own, at a shop that has given its WhatsApp number: they pick
+  // items and send them as a message (ALY-136). The shop, or the chat, answers.
+  const whatsapp = store.shop.whatsapp;
+  const waList = !canOrder && Boolean(whatsapp);
+  const canPick = canOrder || waList;
 
   const say_ = useCallback((text: string) => setSaid((old) => (old === text ? `${text} ` : text)), []);
 
@@ -136,6 +155,16 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
     for (const item of [...base, ...(remote?.items ?? []), ...(open ? [open] : [])]) seenRef.current.set(item.id, item);
   }, [base, remote, open]);
   const lookup = useCallback((id: string) => seenRef.current.get(id), []);
+
+  /** An order as WhatsApp messages: one, or a few when it is too long for one. */
+  const known = useMemo(() => new Map([...base, ...(remote?.items ?? [])].map((i) => [i.id, i] as const)), [base, remote]);
+  const partsOf = useCallback((ls: Line[], fulfilment: WaFulfilment | null = null): WaPart[] => {
+    if (!whatsapp || ls.length === 0) return [];
+    return waParts(whatsapp, {
+      shop: store.shop, lang, mode: store.settings.whatsapp_mode, lines: toWaLines(ls, (id) => known.get(id)),
+      money: (dirhams) => formatPrice(dirhams, lang), customer: store.customer?.name, table: store.table, fulfilment,
+    });
+  }, [whatsapp, store, lang, known]);
 
   // ── what is shown: all of it filtered here when it is all loaded, else asked of the API ──
   const words = useMemo(() => searchWords(q), [q]);
@@ -242,11 +271,11 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
     setCart((old) => {
       const have = old.find((l) => l.key === key);
       const cap = most(item, pick.variantId);
-      if (have) return old.map((l) => (l.key === key ? { ...l, qty: Math.min(cap, l.qty + pick.qty), unit: unitPrice(item, pick.variantId, pick.optionIds) } : l));
+      if (have) return old.map((l) => (l.key === key ? { ...l, qty: minQty(cap, addQty(l.qty, pick.qty)), unit: unitPrice(item, pick.variantId, pick.optionIds) } : l));
       return [...old, makeLine(item, pick.variantId, pick.optionIds, pick.qty)];
     });
     setOpen(null);
-    say_(`${t.inOrder(pick.qty)}: ${say(lang, item.name, item.name_ar)}`);
+    say_(`${t.inOrder(fmtQtyUnit(pick.qty, unitFor(item), lang))}: ${say(lang, item.name, item.name_ar)}`);
   }, [lang, say_, t]);
   const swap = useCallback((key: string, alt: NonNullable<Checked["alternatives"]>[number]) => {
     setCart((old) => {
@@ -262,10 +291,10 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
   }, []);
   const onLimit = useCallback((item: Item) => {
     const cap = most(item);
-    say_(t.atMost(cap));
-  }, [say_, t]);
+    say_(t.atMost(fmtQtyUnit(cap, unitFor(item), lang)));
+  }, [say_, t, lang]);
 
-  const inOrder = useCallback((id: string) => cart.reduce((n, l) => (l.itemId === id ? n + l.qty : n), 0), [cart]);
+  const inOrder = useCallback((id: string) => cart.reduce((n, l) => (l.itemId === id ? addQty(n, l.qty) : n), 0), [cart]);
   const qtyOf = useCallback((id: string, variantId: string | null) => cart.find((l) => l.key === keyOf(id, variantId, []))?.qty ?? 0, [cart]);
 
   // ── the refresh ──
@@ -380,7 +409,12 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
   const style = store.catalog?.layout.style ?? "menu";
   const layout = store.settings.wholesale_layout || !store.group.is_default || style === "table" ? "table" : "cards";
   const look = style === "grid" || style === "list" ? style : "menu";
+  // What the page offers is the shop's choice (features, ALY-148). A shop without the Catalog
+  // keeps the page it always had, which offers all four.
+  const offers = store.catalog?.layout ?? { pickup_date: true, quick_quantity: true, same_as_last: true, show_sku: true };
   const section = store.catalog ? say(lang, store.catalog.section.name, store.catalog.section.name_ar) : "";
+  // The shop's automatic discounts in words, only while its discounts are on (ALY-150).
+  const offerList = store.pricing?.discounts?.offers ?? [];
 
   if (placed) {
     const link = placed.payment === "link" && placed.pay_url ? new URL(placed.pay_url).pathname : null;
@@ -389,6 +423,12 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
         <Done title={t.placed(placed.number)}>
           {placed.payment === "account" && <p><b className="num"><Price value={placed.total} lang={lang} /></b> · {t.onAccount}</p>}
           {placed.payment === "link" && <p><b className="num"><Price value={placed.total} lang={lang} /></b></p>}
+          {placed.payment === "later" && (
+            <p><b className="num"><Price value={placed.total} lang={lang} /></b> · {t.payOnCollect(waysText(lang, placed.pay_ways ?? []))}</p>
+          )}
+          {placed.pricing && placed.pricing.discount_total > 0 && (
+            <p className="ox-discount-line">{t.discountOnOrder(`−${formatPrice(placed.pricing.discount_total, lang)}`)}</p>
+          )}
           <p>{placed.payment === "link" ? t.payToConfirm : t.backToChat}</p>
         </Done>
         {placed.left_out && placed.left_out.length > 0 && (
@@ -420,7 +460,8 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
 
   const flaggedCount = cart.filter((l) => flagged.has(l.key)).length;
   const lines = cart;
-  const whatsapp = store.shop.whatsapp;
+  const sending = waList ? partsOf(lines) : [];
+  const itemMessage = (item: Item, pick: Chosen) => partsOf([makeLine(item, pick.variantId, pick.optionIds, pick.qty)])[0]?.href ?? "";
   // The label the server cleaned (`store.table`), not the raw address: a printed code is the
   // shop's, but anyone can type an address.
   const prefill = store.table ? (lang === "ar" ? `طلب طاولة ${store.table}` : `Order table ${store.table}`) : t.prefillOrder;
@@ -436,7 +477,7 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
   const renderCards = (items: Item[]) => (
     <ul className={`ox-list ${look}`}>
       {items.map((item) => (
-        <ItemCard key={item.id} item={item} lang={lang} look={look} canOrder={canOrder} inOrder={inOrder(item.id)}
+        <ItemCard key={item.id} item={item} lang={lang} look={look} canOrder={canPick} quick={offers.quick_quantity} inOrder={inOrder(item.id)}
           simpleQty={qtyOf(item.id, simpleVariant(item))} onOpen={setOpen} onSet={setSimple} onLimit={onLimit} />
       ))}
     </ul>
@@ -453,19 +494,25 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
         </div>
       </section>
 
+      {offerList.length > 0 && (
+        <ul className="ox-offers" aria-label={t.offers}>
+          {offerList.map((o) => <li key={o.text}>{say(lang, o.text, o.text_ar)}</li>)}
+        </ul>
+      )}
+
       {store.link.state === "invalid" || store.link.state === "expired" ? (
         <p className="cx-warn" role="alert">{say(lang, store.link.message, store.link.message_ar)}</p>
       ) : null}
       {!canOrder && (
         <section className="cx-card ox-notice" style={{ "--i": 1 } as React.CSSProperties}>
-          <h2>{t.browseTitle}</h2>
+          <h2>{wa ? t.waTitle : t.browseTitle}</h2>
           <p>{wa ? t.browseWhatsApp(shopName) : t.browseNoNumber(shopName)}</p>
         </section>
       )}
       {gone && <p className="cx-warn" role="status">{t.itemGone}</p>}
       {offline && <p className="cx-warn" role="status"><Glyph name="refresh" /> {t.offline}</p>}
 
-      {canOrder && customer?.has_last_order && cart.length === 0 && !filtering && (
+      {canOrder && offers.same_as_last && customer?.has_last_order && cart.length === 0 && !filtering && (
         <section className="cx-card ox-again" aria-labelledby="ox-again-h" style={{ "--i": 1 } as React.CSSProperties}>
           <h2 id="ox-again-h">{t.again}</h2>
           <p>{t.againHint}</p>
@@ -515,7 +562,7 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
       )}
 
       {layout === "table" && shown.length > 0 && (
-        <Wholesale rows={rowsOf(shown)} lang={lang} label={section || t.priceList} canOrder={canOrder} onOpen={setOpen} onSet={setVariantQty}
+        <Wholesale rows={rowsOf(shown)} lang={lang} label={section || t.priceList} canOrder={canPick} showSku={offers.show_sku} onOpen={setOpen} onSet={setVariantQty}
           onLimit={onLimit} qtyOf={(item, variant) => qtyOf(item.id, variant ? variant.id : simpleVariant(item))} />
       )}
       {layout === "cards" && (grouped
@@ -546,6 +593,22 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
             </button>
           </div>
         </div>
+      ) : waList && sending.length > 0 ? (
+        <div className="cx-bar">
+          <div className="cx-bar-in">
+            <div className="cx-sum">
+              <span>{t.bar(count(lines))}</span>
+              <b><Price value={totalOf(lines)} lang={lang} /></b>
+            </div>
+            {sending.length > 1 && <p className="ox-quiet center">{t.partsHint(sending.length)}</p>}
+            {sending.map((part, i) => (
+              <a key={part.href} className={`cx-btn ${i > 0 ? "ghost" : ""}`} href={part.href} target="_blank" rel="noopener noreferrer">
+                <Glyph name="wa" />{sending.length > 1 ? t.partOf(i + 1, sending.length) : t.startOrder}
+              </a>
+            ))}
+            <button type="button" className="ox-link ox-seelist" onClick={() => setListOpen(true)}>{t.seeList}</button>
+          </div>
+        </div>
       ) : !canOrder && wa ? (
         <div className="cx-bar">
           <div className="cx-bar-in">
@@ -557,12 +620,18 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
       <p className="ox-sr" role="status" aria-live="polite" aria-atomic="true">{said}</p>
 
       {open && (
-        <ItemSheet key={open.id} item={open} lang={lang} canOrder={canOrder} fetchFull={fetchFull} onAdd={addChosen}
-          onClose={() => setOpen(null)} onLimit={onLimit} />
+        <ItemSheet key={open.id} item={open} lang={lang} canOrder={canPick} showSku={offers.show_sku} fetchFull={fetchFull} onAdd={addChosen}
+          onClose={() => setOpen(null)} onLimit={onLimit} whatsapp={waList ? itemMessage : undefined} />
+      )}
+      {listOpen && waList && (
+        <ListSheet lang={lang} lines={lines} lookup={lookup} parts={sending} setQty={setQty} remove={remove}
+          onClose={() => setListOpen(false)} />
       )}
       {review && token && customer && (
-        <ReviewSheet slug={slug} token={token} lang={lang} lines={lines} lookup={lookup} customer={customer} table={store.table}
+        <ReviewSheet slug={slug} token={token} lang={lang} lines={lines} lookup={lookup} customer={customer} payLater={store.settings.pay?.online === false ? store.settings.pay.ways : undefined} table={store.table} askDay={offers.pickup_date}
           forDate={forDate} onForDate={setForDate} setQty={setQty} remove={remove} accept={accept} swap={swap}
+          whatsapp={partsOf(lines)} discounts={!!store.pricing?.discounts}
+          delivery={store.pricing?.delivery} whatsappFor={(choice) => partsOf(lines, choice)}
           choose={(id) => { const it = seenRef.current.get(id); setReview(false); if (it) setOpen(it); }}
           onPlaced={(p) => {
             setReview(false); setCart([]); setFlagged(new Set());

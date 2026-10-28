@@ -2,6 +2,7 @@ from uuid import UUID
 
 from fastapi import Depends, HTTPException, Request
 
+from alyr import catalog
 from alyr.config import get_settings
 from alyr.core import auth
 from alyr.core.auth import Staff
@@ -27,6 +28,14 @@ async def current_staff(request: Request) -> Staff:
     raise HTTPException(status_code=401, detail="sign-in required")
 
 
+async def require_manager(staff: Staff = Depends(current_staff)) -> None:
+    """Owners and admins only: prices, services, opening hours, bulk reminders, saved replies
+    and failed-job retries do not belong to the agent role (ALY-117). Used as a route
+    dependency, `dependencies=[Depends(require_manager)]`."""
+    if staff.role not in catalog.MANAGERS:
+        raise HTTPException(status_code=403, detail="Only the owner or an admin can change this.")
+
+
 async def current_tenant(staff: Staff = Depends(current_staff)) -> UUID:
     """The tenant every query in this request is scoped to. It comes from the session,
     never from anything the browser sends."""
@@ -35,7 +44,7 @@ async def current_tenant(staff: Staff = Depends(current_staff)) -> UUID:
 
 def require_module(module: str):
     """A dependency for workspace routes that belong to one module: refuse when the
-    signed-in person's shop has not switched that module on."""
+    signed-in person's shop has not switched that module on,."""
 
     async def check(request: Request, staff: Staff = Depends(current_staff)) -> None:
         from alyr.core.workspace import module_enabled
