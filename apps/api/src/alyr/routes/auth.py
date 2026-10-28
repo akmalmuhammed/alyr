@@ -38,6 +38,8 @@ def _me(staff: Staff) -> dict:
         "signed_in": staff.user_id is not None,
         "id": str(staff.user_id) if staff.user_id else None,
         "name": staff.name, "email": staff.email, "role": staff.role,
+        # So the workspace can count use per business (D-070); an ID, nothing else.
+        "business_id": str(staff.tenant_id) if staff.user_id else None,
     }
 
 
