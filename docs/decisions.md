@@ -46,10 +46,11 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-038 | The Sunday report is a report card: a branded image from ALYR Agent's engine with about eight lines under it | Accepted |
 | D-039 | The Catalog (items, stock, photos) is built complete before go-live; photos on Cloudflare R2; free now, charged by usage later | Accepted |
 | D-042 | Documents (receipts, invoices and the rest) are one engine: gapless numbers, issued paper nobody can change, Arabic first, a PDF drawn by fpdf2 and kept in the database; free now, metered later | Accepted |
+| D-043 | How ALYR introduces itself: every owner-run business, the brand speaks alone, Qatar first then the GCC | Accepted |
 | D-045 | When two records turn out to be one customer, a withdrawal of consent always wins, append-only records are copied forward and nothing is deleted that cannot be found again | Accepted |
 | D-046 | The public site adds ALYR Shelf (the Catalog) and ALYR Docs (Documents), each with its own page; Payroll leaves the site until it is built; every product's state is "Set up for you" | Accepted |
 | D-056 | Search and AI visibility: be found, described correctly and contacted in Qatar, in search and AI assistants; profiles and verification switch on from settings | Accepted |
-| D-058 | The homepage hero's ALYR Agent figure (and /agent's) moves continuously, the one exception to "plays once", with a pause button and calm pacing | Accepted |
+| D-058 | The homepage hero's ALYR Agent figure (and /agent's) moves continuously, the one exception to "plays once", with a pause button and calm pacing | Accepted; the homepage hero is D-062's film since 28 Oct 2026, /agent keeps the live figure |
 | D-059 | Motion is always on: the site's figures (How we work, the products frame, the signature figures, with the flows, demos and the live Agent) keep playing, each with a Pause control; text arrives once | Accepted |
 | D-060 | ALYR runs on Google Cloud in Doha (Cloud Run, Cloud SQL, Secret Manager); replaces Azure (D-036) and the interim Cloudflare and Neon host (D-052); backups stay in Doha | Accepted |
 | D-061 | Company mail moves to Zoho Mail (free plan): hello@ with akmal@ and security@ as aliases, and a mailbox for Beevi Jinan, the registered owner; Resend still sends the product's email | Accepted |
@@ -57,6 +58,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-064 | The owner's test order is marked in the database (a trigger sets `orders.is_test`), counted nowhere (a guard test reads every query), and cancelled with its stock returned when the test ends | Accepted |
 | D-067 | Terms and the privacy notice are versions ALYR publishes; an owner accepts them at sign-up and again when a new one is published, in an append-only record | Accepted |
 | D-068 | An owner who stops partway through setup gets two emails to come back, then none, and can stop them from the link; the funnel counts them | Accepted |
+| D-062 | The homepage hero is the explainer film (one afternoon at Qirfa Bakery in the product's own screens, three lanes at once, ending on the ALYR Agent home): "the product is the illustration" in motion; the hero's live ALYR Agent figure leaves the hero | Accepted |
 
 ---
 
@@ -994,6 +996,20 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 
 **Revisit when.** The lawyer answers (ALY-51); the General Tax Authority publishes the e-invoicing specification (D-008); volume makes the documents too heavy for the database (then a Qatar object store behind `core/storage.py`); a connected POS issues in bursts (draw before the lock); a country pack needs tax-inclusive prices.
 
+## D-043 · How ALYR introduces itself
+**Date** 19 Oct 2026 · **Status** Accepted (founder, 19 Oct, in conversation) · Source: `docs/company/introduction.md`
+
+**Decision.**
+- ALYR introduces itself to every owner-run business in Qatar, with no single target sector. Every lead records its sector, so the sales tool shows which sectors buy fastest.
+- The brand speaks alone: no founder name or photo on the site, deck or profiles, and people on visits are "the ALYR team".
+- The stated ambition is Qatar first, then the GCC.
+- The commercial registration is submitted and waiting; until it is issued, D-034's limits hold (no signing, no money, no public prices).
+
+**What the founder was told before choosing.**
+- A single first sector would teach faster; recording the sector on every lead gets most of that benefit while still going to everyone.
+- A visible founder builds trust faster in Qatar. With the brand alone, trust comes from checkable signals instead: ALYR's own WhatsApp number, the registration number and address, the visit kit, the money-back first month, then case studies.
+
+**What it changes.** `docs/company/introduction.md` is the one source for the company story, the lines in English and Arabic, the answers to an owner's questions, what we never say, and the plan to win clients. The site, the deck, the leave-behind and every profile take their words from it.
 **As built (ALY-139, 19 to 20 Oct 2026; package 2: receipts and invoices from sales, payments by hand, delivery; `specs/013-documents-sales/spec.md`).** Where the code settled what the issue left open. None of it changes the decision.
 - **Sales make documents through one door, behind a savepoint, with a key.** `modules/documents/sales.py`: a receipt when an order is paid (the payment link's report), an invoice when an order goes on a customer's credit account, a receipt for a payment on a credit account (`ledger.add_entry` is the one door, so staff in the chat and the payment link both come through it), and a credit note when an order that has a receipt or invoice is cancelled (`orders.service.cancel_order`, in its own transaction). Each is issued with a key made of what it is for, so an event that fires twice or at the same moment finds the document that is there; each runs behind a savepoint so a document that cannot be made (no CR number for an invoice, the PDF engine down) skips itself with a reason on the activity record and the sale goes on. A shop without the module pays one `select`, and nothing else. *Chosen over* a hook in the payment webhook (the payment link has no webhook yet; the ledger and the order service are the doors that exist) and over a background reconciliation job (it would issue documents later than the sale and could not share its transaction).
 - **A document is the shop's, whoever pressed the button.** The documents of a sale are issued as the shop, with the person's name on the paper (`issued_by`): an agent the shop lets record payments may issue the receipt that goes with one without being allowed to issue documents. Automatic ones say "ALYR".
@@ -1388,3 +1404,42 @@ Nothing claims more than the page, as before.
 **Chosen over** a daily digest of stuck businesses for the founder to chase by hand (it does not scale and the owner hears nothing), a drip of five or more emails (an owner who has not come back after two will not be won by more, and the sign-up address is ALYR's to protect), a magic sign-in link in the email (a sign-in token in an inbox is a bigger security decision than a reminder is worth), and guessing the language from the address or the business name.
 
 **Revisit when** ALYR has its own live WhatsApp number (the same reminder there, as a template), when the funnel shows the second email brings nobody back (drop it) or the first brings few (change the wording or the time), or when a one-tap sign-in is wanted for other reasons.
+
+## D-044 · Shops get paid online through their own account, opened from inside ALYR (model B), or one they already have (model A)
+**Date** 20 Oct 2026 · **Status** Accepted (founder, 20 Oct, in the project thread: "plan model B ... as another option for model A", and that it happens at onboarding) · Linear ALY-155 (ALY-156, ALY-157, ALY-158, ALY-159, ALY-160; ALY-17 and ALY-5 updated) · Research: the Claude Doc "Alyr payment layer: analysis and strategy" (https://claude.ai/code/artifact/d555d6fb-7540-4188-9015-cbadd227cdcd) · Keeps hard rule 3 (non-custodial); changes only how a shop gets its account. (The number: D-043 is taken by the open pull request #87.)
+
+**Where we were.** ALY-17 assumed each shop applies to SADAD, SkipCash or Dibsy by itself and pastes its keys into ALYR. That works for a bakery chain that already has a provider, and fails for a home baker who has never opened one: every shop would need coaching, and onboarding would not run without ALYR staff.
+
+**The decision.**
+- **Model B is the default.** The onboarding step "Get paid online" offers "Open my ALYR Payments account": one form inside ALYR (QID, home business licence or CR, IBAN), sent through the partner provider's API. The provider runs KYC and opens the account **in the shop's name**; its webhook moves the account to Live and payment links switch on by themselves. Staff see only rejected or stuck accounts, in /ops (ALY-158).
+- **Model A stays as the other door.** "I already have SADAD, SkipCash, Dibsy or MyFatoorah" connects the shop's existing account (ALY-157).
+- **One adapter for both** (ALY-17): open or connect an account, create a payment, read its status, refund, receive signed webhooks; authorize and capture later (ALY-160). The pay page, receipts and reports never know which door a shop used.
+- **The shop is always the merchant of record.** Its name is on the customer's statement, the provider pays its own bank, and refunds and disputes are on its account. ALYR stores references and statuses, never card data or balances.
+- **The step never blocks going live.** Until the account is approved the shop takes cash and transfers, recorded by hand (already built).
+- **Partner order, to confirm in ALY-5:** Tap Payments first (QCB-licensed, licensed in all six GCC countries, the only Qatar-licensed provider found with public documentation for opening merchant accounts through a platform's API), SADAD second (published prices, direct NAPS), MyFatoorah reserve (supplier API with document upload and an approval webhook).
+- **ALYR's income from payments:** a revenue share from the partner first; a platform fee inside the payment only where the provider supports it and the shop pays no more than it would directly; monthly billing for model A.
+
+**Rejected.**
+- *Model C, ALYR as the merchant of record that collects and splits (a marketplace).* ALYR would hold customers' money for days and carry chargebacks (Tap's marketplace documents say so), which looks like a payment service under QCB's Payment Services Regulation. Not planned; the lawyer is asked on ALY-32 whether it could serve marketplace orders later.
+- *Model A only.* Every shop without a provider would need ALYR staff to get paid, which breaks self-service onboarding.
+- *Stripe or another global provider.* Stripe does not accept Qatar businesses; the others serve large merchants and lack NAPS debit.
+
+**Not confirmed.** Whether Tap's platform API opens Qatar accounts, its Qatar prices and NAPS routing, payout times, whether providers accept a home business licence instead of a CR, and whether a platform fee is possible: the 12 questions in ALY-5. Whether model B needs any licence for ALYR: ALY-32.
+
+**Revisit when.** ALY-5's answers come back (SADAD or MyFatoorah may lead instead of Tap); the lawyer answers on ALY-32; ALYR enters another GCC country.
+
+## D-062 · The homepage hero is the explainer film
+**Date** 28 Oct 2026 · **Status** Accepted (the founder, 28 Oct 2026, after reviewing four Framer prototypes of the hero, in his words, relayed in the work's brief: "go with D and publish to home page") · Branch `aly-hero-film` · Prototype: `docs/doodle-study/04-d-log.md` in the doodle worktree (`D:/alyr-doodle`) (05D, "Explainer") · Log: `docs/framer-review/09-hero-film-log.md`
+
+**Decision.**
+- The hero of `/` and `/ar` is a film of one afternoon at the fictional Qirfa Bakery, Thursday 15:58 to 16:20, told in ALYR's own screens on a Carbon plate cut by the 45° fold, beside the headline: orders #1440 to #1442 moving through New, Confirmed, Ready and Done, a booking and its reminder, credit owed and the balance that needs a look, three lanes (Orders, Bookings, Money) at once, ending on the ALYR Agent home: "Week so far: 50 orders, QAR 8,520". It loops (about 36 s at pace 1.3), as D-059 allows.
+- **The hero's live ALYR Agent figure (D-058) leaves the hero.** The ALYR Agent section further down the homepage keeps its figure, and `/agent` keeps its live figure, unchanged.
+- This is principle 6, "the product is the illustration", in motion: real screens, real words, one fictional business, nothing drawn that the product does not do.
+
+**Conditions** (D-058's and D-059's, and these).
+- A Pause control ("Pause" / «إيقاف»); it stops off screen and in a hidden tab; reduced motion and no scripts show one composed still (the ALYR Agent home at 16:20), which is also the HTML and the film's first frame.
+- Every number agrees with the homepage's sample at 16:20 and with the others in every frame; the team confirms and moves the orders on, ALYR sends the messages; nothing is paid by link and no document is sent (ALYR Docs is off for every shop); one #1442 sitewide.
+- The headline stays clear of the fold and is the page's slogan; the homepage's Lighthouse no worse than before.
+
+**Revisit when** the founder or a visitor finds it busy or slow (`--pace` tunes all of it), or the product's screens change (the film draws them from the products frame's drawings and the real dashboard, so they follow).
+
