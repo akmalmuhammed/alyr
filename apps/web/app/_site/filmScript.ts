@@ -59,8 +59,10 @@ export const E = {
 export const CLOSE = 34.6; // the fold closes over the film
 export const RESET = 35.25; // the canvas goes back to 15:58 under it
 /** The still: reduced motion, no scripts, and the film's first frame. The ALYR Agent home at
- * 16:20, settled: the one screen, in the dashboard sample's numbers. */
-export const STILL = 31.8;
+ * 16:20, settled: the one screen, in the dashboard sample's numbers. It is the last moment
+ * before the fold closes, so the film moves as soon as it starts (founder, 29 Oct 2026: "all
+ * animations should start right away"); the home's own beat comes round again in each loop. */
+export const STILL = CLOSE - 0.35;
 
 /** The clock's minutes (after midnight) at each event; between two events it runs evenly. */
 const CLOCK: [number, number][] = [
@@ -236,8 +238,9 @@ export const CAPS: { key: CapKey; a: number; b: number; card?: CardKey }[] = [
 ];
 
 /** A caption's place in the world for one layout, at the shot it belongs to: over its window,
- * clear of the fold (or of the phone's cut corner), drawn at true size (`--cs` undoes the
- * camera's scale). */
+ * clear of the fold (or of the phone's cut corner) for as long as it is on screen (the camera
+ * drifts while it holds, so the clearance is the larger of its first and last moments; the
+ * week's caption is also the still), drawn at true size (`--cs` undoes the camera's scale). */
 export function capGeometry(layout: Layout, key: CapKey) {
   const g = STAGE[layout];
   const cap = CAPS.find((c) => c.key === key)!;
@@ -247,11 +250,17 @@ export function capGeometry(layout: Layout, key: CapKey) {
   let w: number;
   if (cap.card) {
     const r = CARDS[cap.card];
-    x = v.tx + r.x * v.s;
+    // the clearance in world units, at the caption's first moment and at its last
+    let clearWorld = 0;
+    for (const at of [v, camAt(layout, cap.b)]) {
+      const ax = at.tx + r.x * at.s;
+      const ay = at.ty + r.y * at.s - 14;
+      const clear = g.phone ? Math.max(0, PHONE_CUT + 8 - ay) : Math.max(0, foldX(g, ay - 24) + 12 - ax);
+      clearWorld = Math.max(clearWorld, clear / at.s);
+    }
+    x = v.tx + (r.x + clearWorld) * v.s;
     y = v.ty + r.y * v.s - 14;
-    const clear = g.phone ? Math.max(0, PHONE_CUT + 8 - y) : Math.max(0, foldX(g, y - 24) + 12 - x);
-    x += clear;
-    w = r.w * v.s - clear;
+    w = (r.w - clearWorld) * v.s;
   } else {
     const l = LANES[0];
     y = v.ty + (l.y + 30) * v.s - 34;
