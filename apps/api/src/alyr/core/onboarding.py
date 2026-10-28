@@ -102,6 +102,7 @@ async def _free_slug(conn: asyncpg.Connection, name: str) -> str:
 async def create_business(
     db: Database, token: str, owner_name: str, name: str, name_ar: str, type_key: str,
     area: str, accepted_terms: list[UUID] | None = None, ip: str = "", user_agent: str = "",
+    lang: str = "en",
 ) -> tuple[UUID, str]:
     """Create the business, its owner and its starting setup. Returns the tenant and a
     session cookie value for the owner. The owner must have accepted every current version of
@@ -146,6 +147,8 @@ async def create_business(
             "select email from signup_tokens where token_hash = $1", _hash(token)
         )
     async with db.tenant(tenant_id) as conn:
+        # The language the owner reads, so a reminder to finish setup is written in it (ALY-171).
+        await conn.execute("select update_own_resume($1, null)", "ar" if lang == "ar" else "en")
         if required:
             owner = await conn.fetchval(
                 "select user_id from memberships where role = 'owner' order by created_at limit 1"
@@ -189,9 +192,13 @@ async def create_business(
 
 async def state(conn: asyncpg.Connection, staff: Staff) -> dict:
     """Everything the onboarding screens need, for the signed-in owner's business."""
+    # The owner is back: any reminder that went is now answered (ALY-171).
+    await conn.execute(
+        "update onboarding_reminders set returned_at = now() where returned_at is null"
+    )
     shop = await conn.fetchrow(
         "select name, name_ar, slug, business_type, area, onboarding_way, onboarding_step, "
-        "onboarded_at, booking_reminders from tenants "
+        "onboarded_at, booking_reminders, owner_lang from tenants "
         "where id = nullif(current_setting('app.tenant_id', true), '')::uuid"
     )
     preset = presets.PRESET_BY_KEY.get(shop["business_type"])
@@ -214,6 +221,8 @@ async def state(conn: asyncpg.Connection, staff: Staff) -> dict:
         "steps": list(presets.STEPS[way]),
         "step": shop["onboarding_step"],
         "finished": shop["onboarded_at"] is not None,
+        # The language ALYR writes to the owner in (a reminder to finish setting up).
+        "lang": shop["owner_lang"],
         "services": [
             {"id": str(r["id"]), "name": r["name"], "name_ar": r["name_ar"],
              "duration_minutes": r["duration_minutes"], "price": r["price"],
@@ -236,7 +245,7 @@ async def state(conn: asyncpg.Connection, staff: Staff) -> dict:
 async def update(
     conn: asyncpg.Connection, *, name: str | None = None, name_ar: str | None = None,
     area: str | None = None, step: str | None = None, reminders: bool | None = None,
-    finished: bool = False,
+    finished: bool = False, lang: str | None = None, resume_reminders: bool | None = None,
 ) -> None:
     """Change the business's own onboarding details. `conn` is tenant-scoped."""
     every_step = {s for steps in presets.STEPS.values() for s in steps} | {""}
@@ -246,6 +255,10 @@ async def update(
         "select update_own_business($1, $2, $3, $4, $5, $6)",
         name, name_ar, area, step, reminders, finished,
     )
+    if lang is not None or resume_reminders is not None:
+        if lang not in (None, "en", "ar"):
+            raise OnboardingError("choose English or Arabic")
+        await conn.execute("select update_own_resume($1, $2)", lang, resume_reminders)
 
 
 def test_key(staff: Staff) -> str:

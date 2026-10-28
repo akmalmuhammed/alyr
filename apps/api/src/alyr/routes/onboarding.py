@@ -1,6 +1,7 @@
 """Self-serve onboarding at /start (D-031)."""
 
 import logging
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -10,6 +11,7 @@ from alyr.config import get_settings
 from alyr.core import (
     access,
     auth,
+    links,
     mail,
     onboarding,
     pricing,
@@ -43,6 +45,8 @@ class NewBusiness(BaseModel):
     # The versions of the terms and the privacy notice the owner ticked, as the sign-up screen
     # listed them (GET /terms/current); every current one is needed (ALY-167).
     accepted_terms: list[UUID] = Field(default_factory=list, max_length=10)
+    # The language of the screen the owner filled this in on (ALY-171).
+    lang: Literal["en", "ar"] = "en"
 
 
 class TermsAcceptance(BaseModel):
@@ -55,6 +59,14 @@ class Change(BaseModel):
     area: str | None = Field(default=None, max_length=80)
     step: str | None = Field(default=None, max_length=40)
     reminders: bool | None = None
+    # The language the owner reads, and whether to email them to finish setting up (ALY-171).
+    lang: Literal["en", "ar"] | None = None
+    resume_reminders: bool | None = None
+
+
+class ResumeStop(BaseModel):
+    slug: str = Field(min_length=1, max_length=60)
+    token: str = Field(min_length=10, max_length=300)
 
 
 class Acceptance(BaseModel):
@@ -163,6 +175,7 @@ async def create_business(body: NewBusiness, request: Request, response: Respons
             request.app.state.db, body.signup_token, body.owner_name, body.name,
             body.name_ar, body.type, body.area, body.accepted_terms,
             ratelimit.client_address(request), request.headers.get("user-agent", ""),
+            body.lang,
         )
     except auth.AuthError as error:
         raise HTTPException(status_code=401, detail=str(error)) from error
@@ -176,6 +189,26 @@ def _owner(staff: Staff) -> Staff:
     if staff.role not in ("owner", "admin"):
         raise HTTPException(status_code=403, detail="only the owner sets up the business")
     return staff
+
+
+@router.post("/resume/stop")
+async def stop_resume(body: ResumeStop, request: Request) -> dict:
+    """Switch the reminder emails off, from the link at the foot of one. No sign-in: the link is
+    signed for this business and can do nothing else."""
+    await ratelimit.check(request, "resume-stop", ratelimit.STOPS_PER_ADDRESS)
+    db = request.app.state.db
+    async with db.unscoped() as conn:
+        tenant_id = await conn.fetchval("select id from tenants where slug = $1", body.slug)
+        try:
+            if tenant_id is None:
+                raise links.LinkError("malformed")
+            link = links.read(body.token, tenant_id, purpose=links.RESUME)
+            if link.subject_id != tenant_id:
+                raise links.LinkError("bad_signature")
+        except links.LinkError as error:
+            raise HTTPException(status_code=400, detail="this link does not work") from error
+        await conn.fetchval("select stop_resume_reminders($1)", tenant_id)
+    return {"stopped": True}
 
 
 @router.get("/terms")
@@ -215,7 +248,8 @@ async def change(body: Change, request: Request, staff: Staff = Depends(current_
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
             await onboarding.update(
                 conn, name=body.name, name_ar=body.name_ar, area=body.area, step=body.step,
-                reminders=body.reminders,
+                reminders=body.reminders, lang=body.lang,
+                resume_reminders=body.resume_reminders,
             )
             return await onboarding.state(conn, staff)
     except onboarding.OnboardingError as error:

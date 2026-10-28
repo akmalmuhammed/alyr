@@ -11,13 +11,15 @@ type Funnel = {
   started: number; ready: number; live: number;
   median_hours_to_ready: number | null; median_hours_to_live: number | null;
   helped: number; helped_live: number; quiet: number;
+  // Reminder emails to finish setting up, and the owners who opened setup again after one (ALY-171).
+  reminders?: { sent: number; businesses: number; returned: number };
   steps: { key: string; label: string; reached: number; share: number; median_hours: number | null }[];
   stuck_on: { key: string; label: string; count: number }[];
 };
 
 const STEPS: Record<string, string> = {
   content: "What they sell", hours: "Opening hours", test: "Test order or booking",
-  price: "Plan accepted", paid: "Payment received", payments: "How customers pay", whatsapp: "WhatsApp number",
+  terms: "Terms accepted", price: "Plan accepted", paid: "Payment received", payments: "How customers pay", whatsapp: "WhatsApp number",
 };
 
 // "5 h" under a day, "2.5 days" over; a dash when nobody has got there yet.
@@ -44,6 +46,7 @@ export default function FunnelView() {
         {funnel.median_hours_to_live !== null && <> · typically live after {span(funnel.median_hours_to_live)}</>}
         {" "}· <b className="num">{funnel.helped}</b> needed ALYR’s hand
         {funnel.quiet > 0 && <> · <b className="num">{funnel.quiet}</b> quiet for a week</>}
+        {funnel.reminders && funnel.reminders.sent > 0 && <> · <b className="num">{funnel.reminders.sent}</b> reminder emails to <b className="num">{funnel.reminders.businesses}</b>, <b className="num">{funnel.reminders.returned}</b> came back</>}
         {" "}<button type="button" className="btn small ghost" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? "Hide steps" : "Steps"}</button>
       </p>
       {open && (

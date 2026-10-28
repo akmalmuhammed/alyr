@@ -68,6 +68,14 @@ const en = {
   },
   // What an owner accepts before the business is made, and again when ALYR publishes a new
   // version (ALY-167). The titles and the pages come from the API, in both languages.
+  // The page the link in a reminder email opens (ALY-171).
+  resumeStop: {
+    title: "We will not email you about setup again",
+    body: "You can still finish your setup any time at alyr.qa/start. Nothing else has changed.",
+    open: "Open my setup",
+    failed: "This link does not work any more. Reply to the email and a person will stop them for you.",
+    working: "Stopping the reminders…",
+  },
   terms: {
     legend: "Before you start",
     agreement: (title: string) => `I accept the ${title}`,
@@ -352,6 +360,13 @@ const ar: typeof en = {
     otherArea: "منطقة أخرى",
     create: "أنشئ نشاطي",
     expired: "انتهت صلاحية التسجيل. اطلب رمزاً جديداً.",
+  },
+  resumeStop: {
+    title: "لن نراسلك عن الإعداد مرة أخرى",
+    body: "ما زال بإمكانك إكمال إعدادك في أي وقت من alyr.qa/start. لم يتغير أي شيء آخر.",
+    open: "افتح إعدادي",
+    failed: "هذا الرابط لم يعد يعمل. ردّ على الرسالة وسيوقفها لك أحد من فريقنا.",
+    working: "جارٍ إيقاف التذكيرات…",
   },
   terms: {
     legend: "قبل أن تبدأ",
