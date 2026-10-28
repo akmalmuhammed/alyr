@@ -58,9 +58,9 @@ jobs:
       # Stamp the pull request's own commit, not GitHub's temporary merge commit.
       ALYR_BUILD_SHA: ${{ github.event.pull_request.head.sha }}
       ALYR_BUILD_BRANCH: ${{ github.head_ref }}
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
+      # The Cloudflare token is NOT set here: only the two steps that talk to Cloudflare get it,
+      # so the dependency install and the build of the pull request's code never see it (ALY-245).
     defaults:
       run:
         working-directory: apps/web
@@ -80,6 +80,9 @@ jobs:
       - run: pnpm site:build
       - name: Cloudflare credentials present?
         id: creds
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then
             echo "ok=true" >> "$GITHUB_OUTPUT"
@@ -90,6 +93,8 @@ jobs:
       - name: Upload a preview version (takes no traffic)
         if: steps.creds.outputs.ok == 'true'
         env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-output.json
         run: |
           short="${ALYR_BUILD_SHA:0:7}"
@@ -146,10 +151,9 @@ jobs:
     env:
       ALYR_BUILD_SHA: ${{ github.sha }}
       ALYR_BUILD_BRANCH: ${{ github.ref_name }}
+      # The Cloudflare token is set on the deploy step only (ALY-245).
       # Product analytics (D-070), production only: previews are not counted.
       NEXT_PUBLIC_POSTHOG_KEY: ${{ vars.POSTHOG_PROJECT_KEY }}
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     defaults:
       run:
         working-directory: apps/web
@@ -167,6 +171,9 @@ jobs:
       # The same build and checks as the CI site job; nothing is published if one fails.
       - run: pnpm site:check
       - name: Deploy to alyr.qa
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::CLOUDFLARE_API_TOKEN is not set (docs/runbooks/site-deploy.md, step 1)"; exit 1; }
           pnpm exec wrangler deploy --config wrangler.jsonc \
