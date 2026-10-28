@@ -1,0 +1,79 @@
+/* The homepage hero's film (HeroFilm.tsx, filmScript.ts; D-062). This is only what the first
+   paint needs: the plate, the stage, the bar and the still (the ALYR Agent home at 16:20). The
+   rest of the canvas's styles (filmStyle.ts) and the film's tracks are written into the page by
+   film.ts after load, so the first paint never waits for them (alyr-design/motion.md, "Figures
+   that keep playing", rule 6).
+   The stage has a fixed size (1000 x 724 beside the headline, 390 x 360 on a phone) and is
+   scaled whole by --fz, so the film's numbers hold at every width. Windows reuse the products
+   frame's drawings (`sf-*`, suite.css) so the two never drift apart. */
+
+.hf { position: absolute; inset-inline-end: 0; top: var(--hf-top); width: calc(1000px * var(--fz)); height: calc(724px * var(--fz)); color: var(--on-band); }
+.hf-stage { position: absolute; top: 0; inset-inline-start: 0; width: 1000px; height: 724px; transform: scale(var(--fz)); transform-origin: 0 0; pointer-events: none; }
+[dir="rtl"] .hf-stage { transform-origin: 100% 0; }
+.hf-plate { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.hf-plate polygon { fill: var(--band); stroke: var(--band-edge); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+[dir="rtl"] .hf-plate { transform: scaleX(-1); }
+/* the canvas: inside the plate, above its bar */
+.hf-clip { position: absolute; inset: 0; overflow: hidden; clip-path: polygon(724px 0, 100% 0, 100% 680px, 44px 680px); }
+[dir="rtl"] .hf-clip { clip-path: polygon(0 0, 276px 0, 956px 680px, 0 680px); }
+.hf-world { position: absolute; top: 0; inset-inline-start: 0; width: 0; height: 0; transform-origin: 0 0; transform: var(--hf-cam-w); }
+.hf-cover { position: absolute; inset: 0; background: var(--band); clip-path: polygon(100% 100%, 100% 100%, 100% 100%); }
+[dir="rtl"] .hf-cover { transform: scaleX(-1); }
+
+/* windows on the canvas; in the still only the ALYR Agent home */
+.hf-card { position: absolute; inset-inline-start: var(--x); top: var(--y); width: var(--w); height: var(--h); opacity: 0; }
+.hf-card.hf-dash { opacity: 1; }
+/* the canvas's other windows are drawn after load, unseen; they are laid out only as film.ts
+   starts them, one a frame, so drawing them never holds the page up */
+.hf-card:not(.hf-dash, .hf-live), .hf-lanes:not(.hf-live), .hf-cap:not(.hf-cap-week, .hf-live) { content-visibility: hidden; }
+.hf-sw { display: inline-grid; min-width: 0; }
+.hf-sw > * { grid-area: 1 / 1; }
+.hf-sw > :not(:last-child) { opacity: 0; }
+/* the clock: 16:20 in the still; the canvas adds the earlier minutes after it */
+.hf-clock > :not(.is-now) { opacity: 0; }
+.hf-clock > .is-now { opacity: 1; }
+
+/* the ALYR Agent home: the real dashboard, its top */
+.hf .hf-dash-head { justify-content: flex-start; gap: .625rem; }
+.hf-dash-head .aw-path { margin-inline-start: auto; }
+.hf-dash-body { flex: 1; min-height: 0; overflow: hidden; padding: 18px 22px 0; }
+.hf .ag.is-live .ag-word { white-space: nowrap; }
+.hf .ag.is-live .ag-roll { display: inline-block; position: relative; }
+
+/* the captions: drawn at true size wherever the camera is (the still shows one) */
+.hf-cap { position: absolute; inset-inline-start: var(--cx); top: var(--cy); width: var(--cw); height: 0; transform: scale(var(--cs)); transform-origin: 0 0; opacity: 0; }
+.hf-cap-week { --cx: var(--wx-w); --cy: var(--wy-w); --cw: var(--ww-w); --cs: var(--ws-w); opacity: 1; }
+[dir="rtl"] .hf-cap, [dir="rtl"] .hf-cap-line { transform-origin: 100% 0; }
+.hf-cap-line { position: absolute; inset-inline: 0; bottom: 0; height: 1px; background: var(--band-rule); transform-origin: 0 0; }
+.hf-cap-tick { position: absolute; inset-inline-end: 0; bottom: -4px; width: 1px; height: 9px; background: var(--on-band-faint); }
+.hf-cap-words { position: absolute; inset-inline-start: 0; bottom: 8px; display: flex; gap: 7px; font-family: var(--mono); font-size: var(--ui-caption); font-weight: var(--weight-medium); letter-spacing: var(--tracking-label); text-transform: uppercase; line-height: 1.2; white-space: nowrap; color: var(--on-band-soft); }
+.hf-w { display: inline-block; }
+.hf-w.is-sep { color: var(--on-band-faint); }
+.hf-w.is-last { color: var(--on-band); }
+.hf-w .ico { display: block; width: 13px; height: 13px; }
+[lang="ar"] .hf .hf-cap-words { font-family: var(--arabic); letter-spacing: 0; text-transform: none; }
+
+/* the plate's bar: the shop, the one Sample mark, the afternoon's clock; Pause at its end */
+.hf-bar { position: absolute; inset-inline: 44px 0; bottom: 0; display: flex; align-items: center; gap: 10px; height: 44px; padding-inline: 26px 9rem; border-top: 1px solid var(--dark-line); font-size: var(--fs-note); }
+.hf-bar b { font-weight: var(--weight-semibold); white-space: nowrap; }
+.hf-bar .mark-sample { margin-inline-start: 0; border-color: var(--band-rule); color: var(--on-band-quiet); }
+.hf-when { margin-inline-start: auto; color: var(--on-band-quiet); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* a tablet: the film under the text, at the end side */
+@media (min-width: 48rem) and (max-width: 61.99rem) {
+  .hf { position: relative; inset: auto; margin-top: var(--space-5); margin-inline-start: auto; }
+}
+/* a phone: under the text, the plate the full width with its cut corner */
+@media (max-width: 47.99rem) {
+  .hf { position: relative; inset: auto; width: auto; height: calc(360px * var(--fz)); margin-top: var(--space-5); background: var(--band); clip-path: polygon(var(--cut-plate-sm) 0, 100% 0, 100% 100%, 0 100%, 0 var(--cut-plate-sm)); }
+  [dir="rtl"] .hf { clip-path: polygon(0 0, calc(100% - var(--cut-plate-sm)) 0, 100% var(--cut-plate-sm), 100% 100%, 0 100%); }
+  .hf::after { content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 0 1px var(--band-edge); pointer-events: none; }
+  .hf-stage { width: 390px; height: 360px; inset-inline-start: 50%; transform: translateX(calc(var(--dir) * -50%)) scale(var(--fz)); transform-origin: 50% 0; }
+  [dir="rtl"] .hf-stage { transform-origin: 50% 0; }
+  .hf-plate { display: none; }
+  .hf-clip, [dir="rtl"] .hf-clip { clip-path: inset(0 0 40px 0); }
+  .hf-world { transform: var(--hf-cam-p); }
+  .hf-cap-week { --cx: var(--wx-p); --cy: var(--wy-p); --cw: var(--ww-p); --cs: var(--ws-p); }
+  .hf-bar { inset-inline: 0; height: 40px; padding-inline: 16px 6rem; }
+  .hf-day-name { display: none; }
+}

@@ -9,6 +9,7 @@ import { SampleMark, TickPath } from "./Frames";
 import { FlowDiagram } from "./FlowDiagram";
 import { FoldSplit } from "./FoldSplit";
 import { HomeMotion } from "./HomeMotion";
+import { HeroFilm } from "./HeroFilm";
 import { HowCards } from "./HowCards";
 import { SAMPLE_ORDER, SAMPLES } from "./samples";
 import { SuiteFrame } from "./SuiteFrame";
@@ -22,8 +23,8 @@ import "./room.css";
 /**
  * The ALYR homepage: ALYR as the technology team an owner-run business never had (ALY-210,
  * D-048, after D-047, folded on 24 Oct 2026). The hero says so, with why in one line (a big
- * company has consultants and an IT team; you have us), beside the real dashboard and the
- * feed of what ALYR did; how we work, a loop of check, set up, see and improve; the
+ * company has consultants and an IT team; you have us), beside a film of one afternoon at a
+ * fictional bakery in the product's own screens (D-062); how we work, a loop of check, set up, see and improve; the
  * visitor's own business, as tabs, whose "Today" list is what a check-up finds; one order
  * followed from the first message to collection, as proof; ALYR Agent; the products; the
  * price (offer on); questions; the closing call. Every word from `copy.ts`; every
@@ -75,44 +76,36 @@ function Head({ eyebrow, title, id, dark = false, children }: {
 }
 
 // ------------------------------------------------------------------------ hero
+/* The headline, the lead, the check-up and the facts on the start side; on the far side the
+   film of one afternoon at Qirfa Bakery in the product (HeroFilm.tsx, D-062), on a Carbon plate
+   cut by the fold and clear of the headline, which stays the page's largest paint. On a phone
+   the plate comes under the text. */
 function Hero({ locale }: { locale: Locale }) {
   const t = copy[locale];
   const hero = t.home.hero;
   return (
     <section className="hero" aria-labelledby="hero-title">
       <div className="wrap">
-        <div className="hero-grid">
+        <div className="hero-text">
           <h1 className="display hero-title" id="hero-title">
             <span className="hl"><span>{hero.title[0]}</span></span>{" "}
             <span className="hl"><span>{hero.title[1]}</span></span>
           </h1>
-          <div className="hero-side">
-            <p className="hero-lead">{rich(hero.lead)}</p>
-            <div className="hero-actions" data-hero-cta>
-              <ContactButton locale={locale} lean label={hero.action} />
-              <a className="link hero-more" href="#how">
-                {hero.more}
-                <Icon name="arrow-right" className="ico ico-flip" />
-              </a>
-            </div>
-            <ContactNote locale={locale} className="hero-note" />
+          <p className="hero-lead">{rich(hero.lead)}</p>
+          <div className="hero-actions" data-hero-cta>
+            <ContactButton locale={locale} lean label={hero.action} />
+            <a className="link hero-more" href="#how">
+              {hero.more}
+              <Icon name="arrow-right" className="ico ico-flip" />
+            </a>
           </div>
+          <ContactNote locale={locale} className="hero-note" />
+          <ul className="hero-facts">
+            {(OFFER_LIVE ? hero.facts : hero.factsNoOffer).map((fact, index) => <li key={fact} style={n(index)}>{rich(fact)}</li>)}
+          </ul>
         </div>
-        <ul className="hero-facts">
-          {(OFFER_LIVE ? hero.facts : hero.factsNoOffer).map((fact, index) => <li key={fact} style={n(index)}>{rich(fact)}</li>)}
-        </ul>
-        <AgentFigure
-          variant="hero"
-          views={{ bakery: SAMPLES[locale].bakery }}
-          order={["bakery"]}
-          text={t.agent}
-          sample={t.fig.sample}
-          label={hero.figure.label}
-          feed
-          crop
-          headingLevel={2}
-        />
       </div>
+      <HeroFilm locale={locale} />
     </section>
   );
 }
