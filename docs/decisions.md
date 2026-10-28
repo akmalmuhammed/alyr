@@ -53,6 +53,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-059 | Motion is always on: the site's figures (How we work, the products frame, the signature figures, with the flows, demos and the live Agent) keep playing, each with a Pause control; text arrives once | Accepted |
 | D-060 | ALYR runs on Google Cloud in Doha (Cloud Run, Cloud SQL, Secret Manager); replaces Azure (D-036) and the interim Cloudflare and Neon host (D-052); backups stay in Doha | Accepted |
 | D-061 | Company mail moves to Zoho Mail (free plan): hello@ with akmal@ and security@ as aliases, and a mailbox for Beevi Jinan, the registered owner; Resend still sends the product's email | Accepted |
+| D-063 | Order businesses get a self-serve onboarding path (a third way, `orders`) made of thin screens over the Catalog's own APIs; one flow for both doors, automatic first, money later | Accepted |
 
 ---
 
@@ -1306,3 +1307,23 @@ Nothing claims more than the page, as before.
 **Data.** Zoho is outside Qatar and may hold a customer's or a merchant's message when they write to us: a row in `docs/data-residency.md`. No merchant data is routed through it.
 
 **Revisit when** ALYR needs shared inboxes or more than five mailboxes (Zoho's paid plan, or the startup programme's mail, ALY-55), or a lawyer says company mail must stay in Qatar (ALY-51).
+
+---
+
+## D-063 · Order businesses get a self-serve onboarding path, over the Catalog's own APIs
+**Date** 28 Oct 2026 · **Status** Accepted (the founder, 28 Oct, in chat after the onboarding review: "it can be both in-person and auto, also focus on auto onboarding, in person I can just add through my admin console"; "ignore the money part, we will add it once our bank and payment stuff is done") · Linear ALY-164, ALY-168, epic ALY-163 · Spec `specs/027-order-onboarding/spec.md` · Builds on D-049 (one engine, three doors), D-053 (nothing is paid first) and D-055 (pay on collection)
+
+**Where we were.** Every business that sells things (restaurant, bakery, grocery, shop, fashion) was created with the `assisted` way: one screen saying ALYR sets up the rest, and a setup request in `/ops`. Only appointment businesses could finish setup alone. The readiness check (D-049) already knows what an order business needs (a live item, a way to pay, a test order, a plan); what was missing was the screens, and a type could not even be switched to self-serve.
+
+**The decision.**
+- **A third way of working, `orders`,** for restaurant, bakery, grocery, shop and fashion: `products`, `handover`, `try`, `plan`, `golive`. Wholesale (credit, price groups) and travel (requests) stay assisted.
+- **Thin screens over APIs that exist.** Each step calls the Catalog, the delivery settings, the features switch and the payment ways the workspace already uses, so there is one source of truth and nothing is built twice. The Catalog stays the place for photos, sizes and file import; `/start` links to it.
+- **One flow for both doors.** A client who signs up alone and one the founder creates from the `/ops` console go through the same steps (D-049). The sales link and assisted mode (ALY-216, ALY-215) are later.
+- **Nothing changes until the founder switches a type** in `/ops` (D-032). The default stays `with_alyr`; the switch can now be set to `self_serve` for an order type.
+- **No hours step for order businesses.** The order page decides availability from each item's own schedule (`modules/items/schedule.py`), not from `business_hours`, and a type's starting notice rule is a starting value for new items, not a stored shop setting. Opening hours are required only for bookings (D-049). An hours screen would collect numbers nothing reads, so it waits until something does, or until a shop-level starting rule is stored.
+- **Money waits** (founder, 28 Oct). The setup fee for a self-serve client, when the first charge is taken and the site's price text stay open until the bank and payment side exists. The plan and pay steps are as D-053 built them.
+- **Test orders are flagged and cancelled** (ALY-168, next pull request): `orders.is_test` marks an order made by the owner's test customer, ending the test cancels it and returns its stock, and a guard test fails if a query that counts orders ignores the flag, the same pattern as the contact merge (D-045). 19 files read the orders table, so the guard is what makes "test orders never count in reports, the Agent or the money-back result" stay true.
+
+**Chosen over** rebuilding item entry inside `/start` (it would duplicate the Catalog and drift from it), a single "ask ALYR to do it" step for order businesses (the status quo; it does not scale past the founder's own hands and fails the "no support" promise), and a shop-wide ordering-hours setting (a second source of truth beside the item schedules).
+
+**Revisit when** an owner needs more than a flat delivery fee at setup (zones are in the Catalog's Delivery screen), when wholesale needs its own path (price groups and credit), or when the onboarding agent (ALY-174, ALY-175) proposes the catalogue from a menu photo: it would fill this step's items, and the owner would still approve them.
