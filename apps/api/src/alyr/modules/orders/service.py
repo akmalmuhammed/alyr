@@ -42,7 +42,7 @@ from alyr.modules.items.clock import ShopClock
 from alyr.modules.items.service import MAX_QUANTITY
 from alyr.modules.items.service import load as load_items
 from alyr.modules.ledger import service as ledger
-from alyr.modules.orders import totals
+from alyr.modules.orders import pay_ways, totals
 
 STATUSES = ("new", "confirmed", "ready", "done", "cancelled")
 # The job that gives back the stock of an order nobody paid for.
@@ -469,13 +469,18 @@ async def create_order(
             extra={"pricing": pricing, "total": total},
         )
 
+    # A shop with no online account yet takes its money when the customer collects (ALY-170,
+    # spec 024): the page and the chat still ask for "link", and it means "pay on collection".
+    ways = await pay_ways.get(conn)
+    if payment == "link" and not ways["online"]:
+        payment = "later"
     if payment == "account":
         if not contact["credit_limit"] > 0:
             raise _plain("no_account")
         balance = (await ledger.aged(conn, contact_id)).balance
         if balance + total > contact["credit_limit"]:
             raise _plain("over_limit", limit_amount=contact["credit_limit"])
-    elif payment != "link":
+    elif payment not in ("link", "later"):
         raise _plain("bad_payment")
 
     # Take the stock before anything else is written, in one step per line. Another order
@@ -615,6 +620,15 @@ async def create_order(
             f"تم تسجيله على حسابك. رصيدك الآن {fmt_qar(balance)}." if arabic
             else f"Put on your account. Your balance is now {fmt_qar(balance)}."
         )
+    elif payment == "later":
+        # Nothing to pay now: the order is the shop's to prepare, and staff mark it paid when
+        # the money arrives. Its stock is already committed, so no hold runs out.
+        how = pay_ways.say(ways["ways"], contact["lang"])
+        delivering = choice is not None and choice.mode == "delivery"
+        if arabic:
+            closing = f"الدفع {how} عند الاستلام."
+        else:
+            closing = f"Pay by {how} " + ("on delivery." if delivering else "when you collect.")
     else:
         pay_url = await conn.fetchval(
             "insert into payment_requests (contact_id, amount, order_id) values ($1, $2, $3) "
@@ -642,13 +656,17 @@ async def create_order(
     # The tracking link goes in the module's own wording. An approved template cannot
     # change, so a notice sent after the 24-hour window arrives without it.
     await outbound.send(conn, templates.notice(
-        contact_id, "order_received_account" if payment == "account" else "order_received_pay",
+        contact_id,
+        {"account": "order_received_account", "later": "order_received_later"}.get(
+            payment, "order_received_pay"),
         contact["lang"], f"{head}\n{summary}\n{total_line}\n{closing}{skipped}\n{track}",
-        number, items, fmt_qar(total), fmt_qar(balance) if payment == "account" else pay_url,
+        number, items, fmt_qar(total),
+        fmt_qar(balance) if payment == "account" else closing if payment == "later" else pay_url,
     ))
     return {
         "order_id": str(order_id), "number": number, "total": total,
         "total_text": fmt_qar(total), "payment": payment, "pay_url": pay_url,
+        "pay_ways": ways["ways"] if payment == "later" else [],
         "track_url": track_url(web_url, tenant_id, order_id),
         "fulfil_on": max(dates).isoformat() if dates else None,
         "hold_expires_at": held_until.isoformat() if held_until else None,

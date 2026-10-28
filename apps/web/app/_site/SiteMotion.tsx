@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { startLoops } from "./loops";
 
 /**
  * The page's scroll behaviour, in one place: the header tightening, the header turning
@@ -32,63 +33,9 @@ export function SiteMotion() {
     );
     document.querySelectorAll("[data-reveal], [data-m]").forEach((node) => seen.observe(node));
 
-    // A product page's signature figure (LastOne, PaymentPaper) plays only once it is
-    // substantially in view, so its ending is seen (08-rulings.md): 60% of it on screen, or
-    // its top past the middle of the screen. On a wide screen the whole figure starts at
-    // once; on a phone, where its three parts stack, each part starts as it arrives
-    // (moment.css counts each part's delays from its own first beat).
-    const figures = Array.from(document.querySelectorAll<HTMLElement>("[data-sig]"));
-    const wide = window.matchMedia("(min-width: 62rem)").matches;
-    const started = new Set<Element>();
-    const start = (target: Element) => {
-      if (started.has(target)) return;
-      started.add(target);
-      enough.unobserve(target);
-      past.unobserve(target);
-      const parts = target.hasAttribute("data-sig") ? Array.from(target.querySelectorAll(".sig-part")) : [];
-      for (const node of [target, ...parts]) node.classList.add("is-in");
-    };
-    const enough = new IntersectionObserver(
-      (entries) => { for (const entry of entries) if (entry.intersectionRatio >= 0.6) start(entry.target); },
-      { threshold: 0.6 },
-    );
-    const past = new IntersectionObserver(
-      (entries) => { for (const entry of entries) if (entry.isIntersecting) start(entry.target); },
-      { rootMargin: "0px 0px -50% 0px" },
-    );
-    for (const figure of figures) {
-      const targets = wide ? [figure] : Array.from(figure.querySelectorAll(".sig-part"));
-      for (const target of targets) {
-        enough.observe(target);
-        past.observe(target);
-      }
-    }
-    // It can be read long after the first 4 s. The page has hydrated and these observers
-    // will start it, so the failsafe that drops `motion` is no longer needed here.
-    if (!still && figures.length) window.clearTimeout(window.__alyrMotion);
-
-    // The homepage's six product tiles (SuiteFrame.tsx, suite.css): each plays its moment once.
-    // Where there is a fine pointer, when it is hovered or reached with the keyboard; elsewhere
-    // (a phone, a tablet), when 60% of it has scrolled into view, or when it takes focus. With
-    // reduced motion nothing is watched, and every tile is already finished.
-    const tiles = still ? [] : Array.from(document.querySelectorAll<HTMLElement>("[data-tile]"));
-    const fine = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-    const tileView = new IntersectionObserver(
-      (entries) => { for (const entry of entries) if (entry.intersectionRatio >= 0.6) playTile(entry.target); },
-      { threshold: 0.6 },
-    );
-    function playTile(tile: Element) {
-      tile.classList.add("is-in");
-      tileView.unobserve(tile);
-    }
-    const onTile = (event: Event) => playTile(event.currentTarget as Element);
-    for (const tile of tiles) {
-      tile.addEventListener("focus", onTile, { once: true });
-      if (fine) tile.addEventListener("pointerenter", onTile, { once: true });
-      else tileView.observe(tile);
-    }
-    // a tile can wait long after the first 4 s for its hover: keep `motion` for it
-    if (tiles.length) window.clearTimeout(window.__alyrMotion);
+    // The figures that keep playing: How we work's cards, the products frame's tiles and the
+    // product pages' signature figures (loops.ts; founder, 26 Oct 2026: motion always on).
+    const stopLoops = startLoops();
 
     // The language link keeps the section being read.
     const sections = Array.from(document.querySelectorAll<HTMLElement>("main section[id]"));
@@ -200,13 +147,7 @@ export function SiteMotion() {
       document.removeEventListener("click", onLanguage, true);
       window.removeEventListener("hashchange", openQuestion);
       seen.disconnect();
-      enough.disconnect();
-      past.disconnect();
-      tileView.disconnect();
-      for (const tile of tiles) {
-        tile.removeEventListener("focus", onTile);
-        tile.removeEventListener("pointerenter", onTile);
-      }
+      stopLoops();
       dark?.disconnect();
       watchBar?.disconnect();
       atClosing?.disconnect();

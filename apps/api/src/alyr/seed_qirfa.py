@@ -881,8 +881,9 @@ async def ensure_qirfa_tenant(owner_dsn: str) -> None:
         )
         if not await conn.fetchval("select client_id from tenants where id = $1", QIRFA_TENANT_ID):
             client_id = await conn.fetchval(
-                "insert into clients (name, contact_name, contact_email, access_from, access_note) "
-                "values ('Qirfa Bakery', 'Huda Rahim', $1, now(), 'Demo shop') returning id",
+                "insert into clients (name, contact_name, contact_email, access_from, "
+                "payment_waived_at, access_note) "
+                "values ('Qirfa Bakery', 'Huda Rahim', $1, now(), now(), 'Demo shop') returning id",
                 OWNER_EMAIL,
             )
             await conn.execute(

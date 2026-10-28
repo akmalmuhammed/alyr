@@ -25,6 +25,7 @@ import asyncpg
 from alyr import catalog
 from alyr.catalog import Text
 from alyr.core import access, whatsapp_setup
+from alyr.modules.orders import pay_ways
 
 OWNERS = ("client", "alyr")
 
@@ -87,12 +88,11 @@ CHECKS: tuple[Check, ...] = (
     ),
     Check(
         "paid",
-        Text("Your products are paid for", "منتجاتك مدفوعة"),
+        Text("You paid to go live", "دفعت لتبدأ العمل"),
         Text(
-            "Pay the setup fee and your first month. ALYR opens your products the same working "
-            "day it sees the payment.",
-            "ادفع رسوم الإعداد وشهرك الأول. تفتح ALYR منتجاتك في يوم العمل نفسه "
-            "الذي يصلها فيه الدفع.",
+            "Pay the setup fee and your first month to go live. ALYR sees the payment the same "
+            "working day.",
+            "ادفع رسوم الإعداد وشهرك الأول لتبدأ العمل. تصل الدفعة إلى ALYR في يوم العمل نفسه.",
         ),
     ),
     Check(
@@ -173,7 +173,7 @@ _PASSES: dict[str, Evaluate] = {
     "hours": lambda conn, modules: _exists(conn, "select 1 from business_hours"),
     "test": _test,
     "price": _price,
-    "paid": lambda conn, modules: access.is_open(conn),
+    "paid": lambda conn, modules: access.settled(conn),
 }
 
 
@@ -351,6 +351,9 @@ async def set_choice(
         key, choice, actor,
     )
     await _event(conn, key, "choice", actor, by_alyr, {"from": row["choice"], "to": choice})
+    if key == "payments":
+        # What the owner chose is how the order page asks for money (ALY-170, spec 024).
+        await pay_ways.apply_choice(conn, choice)
     return True
 
 
@@ -420,6 +423,8 @@ def board_row(row: asyncpg.Record, now: datetime) -> dict:
         "stuck": stage != "live" and hours_still >= STUCK_HOURS,
         "helped": row["helped"],
         "whatsapp": _board_whatsapp(row["whatsapp"], steps),
+        # The Meta number attached to the business (ALY-166), if any.
+        "number": row["number"],
     }
 
 
