@@ -33,7 +33,7 @@ export default function Login() {
       setDevCode(answer.data.dev_code ?? null);
       setStep("code");
     } catch {
-      setError("Cannot reach Alyr. Check your connection and try again.");
+      setError("Cannot reach ALYR. Check your connection and try again.");
     } finally {
       setBusy(false);
     }
@@ -47,7 +47,7 @@ export default function Login() {
       if (!answer.ok) return setError("That code is wrong or has expired. Check it, or request a new one.");
       router.push("/app");
     } catch {
-      setError("Cannot reach Alyr. Check your connection and try again.");
+      setError("Cannot reach ALYR. Check your connection and try again.");
     } finally {
       setBusy(false);
     }
@@ -55,7 +55,7 @@ export default function Login() {
 
   return (
     <main className="login">
-      <h1>Alyr</h1>
+      <h1>ALYR</h1>
       <p className="lead">Sign in to your shop&apos;s workspace</p>
       {step === "email" ? (
         <form onSubmit={(e) => { e.preventDefault(); requestCode(); }}>
@@ -65,7 +65,6 @@ export default function Login() {
             onChange={(e) => setEmail(e.target.value)} autoComplete="email"
           />
           <button className="btn primary" type="submit" disabled={busy}>Send me a code</button>
-          <p className="hint">Demo shop staff: fatima@alnoor.example (owner) or yusuf@alnoor.example (agent).</p>
         </form>
       ) : (
         <form onSubmit={(e) => { e.preventDefault(); verify(); }}>
