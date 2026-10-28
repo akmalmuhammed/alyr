@@ -250,10 +250,16 @@ export default function WorkspaceShell() {
   const pick = useCallback((text: Text) => text[lang], [lang]);
 
   const load = useCallback(async () => {
+    // Signed out (or the session ended): the sign-in page, not "cannot reach ALYR".
+    let signedOut = false;
+    const json = (r: Response) => {
+      if (r.status === 401) signedOut = true;
+      return r.ok ? r.json() : Promise.reject();
+    };
     try {
       const [s, h] = await Promise.all([
-        fetch("/api/workspace", { cache: "no-store" }).then((r) => (r.ok ? r.json() : Promise.reject())),
-        fetch("/api/workspace/home", { cache: "no-store" }).then((r) => (r.ok ? r.json() : Promise.reject())),
+        fetch("/api/workspace", { cache: "no-store" }).then(json),
+        fetch("/api/workspace/home", { cache: "no-store" }).then(json),
       ]);
       setState(s);
       setCards(h.cards);
@@ -268,9 +274,13 @@ export default function WorkspaceShell() {
         if (r.ok) setReadiness(await r.json());
       }
     } catch {
+      if (signedOut) {
+        router.replace("/login");
+        return;
+      }
       setOffline(true);
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     const first = setTimeout(load, 0);

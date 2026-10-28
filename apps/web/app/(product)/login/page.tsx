@@ -45,7 +45,7 @@ export default function Login() {
     try {
       const answer = await post("/api/auth/verify", { email, code });
       if (!answer.ok) return setError("That code is wrong or has expired. Check it, or request a new one.");
-      router.push("/whatsapp");
+      router.push("/app");
     } catch {
       setError("Cannot reach Alyr. Check your connection and try again.");
     } finally {
