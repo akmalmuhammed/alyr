@@ -9,6 +9,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Logo } from "../../_site/brand";
+import { identifyFromSession } from "../../_analytics/ProductAnalytics";
+import { track } from "../../_analytics/posthog";
 import { Chat, initialsOf, type ChatMessage, type Choice } from "./Chat";
 import { COPY, type Lang } from "./copy";
 import "./start.css";
@@ -257,6 +259,7 @@ export default function Start() {
     if (answer.status === 429) return setError(t.account.tooMany);
     if (!answer.ok) return setError(t.account.cannotSend);
     setDevCode(answer.data.dev_code ?? null);
+    track("onboarding_code_sent");
     setStep("code");
   });
   const verify = () => guard(async () => {
@@ -264,11 +267,14 @@ export default function Start() {
     if (answer.status === 403) return setError(t.account.closedNew);
     if (!answer.ok) return setError(t.account.wrong);
     if (answer.data.status === "signed_in") {
+      await identifyFromSession();
+      track("onboarding_signed_in");
       const loaded = await loadState();
       if (loaded && !loaded.finished) return setStep((loaded.step || loaded.steps[0]) as Step);
       return router.push("/app");
     }
     setToken(answer.data.signup_token ?? "");
+    track("onboarding_email_verified");
     setStep("type");
   });
 
@@ -279,6 +285,8 @@ export default function Start() {
     });
     if (answer.status === 401) { setStep("account"); return setError(t.basics.expired); }
     if (!answer.ok) return setError(t.offline);
+    await identifyFromSession();
+    track("onboarding_business_created", { business_type: kind, area: form.area });
     const loaded = await loadState();
     if (loaded) setStep((loaded.step || loaded.steps[0]) as Step);
   });
@@ -389,6 +397,7 @@ export default function Start() {
     if (!answer.ok) return setError(t.offline);
     quoteSeen.current = JSON.stringify(answer.data);
     setQuote(answer.data);
+    track("onboarding_quote_accepted", { period_months: answer.data.period_months ?? 1 });
     then();
   });
 
@@ -421,8 +430,21 @@ export default function Start() {
   });
   const finish = () => guard(async () => {
     await call("/api/onboarding/finish", "POST");
+    track("onboarding_finished");
     router.push("/app");
   });
+
+  // Count each step an owner reaches, and the first test booking (D-070). The step name,
+  // the type of business and the way are all that is sent.
+  useEffect(() => {
+    if (step !== "loading") track("onboarding_step", { step, business_type: state?.business.type || kind, way, quote: step === "plan" ? quote?.status ?? "" : undefined });
+    // only when the step changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+  const testedOnce = useRef(false);
+  useEffect(() => {
+    if (tested && !testedOnce.current) { testedOnce.current = true; track("onboarding_test_booked"); }
+  }, [tested]);
 
   // ── the live preview on the right ─────────────────────
   const preview = useMemo((): ChatMessage[] => {
