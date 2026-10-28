@@ -42,25 +42,13 @@ async def current_tenant(staff: Staff = Depends(current_staff)) -> UUID:
     return staff.tenant_id
 
 
-async def _paid(request: Request, staff: Staff) -> None:
-    """Products open once the client has paid (ALY-212, D-051): until then every product's
-    screens and API answer 402, and the owner is sent to pay."""
-    from alyr.core import access
-
-    if not await access.open_for(request.app.state.db, staff.tenant_id):
-        raise HTTPException(
-            status_code=402, detail="your workspace opens once ALYR has your payment"
-        )
-
-
 def require_module(module: str):
     """A dependency for workspace routes that belong to one module: refuse when the
-    signed-in person's shop has not switched that module on, or has not paid yet."""
+    signed-in person's shop has not switched that module on,."""
 
     async def check(request: Request, staff: Staff = Depends(current_staff)) -> None:
         from alyr.core.workspace import module_enabled
 
-        await _paid(request, staff)
         if not await module_enabled(request.app.state.db, staff.tenant_id, module):
             raise HTTPException(
                 status_code=403, detail=f"{module} is not switched on for this shop"
@@ -76,7 +64,6 @@ def require_any_module(*modules: str):
     async def check(request: Request, staff: Staff = Depends(current_staff)) -> None:
         from alyr.core.workspace import module_enabled
 
-        await _paid(request, staff)
         for module in modules:
             if await module_enabled(request.app.state.db, staff.tenant_id, module):
                 return

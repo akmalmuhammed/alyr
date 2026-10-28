@@ -1,5 +1,7 @@
 # 020 · A client pays before their products open
 
+> **Superseded on 25 Oct 2026 by D-053 and spec 022.** Nothing is paid first any more; the workspace opens at sign-up. This spec stays as the record of what was built and merged.
+
 Linear ALY-212 · Decision D-051 · Builds on spec 018 (the onboarding engine, D-049) and the
 pricing and quotes of D-032
 

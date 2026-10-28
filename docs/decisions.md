@@ -1135,7 +1135,7 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 
 
 ## D-051 · A client pays before their products open
-**Date** 23 Oct 2026 · **Status** Accepted (the founder, 23 Oct, answering the onboarding plan's third question: "dashboard will unlock after payment, that means they browse, get to the portal, pay and get access to products") · Linear ALY-212 · Spec `specs/020-pay-before-access/spec.md` · Updates D-049 (the onboarding engine)
+**Date** 23 Oct 2026 · **Status** Superseded by D-053 on 25 Oct 2026 (the founder dropped pay-first) · was Accepted (the founder, 23 Oct, answering the onboarding plan's third question: "dashboard will unlock after payment, that means they browse, get to the portal, pay and get access to products") · Linear ALY-212 · Spec `specs/020-pay-before-access/spec.md` · Updates D-049 (the onboarding engine)
 
 **The decision.** The account is still made before any payment (the founder's first answer). The owner signs in, sees the price for their business first, accepts it and pays the setup fee and the first period of that price. Until ALYR has that payment, every product screen and its API answer "your workspace opens once ALYR has your payment" (`402`); the guided setup, the price, the payment page and the go-live list stay open. Recording enough to cover what is due opens every business of that client, once. ALYR's staff can also open it without a payment, saying why (a pilot, a demo); both are on the audit log.
 
@@ -1172,6 +1172,26 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 **Chosen over** Fly or Railway for the API (another vendor, no gain), the laptop and tunnel (down when the laptop is off), and waiting for Azure credits (no portal for the first clients).
 
 **Revisit when** Azure credits arrive (ALY-55, ALY-63), or the first paying client who has not agreed to data outside Qatar.
+
+## D-053 · Nothing is paid first: the workspace opens at sign-up, the price depends on the products, payment is asked at go-live
+**Date** 25 Oct 2026 · **Status** Accepted (the founder, 25 Oct, in conversation: "payment depends on the product they choose, audit is free, … no first pay, that's the rule now"; "anyone can auto start using ALYR without any support") · Linear ALY-242 · Spec `specs/022-no-payment-first/spec.md` · Supersedes D-051 · Changes the added-product price of D-035
+
+**The decision.**
+- A client's workspace opens the moment they sign up. The guided setup, the test chat and every product they chose work with nothing paid. The `402` gate of D-051 is gone.
+- The price depends on the products the client chooses. ALYR Agent (the check-up, the home dashboard and the Sunday report) is free for every business. The first product is QAR 449 a month (D-032); **each product added is QAR 50 a month** (D-035 had 150). Chat and Bookings are QAR 499, with Accounts QAR 549.
+- The plan screen shows what combining saves, as a real price: three products are QAR 549 against QAR 1,347 bought one by one, 59% off. The figure is always the products' own list prices against what is charged, never an invented "was" price, and nothing is shown when nothing is discounted.
+- Payment is asked at go-live: the owner sets up, tries it as a customer, sees the plan and then pays the setup fee and the first period to go live. The readiness check `paid` is now "you paid to go live" and is part of "ready". Staff record payments, or waive one with a reason (a pilot, a demo).
+- Every client who was waiting on a payment under D-051 is opened by the migration.
+
+**Why.** The founder wants any owner to start alone and see ALYR work before being asked for money. It also matches the Figma onboarding plan of 16 Oct, which puts the plan after "it works".
+
+**Kept.** The money-back promise is counted over the first 30 days after going live (D-034). ALYR never holds a shop's money (hard rule 3): this is the client paying ALYR. Only references are stored.
+
+**Not decided yet** (asked of the founder): the setup fee for a self-serve client with no support visit; whether the first charge is taken the day the owner goes live or when WhatsApp is connected; the public site's "from QAR 449" text, changed in the repository but not published.
+
+**Chosen over** unlocking only the guided setup before payment (a half-open product tells an owner nothing), and a free trial (D-034 has none; the money-back promise covers the risk).
+
+**Revisit when** online payment for clients exists (ALY-5, ALY-188), and when the subscription is billed (ALY-85, ALY-218).
 
 ## D-056 · Search and AI visibility
 **Date** 25 Oct 2026 · **Status** Accepted (founder: "improve and implement", 25 Oct) · Linear ALY-227 · Plan and audit: `docs/growth/visibility.md`
