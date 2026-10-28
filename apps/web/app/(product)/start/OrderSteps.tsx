@@ -25,6 +25,11 @@ function dirhams(text: string): number | null {
   const value = Number(plain);
   return Number.isFinite(value) && value >= 0 ? Math.round(value * 100) : null;
 }
+// An amount as the product prints it: "QAR 24" in English, «24 ر.ق» in Arabic, no trailing zeros.
+export const moneyText = (dirhams: number, lang: Lang) => {
+  const value = Number.isInteger(dirhams / 100) ? String(dirhams / 100) : (dirhams / 100).toFixed(2);
+  return lang === "ar" ? `${value} ر.ق` : `QAR ${value}`;
+};
 const codeOf = (fault: Fault) => (typeof fault.detail === "object" ? fault.detail?.code : undefined);
 
 // ── what you sell ───────────────────────────────────────────────────────────────

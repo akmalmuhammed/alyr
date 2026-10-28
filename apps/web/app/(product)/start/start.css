@@ -202,7 +202,7 @@
 .ob-suggest { display: flex; flex-wrap: wrap; gap: 8px; }
 .ob-inline-chat .ob-chat { height: min(30rem, 62dvh); }
 .ob-waiting { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--ink-2); font-size: var(--ui-body-sm); }
-.ob-pulse { width: 9px; height: 9px; border-radius: 50%; background: var(--volt); box-shadow: 0 0 0 0 rgba(183, 243, 74, 0.7); animation: ob-pulse 1.6s infinite; }
+.ob-pulse { width: 9px; height: 9px; border-radius: 50%; background: var(--volt); }
 @keyframes ob-pulse { 70% { box-shadow: 0 0 0 10px rgba(183, 243, 74, 0); } 100% { box-shadow: 0 0 0 0 rgba(183, 243, 74, 0); } }
 .ob-success { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 18px; background: var(--volt-wash); box-shadow: 0 0 0 1px color-mix(in srgb, var(--volt) 50%, transparent); animation: ob-in 0.4s var(--ease-product); }
 .ob-success > div { display: grid; gap: 2px; }
@@ -433,3 +433,14 @@
 @media (min-width: 640px) {
   .ob-own-form { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.4fr) minmax(0, 0.8fr) auto; }
 }
+
+/* ── the test order (ALY-168), and the try step both ways share: phone-sized targets and a
+   chat whose small print passes 4.5:1 in both themes ───────────────────────────────── */
+.ob-suggest .ob-chip, .ob-reply, .ob-ready { min-height: 44px; }
+.ob-compose input, .ob-compose button { min-height: 44px; height: 44px; }
+.ob-actions .ob-link { display: inline-flex; align-items: center; min-height: 44px; padding-inline: 6px; }
+.ob-chat-name small { color: var(--ink-2); }
+.ob-bubble time { color: var(--wa-soft); }
+.ob-row.me .ob-bubble time { color: var(--wa-soft-out); }
+.ob-avatar { background: var(--monogram-bg); color: var(--monogram-ink); }
+.ob-btn.small.ob-ready { height: 44px; min-height: 44px; justify-self: start; align-self: flex-start; }

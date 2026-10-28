@@ -33,7 +33,7 @@ Every step is a thin screen over an API that already exists, so nothing is built
 
 - `presets.py`: `way="orders"` for the five types, `STEPS["orders"]`, and `SELF_SERVE_WAYS = ("appointments", "orders")` so `core/pricing.py` (`type_settings`, `way_for`, `save_type`, `can_self_serve`) asks one question instead of naming appointments.
 - `core/onboarding.py`: `create_business` does **not** file a setup request for the `orders` way and starts the business on `products`; `state()` carries the way's steps; `update()` accepts the new step keys (they come from `STEPS`).
-- **No new endpoint and no migration.** `tenants.onboarding_way` is plain text, and every step writes through the existing APIs above. (ALY-168 adds `orders.is_test`.)
+- **No new endpoint and no migration.** `tenants.onboarding_way` is plain text, and every step writes through the existing APIs above. (ALY-168 adds `orders.is_test`, spec 028.)
 
 ## Rules
 

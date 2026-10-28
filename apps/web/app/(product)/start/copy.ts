@@ -154,6 +154,17 @@ const en = {
     skip: "Skip for now",
     test: "Test mode · only you can see this",
   },
+  // The test order of the order path (ALY-168): the same private line, an order instead of a visit.
+  tryOrder: {
+    title: "Try it as a customer",
+    sub: "This is a private test line that only you can see. Say menu, open the link, order an item and place the order.",
+    suggestions: ["hello", "menu"],
+    waiting: "Waiting for your test order…",
+    worked: (number: number, total: string) => `It works. Order #${number} came in, ${total}.`,
+    workedSub: "This is exactly what your customers get. Your team sees it in Orders, marked Test. It is not counted anywhere, no money moves, and it is cancelled when you finish.",
+    ready: "Mark it ready",
+    readyDone: "Marked ready. The message your customer gets is in the chat.",
+  },
   plan: {
     title: "One plan for your business",
     sub: "Nothing to pay now. You pay when you go live, once you have tried it and it works.",
@@ -416,6 +427,16 @@ const ar: typeof en = {
     workedSub: "هذا تماماً ما يصل لعملائك، ويراه فريقك في مساحة العمل.",
     skip: "تخطَّ الآن",
     test: "وضع التجربة · لا يراه غيرك",
+  },
+  tryOrder: {
+    title: "جرّبه كعميل",
+    sub: "هذا خط تجريبي خاص لا يراه غيرك. اكتب «القائمة»، افتح الرابط، اختر صنفاً وأرسل الطلب.",
+    suggestions: ["مرحبا", "القائمة"],
+    waiting: "بانتظار طلبك التجريبي…",
+    worked: (number, total) => `يعمل. وصل الطلب رقم ${number}، ${total}.`,
+    workedSub: "هذا تماماً ما يصل لعملائك. يراه فريقك في الطلبات بعلامة «تجريبي»، ولا يُحسب في أي رقم، ولا تتحرك أموال، ويُلغى عند انتهائك.",
+    ready: "علّم الطلب جاهزاً",
+    readyDone: "تم. الرسالة التي تصل العميل موجودة في المحادثة.",
   },
   plan: {
     title: "خطة واحدة لنشاطك",

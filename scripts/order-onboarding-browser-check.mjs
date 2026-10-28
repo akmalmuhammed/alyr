@@ -20,7 +20,13 @@
 //     added with one; one sample dropped and one price changed; Continue keeps the rest as
 //     live items (the API says so);
 //   * handover: delivery on with a fee, one more way to pay; Continue saves it (the API says
-//     so) and the go-live checks for content and payments turn green.
+//     so) and the go-live checks for content and payments turn green;
+//   * the test order (ALY-168): on the private test line the owner says "menu", the chat gives
+//     their own order link, the link opens the real order page, an order is placed with it, the
+//     screen says it works and offers "Mark it ready", the customer's message shows in the chat,
+//     finishing cancels the order, and the workspace's Orders list shows it marked Test without
+//     a way to mark it paid. The scratch API must have ALYR_PUBLIC_WEB_URL set to --base, so the
+//     link in the chat opens this web app.
 // Short folders: Edge fails quietly with long paths, so keep --profile and --out short.
 
 import { mkdirSync } from "node:fs";
@@ -53,8 +59,8 @@ async function post(path, body, cookie = "") {
   });
   return { status: response.status, data: await response.json().catch(() => ({})), cookie: response.headers.getSetCookie?.().map((c) => c.split(";")[0]).find((c) => c.startsWith("alyr_session=")) ?? "" };
 }
-const apiAs = async (cookie, path, method = "GET", body) => {
-  const response = await fetch(`${BASE}${path}`, { method, headers: { cookie, ...(body ? { "content-type": "application/json" } : {}) }, body: body ? JSON.stringify(body) : undefined });
+const apiAs = async (cookie, path, method = "GET", body, headers = {}) => {
+  const response = await fetch(`${BASE}${path}`, { method, headers: { ...(cookie ? { cookie } : {}), ...headers, ...(body ? { "content-type": "application/json" } : {}) }, body: body ? JSON.stringify(body) : undefined });
   return { status: response.status, data: await response.json().catch(() => ({})) };
 };
 async function signUp(tag) {
@@ -90,7 +96,7 @@ async function targetsAndLabels(name) {
   check(small === "", `${name}: every button, field and link is at least 44 px${small ? " (" + small + ")" : ""}`);
   const unlabelled = await b.js(`(() => [...document.querySelectorAll('.ob-main input')].filter(${visible}).filter(i => !(i.labels && i.labels.length) && !i.getAttribute('aria-label')).map(i => i.outerHTML.slice(0, 80)).join(' | '))()`);
   check(unlabelled === "", `${name}: every field has a name${unlabelled ? " (" + unlabelled + ")" : ""}`);
-  const cut = await b.js(`(() => [...document.querySelectorAll('.ob-main *')].filter(e => { const c = getComputedStyle(e); return c.textOverflow === 'ellipsis' || (c.overflow === 'hidden' && e.scrollWidth > e.clientWidth + 1 && e.textContent.trim()); }).map(e => e.className || e.tagName).slice(0, 4).join(', '))()`);
+  const cut = await b.js(`(() => [...document.querySelectorAll('.ob-main *')].filter(e => { const c = getComputedStyle(e); return (c.textOverflow === 'ellipsis' || c.overflow === 'hidden') && e.scrollWidth > e.clientWidth + 1 && e.textContent.trim(); }).map(e => e.className || e.tagName).slice(0, 4).join(', '))()`);
   check(cut === "", `${name}: no text is cut off${cut ? " (" + cut + ")" : ""}`);
 }
 async function axe(name) {
@@ -101,6 +107,88 @@ async function axe(name) {
 }
 const typeInto = async (find, text) => { await b.click(find); await b.clearFocused(); await b.type(text); await b.sleep(120); };
 const rowsNow = (cookie) => apiAs(cookie, "/api/items?limit=200").then((r) => r.data.items ?? []);
+
+async function tryPass(scheme, tag) {
+  await b.view(375, 812, true, scheme);
+  log(`── the test order, ${scheme}`);
+  const cookie = await signUp(`${tag}-${scheme}`);
+  const mine = (path, method, body) => apiAs(cookie, path, method, body);
+  // What the first two steps leave behind: an item on sale and a way to pay.
+  const item = await mine("/api/items", "POST", { name: "Date cake", name_ar: "كيكة التمر", price: 4000, status: "live" });
+  check(item.status < 300, `an own item is on sale (${item.status})`);
+  await mine("/api/onboarding/steps/payments", "PATCH", { choice: "cash_transfer" });
+  await mine("/api/onboarding/state", "PATCH", { step: "try" });
+  await b.go(`${BASE}/start`, 2500);
+  await b.until(`document.querySelector('.ob-main h1')?.innerText === ${JSON.stringify(s.tryOrder.title)}`, "the try step", 60000);
+  check((await b.js("document.querySelector('.ob-main .ob-sub')?.innerText ?? ''")) === s.tryOrder.sub, "try: it says what to do on the private test line");
+  check((await b.js("document.querySelector('.ob-main [role=status]')?.innerText ?? ''")).includes(s.tryOrder.waiting), `try: it waits (“${s.tryOrder.waiting}”)`);
+  check(await b.js("[...document.querySelectorAll('.ob-btn.primary')].filter(e => e.getClientRects().length)[0].disabled"), "try: Continue is off until an order has come in");
+  check(!/coming|soon|beta|قريب/i.test(await b.js("document.querySelector('.ob-main').innerText")), "try: nothing says something is coming");
+  await layout("try"); await targetsAndLabels("try"); await shot("try");
+  await axe(`try (${scheme})`);
+  await b.view(320, 640, true, scheme);
+  await b.sleep(300);
+  await layout("try at 320"); await targetsAndLabels("try at 320"); await shot("try-320");
+  await b.view(375, 812, true, scheme);
+  await b.sleep(300);
+
+  // "menu" on the test line: the chat answers with the owner's own link
+  const chip = (word) => `[...document.querySelectorAll('.ob-suggest .ob-chip')].find(e => ${norm}(e) === ${JSON.stringify(word)})`;
+  await b.click(chip(s.tryOrder.suggestions[1]), 400);
+  const linkPattern = "/https?:\\/\\/\\S+\\/s\\/\\S+\\?t=\\S+/";
+  await b.until(`${linkPattern}.test(document.querySelector('.ob-inline-chat')?.innerText ?? '')`, "the order link in the chat", 40000);
+  const link = await b.js(`(document.querySelector('.ob-inline-chat').innerText.match(${linkPattern}) || [''])[0]`);
+  check(link !== "", "try: “menu” gets the owner's own order link in the chat");
+  const url = new URL(link);
+  const slug = url.pathname.split("/")[2];
+  const token = url.searchParams.get("t");
+  check(!/[?&]c=/.test(link), "try: the link carries a signed token, never a contact ID");
+  await shot("try-chat");
+
+  // the link opens the real order page, as that customer
+  await b.go(link, 2500);
+  await b.until("document.querySelectorAll('.ox-card').length > 0", "the real order page", 60000);
+  check(!/not valid|expired|منتهي|غير صالح/i.test(await b.js("document.body.innerText")), "try: the link opens the shop's real order page");
+  const page = (await apiAs("", `/api/store/${slug}`, "GET", undefined, { "x-order-link": token })).data;
+  const cake = (page.products ?? []).find((p) => p.name === "Date cake");
+  check(!!cake, "try: the order page lists the owner's item");
+  const place = (extra = {}) => post(`/api/store/${slug}/orders`, { token, items: [{ product_id: cake.id, quantity: 2 }], payment: "link", ...extra });
+  let placed = await place();
+  if (placed.status !== 200) placed = await place({ for_date: new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10) });
+  check(placed.status === 200, `try: the order is placed with that link (${placed.status} ${JSON.stringify(placed.data).slice(0, 120)})`);
+
+  // back in /start: it works, and the owner marks it ready
+  await b.go(`${BASE}/start`, 2500);
+  await b.until("!!document.querySelector('.ob-success')", "the success line", 60000);
+  const order = (await mine("/api/orders")).data.orders.find((o) => o.test);
+  check(!!order && order.status === "new" && order.payment === "unpaid", "try: the order is in the list, marked test, unpaid (no money moves)");
+  const amount = order.total % 100 === 0 ? String(order.total / 100) : (order.total / 100).toFixed(2);
+  const money = LANG === "ar" ? `${amount} ر.ق` : `QAR ${amount}`;
+  check((await b.js("document.querySelector('.ob-success b').innerText")) === s.tryOrder.worked(order.number, money), `try: it says “${s.tryOrder.worked(order.number, money)}”`);
+  check(await b.js("![...document.querySelectorAll('.ob-btn.primary')].filter(e => e.getClientRects().length)[0].disabled"), "try: Continue is on");
+  await layout("try, ordered"); await targetsAndLabels("try, ordered"); await shot("try-ordered");
+  await axe(`try, ordered (${scheme})`);
+  await b.click(`[...document.querySelectorAll('.ob-main button')].find(e => ${norm}(e) === ${JSON.stringify(s.tryOrder.ready)})`, 500);
+  await b.until(`(document.querySelector('.ob-main')?.innerText ?? '').includes(${JSON.stringify(s.tryOrder.readyDone)})`, "marked ready", 30000);
+  check((await mine("/api/orders")).data.orders.find((o) => o.test).status === "ready", "try: Mark it ready moved the order to ready");
+  const ready = LANG === "ar" ? `الطلب رقم ${order.number} جاهز` : `Order #${order.number} is ready`;
+  await b.until(`(document.querySelector('.ob-inline-chat')?.innerText ?? '').includes(${JSON.stringify(ready)})`, "the customer's message in the chat", 30000);
+  check(true, `try: the customer's message “${ready}” is in the test chat`);
+  const checks = Object.fromEntries(((await mine("/api/onboarding/readiness")).data.checks ?? []).map((c) => [c.key, c.status]));
+  check(checks.test === "done", `the go-live list shows the test order done (${checks.test})`);
+  const agent = (await mine("/api/agent?lang=en")).data;
+  check(!JSON.stringify(agent).includes(`#${order.number}`), "try: the owner's Agent view says nothing about the test order");
+
+  // finishing: cancelled, and the workspace marks it Test and offers no way to mark it paid
+  const finished = await mine("/api/onboarding/finish", "POST");
+  check(finished.status === 200 && finished.data.test_orders_cancelled === 1, `finishing cancels the test order (${JSON.stringify(finished.data)})`);
+  await b.go(`${BASE}/app/orders`, 2500);
+  await b.until("document.querySelectorAll('.norow').length > 0", "the Orders list", 60000);
+  const testWord = LANG === "ar" ? "طلب تجريبي" : "Test order";
+  check(await b.js(`[...document.querySelectorAll('.norow .pill')].some(e => e.innerText.trim() === ${JSON.stringify(testWord)})`), `orders: the test order is marked “${testWord}”`);
+  check(await b.js("![...document.querySelectorAll('.norow button')].some(e => /mark.*paid|تسجيل.*دفع|دفع/i.test(e.innerText))"), "orders: no way to mark the test order paid");
+  await layout("orders list"); await shot("orders-test");
+}
 
 async function pass(scheme, tag) {
   await b.view(375, 812, true, scheme);
@@ -204,7 +292,7 @@ async function pass(scheme, tag) {
 
 try {
   await b.go(`${BASE}/start`, 1500);
-  await b.js(`localStorage.setItem('alyr-lang', '${LANG}')`);
+  await b.js(`localStorage.setItem('alyr-lang', '${LANG}'); localStorage.setItem('alyr-workspace-lang', '${LANG}')`);
   await pass("light", "a");
   await pass("dark", "b");
   // 320 px: the narrowest phone, the same two steps (the saved shop from the pass above is on handover).
@@ -217,6 +305,8 @@ try {
   await b.go(`${BASE}/start`, 2500);
   await b.until("document.querySelectorAll('.ob-item').length > 0", "products at 320 px", 40000);
   await layout("products at 320"); await targetsAndLabels("products at 320"); await shot("products-320");
+  await tryPass("light", "c");
+  await tryPass("dark", "d");
   check(b.problems.length === 0, `no console errors or exceptions${b.problems.length ? ": " + b.problems.slice(0, 5).join(" || ") : ""}`);
 } catch (error) {
   failures.push(String(error.message ?? error));

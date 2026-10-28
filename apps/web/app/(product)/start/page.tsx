@@ -12,7 +12,7 @@ import { Logo } from "../../_site/brand";
 import { call } from "./api";
 import { Chat, initialsOf, type ChatMessage, type Choice } from "./Chat";
 import { COPY, type Lang } from "./copy";
-import { HandoverView, ProductsView, useHandover, useProducts } from "./OrderSteps";
+import { HandoverView, ProductsView, moneyText, useHandover, useProducts } from "./OrderSteps";
 import "./start.css";
 
 type Text = { en: string; ar: string };
@@ -68,6 +68,8 @@ type Payment = {
   reference: string; bank: string;
 };
 type Booking = { customer: string; service: string; when_text: string; status: string };
+// The owner's test order, as the Orders list answers it (ALY-168).
+type TestOrder = { id: string; number: number; total: number; status: string; test?: boolean };
 type Step = "loading" | "account" | "code" | "type" | "basics" | "services" | "hours" | "products" | "handover" | "assisted" | "try" | "plan" | "golive" | "finished";
 
 const ORDER = [6, 0, 1, 2, 3, 4, 5]; // Saturday first, as the week runs in Qatar
@@ -149,6 +151,7 @@ export default function Start() {
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [tested, setTested] = useState<Booking | null>(null);
+  const [testedOrder, setTestedOrder] = useState<TestOrder | null>(null);
   const [ready, setReady] = useState<Readiness | null>(null);
   // The WhatsApp number and name as the owner types them, until saved.
   const [waDraft, setWaDraft] = useState<{ phone?: string; display_name?: string }>({});
@@ -327,18 +330,20 @@ export default function Start() {
   });
 
   // ── try it ───────────────────────────────────────────
-  const refreshTry = useCallback(async () => {
-    const [conversation, bookings] = await Promise.all([
+  const refreshTry = useCallback(async (kind: string) => {
+    const [conversation, bookings, placed] = await Promise.all([
       call<{ messages: ChatMessage[] }>("/api/onboarding/test-chat"),
-      call<{ bookings: Booking[] }>("/api/bookings"),
+      kind === "appointments" ? call<{ bookings: Booking[] }>("/api/bookings") : null,
+      kind === "orders" ? call<{ orders: TestOrder[] }>("/api/orders") : null,
     ]);
     if (conversation.ok) setChat(conversation.data.messages);
-    if (bookings.ok) setTested(bookings.data.bookings.find((b) => b.customer.endsWith("(test)") && b.status === "booked") ?? null);
+    if (bookings?.ok) setTested(bookings.data.bookings.find((b) => b.customer.endsWith("(test)") && b.status === "booked") ?? null);
+    if (placed?.ok) setTestedOrder(placed.data.orders.find((o) => o.test && o.status !== "cancelled") ?? null);
   }, []);
   useEffect(() => {
-    if (way !== "appointments" || (step !== "try" && step !== "golive")) return;
+    if ((way !== "appointments" && way !== "orders") || (step !== "try" && step !== "golive")) return;
     let alive = true;
-    const tick = async () => { if (alive) await refreshTry().catch(() => undefined); };
+    const tick = async () => { if (alive) await refreshTry(way).catch(() => undefined); };
     const first = setTimeout(tick, 0);
     const timer = setInterval(tick, 2500);
     return () => { alive = false; clearTimeout(first); clearInterval(timer); };
@@ -348,6 +353,14 @@ export default function Start() {
     setDraft("");
     const answer = await call<{ messages: ChatMessage[] }>("/api/onboarding/test-chat", "POST", { text: choice ? choice.title : text, reply_id: choice?.id ?? "" });
     if (answer.ok) setChat(answer.data.messages);
+  });
+
+  // The owner marks their test order ready, as staff would, and the message the customer gets
+  // shows in the test chat on the next look.
+  const markReady = () => guard(async () => {
+    if (!testedOrder) return;
+    await call(`/api/orders/${testedOrder.id}/status`, "POST", { status: "ready" });
+    await refreshTry("orders");
   });
 
   // ── the price ALYR prepared (D-032) ───────────────────
@@ -691,25 +704,36 @@ export default function Start() {
     );
     actions = <button className="ob-btn primary" type="button" onClick={() => go("plan")}>{t.continue}<Ico name="arrow" /></button>;
   } else if (step === "try") {
+    const orders = way === "orders";
+    const c = orders ? t.tryOrder : t.try;
+    const worked = orders
+      ? (testedOrder ? t.tryOrder.worked(testedOrder.number, moneyText(testedOrder.total, lang)) : null)
+      : (tested ? t.try.worked(`${tested.service}, ${tested.when_text}`) : null);
     main = (
       <>
         <p className="ob-kicker volt">{t.try.test}</p>
-        <h1>{t.try.title}</h1>
-        <p className="ob-sub">{t.try.sub}</p>
-        <div className="ob-suggest">{t.try.suggestions.map((s) => <button key={s} type="button" className="ob-chip" onClick={() => say(s)} dir="auto">{s}</button>)}</div>
-        {tested ? (
-          <div className="ob-success" role="status"><span className="ob-signal"><Ico name="check" size={22} /></span><div><b>{t.try.worked(`${tested.service}, ${tested.when_text}`)}</b><small>{t.try.workedSub}</small></div></div>
+        <h1>{c.title}</h1>
+        <p className="ob-sub">{c.sub}</p>
+        <div className="ob-suggest">{c.suggestions.map((s) => <button key={s} type="button" className="ob-chip" onClick={() => say(s)} dir="auto">{s}</button>)}</div>
+        {worked ? (
+          <>
+            <div className="ob-success" role="status"><span className="ob-signal"><Ico name="check" size={22} /></span><div><b>{worked}</b><small>{c.workedSub}</small></div></div>
+            {orders && testedOrder && (testedOrder.status === "ready"
+              ? <p className="ob-note" role="status"><Ico name="check" size={18} />{t.tryOrder.readyDone}</p>
+              : <button className="ob-btn small ob-ready" type="button" disabled={busy} onClick={markReady}>{t.tryOrder.ready}</button>)}
+          </>
         ) : (
-          <p className="ob-waiting" role="status"><span className="ob-pulse" />{t.try.waiting}</p>
+          <p className="ob-waiting" role="status"><span className="ob-pulse" />{c.waiting}</p>
         )}
         <div className="ob-inline-chat">{testChat}</div>
       </>
     );
+    const done = orders ? testedOrder !== null : tested !== null;
     actions = (
       <>
-        <button className="ob-btn ghost" type="button" onClick={() => go("hours")}>{t.back}</button>
-        {!tested && <button className="ob-link" type="button" onClick={() => go("plan")}>{t.try.skip}</button>}
-        <button className="ob-btn primary" type="button" disabled={!tested} onClick={() => go("plan")}>{t.continue}<Ico name="arrow" /></button>
+        <button className="ob-btn ghost" type="button" onClick={() => go(orders ? "handover" : "hours")}>{t.back}</button>
+        {!done && <button className="ob-link" type="button" onClick={() => go("plan")}>{t.try.skip}</button>}
+        <button className="ob-btn primary" type="button" disabled={!done} onClick={() => go("plan")}>{t.continue}<Ico name="arrow" /></button>
       </>
     );
   } else if (step === "plan") {
