@@ -41,6 +41,8 @@ CODES_PER_EMAIL = Limit(5, HOUR)
 GUESSES_PER_ADDRESS = Limit(30, HOUR)
 # New businesses created from one address.
 SIGNUPS_PER_ADDRESS = Limit(10, HOUR)
+# Reminder emails switched off from a link, from one address (ALY-171).
+STOPS_PER_ADDRESS = Limit(30, HOUR)
 # Orders and bookings placed from one address on customers' pages.
 PLACED_PER_ADDRESS = Limit(30, TEN_MINUTES)
 

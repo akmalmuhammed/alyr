@@ -60,6 +60,8 @@ type OrderRow = {
   assigned: Person | null;
   // The table the order is for, from a QR code on a table ("" for none).
   table?: string;
+  // The owner's own test order from the test line (ALY-168): marked, never counted, cannot be paid.
+  test?: boolean;
   // The price group the order was charged under, as named then (null for orders before groups).
   price_group?: { name: string; name_ar: string; is_default: boolean } | null;
   // The receipt or invoice the order made, for a shop with Documents on (ALY-146).
@@ -129,6 +131,7 @@ const T = {
     bk: { booked: "Booked", completed: "Came", cancelled: "Cancelled", no_show: "No-show" } as Record<string, string>,
     tabLedger: "Credit ledger", tabOrders: "Orders", ordersSub: "Placed through the order link",
     noOrders: "No orders yet. In the chat, tap \"Place an order\" as a customer.", table: (label: string) => `Table ${label}`,
+    testOrder: "Test order",
     docLink: (kind: string, number: string, status: string) => `${({ receipt: "Receipt", invoice: "Invoice", deposit_receipt: "Deposit receipt" } as Record<string, string>)[kind] ?? "Document"} ${number}${status === "void" ? " (cancelled)" : ""}`,
     orderNo: "Order", items: "Items", payment: "Payment", status: "Status",
     pay: { unpaid: "Not paid", paid: "Paid", on_account: "On account" } as Record<string, string>,
@@ -199,6 +202,7 @@ const T = {
     bk: { booked: "محجوز", completed: "حضر", cancelled: "ملغي", no_show: "لم يحضر" } as Record<string, string>,
     tabLedger: "دفتر الديون", tabOrders: "الطلبات", ordersSub: "الطلبات الواردة من رابط الطلب",
     noOrders: "لا توجد طلبات بعد. في المحادثة اضغط \"اطلب الآن\" كعميل.", table: (label: string) => `طاولة ${label}`,
+    testOrder: "طلب تجريبي",
     docLink: (kind: string, number: string, status: string) => `${({ receipt: "إيصال", invoice: "فاتورة", deposit_receipt: "إيصال عربون" } as Record<string, string>)[kind] ?? "مستند"} ${number}${status === "void" ? " (ملغى)" : ""}`,
     orderNo: "الطلب", items: "الأصناف", payment: "الدفع", status: "الحالة",
     pay: { unpaid: "غير مدفوع", paid: "مدفوع", on_account: "على الحساب" } as Record<string, string>,
@@ -1095,6 +1099,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                             <><br /><span className="pill none">{lang === "ar" ? o.price_group.name_ar || o.price_group.name : o.price_group.name}</span></>
                           )}
                           {o.table && <><br /><span className="pill p1">{t.table(o.table)}</span></>}
+                          {o.test && <><br /><span className="pill p1">{t.testOrder}</span></>}
                           {o.document && embedded && canManage && (
                             <><br /><a className="doc-link" href={`/app/documents?d=${o.document.id}`}>{t.docLink(o.document.kind, o.document.number, o.document.status)}</a></>
                           )}
@@ -1110,7 +1115,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                         <td className="r num" dir="ltr">{o.total_text}</td>
                         <td>
                           <span className={`pill ${o.payment === "unpaid" ? "p1" : "p0"}`}>{t.pay[o.payment]}</span>
-                          {o.payment === "unpaid" && o.status !== "cancelled" && canManage && (
+                          {o.payment === "unpaid" && o.status !== "cancelled" && canManage && !o.test && (
                             <MarkPaid orderId={o.id} lang={lang} onDone={refresh} />
                           )}
                         </td>

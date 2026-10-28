@@ -22,7 +22,7 @@ async def numbers(conn: asyncpg.Connection, start: datetime, end: datetime, tz: 
         "count(*) filter (where status <> 'cancelled' and payment = 'paid') as paid_orders, "
         "coalesce(sum(total) filter (where status <> 'cancelled' and payment = 'on_account'), 0)"
         "::bigint as on_account "
-        "from orders where created_at >= $1 and created_at < $2",
+        "from orders where not is_test and created_at >= $1 and created_at < $2",
         start, end,
     )
     out = dict(row)
@@ -30,7 +30,8 @@ async def numbers(conn: asyncpg.Connection, start: datetime, end: datetime, tz: 
         return out
     out["repeat"] = await conn.fetchval(
         "select count(distinct o.contact_id) from orders o "
-        "where o.created_at >= $1 and o.created_at < $2 and o.status <> 'cancelled' "
+        "where not o.is_test and o.created_at >= $1 and o.created_at < $2 "
+        "and o.status <> 'cancelled' "
         "and exists (select 1 from orders p where p.contact_id = o.contact_id "
         "            and p.created_at < $1)",
         start, end,
@@ -40,7 +41,8 @@ async def numbers(conn: asyncpg.Connection, start: datetime, end: datetime, tz: 
         "sum(i.quantity) as quantity "
         "from order_items i join orders o on o.id = i.order_id "
         "left join items p on p.id = i.item_id "
-        "where o.created_at >= $1 and o.created_at < $2 and o.status <> 'cancelled' "
+        "where not o.is_test and o.created_at >= $1 and o.created_at < $2 "
+        "and o.status <> 'cancelled' "
         "group by i.name, p.name_ar order by quantity desc, i.name limit 1",
         start, end,
     )

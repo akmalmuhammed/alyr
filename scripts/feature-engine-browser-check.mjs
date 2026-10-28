@@ -63,7 +63,7 @@ async function signUp(kind) {
   const email = `fe-${kind}-${stamp}@shop.example`;
   const code = (await call("/api/onboarding/code", { method: "POST", body: { email }, as: "" })).data.dev_code;
   const verified = await call("/api/onboarding/verify", { method: "POST", body: { email, code }, as: "" });
-  const made = await call("/api/onboarding/business", { method: "POST", as: "", body: { signup_token: verified.data.signup_token, owner_name: "Hamad", name: `Sweet ${stamp.slice(-4)}`, name_ar: "حلويات الدوحة", type: kind, area: "Al Sadd" } });
+  const made = await call("/api/onboarding/business", { method: "POST", as: "", body: { accepted_terms: (await call("/api/onboarding/terms/current", { as: "" })).data.current.map((t) => t.id), signup_token: verified.data.signup_token, owner_name: "Hamad", name: `Sweet ${stamp.slice(-4)}`, name_ar: "حلويات الدوحة", type: kind, area: "Al Sadd" } });
   if (made.status !== 200) throw new Error(`could not create a ${kind}: ${made.status} ${JSON.stringify(made.data)}`);
   cookie = made.cookie;
   const state = (await call("/api/onboarding/state")).data;

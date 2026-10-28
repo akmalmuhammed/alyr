@@ -202,7 +202,7 @@
 .ob-suggest { display: flex; flex-wrap: wrap; gap: 8px; }
 .ob-inline-chat .ob-chat { height: min(30rem, 62dvh); }
 .ob-waiting { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--ink-2); font-size: var(--ui-body-sm); }
-.ob-pulse { width: 9px; height: 9px; border-radius: 50%; background: var(--volt); box-shadow: 0 0 0 0 rgba(183, 243, 74, 0.7); animation: ob-pulse 1.6s infinite; }
+.ob-pulse { width: 9px; height: 9px; border-radius: 50%; background: var(--volt); }
 @keyframes ob-pulse { 70% { box-shadow: 0 0 0 10px rgba(183, 243, 74, 0); } 100% { box-shadow: 0 0 0 0 rgba(183, 243, 74, 0); } }
 .ob-success { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 18px; background: var(--volt-wash); box-shadow: 0 0 0 1px color-mix(in srgb, var(--volt) 50%, transparent); animation: ob-in 0.4s var(--ease-product); }
 .ob-success > div { display: grid; gap: 2px; }
@@ -408,3 +408,55 @@
 .ob-pay-how pre { margin: 0; white-space: pre-wrap; font: inherit; font-size: var(--ui-body-sm); }
 .ob-pay-how code { justify-self: start; padding: 4px 8px; border-radius: 8px; background: var(--raise); font-size: var(--ui-body-sm); letter-spacing: 0.04em; }
 .ob-pay-note { display: flex; gap: 8px; align-items: baseline; margin: 0; color: var(--ink-2); font-size: var(--ui-small); line-height: 1.5; }
+
+/* ── the order path (ALY-164): what you sell, then pickup and payment ───────── */
+.ob-items .ob-tr, .ob-items .ob-th { grid-template-columns: 2.75rem minmax(0, 1fr) 5.5rem 2.75rem; }
+.ob-items .ob-item { min-height: 3rem; }
+.ob-keep { display: grid; place-items: center; min-width: 44px; min-height: 44px; cursor: pointer; }
+.ob-tr .ob-keep input { width: 22px; height: 22px; min-width: 22px; padding: 0; accent-color: var(--ink); cursor: pointer; }
+.ob-onsale { display: grid; place-items: center; min-height: 44px; color: var(--ink-2); }
+.ob-item-name { display: grid; min-width: 0; font-size: var(--ui-body); overflow-wrap: anywhere; }
+.ob-item-name small { color: var(--ink-2); font-size: var(--ui-small); }
+.ob-items .ob-th, .ob-handover .ob-muted { color: var(--ink-2); }
+.ob-items .ob-tr input[inputmode="decimal"] { height: 44px; font-size: var(--ui-input); text-align: end; }
+.ob-items .ob-tr input:disabled { color: var(--ink-3); }
+.ob-items .ob-x { width: 44px; height: 44px; }
+.ob-own, .ob-handover { display: grid; gap: 12px; margin-top: 14px; }
+.ob-own h2, .ob-handover h2 { margin: 0; font-size: var(--ui-title); }
+.ob-handover p { margin: 0; }
+.ob-own-form { display: grid; gap: 12px; align-items: end; }
+.ob-own-form .ob-field, .ob-handover .ob-field { grid-template-columns: minmax(0, 1fr); }
+.ob-own-form .ob-field input, .ob-handover .ob-field input { min-width: 0; min-height: 44px; font-size: var(--ui-input); }
+.ob-own-form .ob-btn.small { min-height: 44px; justify-self: start; }
+.ob-handover .ob-chip { min-height: 44px; padding-inline: 18px; }
+.ob-more { margin-top: 14px; flex-wrap: wrap; }
+@media (min-width: 640px) {
+  .ob-own-form { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.4fr) minmax(0, 0.8fr) auto; }
+}
+
+/* ── the test order (ALY-168), and the try step both ways share: phone-sized targets and a
+   chat whose small print passes 4.5:1 in both themes ───────────────────────────────── */
+.ob-suggest .ob-chip, .ob-reply, .ob-ready { min-height: 44px; }
+.ob-compose input, .ob-compose button { min-height: 44px; height: 44px; }
+.ob-actions .ob-link { display: inline-flex; align-items: center; min-height: 44px; padding-inline: 6px; }
+.ob-chat-name small { color: var(--ink-2); }
+.ob-bubble time { color: var(--wa-soft); }
+.ob-row.me .ob-bubble time { color: var(--wa-soft-out); }
+.ob-avatar { background: var(--monogram-bg); color: var(--monogram-ink); }
+.ob-btn.small.ob-ready, .ob-btn.small.ob-tall { height: 44px; min-height: 44px; justify-self: start; align-self: flex-start; }
+.ob-chips .ob-chip { min-height: 44px; }
+
+/* ── terms and the privacy notice (ALY-167): a tick per version, with a link to read it ── */
+.ob-terms { display: grid; gap: 4px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.ob-terms legend { padding: 0; margin-bottom: 6px; font-size: var(--ui-body-sm); font-weight: 600; }
+.ob-term { display: flex; align-items: center; gap: 12px; min-height: 44px; }
+.ob-term label { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; min-height: 44px; cursor: pointer; font-size: var(--ui-body); }
+.ob-term input { flex: none; width: 22px; height: 22px; min-width: 22px; padding: 0; accent-color: var(--ink); cursor: pointer; }
+.ob-term > span { flex: 1; min-width: 0; display: grid; font-size: var(--ui-body); }
+.ob-term small { color: var(--ink-2); font-size: var(--ui-small); }
+.ob-term label > span { min-width: 0; overflow-wrap: anywhere; }
+.ob-term .ob-link { display: inline-flex; align-items: center; justify-content: center; flex: none; min-width: 44px; min-height: 44px; padding-inline: 6px; }
+/* A field's column is the width it is given, not the width its input would like: an Arabic
+   input is wider by default and pushed the sign-up page sideways at 320 px. */
+.ob-field { grid-template-columns: minmax(0, 1fr); }
+.ob-field input { min-width: 0; }

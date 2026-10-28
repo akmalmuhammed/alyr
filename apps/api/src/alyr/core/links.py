@@ -20,6 +20,10 @@ for table 7 cannot be turned into table 3 by editing it. A tampered, malformed, 
 wrong-shop or wrong-purpose token is refused; a customer who opens an old link asks for a new
 one in their chat.
 
+A fourth purpose, "resume" (ALY-171), is the link at the foot of a reminder email that stops
+the reminders: the ID in the token is the business's own, the life is a year, and it opens nothing
+else (a customer's link, a document's link and this one are not interchangeable).
+
 A third purpose, "document" (ALY-139), makes the link to one issued receipt or invoice: the ID in
 the token is the document's, not a customer's, the life is `ALYR_DOCUMENT_LINK_DAYS`, and the same
 rule holds: an order or booking token opens nothing on the document page, and a document token
@@ -55,7 +59,8 @@ CONTEXT = b"alyr-link-v2\x00"
 ORDER = "order"
 BOOKING = "booking"
 DOCUMENT = "document"
-_CODES = {ORDER: 1, BOOKING: 2, DOCUMENT: 3}
+RESUME = "resume"
+_CODES = {ORDER: 1, BOOKING: 2, DOCUMENT: 3, RESUME: 4}
 _PURPOSES = {code: name for name, code in _CODES.items()}
 HEADER = 22  # version, purpose, contact ID, expiry
 MAC_BYTES = 16
@@ -208,6 +213,12 @@ def read(
     except UnicodeDecodeError as error:  # signed by us, so this cannot happen; refuse anyway
         raise LinkError("malformed") from error
     return Link(UUID(bytes=payload[2:18]), table, expires, made_for)
+
+
+def resume_stop_url(web_url: str, slug: str, tenant_id: UUID) -> str:
+    """The link at the foot of a reminder email that switches the reminders off. It needs no
+    sign-in: whoever holds the email can stop it, and it can do nothing else."""
+    return f"{web_url}/start/stop?b={slug}&t={mint(tenant_id, tenant_id, purpose=RESUME, days=365)}"
 
 
 def order_url(

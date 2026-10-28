@@ -59,12 +59,15 @@ paid from the startup credits.
 functions behind sign-up and the back office are owned by it. Cloud SQL's `postgres` is not a
 superuser, so without this those functions fail. The application role never bypasses it.
 
-**Addresses.** Cloud Run gives fixed addresses: `https://alyr-api-841433519399.me-central1.run.app`
-and `https://alyr-web-841433519399.me-central1.run.app`. Custom names (`api.alyr.qa`,
-`app.alyr.qa`) need Google's load balancer (about USD 18 a month) or a Cloudflare Worker in
-front: Cloud Run's own domain mappings are refused in Doha ("Creating domain mappings is not
-allowed in me-central1", 28 Oct 2026). alyr.qa is verified in Google Search Console for
-akmal@alyr.qa (TXT record on alyr.qa).
+**Addresses.** The public names are **https://app.alyr.qa** (the workspace, sign-in and
+customer pages) and **https://api.alyr.qa** (the API and Meta's webhook). They are a
+Cloudflare Worker, `alyr-edge` (`infra/cloudflare/edge`), which forwards each request
+unchanged to Cloud Run's fixed addresses, `https://alyr-web-841433519399.me-central1.run.app`
+and `https://alyr-api-841433519399.me-central1.run.app`, and points redirects back at the
+public name. Chosen by the founder on 28 Oct 2026 over Google's load balancer (about USD 18 a
+month), because Cloud Run's own domain mappings are refused in Doha ("Creating domain
+mappings is not allowed in me-central1"). The Worker keeps no logs and no cache. alyr.qa is
+verified in Google Search Console for akmal@alyr.qa (TXT record on alyr.qa).
 
 ## Production settings
 
