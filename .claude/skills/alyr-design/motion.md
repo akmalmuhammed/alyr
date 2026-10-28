@@ -121,7 +121,10 @@ write its own timers.
    (and "Play" / «تشغيل») with the demo's icon, its full name from `copy.ts` (`loop.names`),
    starting with that word. It is `hidden` in the HTML and placed out of the flow over room
    the figure keeps for it (the frame's bar keeps 5 rem at its end), so it never moves
-   anything; loops.ts shows it once the figure plays. Pause finishes every move at once and
+   anything; loops.ts shows it once the figure plays. On the homepage (the film, How we work,
+   the products frame and the flow) it is not on show: it fades in only while the pointer is
+   over its figure, with keyboard focus, or while paused, so the page plays like a video and
+   still has a way to stop (D-071). Pause finishes every move at once and
    holds the finished state (`data-paused`); Play plays every player from its start. Per
    section, not one site-wide control, because the hero, the flows and the demos already
    carry their own where a visitor looks, and a site-wide one would need a new control in
@@ -166,8 +169,11 @@ same as the figures above.
    trip in Lighthouse's model (+0.15 s LCP on `/ar`); and the canvas goes in as one commit, so
    the page re-styles once. (Every DOM insertion used to re-style the whole page: the cause was
    a `:not()` inside the Agent figure's `:has()` rules, not the `:root:has(...)` ones; rewritten
-   on 28 Oct 2026, and `scripts/site/has-check.mjs` in `pnpm site:check` keeps it out.)
-4. **Pause holds the frame,** as a film does (the figures above finish their moves instead);
+   on 28 Oct 2026, and `scripts/site/has-check.mjs` in `pnpm site:check` keeps it out. The
+   header's and product bar's states are now marks on `<html>`, the header and `<main>`.)
+4. **Pause holds the frame,** as a film does (the figures above finish their moves instead), and
+   so does a click on the film; the control shows only on hover, focus or paused (D-071). The
+   film starts at load, on the last moment before the fold closes (`STILL`), so it moves at once;
    off screen and in a hidden tab every track is paused where it is. The last shot's numbers
    are the dashboard's own: `film.ts` tells `FilmDash` when the film reaches 16:20 (it rolls,
    one Volt rule under the count that went up) and when it goes back to 16:19 under the fold.

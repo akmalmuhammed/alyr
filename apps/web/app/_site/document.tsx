@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { SiteAnalytics } from "../_analytics/SiteAnalytics";
 import { IBM_Plex_Mono, IBM_Plex_Sans_Arabic, Instrument_Sans } from "next/font/google";
 import { copy, type Locale } from "./copy";
 import { OFFER_LIVE, PATHS, SITE_URL, SITE_VERIFICATION, type PageKey } from "./site";
@@ -224,7 +225,7 @@ export function SiteDocument({ locale, children }: { locale: Locale; children: R
       <head>
         <script dangerouslySetInnerHTML={{ __html: `${THEME};${MENUS};${BEFORE_PAINT}` }} />
       </head>
-      <body>{children}</body>
+      <body>{children}<SiteAnalytics /></body>
     </html>
   );
 }
