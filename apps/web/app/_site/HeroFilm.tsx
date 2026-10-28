@@ -4,7 +4,6 @@ import type { FilmWords } from "./FilmCanvas";
 import { FilmCaption } from "./FilmCaption";
 import { FilmDash } from "./FilmDash";
 import { FilmScenes } from "./FilmScenes";
-import { SampleMark } from "./Frames";
 import { CARDS, MINUTES, hhmm, still } from "./filmScript";
 import { LoopToggle } from "./LoopToggle";
 import { SAMPLES } from "./samples";
@@ -81,10 +80,8 @@ export function HeroFilm({ locale }: { locale: Locale }) {
           <div className="hf-cover" />
         </div>
         <div className="hf-bar">
-          <span className="sf-mono">{sample.monogram}</span>
-          <b>{sample.shop}</b>
-          <SampleMark label={t.fig.sample} />
           <span className="hf-when">
+            <span className="hf-sample">{t.fig.sample}<span aria-hidden="true"> · </span></span>
             <span className="hf-day-name">{f.day}<span aria-hidden="true"> · </span></span>
             <bdi className="hf-sw hf-clock">
               <span className={`hf-clk-${MINUTES.length - 1} is-now`}>{hhmm(MINUTES[MINUTES.length - 1].m)}</span>
