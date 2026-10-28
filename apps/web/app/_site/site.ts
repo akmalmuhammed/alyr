@@ -57,6 +57,10 @@ export const PATHS = {
   accounts: { en: "/accounts", ar: "/ar/accounts" },
   shelf: { en: "/shelf", ar: "/ar/shelf" },
   docs: { en: "/docs", ar: "/ar/docs" },
+  // Not a product: the company's registration details (the footer links to it).
+  company: { en: "/company", ar: "/ar/company" },
+  // Not a product: the privacy policy (ALY-72); Meta's app settings point here.
+  privacy: { en: "/privacy", ar: "/ar/privacy" },
 } as const;
 
 export type PageKey = keyof typeof PATHS;

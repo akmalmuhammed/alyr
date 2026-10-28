@@ -59,7 +59,7 @@ export function siteMetadata(locale: Locale, page: PageKey = "home"): Metadata {
       // Each English product page has its own card (app/(site)/<page>/opengraph-image.tsx),
       // which Next names with a hash and fills in itself when no image is given here. The
       // homepage and the Arabic pages share the homepage's English card (socialCard.tsx).
-      ...(locale === "en" && page !== "home" ? {} : { images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "ALYR" }] }),
+      ...(locale === "en" && page !== "home" && page !== "company" && page !== "privacy" ? {} : { images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "ALYR" }] }),
     },
     twitter: { card: "summary_large_image", title: t.title, description },
     // Search Console and Bing Webmaster Tools, when verified by tag (D-056).
