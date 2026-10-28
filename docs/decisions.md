@@ -46,6 +46,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-038 | The Sunday report is a report card: a branded image from ALYR Agent's engine with about eight lines under it | Accepted |
 | D-039 | The Catalog (items, stock, photos) is built complete before go-live; photos on Cloudflare R2; free now, charged by usage later | Accepted |
 | D-042 | Documents (receipts, invoices and the rest) are one engine: gapless numbers, issued paper nobody can change, Arabic first, a PDF drawn by fpdf2 and kept in the database; free now, metered later | Accepted |
+| D-043 | How ALYR introduces itself: every owner-run business, the brand speaks alone, Qatar first then the GCC | Accepted |
 | D-045 | When two records turn out to be one customer, a withdrawal of consent always wins, append-only records are copied forward and nothing is deleted that cannot be found again | Accepted |
 | D-046 | The public site adds ALYR Shelf (the Catalog) and ALYR Docs (Documents), each with its own page; Payroll leaves the site until it is built; every product's state is "Set up for you" | Accepted |
 | D-056 | Search and AI visibility: be found, described correctly and contacted in Qatar, in search and AI assistants; profiles and verification switch on from settings | Accepted |
@@ -993,6 +994,20 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 
 **Revisit when.** The lawyer answers (ALY-51); the General Tax Authority publishes the e-invoicing specification (D-008); volume makes the documents too heavy for the database (then a Qatar object store behind `core/storage.py`); a connected POS issues in bursts (draw before the lock); a country pack needs tax-inclusive prices.
 
+## D-043 · How ALYR introduces itself
+**Date** 19 Oct 2026 · **Status** Accepted (founder, 19 Oct, in conversation) · Source: `docs/company/introduction.md`
+
+**Decision.**
+- ALYR introduces itself to every owner-run business in Qatar, with no single target sector. Every lead records its sector, so the sales tool shows which sectors buy fastest.
+- The brand speaks alone: no founder name or photo on the site, deck or profiles, and people on visits are "the ALYR team".
+- The stated ambition is Qatar first, then the GCC.
+- The commercial registration is submitted and waiting; until it is issued, D-034's limits hold (no signing, no money, no public prices).
+
+**What the founder was told before choosing.**
+- A single first sector would teach faster; recording the sector on every lead gets most of that benefit while still going to everyone.
+- A visible founder builds trust faster in Qatar. With the brand alone, trust comes from checkable signals instead: ALYR's own WhatsApp number, the registration number and address, the visit kit, the money-back first month, then case studies.
+
+**What it changes.** `docs/company/introduction.md` is the one source for the company story, the lines in English and Arabic, the answers to an owner's questions, what we never say, and the plan to win clients. The site, the deck, the leave-behind and every profile take their words from it.
 **As built (ALY-139, 19 to 20 Oct 2026; package 2: receipts and invoices from sales, payments by hand, delivery; `specs/013-documents-sales/spec.md`).** Where the code settled what the issue left open. None of it changes the decision.
 - **Sales make documents through one door, behind a savepoint, with a key.** `modules/documents/sales.py`: a receipt when an order is paid (the payment link's report), an invoice when an order goes on a customer's credit account, a receipt for a payment on a credit account (`ledger.add_entry` is the one door, so staff in the chat and the payment link both come through it), and a credit note when an order that has a receipt or invoice is cancelled (`orders.service.cancel_order`, in its own transaction). Each is issued with a key made of what it is for, so an event that fires twice or at the same moment finds the document that is there; each runs behind a savepoint so a document that cannot be made (no CR number for an invoice, the PDF engine down) skips itself with a reason on the activity record and the sale goes on. A shop without the module pays one `select`, and nothing else. *Chosen over* a hook in the payment webhook (the payment link has no webhook yet; the ledger and the order service are the doors that exist) and over a background reconciliation job (it would issue documents later than the sale and could not share its transaction).
 - **A document is the shop's, whoever pressed the button.** The documents of a sale are issued as the shop, with the person's name on the paper (`issued_by`): an agent the shop lets record payments may issue the receipt that goes with one without being allowed to issue documents. Automatic ones say "ALYR".
