@@ -24,7 +24,7 @@ app=".next/server/app"
 mkdir -p out-site/_next
 pages="chat bookings agent accounts shelf docs"
 # a plain page: no social card of its own (it uses the homepage's), so it is not in `pages`
-plain="company"
+plain="company privacy"
 cp "$app/index.html" out-site/index.html
 cp "$app/ar.html" out-site/ar.html
 mkdir -p out-site/ar
@@ -71,6 +71,8 @@ cat > out-site/_headers <<'EOF'
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+  Content-Security-Policy: frame-ancestors 'none'; base-uri 'self'; object-src 'none'
 EOF
 
 # The site for machines: llms.txt, llms-full.txt and a markdown copy of each page (index.md,

@@ -88,7 +88,7 @@ function faq(locale: Locale, page: PageKey, items: Question[]): Json | null {
 function questionsOf(locale: Locale, page: PageKey): Question[] {
   const t = copy[locale];
   if (page === "home") return t.home.faq.items;
-  if (page === "chat" || page === "company") return [];
+  if (page === "chat" || page === "company" || page === "privacy") return [];
   return t.pages[page].faq.items;
 }
 
@@ -105,13 +105,13 @@ export function structuredData(locale: Locale, page: PageKey): Json {
       inLanguage: locale,
       publisher: { "@id": ORG_ID },
     });
-  } else if (page === "company") {
+  } else if (page === "company" || page === "privacy") {
     graph.push(
       {
         "@type": "WebPage",
-        "@id": `${url(PATHS.company[locale])}#page`,
-        name: t.meta.company.title,
-        url: url(PATHS.company[locale]),
+        "@id": `${url(PATHS[page][locale])}#page`,
+        name: t.meta[page].title,
+        url: url(PATHS[page][locale]),
         inLanguage: locale,
         about: { "@id": ORG_ID },
       },
@@ -119,7 +119,7 @@ export function structuredData(locale: Locale, page: PageKey): Json {
         "@type": "BreadcrumbList",
         itemListElement: [
           { "@type": "ListItem", position: 1, name: "ALYR", item: url(PATHS.home[locale]) },
-          { "@type": "ListItem", position: 2, name: t.nav.company, item: url(PATHS.company[locale]) },
+          { "@type": "ListItem", position: 2, name: t.nav[page], item: url(PATHS[page][locale]) },
         ],
       },
     );
