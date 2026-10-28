@@ -27,6 +27,11 @@ def signup_token(client, email):
     return answer.json()["signup_token"]
 
 
+def accepted_terms(client):
+    """What the sign-up screen lists and the owner ticks (ALY-167): every current version."""
+    return [t["id"] for t in client.get(f"{BASE}/terms/current").json()["current"]]
+
+
 def new_business(client, name=None, kind="salon", paid=True):
     """Each test makes its own business; the database is shared by the whole run. Its
     payment is settled, as once the client has paid (D-053); `paid=False` leaves it owing,
@@ -34,7 +39,8 @@ def new_business(client, name=None, kind="salon", paid=True):
     email = f"owner-{uuid4().hex[:8]}@shop.example"
     name = name or f"Barbers {uuid4().hex[:6]}"
     body = {"signup_token": signup_token(client, email), "owner_name": "Hamad", "name": name,
-            "name_ar": "حلاق السد", "type": kind, "area": "Al Sadd"}
+            "name_ar": "حلاق السد", "type": kind, "area": "Al Sadd",
+            "accepted_terms": accepted_terms(client)}
     answer = client.post(f"{BASE}/business", json=body)
     assert answer.status_code == 200, answer.text
     slug = client.get(f"{BASE}/state").json()["business"]["slug"]
@@ -122,14 +128,16 @@ def test_an_existing_owner_is_signed_in_instead(client):
 
 def test_a_sign_up_token_works_once(client):
     token = signup_token(client, f"once-{uuid4().hex[:6]}@shop.example")
-    body = {"signup_token": token, "owner_name": "A", "name": "Once", "type": "salon"}
+    body = {"signup_token": token, "owner_name": "A", "name": "Once", "type": "salon",
+            "accepted_terms": accepted_terms(client)}
     assert client.post(f"{BASE}/business", json=body).status_code == 200
     assert client.post(f"{BASE}/business", json={**body, "name": "Twice"}).status_code == 401
 
 
 def test_an_invented_token_creates_nothing(client):
     before = owner_sql("select count(*) as n from tenants")[0]["n"]
-    body = {"signup_token": "x" * 40, "owner_name": "A", "name": "Fake", "type": "salon"}
+    body = {"signup_token": "x" * 40, "owner_name": "A", "name": "Fake", "type": "salon",
+            "accepted_terms": accepted_terms(client)}
     assert client.post(f"{BASE}/business", json=body).status_code == 401
     assert owner_sql("select count(*) as n from tenants")[0]["n"] == before
 
@@ -167,7 +175,8 @@ def test_sign_up_is_closed_outside_a_local_machine_unless_switched_on(monkeypatc
 
 def test_an_unknown_type_is_refused(client):
     body = {"signup_token": signup_token(client, f"odd-{uuid4().hex[:6]}@shop.example"),
-            "owner_name": "A", "name": "Odd", "type": "zoo"}
+            "owner_name": "A", "name": "Odd", "type": "zoo",
+            "accepted_terms": accepted_terms(client)}
     assert client.post(f"{BASE}/business", json=body).status_code == 422
 
 

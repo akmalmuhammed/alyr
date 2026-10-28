@@ -71,12 +71,13 @@ def test_a_new_salon_starts_setting_up_with_what_is_left_in_plain_words(client):
     state = check(client)
     assert state["stage"] == "setting_up" and state["live_at"] is None
     assert [c["key"] for c in state["checks"]] == [
-        "content", "hours", "test", "price", "paid", "payments", "whatsapp",
+        "content", "hours", "test", "price", "terms", "paid", "payments", "whatsapp",
     ]
-    # The salon's starting services and hours count; the rest is the owner's to do.
+    # The salon's starting services and hours count, and the terms were ticked at sign-up
+    # (ALY-167); the rest is the owner's to do.
     assert {c["key"]: c["status"] for c in state["checks"]} == {
-        "content": "done", "hours": "done", "test": "todo", "price": "todo", "paid": "done",
-        "payments": "todo", "whatsapp": "todo",
+        "content": "done", "hours": "done", "test": "todo", "price": "todo", "terms": "done",
+        "paid": "done", "payments": "todo", "whatsapp": "todo",
     }
     assert state["left"] == ["test", "price", "payments", "whatsapp"]
     assert line(state, "whatsapp")["choices"] == [
@@ -86,7 +87,8 @@ def test_a_new_salon_starts_setting_up_with_what_is_left_in_plain_words(client):
     # Seen done once, recorded once, however often the check runs.
     check(client)
     assert events(tenant) == [
-        ("content", "done", False), ("hours", "done", False), ("paid", "done", False),
+        ("content", "done", False), ("hours", "done", False), ("terms", "done", False),
+        ("paid", "done", False),
     ]
 
 

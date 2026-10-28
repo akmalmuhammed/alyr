@@ -19,7 +19,7 @@ import asyncpg
 from alyr import catalog, presets, shop_templates
 from alyr.channels.base import InboundMessage
 from alyr.config import get_settings
-from alyr.core import auth, identity, pricing, team
+from alyr.core import auth, identity, pricing, team, terms
 from alyr.core.auth import Staff
 from alyr.core.normalise import fmt_qar
 from alyr.db import Database
@@ -101,10 +101,16 @@ async def _free_slug(conn: asyncpg.Connection, name: str) -> str:
 
 async def create_business(
     db: Database, token: str, owner_name: str, name: str, name_ar: str, type_key: str,
-    area: str,
+    area: str, accepted_terms: list[UUID] | None = None, ip: str = "", user_agent: str = "",
 ) -> tuple[UUID, str]:
     """Create the business, its owner and its starting setup. Returns the tenant and a
-    session cookie value for the owner."""
+    session cookie value for the owner. The owner must have accepted every current version of
+    the terms and the privacy notice (ALY-167): without that nothing is created, and with it
+    each acceptance is recorded with who, when and from where."""
+    async with db.unscoped() as conn:
+        required = {t["id"] for t in await terms.current(conn)}
+    if required - {str(t) for t in accepted_terms or []}:
+        raise OnboardingError("accept the terms and the privacy notice to create your business")
     preset = presets.PRESET_BY_KEY.get(type_key)
     if preset is None or not preset.offered(catalog_on()):
         raise OnboardingError("choose the type of business")
@@ -140,6 +146,13 @@ async def create_business(
             "select email from signup_tokens where token_hash = $1", _hash(token)
         )
     async with db.tenant(tenant_id) as conn:
+        if required:
+            owner = await conn.fetchval(
+                "select user_id from memberships where role = 'owner' order by created_at limit 1"
+            )
+            await terms.accept(
+                conn, [UUID(t) for t in sorted(required)], owner, owner_name, ip, user_agent
+            )
         for sort, s in enumerate(preset.services):
             await conn.execute(
                 "insert into services (name, name_ar, duration_minutes, price, sort) "

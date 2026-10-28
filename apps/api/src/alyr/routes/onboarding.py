@@ -15,6 +15,7 @@ from alyr.core import (
     pricing,
     ratelimit,
     readiness,
+    terms,
     whatsapp_setup,
 )
 from alyr.core.auth import Staff
@@ -39,6 +40,13 @@ class NewBusiness(BaseModel):
     name_ar: str = Field(default="", max_length=120)
     type: str = Field(min_length=2, max_length=40)
     area: str = Field(default="", max_length=80)
+    # The versions of the terms and the privacy notice the owner ticked, as the sign-up screen
+    # listed them (GET /terms/current); every current one is needed (ALY-167).
+    accepted_terms: list[UUID] = Field(default_factory=list, max_length=10)
+
+
+class TermsAcceptance(BaseModel):
+    version_ids: list[UUID] = Field(min_length=1, max_length=10)
 
 
 class Change(BaseModel):
@@ -89,6 +97,13 @@ def _cookie(response: Response, token: str) -> None:
 async def types(request: Request) -> dict:
     async with request.app.state.db.unscoped() as conn:
         return {"types": await onboarding.types(conn), "signup_open": signup_open()}
+
+
+@router.get("/terms/current")
+async def current_terms(request: Request) -> dict:
+    """What a new owner is asked to accept, before they have a business."""
+    async with request.app.state.db.unscoped() as conn:
+        return {"current": await terms.current(conn)}
 
 
 @router.post("/code")
@@ -146,7 +161,8 @@ async def create_business(body: NewBusiness, request: Request, response: Respons
     try:
         tenant_id, session = await onboarding.create_business(
             request.app.state.db, body.signup_token, body.owner_name, body.name,
-            body.name_ar, body.type, body.area,
+            body.name_ar, body.type, body.area, body.accepted_terms,
+            ratelimit.client_address(request), request.headers.get("user-agent", ""),
         )
     except auth.AuthError as error:
         raise HTTPException(status_code=401, detail=str(error)) from error
@@ -160,6 +176,30 @@ def _owner(staff: Staff) -> Staff:
     if staff.role not in ("owner", "admin"):
         raise HTTPException(status_code=403, detail="only the owner sets up the business")
     return staff
+
+
+@router.get("/terms")
+async def my_terms(request: Request, staff: Staff = Depends(current_staff)) -> dict:
+    """The terms and the privacy notice in force, and which the business has not accepted."""
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        return await terms.state(conn)
+
+
+@router.post("/terms/accept")
+async def accept_terms(
+    body: TermsAcceptance, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    """The owner accepts the current versions, again after a new one is published."""
+    _owner(staff)
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            await terms.accept(
+                conn, body.version_ids, staff.user_id, staff.name,
+                ratelimit.client_address(request), request.headers.get("user-agent", ""),
+            )
+            return await terms.state(conn)
+    except terms.TermsError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
 
 
 @router.get("/state")
