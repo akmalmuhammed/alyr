@@ -47,9 +47,10 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-042 | Documents (receipts, invoices and the rest) are one engine: gapless numbers, issued paper nobody can change, Arabic first, a PDF drawn by fpdf2 and kept in the database; free now, metered later | Accepted |
 | D-046 | The public site adds ALYR Shelf (the Catalog) and ALYR Docs (Documents), each with its own page; Payroll leaves the site until it is built; every product's state is "Set up for you" | Accepted |
 | D-056 | Search and AI visibility: be found, described correctly and contacted in Qatar, in search and AI assistants; profiles and verification switch on from settings | Accepted |
-| D-058 | The homepage hero's ALYR Agent figure (and /agent's) moves continuously, the one exception to "plays once", with a pause button and calm pacing | Accepted |
+| D-058 | The homepage hero's ALYR Agent figure (and /agent's) moves continuously, the one exception to "plays once", with a pause button and calm pacing | Accepted; the homepage hero is D-062's film since 28 Oct 2026, /agent keeps the live figure |
 | D-059 | Motion is always on: the site's figures (How we work, the products frame, the signature figures, with the flows, demos and the live Agent) keep playing, each with a Pause control; text arrives once | Accepted |
 | D-061 | Company mail moves to Zoho Mail (free plan): hello@ with akmal@ and security@ as aliases, and a mailbox for Beevi Jinan, the registered owner; Resend still sends the product's email | Accepted |
+| D-062 | The homepage hero is the explainer film (one afternoon at Qirfa Bakery in the product's own screens, three lanes at once, ending on the ALYR Agent home): "the product is the illustration" in motion; the hero's live ALYR Agent figure leaves the hero | Accepted |
 
 ---
 
@@ -1176,3 +1177,19 @@ Nothing claims more than the page, as before.
 **Data.** Zoho is outside Qatar and may hold a customer's or a merchant's message when they write to us: a row in `docs/data-residency.md`. No merchant data is routed through it.
 
 **Revisit when** ALYR needs shared inboxes or more than five mailboxes (Zoho's paid plan, or the startup programme's mail, ALY-55), or a lawyer says company mail must stay in Qatar (ALY-51).
+
+## D-062 · The homepage hero is the explainer film
+**Date** 28 Oct 2026 · **Status** Accepted (the founder, 28 Oct 2026, after reviewing four Framer prototypes of the hero, in his words, relayed in the work's brief: "go with D and publish to home page") · Branch `aly-hero-film` · Prototype: `docs/doodle-study/04-d-log.md` in the doodle worktree (`D:/alyr-doodle`) (05D, "Explainer") · Log: `docs/framer-review/09-hero-film-log.md`
+
+**Decision.**
+- The hero of `/` and `/ar` is a film of one afternoon at the fictional Qirfa Bakery, Thursday 15:58 to 16:20, told in ALYR's own screens on a Carbon plate cut by the 45° fold, beside the headline: orders #1440 to #1442 moving through New, Confirmed, Ready and Done, a booking and its reminder, credit owed and the balance that needs a look, three lanes (Orders, Bookings, Money) at once, ending on the ALYR Agent home: "Week so far: 50 orders, QAR 8,520". It loops (about 36 s at pace 1.3), as D-059 allows.
+- **The hero's live ALYR Agent figure (D-058) leaves the hero.** The ALYR Agent section further down the homepage keeps its figure, and `/agent` keeps its live figure, unchanged.
+- This is principle 6, "the product is the illustration", in motion: real screens, real words, one fictional business, nothing drawn that the product does not do.
+
+**Conditions** (D-058's and D-059's, and these).
+- A Pause control ("Pause" / «إيقاف»); it stops off screen and in a hidden tab; reduced motion and no scripts show one composed still (the ALYR Agent home at 16:20), which is also the HTML and the film's first frame.
+- Every number agrees with the homepage's sample at 16:20 and with the others in every frame; the team confirms and moves the orders on, ALYR sends the messages; nothing is paid by link and no document is sent (ALYR Docs is off for every shop); one #1442 sitewide.
+- The headline stays clear of the fold and is the page's slogan; the homepage's Lighthouse no worse than before.
+
+**Revisit when** the founder or a visitor finds it busy or slow (`--pace` tunes all of it), or the product's screens change (the film draws them from the products frame's drawings and the real dashboard, so they follow).
+
