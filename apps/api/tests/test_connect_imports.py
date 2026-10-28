@@ -430,6 +430,9 @@ def test_undo_withdraws_the_documents_of_the_newest_import_and_frees_their_numbe
     token = links.mint(shop.tenant_id, ids[0], purpose=links.DOCUMENT)
     page = shop.owner.get(f"/api/d/{shop.shop.slug}", headers={"X-Order-Link": token}).json()
     assert page["document"]["number"] == "R-1" and page["document"]["external"] is True
+    # The page says it in both languages, with the sentence the PDF carries (ALY-203).
+    note = page["document"]["external_note"]
+    assert "seller's own system" in note["en"] and "نظام البائع" in note["ar"]
 
     undone = shop.owner.post("/api/connect-setup/imports/undo")
     assert undone.status_code == 200 and undone.json()["withdrawn"] == 2
