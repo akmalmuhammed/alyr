@@ -15,6 +15,7 @@
 import type { ContactState, PageKey, ProductKey } from "./site";
 import { docsAr, docsEn, type DocLinkPage, type DocsPage } from "./copyDocs";
 import { shelfAr, shelfEn, type ShelfPage } from "./copyShelf";
+import { privacyAr, privacyEn, type PrivacyPage } from "./copyPrivacy";
 
 export type Locale = "en" | "ar";
 
@@ -520,10 +521,11 @@ export type CompanyPage = {
 export type Copy = {
   meta: Record<PageKey, Meta>;
   company: CompanyPage;
+  privacy: PrivacyPage;
   skip: string;
   nav: {
     products: string; business: string; how: string; questions: string; price: string;
-    other: string; home: string; menu: string; sections: string; productsMenu: string; company: string;
+    other: string; home: string; menu: string; sections: string; productsMenu: string; company: string; privacy: string;
   };
   /** The suite, in its fixed order: the Products menu, the footer, the rows on each page. */
   products: {
@@ -586,6 +588,10 @@ export type Copy = {
 
 const en: Copy = {
   meta: {
+    privacy: {
+      title: "Privacy policy · ALYR",
+      description: "What data ALYR holds, why, who else sees it, how long it is kept and how to ask for it to be deleted. ALYR is run by alyr software W.L.L., Qatar.",
+    },
     company: {
       title: "Company details · ALYR",
       description: "ALYR is a product name of alyr software W.L.L., a limited liability company registered in Qatar. Commercial registration 255539, tax registration 5009341769.",
@@ -629,6 +635,7 @@ const en: Copy = {
     },
   },
   skip: "Skip to content",
+  privacy: privacyEn,
   company: {
     eyebrow: "Company details",
     title: "Who is behind ALYR",
@@ -649,6 +656,7 @@ const en: Copy = {
   nav: {
     products: "Products",
     company: "Company details",
+    privacy: "Privacy",
     business: "By business",
     how: "How we work",
     questions: "Questions",
@@ -1368,7 +1376,7 @@ const en: Copy = {
       currency: "QAR",
       currencyFirst: true,
       period: "a month",
-      first: "for your first product. Add ALYR Chat, ALYR Bookings or ALYR Accounts for QAR 150 a month each. ALYR Agent and ALYR Shelf come with every one.",
+      first: "for your first product. Add ALYR Chat, ALYR Bookings or ALYR Accounts for QAR 50 a month each. ALYR Agent and ALYR Shelf come with every one.",
       setup: "Setup from QAR 1,500, quoted at your visit.",
       firstMonth: "Your first month is the subscription and the setup fee. After that, only the subscription.",
       includesLabel: "Every month includes",
@@ -1384,8 +1392,8 @@ const en: Copy = {
       combosLabel: "For example",
       combos: [
         { label: "A salon: ALYR Bookings", value: "from QAR 449" },
-        { label: "A bakery: ALYR Chat and ALYR Accounts", value: "from QAR 599" },
-        { label: "Home services: Bookings, Chat and Accounts", value: "from QAR 749" },
+        { label: "A bakery: ALYR Chat and ALYR Accounts", value: "from QAR 499" },
+        { label: "Home services: Bookings, Chat and Accounts", value: "from QAR 549" },
         { label: "ALYR Agent and ALYR Shelf", value: "included" },
       ],
       ledgerLabel: "Fees, said plainly",
@@ -1488,7 +1496,7 @@ const en: Copy = {
           id: "more-products",
           offer: true,
           q: "What if I need more than one product?",
-          a: "The first is from QAR 449 a month. ALYR Chat, ALYR Bookings and ALYR Accounts are QAR 150 a month each after that. ALYR Agent and ALYR Shelf come with all of them.",
+          a: "The first is from QAR 449 a month. ALYR Chat, ALYR Bookings and ALYR Accounts are QAR 50 a month each after that. ALYR Agent and ALYR Shelf come with all of them.",
         },
         {
           id: "busy-night",
@@ -2016,7 +2024,7 @@ const en: Copy = {
         lead:
           "Free times come from your opening hours, and the confirmation goes at once. Your team marks who came.",
         facts: ["Free times from your opening hours", "A reminder 2 hours before", "One booking at a time, for one chair or one\u00a0room"],
-        factsOffer: ["From QAR 449 a month, or QAR 150 beside ALYR Chat or ALYR Accounts"],
+        factsOffer: ["From QAR 449 a month, or QAR 50 beside ALYR Chat or ALYR Accounts"],
       },
       demo: {
         business: "Dafira Salon",
@@ -2516,7 +2524,7 @@ const en: Copy = {
         lead:
           "Record credit in one line. One press sends reminders whose tone follows how late the payment is.",
         facts: ["The oldest debt is settled first", "Never reminded twice within 3 days", "No reminders after “stop”"],
-        factsOffer: ["From QAR 449 a month, or QAR 150 beside ALYR Chat or ALYR Bookings"],
+        factsOffer: ["From QAR 449 a month, or QAR 50 beside ALYR Chat or ALYR Bookings"],
       },
       demo: {
         business: "Qirfa Bakery",
@@ -2897,6 +2905,10 @@ const en: Copy = {
 
 const ar: Copy = {
   meta: {
+    privacy: {
+      title: "سياسة الخصوصية · ALYR",
+      description: "البيانات التي تحتفظ بها ALYR، ولماذا، ومن يطّلع عليها، وكم تُحفظ، وكيف تطلب حذفها. تديرها شركة alyr software ذ.م.م. في قطر.",
+    },
     company: {
       title: "بيانات الشركة · ALYR",
       description: "ALYR اسم لمنتجات شركة alyr software ذ.م.م.، شركة ذات مسؤولية محدودة مسجّلة في قطر. السجل التجاري 255539 والتسجيل الضريبي 5009341769.",
@@ -2940,6 +2952,7 @@ const ar: Copy = {
     },
   },
   skip: "انتقل إلى المحتوى",
+  privacy: privacyAr,
   company: {
     eyebrow: "بيانات الشركة",
     title: "من وراء ALYR",
@@ -2960,6 +2973,7 @@ const ar: Copy = {
   nav: {
     products: "المنتجات",
     company: "بيانات الشركة",
+    privacy: "الخصوصية",
     business: "حسب نشاطك",
     how: "كيف نعمل",
     questions: "أسئلة",
@@ -3679,7 +3693,7 @@ const ar: Copy = {
       currency: "ر.ق",
       currencyFirst: false,
       period: "شهرياً",
-      first: "لأول منتج. وأضف ALYR Chat أو ALYR Bookings أو ALYR Accounts بـ\u00a0150 ر.ق شهرياً لكل منها. ويأتي ALYR Agent وALYR Shelf مع كل منتج.",
+      first: "لأول منتج. وأضف ALYR Chat أو ALYR Bookings أو ALYR Accounts بـ\u00a050 ر.ق شهرياً لكل منها. ويأتي ALYR Agent وALYR Shelf مع كل منتج.",
       setup: "ورسوم تجهيز تبدأ من 1,500 ر.ق، ونحدد مبلغها خلال زيارتنا لك.",
       firstMonth: "يشمل شهرك الأول الاشتراك ورسوم التجهيز، وبعده الاشتراك وحده.",
       includesLabel: "يشمل كل شهر",
@@ -3695,8 +3709,8 @@ const ar: Copy = {
       combosLabel: "مثلاً",
       combos: [
         { label: "صالون: ALYR Bookings", value: "من 449 ر.ق" },
-        { label: "مخبز: ALYR Chat وALYR Accounts", value: "من 599 ر.ق" },
-        { label: "خدمات منزلية: Bookings وChat وAccounts", value: "من 749 ر.ق" },
+        { label: "مخبز: ALYR Chat وALYR Accounts", value: "من 499 ر.ق" },
+        { label: "خدمات منزلية: Bookings وChat وAccounts", value: "من 549 ر.ق" },
         { label: "ALYR Agent وALYR Shelf", value: "مشمولان" },
       ],
       ledgerLabel: "الرسوم بوضوح",
@@ -3799,7 +3813,7 @@ const ar: Copy = {
           id: "more-products",
           offer: true,
           q: "وإن احتجت أكثر من منتج؟",
-          a: "الأول من 449 ر.ق شهرياً، ثم ALYR Chat وALYR Bookings وALYR Accounts بـ 150 ر.ق شهرياً لكل منها. ويأتي ALYR Agent وALYR Shelf معها كلها.",
+          a: "الأول من 449 ر.ق شهرياً، ثم ALYR Chat وALYR Bookings وALYR Accounts بـ 50 ر.ق شهرياً لكل منها. ويأتي ALYR Agent وALYR Shelf معها كلها.",
         },
         {
           id: "busy-night",
@@ -4327,7 +4341,7 @@ const ar: Copy = {
         lead:
           "تأتي الأوقات المتاحة من ساعات عملك، ويصل التأكيد فوراً. ويسجّل فريقك من حضر.",
         facts: ["الأوقات المتاحة من ساعات عملك", "تذكير قبل الموعد بساعتين", "حجز واحد في الوقت نفسه، لكرسي واحد أو غرفة واحدة"],
-        factsOffer: ["من 449 ر.ق شهرياً، أو 150 ر.ق مع ALYR Chat أو ALYR Accounts"],
+        factsOffer: ["من 449 ر.ق شهرياً، أو 50 ر.ق مع ALYR Chat أو ALYR Accounts"],
       },
       demo: {
         business: "صالون ضفيرة",
@@ -4828,7 +4842,7 @@ const ar: Copy = {
         lead:
           "سجّل البيع بالآجل بسطر واحد. وبضغطة واحدة تُرسل التذكيرات بنبرة تتدرّج مع تأخر السداد.",
         facts: ["يُسدَّد الأقدم أولاً", "لا تذكير مرتين خلال 3 أيام", "لا تذكير بعد طلب الإيقاف"],
-        factsOffer: ["من 449 ر.ق شهرياً، أو 150 ر.ق مع ALYR Chat أو ALYR Bookings"],
+        factsOffer: ["من 449 ر.ق شهرياً، أو 50 ر.ق مع ALYR Chat أو ALYR Bookings"],
       },
       demo: {
         business: "مخبز قرفة",

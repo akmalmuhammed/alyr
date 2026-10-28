@@ -35,7 +35,7 @@ These are not style preferences. Do not write code that breaks them, and stop an
 
 1. **Tenant isolation.** Every tenant-owned table has a `tenant_id` column and a PostgreSQL Row-Level Security policy. The application database role cannot bypass RLS. No query relies on application code alone to separate tenants.
 2. **Data stays in Qatar.** Production runs in Google Cloud's Doha region (`me-central1`, D-060). No service outside Qatar receives merchant or end-customer personal data unless it is listed in `docs/data-residency.md` with its legal basis. This includes error trackers, analytics, OCR and LLM APIs. When in doubt, strip the data or do not send it.
-3. **Non-custodial payments.** Alyr never holds, pools or moves merchant funds. Each merchant uses their own gateway account (SADAD, SkipCash, Dibsy). Store payment references and statuses only; never card numbers.
+3. **Non-custodial payments.** Alyr never holds, pools or moves merchant funds. Each merchant uses their own gateway account, in their own name: opened through ALYR at the partner provider (model B), or one they already have, such as SADAD, SkipCash or Dibsy (model A; D-044). Store payment references and statuses only; never card numbers.
 4. **Official WhatsApp only.** All WhatsApp traffic goes through Meta's Cloud API. No WhatsApp Web automation, no unofficial libraries.
 5. **Consent before sending.** Any message Alyr starts (a template) goes through the outbound layer, which checks consent, the 24-hour window and the tenant's messaging limit. Modules never call a channel directly.
 6. **Secrets.** Never commit tokens or keys. Local values go in `.env` (ignored); production values in Google Secret Manager, kept in Doha.
