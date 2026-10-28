@@ -23,15 +23,21 @@ NEXT_PUBLIC_ALYR_WORKSPACE_URL="" pnpm build >/dev/null
 
 app=".next/server/app"
 mkdir -p out-site/_next
-# Every page in PATHS (apps/web/app/_site/site.ts) but the homepage: chat, ..., for/bakeries,
+# a plain page: no social card of its own (it uses the homepage's)
+plain="company privacy"
+# Every other page in PATHS (apps/web/app/_site/site.ts) but the homepage: chat, ..., for/bakeries,
 # guides, guides/stop-losing-whatsapp-orders. A page added there is published here.
-pages="$(node "$root/scripts/site/pages.mjs")"
+pages="$(node "$root/scripts/site/pages.mjs" $plain)"
 [ -n "$pages" ] || { echo "build-site: no pages listed by scripts/site/pages.mjs" >&2; exit 1; }
 cp "$app/index.html" out-site/index.html
 cp "$app/ar.html" out-site/ar.html
 mkdir -p out-site/ar
 for page in $pages; do
   mkdir -p "$(dirname "out-site/$page.html")" "$(dirname "out-site/ar/$page.html")"
+  cp "$app/$page.html" "out-site/$page.html"
+  cp "$app/ar/$page.html" "out-site/ar/$page.html"
+done
+for page in $plain; do
   cp "$app/$page.html" "out-site/$page.html"
   cp "$app/ar/$page.html" "out-site/ar/$page.html"
 done
@@ -54,7 +60,7 @@ cp -r .next/static out-site/_next/static
 # The pages are drawn first and the framework's scripts start after the first paint
 # (scripts/site-defer-scripts.mjs says why). It fails the build if Next's markup changes.
 node "$root/scripts/site-defer-scripts.mjs" out-site/index.html out-site/ar.html out-site/404.html \
-  $(for page in $pages; do echo "out-site/$page.html out-site/ar/$page.html"; done)
+  $(for page in $pages $plain; do echo "out-site/$page.html out-site/ar/$page.html"; done)
 
 # Cloudflare Pages reads these two files. The link-preview image has no file extension,
 # so its type is stated; hashed assets never change, so browsers may keep them.

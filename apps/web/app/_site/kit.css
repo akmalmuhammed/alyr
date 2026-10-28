@@ -157,7 +157,6 @@ main:has(.pbar) section[id] { scroll-margin-top: calc(var(--header) + 4rem); }
 .inside-grid.is-four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 @media (max-width: 75rem) { .inside-grid.is-four { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 61.99rem) { .inside-grid.is-four { grid-template-columns: minmax(0, 1fr); } }
-.inside-rules { margin-top: var(--space-4); }
 .pk-list li p { margin-top: 0; color: var(--text); font-size: 1rem; line-height: 1.5; }
 [lang="ar"] .pk-list li p { line-height: 1.7; }
 .notyet { position: relative; margin-top: clamp(2.5rem, 5vw, 3.5rem); padding-top: 1.5rem; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: clamp(1.5rem, 3.5vw, 3.5rem); }

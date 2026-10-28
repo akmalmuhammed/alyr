@@ -95,16 +95,16 @@
 
 @media (prefers-reduced-motion: no-preference) {
   /* the buttons send the fold across; dragging follows the finger with no lag */
-  .split[data-glide] .split-after { transition: clip-path 600ms var(--ease); }
-  .split[data-glide] .split-fold, .split[data-glide] .split-handle { transition: inset-inline-start 600ms var(--ease); }
+  .split[data-glide] .split-after { transition: clip-path calc(var(--play-3) + var(--play-1)) var(--ease); }
+  .split[data-glide] .split-fold, .split[data-glide] .split-handle { transition: inset-inline-start calc(var(--play-3) + var(--play-1)) var(--ease); }
   /* a business chosen: its chats arrive in a new order, then the rows they become */
-  .al-js .biz-panel.is-on .dc-row, .al-js .biz-panel.is-on .do-row { animation: hp-rise var(--dur-3) var(--ease) both; }
-  .al-js .biz-panel.is-on .dc-row:nth-child(1) { animation-delay: 120ms; }
-  .al-js .biz-panel.is-on .dc-row:nth-child(2) { animation-delay: 0ms; }
-  .al-js .biz-panel.is-on .dc-row:nth-child(3) { animation-delay: 180ms; }
-  .al-js .biz-panel.is-on .dc-row:nth-child(4) { animation-delay: 60ms; }
-  .al-js .biz-panel.is-on .dc-row:nth-child(5) { animation-delay: 240ms; }
-  .al-js .biz-panel.is-on .do-row { animation-delay: calc(300ms + var(--r, 0) * 60ms); }
+  .al-js .biz-panel.is-on .dc-row, .al-js .biz-panel.is-on .do-row { animation: hp-rise var(--play-3) var(--ease) both; }
+  .al-js .biz-panel.is-on .dc-row:nth-child(1) { animation-delay: calc(2 * var(--play-stagger)); }
+  .al-js .biz-panel.is-on .dc-row:nth-child(2) { animation-delay: 0s; }
+  .al-js .biz-panel.is-on .dc-row:nth-child(3) { animation-delay: calc(3 * var(--play-stagger)); }
+  .al-js .biz-panel.is-on .dc-row:nth-child(4) { animation-delay: var(--play-stagger); }
+  .al-js .biz-panel.is-on .dc-row:nth-child(5) { animation-delay: calc(4 * var(--play-stagger)); }
+  .al-js .biz-panel.is-on .do-row { animation-delay: calc((5 + var(--r, 0)) * var(--play-stagger)); }
   .do-row:nth-child(2) { --r: 1; }
   .do-row:nth-child(3) { --r: 2; }
   .do-row:nth-child(4) { --r: 3; }

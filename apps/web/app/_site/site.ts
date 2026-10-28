@@ -46,19 +46,6 @@ export const OFFER_LIVE = process.env.NEXT_PUBLIC_ALYR_OFFER === "on";
  * the workspace is not hosted there, so the footer shows no link to it. */
 export const WORKSPACE_URL = process.env.NEXT_PUBLIC_ALYR_WORKSPACE_URL ?? "";
 
-/** Facts that make ALYR checkable, shown in the trust section only once each is true.
- * Until then nothing is rendered: no empty slot, no "coming soon". The labels are in
- * `copy.ts` (`home.trust.records`). */
-export const TRUST_RECORDS = {
-  /** Commercial registration number, once the company is registered (ALY-59). */
-  cr: process.env.NEXT_PUBLIC_ALYR_CR ?? "",
-  /** The licensed payment provider's name, once one is signed and connected (ALY-17). */
-  provider: process.env.NEXT_PUBLIC_ALYR_PAYMENT_PROVIDER ?? "",
-  /** Meta's approval of ALYR as a Tech Provider, once granted (ALY-39). */
-  meta: process.env.NEXT_PUBLIC_ALYR_META_STATUS ?? "",
-} as const;
-export type TrustRecord = keyof typeof TRUST_RECORDS;
-
 /** The kinds of business with a page of their own (ALY-232, D-057): an audience, not a
  * product, so they live under `/for/`. In the order of the homepage's business tabs, with
  * groceries after bakeries. Clinics are not here and must not be (health data, D-043). */
@@ -91,6 +78,10 @@ export const PATHS = {
   accounts: { en: "/accounts", ar: "/ar/accounts" },
   shelf: { en: "/shelf", ar: "/ar/shelf" },
   docs: { en: "/docs", ar: "/ar/docs" },
+  // Not a product: the company's registration details (the footer links to it).
+  company: { en: "/company", ar: "/ar/company" },
+  // Not a product: the privacy policy (ALY-72); Meta's app settings point here.
+  privacy: { en: "/privacy", ar: "/ar/privacy" },
   ...sectorPaths,
   guides: { en: "/guides", ar: "/ar/guides" },
   ...guidePaths,
@@ -105,8 +96,9 @@ export const guidePage = (key: GuideKey) => `guide-${key}` as const;
 /** What kind of page a key is, for the structured data and the machine copies. */
 export function pageKind(page: PageKey):
   | { kind: "home" } | { kind: "product"; key: ProductKey } | { kind: "sector"; key: SectorKey }
-  | { kind: "guides" } | { kind: "guide"; key: GuideKey } {
+  | { kind: "guides" } | { kind: "guide"; key: GuideKey } | { kind: "plain"; key: "company" | "privacy" } {
   if (page === "home") return { kind: "home" };
+  if (page === "company" || page === "privacy") return { kind: "plain", key: page };
   if (page === "guides") return { kind: "guides" };
   if (page.startsWith("for-")) return { kind: "sector", key: page.slice(4) as SectorKey };
   if (page.startsWith("guide-")) return { kind: "guide", key: page.slice(6) as GuideKey };

@@ -163,10 +163,42 @@ function homeTwin(locale) {
       return `[${productName(t, key)}](${SITE}${site.PATHS[key][locale]}): ${flat(body)}`;
     });
   }
-  if (h.trust) doc.h(2, h.trust.title).p(h.trust.body).list(h.trust.facts, titled);
   questions(doc, h.faq);
   if (h.final) doc.h(2, h.final.title).p(h.final.body).p(contactLine(locale));
   footer(doc, locale, site.PATHS.home[locale]);
+  return doc.text();
+}
+
+// ------------------------------------------------------------------ the company page
+
+function companyTwin(locale) {
+  const t = copy[locale];
+  const c = t.company;
+  const doc = new Doc();
+  header(doc, locale, "company", c.title, null);
+  doc.p(c.eyebrow).p(c.lead);
+  doc.list(c.rows, (r) => `**${flat(r.name)}**: ${flat(r.value)}${r.note ? `. ${flat(r.note)}` : ""}`);
+  doc.p(c.source);
+  doc.h(2, c.contact.title).p(c.contact.body);
+  footer(doc, locale, site.PATHS.company[locale]);
+  return doc.text();
+}
+
+// ------------------------------------------------------------------ the privacy policy
+
+function privacyTwin(locale) {
+  const t = copy[locale];
+  const v = t.privacy;
+  const doc = new Doc();
+  header(doc, locale, "privacy", v.title, null);
+  doc.p(v.updated).p(v.lead);
+  for (const s of v.sections) {
+    doc.h(2, s.title);
+    for (const para of s.paras) doc.p(para);
+    if (s.list) doc.list(s.list);
+    for (const para of s.after ?? []) doc.p(para);
+  }
+  footer(doc, locale, site.PATHS.privacy[locale]);
   return doc.text();
 }
 
@@ -302,6 +334,7 @@ function guidesTwin(locale) {
 function pageName(locale, key) {
   const t = copy[locale];
   if (key === "home") return t.nav?.home ?? "ALYR";
+  if (key === "company" || key === "privacy") return t.nav?.[key] ?? key;
   if (key === "guides") return t.guides?.crumb ?? key;
   if (key.startsWith("for-")) return t.sectors?.items?.[key.slice(4)]?.name ?? key;
   if (key.startsWith("guide-")) return t.guides?.items?.[key.slice(6)]?.title ?? key;
@@ -311,6 +344,8 @@ function pageName(locale, key) {
 /** The text of one page's markdown copy. */
 function twinOf(locale, key) {
   if (key === "home") return homeTwin(locale);
+  if (key === "company") return companyTwin(locale);
+  if (key === "privacy") return privacyTwin(locale);
   if (key === "guides") return guidesTwin(locale);
   if (key.startsWith("for-")) return sectorTwin(locale, key.slice(4));
   if (key.startsWith("guide-")) return guideTwin(locale, key.slice(6));
@@ -354,8 +389,13 @@ function llmsTxt() {
     const d = t.guides.items[key];
     lines.push(`- [${flat(d.title)}](${SITE}${twinPath(site.PATHS[`guide-${key}`].en)}): ${flat(d.meta.description)}`);
   }
-  lines.push("", `## ${w.pages}`, "", `- [${w.home}](${SITE}${twinPath("/")}): ${w.homeLine}`);
-  lines.push(`- [${flat(t.guides.crumb)}](${SITE}${twinPath(site.PATHS.guides.en)}): ${flat(t.guides.meta.description)}`, "", `## ${w.optional}`, "");
+  lines.push(
+    "", `## ${w.pages}`, "", `- [${w.home}](${SITE}${twinPath("/")}): ${w.homeLine}`,
+    `- [${flat(t.guides.crumb)}](${SITE}${twinPath(site.PATHS.guides.en)}): ${flat(t.guides.meta.description)}`,
+    `- [${t.nav.company}](${SITE}${twinPath(site.PATHS.company.en)}): ${flat(t.meta.company.description)}`,
+    `- [${t.nav.privacy}](${SITE}${twinPath(site.PATHS.privacy.en)}): ${flat(t.meta.privacy.description)}`,
+    "", `## ${w.optional}`, "",
+  );
   const arabic = Object.entries(site.PATHS).map(([key, p]) => `[${flat(pageName("ar", key))}](${SITE}${twinPath(p.ar)})`);
   lines.push(`- ${w.arabic}: ${arabic.join(", ")}`, "");
   return lines.join("\n");

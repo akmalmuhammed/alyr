@@ -4,7 +4,7 @@ import { copy, fill, type FlowSet, type InsideSection, type Locale, type Product
 import { ContactButton } from "./Contact";
 import { FlowDiagram } from "./FlowDiagram";
 import { contactHref } from "./Shell";
-import { CONTACT_STATE, OFFER_LIVE, PATHS, PRODUCTS, productPath, type ProductKey } from "./site";
+import { CONTACT_STATE, OFFER_LIVE, PRODUCTS, productPath, type ProductKey } from "./site";
 import { lines, rich } from "./Text";
 import "./kit.css";
 
@@ -155,10 +155,8 @@ export function ScreenBlock({ locale, screen, fictional, children, id = "screen"
 }
 
 /** Everything it does today, by audience; anything the page shows beside it (`children`);
- * then, below a dashed rule, what is not built, only where the page needs to say so. The
- * last group may close with a link to the homepage's trust section (`rules`), so WhatsApp's
- * rules and consent are told once for the suite, not on every page. */
-export function InsideBlock({ inside, locale, children }: { inside: InsideSection; locale: Locale; children?: ReactNode }) {
+ * then, below a dashed rule, what is not built, only where the page needs to say so. */
+export function InsideBlock({ inside, children }: { inside: InsideSection; children?: ReactNode }) {
   return (
     <section className="sec inside" id="inside">
       <div className="wrap">
@@ -178,12 +176,6 @@ export function InsideBlock({ inside, locale, children }: { inside: InsideSectio
                   <li key={item}><p>{rich(item)}</p></li>
                 ))}
               </ul>
-              {inside.rules && index === inside.groups.length - 1 && (
-                <a className="link inside-rules" href={`${PATHS.home[locale]}#trust`}>
-                  <span>{rich(inside.rules)}</span>
-                  <Icon name="arrow-right" className="ico ico-flip" />
-                </a>
-              )}
             </div>
           ))}
         </div>

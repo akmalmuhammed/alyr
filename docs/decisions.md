@@ -34,7 +34,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-026 | The homepage is about ALYR the company; ALYR Chat has its own page | Accepted |
 | D-027 | One workspace for every product, driven by a catalogue; ALYR has a back office | Accepted |
 | D-028 | Every item has one person responsible, and the team's work is on the record | Accepted |
-| D-029 | Email at @alyr.qa: Cloudflare Email Routing in, Resend out | Accepted |
+| D-029 | Email at @alyr.qa: Cloudflare Email Routing in, Resend out | Mail in replaced by D-061 (28 Oct 2026); Resend out stands |
 | D-030 | A weekly result report to the owner, one section per product | Accepted |
 | D-031 | Self-serve onboarding: sign up, create the business, start from a preset, try it on a private test line | Accepted |
 | D-032 | Prices are set per client from the back office: a price list, a quote per client, published live to the owner | Accepted |
@@ -47,7 +47,10 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-042 | Documents (receipts, invoices and the rest) are one engine: gapless numbers, issued paper nobody can change, Arabic first, a PDF drawn by fpdf2 and kept in the database; free now, metered later | Accepted |
 | D-046 | The public site adds ALYR Shelf (the Catalog) and ALYR Docs (Documents), each with its own page; Payroll leaves the site until it is built; every product's state is "Set up for you" | Accepted |
 | D-056 | Search and AI visibility: be found, described correctly and contacted in Qatar, in search and AI assistants; profiles and verification switch on from settings | Accepted |
-| D-057 | Sector pages live under `/for/`, owner guides under `/guides/`, in both languages with the same Latin slugs | Proposed |
+| D-057 | Sector pages live under `/for/`, owner guides under `/guides/`, in both languages with the same Latin slugs | Accepted |
+| D-058 | The homepage hero's ALYR Agent figure (and /agent's) moves continuously, the one exception to "plays once", with a pause button and calm pacing | Accepted |
+| D-059 | Motion is always on: the site's figures (How we work, the products frame, the signature figures, with the flows, demos and the live Agent) keep playing, each with a Pause control; text arrives once | Accepted |
+| D-061 | Company mail moves to Zoho Mail (free plan): hello@ with akmal@ and security@ as aliases, and a mailbox for Beevi Jinan, the registered owner; Resend still sends the product's email | Accepted |
 
 ---
 
@@ -1130,7 +1133,7 @@ Nothing claims more than the page, as before.
 - No fake reviews, no undisclosed posts, no AI claims about the product, no prices before the CR.
 
 ## D-057 · Sector pages under `/for/`, owner guides under `/guides/`
-**Date** 25 Oct 2026 · **Status** Proposed (Site and brand lane; the founder can change the addresses before the first publish) · Linear ALY-232, ALY-233 · Plan: `docs/growth/visibility.md` (D-056) · Work: `docs/work/ALY-232-sector-pages/`
+**Date** 25 Oct 2026 · **Status** Accepted (the founder, 28 Oct 2026, relayed by the coordinator: keep the `/for/` and `/guides/` addresses) · Linear ALY-232, ALY-233 · Plan: `docs/growth/visibility.md` (D-056) · Work: `docs/work/ALY-232-sector-pages/`
 
 **Decision.**
 - A page for one kind of business lives at `/for/<trade>`: `/for/bakeries`, `/for/salons`, `/for/groceries`, `/for/restaurants`, `/for/home-services`, `/for/fashion`.
@@ -1147,3 +1150,49 @@ Nothing claims more than the page, as before.
 
 **Revisit when** the site goes to a second country (ALY-241), or Gulf keyword research (ALY-234) shows owners search for a trade by another word.
 
+---
+## D-058 · The live Agent figure moves continuously
+**Date** 25 Oct 2026 · **Status** Accepted (the founder, 25 Oct 2026, relayed in the work's brief) · Branch `aly-hero-live-motion` · Rules: `.claude/skills/alyr-design/motion.md`, "The one exception" · Log: `docs/framer-review/06-live-motion-log.md`
+
+**Decision.**
+- The ALYR Agent dashboard with the "ALYR · Running" feed beside it (the homepage hero, Qirfa Bakery, and `/agent`'s opening with its three samples) keeps moving, the way the workspace does, instead of playing once and stopping. It is the one named exception to "plays once" (alyr-design principle 10).
+- Each sample plays a script of events the product really performs (order page, order received, order confirmation, ready message, welcome menu, booking page, booking confirmation and details, booking reminder, "Needs a look"), and the dashboard's numbers move with them and stay true to each other. Payment reminders are not automatic, so none is shown being sent.
+
+**Conditions.**
+- A pause button with its name in English and Arabic (WCAG 2.2.2).
+- It stops off screen, in a hidden tab and with reduced motion; reduced motion and no scripts show the settled picture, and the first paint is that picture.
+- About one event every 3 to 5 s; Volt only on what just became true, fading back; no flashing; transforms and opacity only; CLS stays 0.
+
+**Revisit when** a visitor or the founder finds it distracting, or another figure asks to keep moving (that needs his word, not this decision).
+
+---
+## D-059 · Motion is always on: the site's figures keep playing
+**Date** 26 Oct 2026 · **Status** Accepted (the founder, 26 Oct 2026, in his words, relayed in the work's brief: "animation is super fast now make it a bit slower, always it should be always on animations and motions") · Branch `aly-always-on`, stacked on `aly-pace-slower` (PR #142) · Rules: `.claude/skills/alyr-design/motion.md` rule 1 and "Figures that keep playing" · Log: `docs/framer-review/08-always-on-log.md`
+
+**Decision.**
+- "A bit slower" is the pace at 1.3 (PR #142); the live Agent figure's beat now follows it too (`--live-beat`: 5.2 s, 6.5 s on a phone).
+- "Always on": the figures that show the product at work keep playing while they are on screen, instead of playing once and resting: the homepage's How we work cards (the return line drawn again with Improve), the products frame's six tiles, and the signature figures on `/shelf` and `/docs`. The flows, the demos and the live Agent figure already did. This replaces "plays once" (alyr-design principle 10) for figures, and widens D-058 beyond its one figure.
+- Text and sections still arrive once, and the visitor's own controls (the business day's fold, `/chat`'s X-ray, tabs, hovers, presses) are unchanged: looping text would make the page unreadable, and a timer must not move a control under the visitor's hand.
+
+**Conditions** (D-058's, for every looping figure).
+- A Pause control per figure or section, its words in English and Arabic (WCAG 2.2.2), absent without scripts and with reduced motion.
+- It stops off screen and in a hidden tab; reduced motion and no scripts show the finished picture.
+- Its timing comes from the pace tokens, and each finished state holds while its words are read (at least `--dwell-min`).
+- The numbers in a scene stay true to each other on every cycle; no layout shift; the homepage's Lighthouse no worse than before.
+
+**Revisit when** a visitor or the founder finds it distracting, or a figure's cycle reads as too busy (its hold is one token away).
+
+## D-061 · Company mail moves to Zoho Mail
+**Date** 28 Oct 2026 (the move was made on 25 Oct 2026) · **Status** Accepted (the founder, 25 Oct 2026: "i want zoho email", then "i want akmal@alyr.qa running and working receiving and sending") · Replaces the mail-in half of D-029
+
+**Decision.**
+- alyr.qa's mail goes to **Zoho Mail** (free plan, 5 licences, Zoho's `.com` data centre). MX `mx.zoho.com` (10), `mx2` (20), `mx3` (50); SPF `include:zohomail.com` added beside Cloudflare's; DKIM selector `zmail` (2048-bit), verified in Zoho on 26 Oct.
+- One mailbox, `hello@alyr.qa` (the Zoho super administrator), with **akmal@** and **security@** as aliases that receive and send. A second mailbox, **beevi.jinan@alyr.qa**, for the company's registered owner, who holds the Meta business portfolio's admin role and receives Meta's business notices.
+- **Resend still sends the product's email** (sign-in codes, reports, documents) from `send.alyr.qa`, as D-029 says. Its records are untouched.
+- Cloudflare Email Routing is no longer used. Its rules still exist and do nothing (Cloudflare marks it "misconfigured" because the MX records are Zoho's).
+
+**Why.** Forwarding to a personal Gmail could not send as @alyr.qa, and Meta's business verification needed company addresses that work both ways.
+
+**Data.** Zoho is outside Qatar and may hold a customer's or a merchant's message when they write to us: a row in `docs/data-residency.md`. No merchant data is routed through it.
+
+**Revisit when** ALYR needs shared inboxes or more than five mailboxes (Zoho's paid plan, or the startup programme's mail, ALY-55), or a lawyer says company mail must stay in Qatar (ALY-51).
