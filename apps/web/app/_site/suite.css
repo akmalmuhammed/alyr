@@ -128,6 +128,8 @@
 .sf-slot { position: relative; display: grid; place-items: center; height: 2.25rem; overflow: hidden; border-radius: var(--radius-md); background: var(--d-card); color: var(--d-ink); box-shadow: 0 0 0 1px var(--d-hair-2); font-size: var(--ui-small); font-weight: var(--weight-medium); font-variant-numeric: tabular-nums; }
 /* the one Volt: the time taken, the screen's current state */
 .sf-slot-fill { position: absolute; inset: 0; display: grid; place-items: center; background: var(--volt); color: var(--on-volt); font-weight: var(--weight-semibold); }
+/* a time another booking already has (the hero film's 6:30 pm), in ink */
+.sf-slot.is-taken { background: var(--text); color: var(--text-inverse); box-shadow: none; font-weight: var(--weight-semibold); }
 .sf-lines { display: grid; }
 .sf-line { display: grid; grid-template-columns: 3.75rem minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); padding-block: .625rem; border-top: 1px solid var(--hair); }
 .sf-line > b { font-size: var(--ui-small); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; justify-self: start; }
