@@ -23,6 +23,9 @@
 //   the line drawn again with Improve, counted from Improve's own start, its words left as are.
 // - The products frame: where each tile's moment ends; a stagger of 8 beats a tile so the six
 //   never fade together; the Pause control at the bar's end, in the room the bar keeps for it.
+// - On the homepage (How we work and the products frame) the motion plays like a video
+//   (founder, 29 Oct 2026): the Pause control is not on show, only while the pointer is over its
+//   figure, with keyboard focus, or while paused (WCAG 2.2.2 keeps a way to stop it).
 // - A signature figure: where each moment ends; the Pause control above the end of its label
 //   line; played again, the three parts stay where they are (no arrival) and their moments count
 //   from the figure's start, on a phone too.
@@ -45,6 +48,8 @@ export const LOOP_CSS = `
 .sf .sf-toggle{top:calc((3.5rem - 2.75rem) / 2);inset-inline-end:calc(var(--space-4) - .75rem);color:var(--on-band-quiet)}
 .sf .sf-toggle:hover{color:var(--on-band)}
 .sf .sf-toggle:focus-visible{outline-color:var(--focus-on-band);outline-offset:-2px}
+.hw .hw-toggle,.sf .sf-toggle{opacity:0;transition:opacity var(--dur-2) var(--ease)}
+.hw:hover .hw-toggle,.hw .hw-toggle:focus-visible,.hw[data-paused] .hw-toggle,.sf:hover .sf-toggle,.sf .sf-toggle:focus-visible,.sf[data-paused] .sf-toggle{opacity:1}
 .sf-chat{--sf-end:calc(11 * var(--play-stagger) + var(--play-3))}
 .sf-bookings{--sf-end:calc(14 * var(--play-stagger) + var(--play-3))}
 .sf-agent{--sf-end:var(--play-4)}

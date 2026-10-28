@@ -1,0 +1,49 @@
+/* The consent prompt (D-070). Colours from design/tokens.json (_tokens/tokens.css), which
+   the site and the product both load, so it follows each one's light and dark theme. */
+.ph-consent {
+  --ph-bg: var(--surface);
+  --ph-fg: var(--text);
+  --ph-muted: var(--text-muted);
+  --ph-line: var(--line);
+  position: fixed;
+  z-index: 60;
+  inset-inline: max(12px, env(safe-area-inset-left, 0px));
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  max-width: 34rem;
+  margin-inline: auto;
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: var(--ph-bg);
+  color: var(--ph-fg);
+  box-shadow: var(--shadow-float), 0 0 0 1px var(--ph-line);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.ph-consent-text { display: grid; gap: 4px; }
+.ph-consent-text b { font-size: 15px; font-weight: 600; }
+.ph-consent-text p { margin: 0; color: var(--ph-muted); }
+.ph-consent-text a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.ph-consent-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.ph-consent button, .ph-consent-change {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ph-consent-deny { background: transparent; color: var(--ph-fg); box-shadow: 0 0 0 1px var(--ph-line) inset; }
+.ph-consent-allow { background: var(--volt); color: var(--on-volt); }
+.ph-consent button:focus-visible, .ph-consent-change:focus-visible { outline: 2px solid var(--ph-fg); outline-offset: 2px; }
+.ph-consent-change { background: transparent; color: inherit; box-shadow: 0 0 0 1px currentColor inset; }
+@media (prefers-reduced-motion: no-preference) {
+  .ph-consent { animation: ph-consent-in 0.3s ease-out; }
+  @keyframes ph-consent-in { from { opacity: 0; transform: translateY(8px); } }
+}
+/* The workspace's tab bar sits at the bottom on a phone: stay above it. */
+@media (max-width: 56rem) {
+  .sh ~ .ph-consent, .sh .ph-consent { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+}
