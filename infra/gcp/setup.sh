@@ -6,6 +6,7 @@
 #   infra/gcp/setup.sh secrets       generate database passwords and the link secret; ask for the rest
 #   infra/gcp/setup.sh env-secrets <.env>  or: copy the R2, Meta and Resend values from a .env file
 #   infra/gcp/setup.sh apps <tag>    migration job, API, worker, web app and the nightly export
+#   infra/gcp/setup.sh first-admin <tag> <email> <name>  the first person who can sign in
 #   infra/gcp/setup.sh github        let GitHub Actions deploy without a stored key; print its variables
 #   infra/gcp/setup.sh monitoring    uptime checks on the health addresses, email alerts (ALYR_ALERT_EMAIL)
 #   infra/gcp/setup.sh lock-backups  lock the export bucket's 35-day retention (cannot be undone)
@@ -272,6 +273,17 @@ case "${1:-}" in
     echo "Web:  $(url alyr-web)/login"
     ;;
 
+  first-admin)
+    # The first person who can sign in, and ALYR's own business and WhatsApp number
+    # (alyr/first_admin.py). Once per database; more staff come from the back office.
+    tag="${2:?usage: setup.sh first-admin <image tag> <email> <name>}"
+    email="${3:?usage: setup.sh first-admin <image tag> <email> <name>}"
+    name="${4:?usage: setup.sh first-admin <image tag> <email> <name>}"
+    g run jobs deploy alyr-first-admin --region="$REGION"       --image="$REGION-docker.pkg.dev/$PROJECT/$REPO/alyr-api:$tag"       --args="^@^python@-m@alyr.first_admin@--email@$email@--name@$name@--own-number"       --service-account="$(sa alyr-run)" "${private_net[@]}" --set-env-vars=ALYR_ENV=production       --set-secrets="ALYR_MIGRATION_URL=migration-url:latest,ALYR_DATABASE_URL=database-url:latest,ALYR_META_PHONE_NUMBER_ID=meta-phone-number-id:latest,ALYR_META_WABA_ID=meta-waba-id:latest"       --cpu=1 --memory=512Mi --max-retries=0 --task-timeout=5m
+    g run jobs execute alyr-first-admin --region="$REGION" --wait
+    echo "Sign in at $(url alyr-web)/login with $email (a code is emailed)."
+    ;;
+
   github)
     num="$(number)"
     exists g iam workload-identity-pools describe github --location=global ||
@@ -355,7 +367,7 @@ for c in json.load(sys.stdin).get('notificationChannels', []):
     ;;
 
   *)
-    sed -n '2,15p' "$0"
+    sed -n '2,16p' "$0"
     exit 1
     ;;
 esac
