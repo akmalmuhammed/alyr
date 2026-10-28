@@ -365,3 +365,9 @@ main[data-page="home"] [id] { scroll-margin-top: calc(var(--header) + 1rem); }
 /* the questions' heading scrolls with the page here: the homepage keeps its pins for the
    products' room and the agent's whole screen only */
 main[data-page="home"] .faq-head .head { position: static; }
+/* the homepage's motion plays like a video (founder, 29 Oct 2026): the flow's Pause is not on
+   show, only while the pointer is over the flow, with keyboard focus, or while paused (WCAG
+   2.2.2 keeps a way to stop it). The film's, How we work's and the products frame's are hidden
+   the same way (film.ts, loopStyle.ts). */
+main[data-page="home"] .fx .demo-toggle:not([data-paused]) { opacity: 0; transition: opacity var(--dur-2) var(--ease); }
+main[data-page="home"] .fx:hover .demo-toggle, main[data-page="home"] .fx .demo-toggle:focus-visible { opacity: 1; }
