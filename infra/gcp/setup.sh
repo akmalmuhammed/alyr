@@ -6,6 +6,7 @@
 #   infra/gcp/setup.sh secrets       generate database passwords and the link secret; ask for the rest
 #   infra/gcp/setup.sh env-secrets <.env>  or: copy the R2, Meta and Resend values from a .env file
 #   infra/gcp/setup.sh set-secret <name>   replace one secret (typed, hidden) and restart the apps
+#   infra/gcp/setup.sh meta-webhook <app id>  point Meta's WhatsApp webhook at api.alyr.qa
 #   infra/gcp/setup.sh apps <tag>    migration job, API, worker, web app and the nightly export
 #   infra/gcp/setup.sh first-admin <tag> <email> <name>  the first person who can sign in
 #   infra/gcp/setup.sh github        let GitHub Actions deploy without a stored key; print its variables
@@ -193,11 +194,47 @@ case "${1:-}" in
     # start new copies of the API and the worker so they read it.
     name="${2:?usage: setup.sh set-secret <secret name, e.g. meta-access-token>}"
     secret_exists "$name" || { echo "setup: no secret called $name" >&2; exit 1; }
-    ask_secret "$name" "New value for $name"
+    read -r -s -p "New value for $name (paste once, then Enter): " value; echo
+    value="$(printf '%s' "$value" | tr -d '[:space:]')"
+    [ -n "$value" ] || { echo "Nothing typed; nothing changed."; exit 1; }
+    if [ "$name" = meta-access-token ]; then
+      # Ask Meta before storing. Only the result is shown: Meta's error text repeats the
+      # token back, so it is never printed.
+      verdict="$(curl -sS -H "Authorization: Bearer $value" "https://graph.facebook.com/v25.0/me" |
+        python -c "import json, sys; e = json.load(sys.stdin).get('error'); print('refused, error code %s' % e.get('code') if e else 'accepted')")"
+      echo "Meta: $verdict"
+      [ "$verdict" = accepted ] || { unset value; echo "Not stored; nothing changed."; exit 1; }
+    fi
+    put_secret "$name" "$value"
+    unset value
+    echo "  stored $name"
     stamp="$(date -u +%Y%m%dT%H%M%SZ)"
-    g run services update alyr-api --region="$REGION" --update-env-vars="ALYR_SECRETS_AT=$stamp" >/dev/null
-    g run worker-pools update alyr-worker --region="$REGION" --update-env-vars="ALYR_SECRETS_AT=$stamp" >/dev/null
+    g run services update alyr-api --region="$REGION" --update-env-vars="ALYR_SECRETS_AT=$stamp" >/dev/null 2>&1
+    g run worker-pools update alyr-worker --region="$REGION" --update-env-vars="ALYR_SECRETS_AT=$stamp" >/dev/null 2>&1
     echo "The API and the worker restarted with the new $name."
+    ;;
+
+  meta-webhook)
+    # Point the Meta app's WhatsApp webhook at the API (https://api.alyr.qa/webhooks/whatsapp),
+    # with the app secret and verify phrase from Secret Manager, never shown. Meta checks the
+    # address at once by calling it with the verify phrase, so the API must already be live.
+    app_id="${2:?usage: setup.sh meta-webhook <Meta app ID> [callback URL]}"
+    callback="${3:-https://api.alyr.qa/webhooks/whatsapp}"
+    graph="https://graph.facebook.com/v25.0/$app_id/subscriptions"
+    app_token="$app_id|$(read_secret meta-app-secret)"
+    fields="$(curl -fsS -G "$graph" --data-urlencode "access_token=$app_token" | python -c "
+import json, sys
+for s in json.load(sys.stdin).get('data', []):
+    if s.get('object') == 'whatsapp_business_account':
+        print(','.join(f['name'] for f in s.get('fields', [])))")"
+    fields="${fields:-messages}"
+    curl -fsS -X POST "$graph" --data-urlencode "access_token=$app_token" \
+      --data-urlencode "object=whatsapp_business_account" \
+      --data-urlencode "callback_url=$callback" \
+      --data-urlencode "verify_token=$(read_secret meta-verify-token)" \
+      --data-urlencode "fields=$fields" >/dev/null
+    unset app_token
+    echo "Meta now sends WhatsApp events ($fields) to $callback"
     ;;
 
   env-secrets)
@@ -386,7 +423,7 @@ for c in json.load(sys.stdin).get('notificationChannels', []):
     ;;
 
   *)
-    sed -n '2,17p' "$0"
+    sed -n '2,18p' "$0"
     exit 1
     ;;
 esac
