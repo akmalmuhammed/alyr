@@ -9,6 +9,7 @@
 // 3. banned words and prices      scripts/site/banned-words.mjs (copy and built files)
 // 4. internal links               scripts/site/link-check.mjs
 // 5. the pace                     scripts/site/pace-check.mjs (timed pieces follow --pace)
+// 6. :has() arguments             scripts/site/has-check.mjs (no :not() inside a :has())
 //
 // All checks run even when one fails, so one run shows everything; the exit code is 1 if
 // any failed.
@@ -25,6 +26,7 @@ const steps = [
   ["banned words and prices", "node", [join(here, "banned-words.mjs")]],
   ["internal links", "node", [join(here, "link-check.mjs")]],
   ["the pace", "node", [join(here, "pace-check.mjs")]],
+  [":has() arguments", "node", [join(here, "has-check.mjs")]],
 ];
 
 const results = [];

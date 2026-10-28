@@ -163,9 +163,10 @@ same as the figures above.
    after the page settles; its windows wait under `content-visibility: hidden` until they
    start. Its parts start in two frames (what the still shows first) and are then set to the
    camera's time. Reasons, measured: the canvas in the HTML grew the payload past a round
-   trip in Lighthouse's model (+0.15 s LCP on `/ar`); and on this site every DOM insertion
-   re-styles the whole page because of its `:root:has(...)` rules (about 10 to 20 ms on a
-   slowed phone), so the canvas goes in as one commit.
+   trip in Lighthouse's model (+0.15 s LCP on `/ar`); and the canvas goes in as one commit, so
+   the page re-styles once. (Every DOM insertion used to re-style the whole page: the cause was
+   a `:not()` inside the Agent figure's `:has()` rules, not the `:root:has(...)` ones; rewritten
+   on 28 Oct 2026, and `scripts/site/has-check.mjs` in `pnpm site:check` keeps it out.)
 4. **Pause holds the frame,** as a film does (the figures above finish their moves instead);
    off screen and in a hidden tab every track is paused where it is. The last shot's numbers
    are the dashboard's own: `film.ts` tells `FilmDash` when the film reaches 16:20 (it rolls,
