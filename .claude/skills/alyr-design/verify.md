@@ -110,6 +110,13 @@ runs; report the lowest: Performance ≥ 90, Accessibility 100, CLS < 0.05, LCP 
 `pnpm site:a11y --no-axe --pages=/,/chat --runs=3` runs the pinned Lighthouse 13 on Edge
 (or `CHROME_PATH`) and fails below that budget.
 
+Style work counts before the first paint: a selector whose rightmost part is an `:is()` holding
+descendant selectors (`.afig[data-feed] :is(.ag-summary, .ag-need small, …)`) is matched
+against every element of the page, and it cost the homepage 150 ms of simulated LCP (25 Oct
+2026, D-058's build). Write such lists out, one selector each, so each keys on its own class.
+To find what moved LCP, swap one built file at a time between two `out-site` copies served side
+by side (`serveSite({ port, out })` in `scripts/site/serve.mjs`) and run Lighthouse on each.
+
 ## Words and claims
 
 - Read every changed line, `aria-label`, alt text, meta description, social card and

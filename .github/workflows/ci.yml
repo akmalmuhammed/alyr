@@ -50,9 +50,10 @@ jobs:
       # --locked: fail if uv.lock does not match pyproject.toml, so CI tests what we ship.
       - run: uv sync --locked
       - run: uv run ruff check .
-      # The API image as Cloudflare runs it (D-052): build apps/api/Dockerfile, migrate the
-      # database above, start the entrypoint (API + job runner) and ask /health. Fails if the
+      # The API image with no argument (API + job runner, as D-052 runs it): build
+      # apps/api/Dockerfile, migrate the database above, start it and ask /health. Fails if the
       # image cannot start with production settings, which pytest alone would not notice.
+      # A throwaway container has no R2, so only here may photos stay on its own disk.
       - run: docker build -t alyr-api .
       - name: Start the image
         run: |
@@ -60,6 +61,7 @@ jobs:
           docker run -d --name api --network host \
             -e ALYR_ENV=production -e ALYR_JOBS_INLINE=false \
             -e ALYR_LINK_SECRET=ci-only-secret-not-used-anywhere-else-0123456789 \
+            -e ALYR_MEDIA_ALLOW_LOCAL=true \
             -e PORT=8080 alyr-api
       - name: Image answers /health and runs the job runner
         run: |
