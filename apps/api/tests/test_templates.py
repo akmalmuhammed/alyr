@@ -229,11 +229,6 @@ def new_with(office, template, name="Oud House", products=()) -> dict:
         "name": name, "slug": slug, "owner_email": email, "owner_name": "Salim",
         "template": template, "products": list(products)})
     assert answer.status_code == 200, answer.text
-    # Its products open as once the client has paid (ALY-212).
-    client_id = owner_sql("select client_id from tenants where slug = $1", slug)[0][0]
-    assert office.post(
-        f"{ADMIN}/clients/{client_id}/open", json={"reason": "Test: paid"}
-    ).status_code == 200
     return {**answer.json(), "email": email}
 
 
