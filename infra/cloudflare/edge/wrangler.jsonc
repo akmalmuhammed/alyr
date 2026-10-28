@@ -1,0 +1,21 @@
+// app.alyr.qa and api.alyr.qa: a Worker that forwards to Cloud Run in Doha (D-060, ALY-219),
+// because Cloud Run's custom domains are refused in me-central1. Deploy by hand from this
+// folder: `pnpm install && pnpm exec wrangler deploy`. Wrangler creates the two DNS records
+// itself (custom domains); no other record may hold those names.
+{
+  "name": "alyr-edge",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-06",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
+    { "pattern": "app.alyr.qa", "custom_domain": true },
+    { "pattern": "api.alyr.qa", "custom_domain": true }
+  ],
+  // Off on purpose: request logs would keep customers' paths and addresses outside Qatar.
+  "observability": { "enabled": false },
+  "vars": {
+    "WEB_ORIGIN": "https://alyr-web-841433519399.me-central1.run.app",
+    "API_ORIGIN": "https://alyr-api-841433519399.me-central1.run.app"
+  }
+}

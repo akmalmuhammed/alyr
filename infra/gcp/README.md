@@ -65,7 +65,10 @@ infra/gcp/setup.sh github
 ```
 
 **8. Monitoring** (after step 6): uptime checks every 5 minutes on `/health/ready`,
-`/health/worker` and `/login`, each with an email alert. Google emails a confirmation first.
+`/health/worker` and `/login`, each with an email alert, and an alert on errors: any server
+error from the API or web app, a crash (traceback) or a failed job (a WhatsApp send, a
+reminder), counted by the log-based metric `alyr-app-errors`. Google's Error Reporting cannot
+read logs kept in Doha, so this replaces it. Google emails a confirmation first.
 
 ```bash
 ALYR_ALERT_EMAIL=akmal@alyr.qa infra/gcp/setup.sh monitoring
@@ -76,9 +79,17 @@ ALYR_ALERT_EMAIL=akmal@alyr.qa infra/gcp/setup.sh monitoring
 
 ## Meta's webhook
 
-Point the Meta app's webhook at `https://alyr-api-841433519399.me-central1.run.app/webhooks/whatsapp`
-with the same verify phrase as in Secret Manager. Retire the laptop tunnel only after Meta
-verifies it and a test message arrives.
+Done on 28 Oct 2026: Meta sends WhatsApp events to `https://api.alyr.qa/webhooks/whatsapp`, and
+a message to ALYR's test number was answered from production within two seconds.
+
+- **Webhook:** `infra/gcp/setup.sh meta-webhook <Meta app ID>` (app `alyr`, 1071845795713841)
+  sets it through the Graph API with the app secret and verify phrase from Secret Manager.
+  Meta checks the address at once, so the API must be live.
+- **Access token:** a permanent system-user token (Business Settings > System users >
+  alyradmin > Generate token; app alyr, never expires, `whatsapp_business_messaging` and
+  `whatsapp_business_management`). Store it with `infra/gcp/setup.sh set-secret
+  meta-access-token`: paste once. Meta checks it before it is stored, and only "accepted" or
+  an error code is shown, because Meta's error text repeats the token.
 
 ## What the first deploy showed (28 Oct 2026)
 
