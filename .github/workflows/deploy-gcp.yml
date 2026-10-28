@@ -48,7 +48,7 @@ jobs:
           echo "API_URL=https://alyr-api-$num.$REGION.run.app" >> "$GITHUB_ENV"
           # The web app's public address, for its staff link; a custom domain if one is set.
           web_url="${{ vars.ALYR_WEB_URL }}"
-          echo "WEB_URL=${web_url:-https://alyr-web-$num.$REGION.run.app}" >> "$GITHUB_ENV"
+          echo "WEB_URL=${web_url:-https://app.alyr.qa}" >> "$GITHUB_ENV"
 
       - name: Build and push the images
         run: |
