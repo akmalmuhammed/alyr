@@ -68,6 +68,11 @@ type Payment = {
   reference: string; bank: string;
 };
 type Booking = { customer: string; service: string; when_text: string; status: string };
+// A version of the customer agreement or the privacy notice (ALY-167).
+type TermsVersion = {
+  id: string; kind: "agreement" | "privacy"; version: string; title: string; title_ar: string;
+  url: string; url_ar: string; changes: string; changes_ar: string; accepted_at: string | null;
+};
 // The owner's test order, as the Orders list answers it (ALY-168).
 type TestOrder = { id: string; number: number; total: number; status: string; test?: boolean };
 type Step = "loading" | "account" | "code" | "type" | "basics" | "services" | "hours" | "products" | "handover" | "assisted" | "try" | "plan" | "golive" | "finished";
@@ -151,6 +156,11 @@ export default function Start() {
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [tested, setTested] = useState<Booking | null>(null);
+  // What the new owner must tick before the business is made, and what an existing one has still
+  // to accept on the go-live list.
+  const [termsList, setTermsList] = useState<TermsVersion[]>([]);
+  const [ticked, setTicked] = useState<string[]>([]);
+  const [termsOpen, setTermsOpen] = useState<TermsVersion[]>([]);
   const [testedOrder, setTestedOrder] = useState<TestOrder | null>(null);
   const [ready, setReady] = useState<Readiness | null>(null);
   // The WhatsApp number and name as the owner types them, until saved.
@@ -277,12 +287,33 @@ export default function Start() {
   const createBusiness = () => guard(async () => {
     const answer = await call("/api/onboarding/business", "POST", {
       signup_token: token, owner_name: form.owner, name: form.name, name_ar: form.nameAr, type: kind, area: form.area,
+      accepted_terms: termsList.map((v) => v.id),
     });
     if (answer.status === 401) { setStep("account"); return setError(t.basics.expired); }
+    if (answer.status === 422) {
+      // The terms may have changed while the owner filled this in: show the new ones, untick.
+      setTicked([]);
+      const fresh = await call<{ current: TermsVersion[] }>("/api/onboarding/terms/current");
+      if (fresh.ok) setTermsList(fresh.data.current);
+      return setError(t.terms.changed);
+    }
     if (!answer.ok) return setError(t.offline);
     const loaded = await loadState();
     if (loaded) setStep((loaded.step || loaded.steps[0]) as Step);
   });
+
+  // The terms a new owner is asked to accept, read once the basics step opens.
+  useEffect(() => {
+    if (step !== "basics" || termsList.length > 0) return;
+    let alive = true;
+    const first = setTimeout(async () => {
+      const answer = await call<{ current: TermsVersion[] }>("/api/onboarding/terms/current").catch(() => null);
+      if (alive && answer?.ok) setTermsList(answer.data.current);
+    }, 0);
+    return () => { alive = false; clearTimeout(first); };
+  }, [step, termsList.length]);
+  const termsTitle = (v: TermsVersion) => (lang === "ar" ? v.title_ar : v.title);
+  const termsUrl = (v: TermsVersion) => (lang === "ar" ? v.url_ar : v.url);
 
   // ── services ─────────────────────────────────────────
   async function saveService(id: string, change: Partial<Service>) {
@@ -407,6 +438,9 @@ export default function Start() {
   const loadReadiness = useCallback(async () => {
     const answer = await call<Readiness>("/api/onboarding/readiness");
     if (answer.ok) setReady(answer.data);
+    // What is still to accept, for the terms line (an owner from before, or a new version).
+    const waiting = await call<{ pending: TermsVersion[] }>("/api/onboarding/terms");
+    if (waiting.ok) setTermsOpen(waiting.data.pending);
   }, []);
   useEffect(() => {
     if (step !== "golive") return;
@@ -429,6 +463,11 @@ export default function Start() {
     setWaError("");
     setWaDraft({});
     setReady(answer.data);
+  });
+  const acceptTerms = () => guard(async () => {
+    const answer = await call("/api/onboarding/terms/accept", "POST", { version_ids: termsOpen.map((v) => v.id) });
+    if (!answer.ok) return setError(t.offline);
+    await loadReadiness();
   });
   const finish = () => guard(async () => {
     await call("/api/onboarding/finish", "POST");
@@ -580,6 +619,22 @@ export default function Start() {
               ))}
             </div>
           </fieldset>
+          {termsList.length > 0 && (
+            <fieldset className="ob-terms">
+              <legend>{t.terms.legend}</legend>
+              {termsList.map((v) => (
+                <div className="ob-term" key={v.id}>
+                  <label>
+                    <input type="checkbox" checked={ticked.includes(v.id)}
+                      onChange={(e) => setTicked(e.target.checked ? [...ticked, v.id] : ticked.filter((x) => x !== v.id))} />
+                    <span>{t.terms[v.kind](termsTitle(v))}</span>
+                  </label>
+                  <a className="ob-link" href={termsUrl(v)} target="_blank" rel="noopener">{t.terms.read}</a>
+                </div>
+              ))}
+              {ticked.length < termsList.length && <p className="ob-note" role="status">{t.terms.needed}</p>}
+            </fieldset>
+          )}
         </form>
         <div className="ob-inline-preview"><p className="ob-kicker">{t.previewLabel}</p><Chat name={shopShown} initials={initialsOf(shopName)} messages={preview} /></div>
       </>
@@ -587,7 +642,7 @@ export default function Start() {
     actions = (
       <>
         <button className="ob-btn ghost" type="button" onClick={() => setStep("type")}>{t.back}</button>
-        <button className="ob-btn primary" form="ob-form" type="submit" disabled={busy || !form.owner.trim() || !form.name.trim()}>{t.basics.create}<Ico name="arrow" /></button>
+        <button className="ob-btn primary" form="ob-form" type="submit" disabled={busy || !form.owner.trim() || !form.name.trim() || termsList.length === 0 || ticked.length < termsList.length}>{t.basics.create}<Ico name="arrow" /></button>
       </>
     );
   } else if (step === "services") {
@@ -889,7 +944,7 @@ export default function Start() {
     const row = (c: Check) => {
       const done = c.status === "done";
       // A step with choices shows them below, with its own "ask ALYR" link.
-      const choosing = !done && c.owner === "client" && (c.key === "whatsapp" || c.key === "payments");
+      const choosing = !done && c.owner === "client" && (c.key === "whatsapp" || c.key === "payments" || c.key === "terms");
       const action = done
         ? <em>{g.done}</em>
         : c.owner === "alyr"
@@ -914,6 +969,20 @@ export default function Start() {
               {c.choice && c.setup && waNeeds(c.setup)}
               <small className="ob-fine">{g.whatsappNote}</small>
               <button type="button" className="ob-link" onClick={() => changeStep(c.key, { owner: "alyr" })} disabled={busy}>{g.ask}</button>
+            </div>
+          )}
+          {c.key === "terms" && !done && termsOpen.length > 0 && (
+            <div className="ob-check-more ob-terms">
+              {termsOpen.map((v) => (
+                <div className="ob-term" key={v.id}>
+                  <span>
+                    {t.terms[v.kind](termsTitle(v))}
+                    {(lang === "ar" ? v.changes_ar : v.changes) && <small>{t.terms.updated(lang === "ar" ? v.changes_ar : v.changes)}</small>}
+                  </span>
+                  <a className="ob-link" href={termsUrl(v)} target="_blank" rel="noopener">{t.terms.read}</a>
+                </div>
+              ))}
+              <button type="button" className="ob-btn small ob-tall" disabled={busy} onClick={acceptTerms}>{t.terms.accept}</button>
             </div>
           )}
           {c.key === "paid" && !done && pay?.status === "unpaid" && (

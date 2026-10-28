@@ -26,6 +26,7 @@ from alyr.core import (
     backoffice,
     pricing,
     readiness,
+    terms,
     whatsapp_attach,
     whatsapp_setup,
 )
@@ -61,6 +62,17 @@ class ItemChange(BaseModel):
     applies: str = Field(max_length=60)
     active: bool = True
     sort: int = Field(default=0, ge=0, le=10_000)
+
+
+class TermsVersion(BaseModel):
+    kind: Literal["agreement", "privacy"]
+    version: str = Field(min_length=1, max_length=40)
+    title: str = Field(min_length=1, max_length=160)
+    title_ar: str = Field(min_length=1, max_length=160)
+    url: str = Field(min_length=1, max_length=300)
+    url_ar: str = Field(min_length=1, max_length=300)
+    changes: str = Field(default="", max_length=400)
+    changes_ar: str = Field(default="", max_length=400)
 
 
 class TypeChange(BaseModel):
@@ -661,6 +673,40 @@ async def onboarding_funnel(request: Request, _: Staff = Depends(platform_admin)
     ALYR's hand (ALY-169). Read from the record the onboarding engine keeps."""
     return readiness.funnel(await _admin_call(
         request, "select admin_onboarding_funnel()", fetch="fetchval"))
+
+
+@router.get("/terms")
+async def terms_versions(request: Request, _: Staff = Depends(platform_admin)) -> dict:
+    """Every version of the customer agreement and the privacy notice ALYR has published."""
+    async with _back_office(request) as conn:
+        return {"versions": await terms.versions(conn)}
+
+
+@router.post("/terms")
+async def publish_terms(
+    body: TermsVersion, request: Request, staff: Staff = Depends(platform_admin)
+) -> dict:
+    """Publish a version. It becomes the current one of its kind, and every owner is asked to
+    accept it once. It can never be changed: a correction is a new version."""
+    try:
+        async with _back_office(request) as conn:
+            published = await terms.publish(conn, by=_by(staff), **body.model_dump())
+            await backoffice.audit(
+                conn, staff, "terms.published", "terms_version", published["id"],
+                detail={"kind": body.kind, "version": body.version},
+            )
+            return published
+    except terms.TermsError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.get("/businesses/{business_id}/terms")
+async def business_terms(
+    business_id: UUID, request: Request, _: Staff = Depends(platform_admin)
+) -> dict:
+    """What one business has accepted, who and when, and what it has not accepted yet."""
+    async with _in_business(request, business_id) as conn:
+        return {**await terms.state(conn), "accepted": await terms.history(conn)}
 
 
 @router.get("/businesses/{business_id}/readiness")

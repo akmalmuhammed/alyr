@@ -11,6 +11,7 @@ import {
 } from "./api";
 import { BusinessTemplate } from "./BusinessTemplate";
 import { ClientAccess } from "./ClientAccess";
+import { BusinessTerms } from "./BusinessTerms";
 
 type DraftLine = Line & { priceText: string };
 type Draft = { period_months: number; discount_pct: number; show_promise: boolean; note: string; lines: DraftLine[] };
@@ -197,6 +198,9 @@ export function Clients({ pricing, onChange, initialClient }: { pricing: Pricing
               <h3>Payment and access</h3>
               <ClientAccess clientId={detail.id} access={detail.access} onDone={() => { openClient(detail.id); loadList(); onChange(); }} />
             </>}
+
+            <h3>Terms and privacy</h3>
+            {detail.businesses.map((b) => <BusinessTerms key={b.id} business={b} />)}
 
             <h3>Businesses</h3>
             <div className="tablewrap"><table>

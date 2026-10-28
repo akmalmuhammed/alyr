@@ -191,3 +191,9 @@
 /* The onboarding funnel (ALY-169) */
 .ops-funnel { margin: 0 0 14px; color: var(--ink-2); }
 .ops-funnel p { margin: 0 0 8px; }
+
+/* What a business accepted of the terms and the privacy notice (ALY-167) */
+.ops-terms { display: grid; gap: 4px; margin-bottom: 12px; }
+.ops-terms ul { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; font-size: var(--ui-body-sm); }
+.ops-terms code { font-family: var(--font-ui-mono); font-size: var(--ui-small); }
+.ops-terms-open { color: var(--warn); }

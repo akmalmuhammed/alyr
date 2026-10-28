@@ -1,0 +1,14 @@
+/* The terms banner at the top of the workspace (ALY-167). Tokens only; 44 px targets. */
+.tm-banner { display: grid; gap: var(--space-3); margin-bottom: var(--space-4); padding: var(--space-4); border: 1px solid var(--line-strong); border-inline-start: 4px solid var(--volt); border-radius: var(--radius-sm); background: var(--surface); }
+.tm-text { display: grid; gap: var(--space-2); min-width: 0; }
+.tm-banner h2 { margin: 0; font-size: var(--ui-title); font-weight: var(--weight-semibold); }
+.tm-banner p { margin: 0; color: var(--text-muted); font-size: var(--ui-body); }
+.tm-banner ul { display: grid; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
+.tm-banner li { display: flex; align-items: center; gap: var(--space-3); min-height: 44px; font-size: var(--ui-body); }
+.tm-banner li > span { display: grid; flex: 1; min-width: 0; }
+.tm-banner li small { color: var(--text-muted); font-size: var(--ui-small); }
+.tm-banner li a { display: inline-flex; align-items: center; justify-content: center; flex: none; min-width: 44px; min-height: 44px; padding-inline: var(--space-2); color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+.tm-banner .tm-error { color: var(--bad); }
+.tm-accept { justify-self: start; min-height: 44px; padding-inline: var(--space-5); border: 0; border-radius: var(--radius-sm); background: var(--volt); color: var(--on-volt); font-size: var(--ui-body); font-weight: var(--weight-semibold); cursor: pointer; }
+.tm-accept:disabled { opacity: 0.5; cursor: default; }
+.tm-banner :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }

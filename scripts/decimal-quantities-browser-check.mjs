@@ -69,7 +69,7 @@ async function signUp() {
   const email = `dq-${stamp}@shop.example`;
   const code = (await call("/api/onboarding/code", { method: "POST", body: { email }, as: "" })).data.dev_code;
   const verified = await call("/api/onboarding/verify", { method: "POST", body: { email, code }, as: "" });
-  const made = await call("/api/onboarding/business", { method: "POST", as: "", body: { signup_token: verified.data.signup_token, owner_name: "Hamad", name: `Baqala ${stamp.slice(-4)}`, name_ar: "بقالة الدوحة", type: "grocery", area: "Al Sadd" } });
+  const made = await call("/api/onboarding/business", { method: "POST", as: "", body: { accepted_terms: (await call("/api/onboarding/terms/current", { as: "" })).data.current.map((t) => t.id), signup_token: verified.data.signup_token, owner_name: "Hamad", name: `Baqala ${stamp.slice(-4)}`, name_ar: "بقالة الدوحة", type: "grocery", area: "Al Sadd" } });
   if (made.status !== 200) throw new Error(`could not create a grocery: ${made.status} ${JSON.stringify(made.data)}`);
   cookie = made.cookie;
   const state = (await call("/api/onboarding/state")).data;

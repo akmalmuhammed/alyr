@@ -68,7 +68,9 @@ async function signUp(tag) {
   const email = `owner-${tag}-${stamp}@shop.example`;
   const code = (await post("/api/onboarding/code", { email })).data.dev_code;
   const verified = await post("/api/onboarding/verify", { email, code });
+  const accepted_terms = (await (await fetch(`${BASE}/api/onboarding/terms/current`)).json()).current.map((t) => t.id);
   const made = await post("/api/onboarding/business", {
+    accepted_terms,
     signup_token: verified.data.signup_token, owner_name: "Hamad", name: `Bakery ${stamp.slice(-4)}`, name_ar: "مخبز الدوحة", type: "bakery", area: "Al Sadd",
   });
   if (made.status !== 200) throw new Error(`could not create a bakery: ${made.status} ${JSON.stringify(made.data)}`);

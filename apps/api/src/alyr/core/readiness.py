@@ -24,7 +24,7 @@ import asyncpg
 
 from alyr import catalog
 from alyr.catalog import Text
-from alyr.core import access, whatsapp_setup
+from alyr.core import access, terms, whatsapp_setup
 from alyr.modules.orders import pay_ways
 
 OWNERS = ("client", "alyr")
@@ -85,6 +85,14 @@ CHECKS: tuple[Check, ...] = (
         "price",
         Text("Your ALYR plan is accepted", "خطتك مع ALYR مقبولة"),
         Text("Read your price and accept it.", "اطّلع على سعرك واقبله."),
+    ),
+    Check(
+        "terms",
+        Text("You accepted the terms and the privacy notice", "قبلت الشروط وإشعار الخصوصية"),
+        Text(
+            "Read the terms and the privacy notice and accept them.",
+            "اقرأ الشروط وإشعار الخصوصية ثم اقبلهما.",
+        ),
     ),
     Check(
         "paid",
@@ -155,6 +163,11 @@ async def _test(conn: asyncpg.Connection, modules: set[str]) -> bool:
     )
 
 
+async def _terms_accepted(conn: asyncpg.Connection) -> bool:
+    # Every current version of the customer agreement and the privacy notice (core/terms.py).
+    return not await terms.pending(conn)
+
+
 async def _price(conn: asyncpg.Connection, modules: set[str]) -> bool:
     # Row-level security shows the owner only their own client's quotes.
     return await _exists(conn, "select 1 from quotes where status = 'accepted'")
@@ -173,6 +186,7 @@ _PASSES: dict[str, Evaluate] = {
     "hours": lambda conn, modules: _exists(conn, "select 1 from business_hours"),
     "test": _test,
     "price": _price,
+    "terms": lambda conn, modules: _terms_accepted(conn),
     "paid": lambda conn, modules: access.settled(conn),
 }
 

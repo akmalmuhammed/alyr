@@ -66,6 +66,18 @@ const en = {
     create: "Create my business",
     expired: "This sign-up has expired. Ask for a new code.",
   },
+  // What an owner accepts before the business is made, and again when ALYR publishes a new
+  // version (ALY-167). The titles and the pages come from the API, in both languages.
+  terms: {
+    legend: "Before you start",
+    agreement: (title: string) => `I accept the ${title}`,
+    privacy: (title: string) => `I have read the ${title}`,
+    read: "Read it",
+    needed: "Tick each line to create your business.",
+    changed: "Our terms changed while you were here. Read the new version and tick it again.",
+    accept: "Accept",
+    updated: (what: string) => `What changed: ${what}`,
+  },
   services: {
     title: "Your price list, ready to edit",
     sub: "Started from a typical list for your trade. The prices are samples: set your own.",
@@ -340,6 +352,16 @@ const ar: typeof en = {
     otherArea: "منطقة أخرى",
     create: "أنشئ نشاطي",
     expired: "انتهت صلاحية التسجيل. اطلب رمزاً جديداً.",
+  },
+  terms: {
+    legend: "قبل أن تبدأ",
+    agreement: (title) => `أوافق على ${title}`,
+    privacy: (title) => `قرأت ${title}`,
+    read: "اقرأه",
+    needed: "ضع علامة على كل سطر لإنشاء نشاطك.",
+    changed: "تغيّرت شروطنا أثناء وجودك. اقرأ النسخة الجديدة وضع علامة عليها من جديد.",
+    accept: "أوافق",
+    updated: (what) => `ما تغيّر: ${what}`,
   },
   services: {
     title: "قائمة أسعارك جاهزة للتعديل",

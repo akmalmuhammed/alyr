@@ -55,6 +55,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-061 | Company mail moves to Zoho Mail (free plan): hello@ with akmal@ and security@ as aliases, and a mailbox for Beevi Jinan, the registered owner; Resend still sends the product's email | Accepted |
 | D-063 | Order businesses get a self-serve onboarding path (a third way, `orders`) made of thin screens over the Catalog's own APIs; one flow for both doors, automatic first, money later | Accepted |
 | D-064 | The owner's test order is marked in the database (a trigger sets `orders.is_test`), counted nowhere (a guard test reads every query), and cancelled with its stock returned when the test ends | Accepted |
+| D-067 | Terms and the privacy notice are versions ALYR publishes; an owner accepts them at sign-up and again when a new one is published, in an append-only record | Accepted |
 
 ---
 
@@ -1347,3 +1348,23 @@ Nothing claims more than the page, as before.
 **Chosen over** a flag set by the page that places the order (it would be forgotten by the chat and by every later way of making an order), marking the test customer's contact and joining to it in each report (every report would need the join, and a missed one is invisible), deleting the test order at the end (history and stock movements would disappear; a cancelled order with its stock returned is the booking test's own pattern), and a separate "test" table (the order page, the list and the messages would all need to learn a second kind of order).
 
 **Revisit when** online payment can be tested on the pay page (the test then needs a stand-in that moves no money), when the customer-side counts (conversations, messages, new customers) are read by many more reports and a second guard is worth writing for contacts, or when a shop's numbering must be gapless for orders as well as documents.
+
+---
+
+## D-067 · Terms and the privacy notice are versions ALYR publishes; an owner accepts them at sign-up and again when a new one is published, in a record nobody can edit
+**Date** 28 Oct 2026 · **Status** Accepted (built under the founder's instruction of 28 Oct to finish automatic onboarding; the shape is the issue's own) · Linear ALY-167, epic ALY-163 · Spec `specs/031-terms-acceptance/spec.md` · Builds on D-031 (self-serve sign-up) and D-049 (the readiness check)
+
+**Where we were.** `/start` never showed or asked for acceptance of the customer agreement or the privacy notice. The privacy notice was published on 28 Oct (ALY-72); the customer agreement is a draft for the lawyer (ALY-98, ALY-51). Sign-up is closed in production, and it cannot open without a record that each owner was shown the terms.
+
+**The decision.**
+- **Versions are data ALYR publishes** (`terms_versions`, migration 0059): kind (customer agreement or privacy notice), version, the page in English and in Arabic, what changed. The newest of each kind is current. **A published version never changes**: the application's own database role has no update or delete on it, and a correction is a new version.
+- **Acceptance is the owner's, recorded once per business and version** (`terms_acceptances`, append-only in the grants): who, when, the address (read by `ratelimit.client_address`, so a visitor cannot choose it) and the browser. A test tries to change and remove both tables' rows as the application's role and is refused.
+- **No business without it.** Creating a business needs every current version ticked; without it nothing is created and the sign-up token is not spent. A new version asks every owner once: a banner in the workspace for the owner and admins until accepted, and a line on the go-live list (`readiness`, "terms") that is part of "ready".
+- **The customer agreement is not seeded.** Its wording is the lawyer's. The privacy notice as published is version one, so owners accept that today; the founder publishes the agreement from the back office (`/ops/terms`) when it is ready, which asks every owner once. Nothing is claimed about an agreement before then.
+- **Existing businesses are asked, not blocked.** The banner and the go-live line ask; their workspaces keep working. Blocking an owner who will not accept is for the founder and the lawyer.
+
+**Chosen over** a single "accept" flag on the business (it cannot say which version, and a new version would need a migration), terms as files in the repository (publishing would be a deploy, and the record could not point at a version), accepting inside the same database function that creates the business (the version list would have to be passed in and trusted), and blocking existing owners at the door of the workspace (a legal call, not an engineering default).
+
+**Data.** The address and browser of the owner are stored with the acceptance, in the Qatar database, as evidence, for as long as the business exists. Add this to the record of processing (ALY-120).
+
+**Revisit when** the lawyer's agreement is ready (publish it), when a second person per business must accept for themselves (staff terms), or when an owner who will not accept must be stopped (the lawyer's call).
