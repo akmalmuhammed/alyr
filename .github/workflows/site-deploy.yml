@@ -152,6 +152,8 @@ jobs:
       ALYR_BUILD_SHA: ${{ github.sha }}
       ALYR_BUILD_BRANCH: ${{ github.ref_name }}
       # The Cloudflare token is set on the deploy step only (ALY-245).
+      # Product analytics (D-070), production only: previews are not counted.
+      NEXT_PUBLIC_POSTHOG_KEY: ${{ vars.POSTHOG_PROJECT_KEY }}
     defaults:
       run:
         working-directory: apps/web
