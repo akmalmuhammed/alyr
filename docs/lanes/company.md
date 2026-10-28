@@ -30,7 +30,7 @@ Last updated 12 Oct 2026.
 1. ALY-59 compare registration routes and file
 2. ALY-5 payment provider applications
 3. ALY-62 one price list
-4. ALY-72 privacy notice and terms
+4. ALY-72 privacy notice and terms: the privacy policy is built as a site page (`/privacy`, `/ar/privacy`, branch `aly-72-privacy-policy`, 28 Oct 2026), drafted from `docs/data-residency.md` and the customer agreement's section 9; it needs the founder's read and a lawyer's (ALY-51) before or soon after publishing. Terms are not written
 
 ## Never
 

@@ -2,6 +2,7 @@ from uuid import UUID
 
 from fastapi import Depends, HTTPException, Request
 
+from alyr import catalog
 from alyr.config import get_settings
 from alyr.core import auth
 from alyr.core.auth import Staff
@@ -25,6 +26,14 @@ async def current_staff(request: Request) -> Staff:
     if settings.env == "local" and settings.demo_open:
         return DEMO_STAFF
     raise HTTPException(status_code=401, detail="sign-in required")
+
+
+async def require_manager(staff: Staff = Depends(current_staff)) -> None:
+    """Owners and admins only: prices, services, opening hours, bulk reminders, saved replies
+    and failed-job retries do not belong to the agent role (ALY-117). Used as a route
+    dependency, `dependencies=[Depends(require_manager)]`."""
+    if staff.role not in catalog.MANAGERS:
+        raise HTTPException(status_code=403, detail="Only the owner or an admin can change this.")
 
 
 async def current_tenant(staff: Staff = Depends(current_staff)) -> UUID:

@@ -42,6 +42,7 @@ the rule still applies where they do not reach.
 6. **The PR template is filled in honestly**, including "Not checked".
 7. **Merge only on green CI.** Then update the Linear issue with what is still missing.
 8. **Delete the branch and remove the worktree** after merge.
+9. **Look at `apps/api/migrations/` on `main` again just before you name a migration** and take the next free number. `tests/test_migration_numbers.py` fails when two files share one.
 
 ## 3. Docs stay true
 
