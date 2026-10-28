@@ -16,12 +16,18 @@ class Settings(BaseSettings):
     # Migrations and demo-tenant setup connect as the owner.
     migration_url: str = "postgresql://alyr:alyr_local@localhost:5432/alyr"
     redis_url: str = "redis://localhost:6379/0"
+    # The read-only role the nightly backup signs in as (scripts/backup). Only migrations
+    # use this setting, to create the role; the app never connects with it. Empty: no
+    # backup role is created.
+    backup_url: str = ""
 
     # Run queued jobs inside the API process after each request. Convenient locally
     # and in tests. In production set this to false and run `python -m alyr.worker`.
     jobs_inline: bool = True
     # First retry delay; it doubles on each further attempt.
     jobs_backoff_seconds: float = 5.0
+    # /health/worker answers 503 when the worker has not checked in for this long.
+    worker_stale_seconds: int = 120
 
     # Local only: let the workspace be used without signing in, as the demo shop.
     # Ignored everywhere except env "local".
@@ -102,6 +108,11 @@ class Settings(BaseSettings):
     r2_bucket: str = "alyr-media"
     media_base_url: str = "https://media.alyr.qa"
     media_local_dir: str = ".media"
+    # Outside a developer machine, photos on local disk are refused at start-up
+    # (`storage.check_store`): a cloud container's disk is wiped on every restart and is not
+    # shared between copies. Only a single server whose `media_local_dir` is a kept volume
+    # may switch this on (the rehearsal in docker-compose.prod.yml does).
+    media_allow_local: bool = False
 
     # What one upload may be. The web page shrinks a photo before sending it, so these
     # only stop a damaged or hostile file. A 12-megapixel phone photo is about 4 MB.

@@ -259,6 +259,9 @@ def test_the_server_does_not_start_without_a_secret_outside_local(client_factory
     with pytest.raises(links.LinkSecretMissing), TestClient(create_app()):
         pass
     monkeypatch.setenv("ALYR_LINK_SECRET", SECRET)
+    # A production server also needs photo storage that survives a restart (ALY-63); this
+    # test is about the secret, so it says its local folder is kept.
+    monkeypatch.setenv("ALYR_MEDIA_ALLOW_LOCAL", "true")
     get_settings.cache_clear()
     with TestClient(create_app()) as started:
         # In production the interactive docs are off and sign-in is required (ALY-114).

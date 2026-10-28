@@ -4,10 +4,10 @@ Every box is ticked, with the PR or issue that ticks it, before the first real m
 customers use ALYR. From the 17 Oct 2026 audit (`docs/audit/2026-10-17.md`).
 
 ## Company and accounts
-- [ ] Commercial registration issued (SR3035824) and Meta business verification done
+- [x] Commercial registration issued (CR 255539, 26 Oct 2026; application SR3044041) and Meta business verification done (28 Oct 2026; `docs/runbooks/meta-tech-provider.md`)
 - [ ] Merchant's own WhatsApp number connected (Embedded Signup, ALY-39)
 - [ ] Every account in `docs/access.md` has 2FA and an owner; renewal dates recorded
-- [ ] Customer agreement and privacy notice published (PR #47; privacy notice issue)
+- [ ] Customer agreement and privacy notice published (PR #47; the privacy policy page is built, ALY-72, and waits for the founder's yes)
 
 ## Hosting and data
 - [ ] Production hosting decided and running in Qatar (D-036 / PR #51, #52, ALY-63, ALY-10)

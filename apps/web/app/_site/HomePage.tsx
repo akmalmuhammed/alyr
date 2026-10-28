@@ -4,15 +4,16 @@ import { Icon, type IconName } from "./brand";
 import { BusinessTabs } from "./BusinessTabs";
 import { ContactButton, ContactNote } from "./Contact";
 import { copy, type BusinessRow, type Locale, type Questions as QuestionSet } from "./copy";
-import { FigCaption, TrackScreen } from "./Drawings";
-import { Phone, SampleMark, TickPath } from "./Frames";
+import { FigCaption } from "./Drawings";
+import { SampleMark, TickPath } from "./Frames";
 import { FlowDiagram } from "./FlowDiagram";
 import { FoldSplit } from "./FoldSplit";
 import { HomeMotion } from "./HomeMotion";
+import { HowCards } from "./HowCards";
 import { SAMPLE_ORDER, SAMPLES } from "./samples";
 import { SuiteFrame } from "./SuiteFrame";
 import { contactHref, Shell } from "./Shell";
-import { CONTACT_STATE, INCLUDED, OFFER_LIVE, PATHS, PRODUCTS, productPath, TRUST_RECORDS, type TrustRecord } from "./site";
+import { CONTACT_STATE, INCLUDED, OFFER_LIVE, PATHS, PRODUCTS, productPath } from "./site";
 import { lines, rich } from "./Text";
 import "./kit.css";
 import "./home.css";
@@ -25,13 +26,12 @@ import "./room.css";
  * feed of what ALYR did; how we work, a loop of check, set up, see and improve; the
  * visitor's own business, as tabs, whose "Today" list is what a check-up finds; one order
  * followed from the first message to collection, as proof; ALYR Agent; the products; the
- * price (offer on); trust; questions; the closing call. Every word from `copy.ts`; every
+ * price (offer on); questions; the closing call. Every word from `copy.ts`; every
  * screen is the product's own, with fictional businesses, each marked as a sample once.
  */
 export function HomePage({ locale }: { locale: Locale }) {
   const t = copy[locale];
   const h = t.home;
-  const other: Locale = locale === "en" ? "ar" : "en";
 
   return (
     <Shell locale={locale} page="home" cta={h.final}>
@@ -42,7 +42,6 @@ export function HomePage({ locale }: { locale: Locale }) {
       <Spotlight locale={locale} />
       <Suite locale={locale} />
       {OFFER_LIVE && <Price locale={locale} />}
-      <Trust locale={locale} other={other} />
       <Questions locale={locale} />
       <HomeMotion />
     </Shell>
@@ -62,7 +61,7 @@ function Rule({ dashed = false }: { dashed?: boolean }) {
 }
 
 /** A section's heading. The eyebrow is kept only where it says something the heading does
- * not (the trust question, the Agent spotlight's product, the price); site audit R1. */
+ * not (the Agent spotlight's product, the price); site audit R1. */
 function Head({ eyebrow, title, id, dark = false, children }: {
   eyebrow?: string; title: string; id: string; dark?: boolean; children?: ReactNode;
 }) {
@@ -387,9 +386,9 @@ function See({ locale }: { locale: Locale }) {
 
 // ---------------------------------------------------------------- how we work
 /**
- * Check, set up, see, improve: four steps on a rail that fills as the visitor scrolls, and
- * a dashed arc from the last step back to the first once it is full, because the work
- * starts again. Without motion the arc is simply drawn.
+ * Check, set up, see, improve: four cards, each a still canvas with one moving scene from
+ * the product, and a line back from the last to the first, because the work starts again
+ * (HowCards.tsx, ALY-226). Without motion every scene is finished and the line is drawn.
  */
 function How({ locale }: { locale: Locale }) {
   const w = copy[locale].home.how;
@@ -403,27 +402,7 @@ function How({ locale }: { locale: Locale }) {
             <p className="lead">{rich(w.lead)}</p>
           </div>
         </div>
-        <div className="how-rail" data-rail>
-          <span className="how-line" aria-hidden="true"><span data-rail-fill /></span>
-          <ol className="how-steps">
-            {w.steps.map((step, index) => (
-              <li key={step.title} className="how-step" data-rail-step>
-                <span className="how-node" aria-hidden="true"><bdi>{index + 1}</bdi></span>
-                <h3>{rich(step.title)}</h3>
-                <p>{rich(step.body)}</p>
-              </li>
-            ))}
-          </ol>
-          {/* the way back to step 1: an arc over the steps on wide screens, a row under them on phones */}
-          <p className="how-loop">
-            <span className="how-loop-k"><bdi>{w.again}</bdi></span>
-            <span className="how-loop-head" aria-hidden="true" />
-          </p>
-          <p className="how-again">
-            <Icon name="arrow-right" className="ico" />
-            <span>{w.again}</span>
-          </p>
-        </div>
+        <HowCards locale={locale} />
         <div className="how-foot">
           <div className="how-next">
             <ContactButton locale={locale} variant="line" label={copy[locale].home.final.action} />
@@ -549,56 +528,6 @@ function Price({ locale }: { locale: Locale }) {
         <div className="price-cta">
           <ContactButton locale={locale} lean label={copy[locale].home.final.action} />
           <ContactNote locale={locale} />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ------------------------------------------------------------------------ trust
-function Trust({ locale, other }: { locale: Locale; other: Locale }) {
-  const tr = copy[locale].home.trust;
-  const records = (Object.keys(TRUST_RECORDS) as TrustRecord[]).filter((key) => TRUST_RECORDS[key]);
-  return (
-    <section className="hs trust" id="trust" aria-labelledby="trust-title">
-      <div className="wrap">
-        <Rule />
-        <div className="trust-grid">
-          <div className="trust-copy">
-            <Head eyebrow={tr.eyebrow} title={tr.title} id="trust-title">
-              <p className="lead">{rich(tr.body)}</p>
-            </Head>
-            <ul className="facts6">
-              {tr.facts.map((fact, index) => (
-                <li key={fact.title} data-m style={n(index % 3)}>
-                  <h3>{rich(fact.title)}</h3>
-                  <p>{rich(fact.body)}</p>
-                </li>
-              ))}
-            </ul>
-            {records.length > 0 && (
-              <dl className="records" aria-label={tr.records.label}>
-                {records.map((key) => (
-                  <div key={key}>
-                    <dt>{tr.records.items[key]}</dt>
-                    <dd dir="auto">{TRUST_RECORDS[key]}</dd>
-                  </div>
-                ))}
-              </dl>
-            )}
-            {OFFER_LIVE && <p className="trust-closing">{rich(tr.closing)}</p>}
-          </div>
-          <figure className="trust-fig fig-cap-end" data-m>
-            <FigCaption locale={locale} caption={tr.figure.caption} />
-            {/* On phones the pair scrolls sideways, so it takes keyboard focus. */}
-            <div className="pair" tabIndex={0} role="group" aria-label={tr.figure.label} data-nosnippet>
-              {[locale, other].map((lang) => (
-                <div key={lang} className={`pair-item pair-${lang}`} dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
-                  <Phone className="pair-phone"><TrackScreen sample={copy[lang].home.sample} lang={lang} /></Phone>
-                </div>
-              ))}
-            </div>
-          </figure>
         </div>
       </div>
     </section>

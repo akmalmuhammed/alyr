@@ -45,6 +45,9 @@ const nextConfig: NextConfig = {
   // A second dev server, or a build, can run beside a running one by giving it its own
   // output folder: ALYR_DIST_DIR=.next-preview next dev -p 3101
   distDir: process.env.ALYR_DIST_DIR ?? ".next",
+  // Container images (apps/web/Dockerfile) set ALYR_STANDALONE=1 to get a small
+  // self-contained server. The public-site build (scripts/build-site.sh) leaves it unset.
+  output: process.env.ALYR_STANDALONE ? "standalone" : undefined,
   // While the customer pages are served from the laptop through the tunnel, the dev
   // server must accept its own assets being requested from that address.
   allowedDevOrigins: ["app.alyr.online"],
