@@ -18,11 +18,11 @@ from datetime import UTC, date, datetime
 from urllib.parse import quote
 from uuid import UUID
 
-from fastapi import APIRouter, Header, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
 
 from alyr.config import get_settings
-from alyr.core import links
+from alyr.core import links, ratelimit
 from alyr.core.normalise import fmt_qar, fmt_qar_ar
 from alyr.core.workspace import module_enabled
 from alyr.modules.items import clock, delivery, demand, discounts, features, template, text
@@ -385,7 +385,8 @@ async def check_cart(slug: str, body: CartCheck, request: Request) -> dict:
         raise _refused(error) from error
 
 
-@router.post("/{slug}/orders")
+@router.post("/{slug}/orders",
+    dependencies=[Depends(ratelimit.per_address("order-placed", "PLACED_PER_ADDRESS"))])
 async def place_order(slug: str, body: NewOrder, request: Request) -> dict:
     shop = await _shop(request, slug)
     link = customer_link.require(body.token, shop["id"], links.ORDER, required=True)
@@ -403,7 +404,8 @@ async def place_order(slug: str, body: NewOrder, request: Request) -> dict:
         raise _refused(error) from error
 
 
-@router.post("/{slug}/orders/repeat")
+@router.post("/{slug}/orders/repeat",
+    dependencies=[Depends(ratelimit.per_address("order-placed", "PLACED_PER_ADDRESS"))])
 async def repeat_order(slug: str, body: Repeat, request: Request) -> dict:
     """"Same as last time": order again what the customer's last order held. What can no
     longer be ordered is left out and named in the answer."""

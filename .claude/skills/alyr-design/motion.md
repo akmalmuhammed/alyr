@@ -44,10 +44,11 @@ curves, which the workspace's `.sh` still calls `--ease` and `--spring`).
 - **New timed pieces take the pace too:** the homepage's How we work, rebuilt after 25 Oct
   2026, uses `--play-*` and `--play-stagger`, not `--dur-*`. Hovers and presses stay on the
   interaction scale.
-- The hero's entrance and the live figure's own moves (a row arriving, a figure rolling, the
-  fade back to 16:20) are still on the interaction scale; its beat, one event every
-  `--live-beat`, follows the pace since 26 Oct 2026 (5.2 s, 6.5 s on a phone, at 1.3). Bring
-  the rest onto the pace when the hero is next touched.
+- The hero's entrance is on the pace since 28 Oct 2026 (the headline's lines `1.3 ×
+  --play-4`, the lead, the check-up and the facts `--play-4`, delays in `--play-stagger`
+  beats). The live figure's own moves on `/agent` (a row arriving, a figure rolling, the fade
+  back to 16:20) are still on the interaction scale; its beat, one event every `--live-beat`,
+  follows the pace (5.2 s, 6.5 s on a phone, at 1.3).
 - Measure before and after with the capture script's `--eval` (no screenshots): every
   animation a piece starts, from `document.getAnimations()`, and each step's dwell from its
   progress bar: `node scripts/site/pace-probe.mjs <url> flow demo sig tiles …` against the built
@@ -61,7 +62,8 @@ curves, which the workspace's `.sh` still calls `--ease` and `--spring`).
    product at work keeps playing while it is on screen, as the hero's live Agent figure does
    (below): the flows and demos (they cycle through their steps and tabs), the homepage's How
    we work cards, the products frame's six tiles and the product pages' signature figures
-   (`_site/loops.ts`, "Figures that keep playing" below).
+   (`_site/loops.ts`, "Figures that keep playing" below), and the homepage hero's film (D-062,
+   "The hero film" below).
    **What stays one-shot:** text and sections arriving as they are read (`data-reveal`,
    `data-m`, the heading splits), the closing call's fold and mark, the business day's fold
    (`FoldSplit`: a control the visitor drags, with words to read on both sides; a timer moving
@@ -119,7 +121,10 @@ write its own timers.
    (and "Play" / «تشغيل») with the demo's icon, its full name from `copy.ts` (`loop.names`),
    starting with that word. It is `hidden` in the HTML and placed out of the flow over room
    the figure keeps for it (the frame's bar keeps 5 rem at its end), so it never moves
-   anything; loops.ts shows it once the figure plays. Pause finishes every move at once and
+   anything; loops.ts shows it once the figure plays. On the homepage (the film, How we work,
+   the products frame and the flow) it is not on show: it fades in only while the pointer is
+   over its figure, with keyboard focus, or while paused, so the page plays like a video and
+   still has a way to stop (D-071). Pause finishes every move at once and
    holds the finished state (`data-paused`); Play plays every player from its start. Per
    section, not one site-wide control, because the hero, the flows and the demos already
    carry their own where a visitor looks, and a site-wide one would need a new control in
@@ -137,11 +142,47 @@ write its own timers.
    React's copy of it) moved `/`'s simulated LCP from 2.42 s to 2.52 s; injected, it moved
    nothing.
 
-## The first exception: the live Agent figure
+## The hero film (D-062, the founder, 28 Oct 2026)
 
-The ALYR Agent figure with its "ALYR · Running" feed (the homepage hero and `/agent`'s
-opening; `_site/AgentFigure.tsx`, `_site/live.ts`) **moves continuously**, as the workspace
-does (the founder, 25 Oct 2026, D-058). It was the first thing on the site allowed to; since 26 Oct 2026 the figures above
+The homepage hero is a film of one afternoon at Qirfa Bakery in the product's own screens
+(`HeroFilm.tsx`, `FilmCanvas.tsx`, `FilmDash.tsx`, `filmScript.ts`, `film.ts`, `film.css`,
+`filmStyle.ts`; words in `copyFilm.ts`). It is the one timed piece that is a film, not a
+cycle of play, hold and fade, so it has its own small controller, `film.ts`; the rules are the
+same as the figures above.
+
+1. **One clock, CSS only.** Every moving part has one keyframe track (`filmScript.ts`
+   `tracks()`), all of them `calc(64 * var(--play-4))` long and infinite, so `--pace` scales
+   the whole film. Times are written as seconds at the pace it was timed at (1.3) and become
+   fractions of the loop; arrivals take `--play-*` and the `--ease` curve from the tokens. The
+   camera (translate and scale of one canvas) and the closing fold (a `clip-path` on a
+   stage-sized cover, never a box that reaches past the plate: axe read one as the header's
+   background) are sampled into keyframes. Transform, opacity and clip-path only.
+2. **The HTML is the still and the first frame.** The server draws only the plate, its bar
+   and the last shot (the real ALYR Agent home at 16:20, `ruleLines={false}`) under its
+   caption: that is the first paint, the page without scripts, and the page with reduced
+   motion. Every track starts at that moment (`--hf-at`), so starting is seamless.
+3. **The rest of the canvas is drawn after load, unseen.** `FilmScenes` loads `FilmCanvas`
+   (and the words in `copyFilm.ts`) in its own chunk when `film.ts` asks, half a live beat
+   after the page settles; its windows wait under `content-visibility: hidden` until they
+   start. Its parts start in two frames (what the still shows first) and are then set to the
+   camera's time. Reasons, measured: the canvas in the HTML grew the payload past a round
+   trip in Lighthouse's model (+0.15 s LCP on `/ar`); and on this site every DOM insertion
+   re-styles the whole page because of its `:root:has(...)` rules (about 10 to 20 ms on a
+   slowed phone), so the canvas goes in as one commit.
+4. **Pause holds the frame,** as a film does (the figures above finish their moves instead), and
+   so does a click on the film; the control shows only on hover, focus or paused (D-071). The
+   film starts at load, on the last moment before the fold closes (`STILL`), so it moves at once;
+   off screen and in a hidden tab every track is paused where it is. The last shot's numbers
+   are the dashboard's own: `film.ts` tells `FilmDash` when the film reaches 16:20 (it rolls,
+   one Volt rule under the count that went up) and when it goes back to 16:19 under the fold.
+5. **Volt** only on the event happening now, at most two at once; captions are mono words on a
+   hairline ending in a tick, one at a time; Arabic captions arrive as one block.
+
+## The live Agent figure (`/agent`; the homepage hero until 28 Oct 2026)
+
+The ALYR Agent figure with its "ALYR · Running" feed (`/agent`'s opening; the homepage hero
+until D-062 replaced it with the film; `_site/AgentFigure.tsx`, `_site/live.ts`) **moves
+continuously**, as the workspace does (the founder, 25 Oct 2026, D-058). It was the first thing on the site allowed to; since 26 Oct 2026 the figures above
 keep playing too (rule 1), on their own conditions.
 
 1. **A pause control** (WCAG 2.2.2): a small, quiet button beside the status chip, its

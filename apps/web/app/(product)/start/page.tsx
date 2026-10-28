@@ -9,6 +9,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Logo } from "../../_site/brand";
+import { identifyFromSession } from "../../_analytics/ProductAnalytics";
+import { track } from "../../_analytics/posthog";
 import { Chat, initialsOf, type ChatMessage, type Choice } from "./Chat";
 import { COPY, type Lang } from "./copy";
 import "./start.css";
@@ -42,6 +44,8 @@ type Quote = {
   lines?: QuoteLine[];
   totals?: { monthly_subtotal_text: string; monthly_total_text: string; period_total_text: string; one_time_total: number; one_time_total_text: string };
   promise?: Text | null; accepted_at?: string | null;
+  // What using the products together saves, against buying each alone (D-053).
+  together?: { alone_text: string; saving_text: string; saving_pct: number } | null;
 };
 // The readiness check (ALY-165): what is left before the business goes live, and who owns it.
 type Check = {
@@ -57,9 +61,9 @@ type WaSetup = {
 type Readiness = { stage: "setting_up" | "ready" | "live"; checks: Check[]; left: string[] };
 // "Start on ALYR's number" waits on the founder's decision (ALY-217); the others are offered.
 const WHATSAPP_OFFERED = ["new_number", "move_number", "own_account"];
-// What opens the products (ALY-212, D-051): the setup fee and the first period, paid to ALYR.
+// What the client pays ALYR to go live (ALY-242, D-053): the setup fee and the first period.
 type Payment = {
-  open: boolean; status: "open" | "no_price" | "unpaid"; due_text: string; paid: number; paid_text: string;
+  status: "paid" | "no_price" | "unpaid"; due_text: string; paid: number; paid_text: string;
   left: number; left_text: string; setup_text: string; period_text: string; period_months: number;
   reference: string; bank: string;
 };
@@ -169,7 +173,7 @@ export default function Start() {
   const way = state?.way ?? chosen?.way ?? "appointments";
   const rail = way === "assisted"
     ? (["account", "business", "assisted", "plan", "golive"] as const)
-    : (["account", "business", "plan", "services", "hours", "try", "golive"] as const);
+    : (["account", "business", "services", "hours", "try", "plan", "golive"] as const);
   const railKey = step === "code" ? "account" : step === "type" || step === "basics" ? "business" : step;
   const current = step === "finished" ? rail.length : Math.max(0, rail.indexOf(railKey as never));
   const shopName = state?.business.name || form.name;
@@ -255,6 +259,7 @@ export default function Start() {
     if (answer.status === 429) return setError(t.account.tooMany);
     if (!answer.ok) return setError(t.account.cannotSend);
     setDevCode(answer.data.dev_code ?? null);
+    track("onboarding_code_sent");
     setStep("code");
   });
   const verify = () => guard(async () => {
@@ -262,11 +267,14 @@ export default function Start() {
     if (answer.status === 403) return setError(t.account.closedNew);
     if (!answer.ok) return setError(t.account.wrong);
     if (answer.data.status === "signed_in") {
+      await identifyFromSession();
+      track("onboarding_signed_in");
       const loaded = await loadState();
       if (loaded && !loaded.finished) return setStep((loaded.step || loaded.steps[0]) as Step);
       return router.push("/app");
     }
     setToken(answer.data.signup_token ?? "");
+    track("onboarding_email_verified");
     setStep("type");
   });
 
@@ -277,6 +285,8 @@ export default function Start() {
     });
     if (answer.status === 401) { setStep("account"); return setError(t.basics.expired); }
     if (!answer.ok) return setError(t.offline);
+    await identifyFromSession();
+    track("onboarding_business_created", { business_type: kind, area: form.area });
     const loaded = await loadState();
     if (loaded) setStep((loaded.step || loaded.steps[0]) as Step);
   });
@@ -354,7 +364,7 @@ export default function Start() {
   // While the owner looks at the plan, ask again every few seconds: ALYR may publish or
   // change the price from the back office at that very moment.
   useEffect(() => {
-    if (step !== "plan") return;
+    if (step !== "plan" && step !== "golive") return;
     let alive = true;
     const tick = async () => {
       const [answer, paid] = await Promise.all([
@@ -387,6 +397,7 @@ export default function Start() {
     if (!answer.ok) return setError(t.offline);
     quoteSeen.current = JSON.stringify(answer.data);
     setQuote(answer.data);
+    track("onboarding_quote_accepted", { period_months: answer.data.period_months ?? 1 });
     then();
   });
 
@@ -419,8 +430,21 @@ export default function Start() {
   });
   const finish = () => guard(async () => {
     await call("/api/onboarding/finish", "POST");
+    track("onboarding_finished");
     router.push("/app");
   });
+
+  // Count each step an owner reaches, and the first test booking (D-070). The step name,
+  // the type of business and the way are all that is sent.
+  useEffect(() => {
+    if (step !== "loading") track("onboarding_step", { step, business_type: state?.business.type || kind, way, quote: step === "plan" ? quote?.status ?? "" : undefined });
+    // only when the step changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+  const testedOnce = useRef(false);
+  useEffect(() => {
+    if (tested && !testedOnce.current) { testedOnce.current = true; track("onboarding_test_booked"); }
+  }, [tested]);
 
   // ── the live preview on the right ─────────────────────
   const preview = useMemo((): ChatMessage[] => {
@@ -664,8 +688,8 @@ export default function Start() {
     actions = (
       <>
         <button className="ob-btn ghost" type="button" onClick={() => go("hours")}>{t.back}</button>
-        {!tested && <button className="ob-link" type="button" onClick={() => go("golive")}>{t.try.skip}</button>}
-        <button className="ob-btn primary" type="button" disabled={!tested} onClick={() => go("golive")}>{t.continue}<Ico name="arrow" /></button>
+        {!tested && <button className="ob-link" type="button" onClick={() => go("plan")}>{t.try.skip}</button>}
+        <button className="ob-btn primary" type="button" disabled={!tested} onClick={() => go("plan")}>{t.continue}<Ico name="arrow" /></button>
       </>
     );
   } else if (step === "plan") {
@@ -689,6 +713,7 @@ export default function Start() {
               {(q.discount_pct ?? 0) > 0 && <small>{t.plan.discount(q.discount_pct ?? 0, q.totals.monthly_subtotal_text)}</small>}
               {(q.period_months ?? 1) > 1 && <small>{t.plan.paidEvery(q.period_months ?? 1, q.totals.period_total_text)}</small>}
               {q.totals.one_time_total > 0 && <small>{t.plan.oneTime(q.totals.one_time_total_text)}</small>}
+              {q.together && <small className="ob-saving">{t.plan.together(q.together.saving_text, q.together.alone_text, q.together.saving_pct)}</small>}
               <ul className="ob-lines">
                 {(q.lines ?? []).map((l) => (
                   <li key={l.id}>
@@ -712,27 +737,10 @@ export default function Start() {
             <ul>{t.plan.includes.map((x) => <li key={x}><Ico name="check" size={16} />{x}</li>)}</ul>
           </section>
         )}
-        {accepted && pay && !pay.open && (
-          <section className="ob-pay" aria-label={t.plan.payTitle}>
-            <h2>{t.plan.payTitle}</h2>
-            <p className="ob-pay-total"><span>{t.plan.payTotal}</span><b className="num"><bdi dir="ltr">{pay.left_text}</bdi></b></p>
-            <small>{t.plan.paySetup(pay.setup_text)} · {t.plan.payPeriod(pay.period_months, pay.period_text)}</small>
-            {pay.paid > 0 && <small>{t.plan.paidSoFar(pay.paid_text, pay.left_text)}</small>}
-            <div className="ob-pay-how">
-              <b>{t.plan.payHow}</b>
-              {pay.bank ? <pre dir="ltr">{pay.bank}</pre> : <small>{t.plan.payNoBank}</small>}
-              <small>{t.plan.payRef}</small>
-              <code dir="ltr">{pay.reference}</code>
-            </div>
-            <p className="ob-pay-note"><span className="ob-pulse" />{t.plan.paySameDay}</p>
-          </section>
-        )}
-        {accepted && pay?.open && !state?.finished && <p className="ob-accepted"><Ico name="check" size={15} />{t.plan.payOpen}</p>}
         <section className="ob-note-card"><b>{t.plan.meta}</b><small>{t.plan.metaSub}</small></section>
       </>
     );
     const waiting = q?.status === "published";
-    const open = pay?.open ?? false;
     if (state?.finished) {
       actions = (
         <>
@@ -743,13 +751,11 @@ export default function Start() {
     } else {
       actions = (
         <>
-          {way === "assisted" && <button className="ob-btn ghost" type="button" onClick={() => go("assisted")}>{t.back}</button>}
-          {/* The products open once the client has paid (D-051): no way past the price before. */}
+          <button className="ob-btn ghost" type="button" onClick={() => go(way === "assisted" ? "assisted" : "try")}>{t.back}</button>
+          {/* Nothing is paid first (D-053): the price is accepted, and paying waits for go-live. */}
           {waiting
-            ? <button className="ob-btn primary" type="button" disabled={busy} onClick={() => acceptQuote(() => undefined)}>{t.plan.accept}<Ico name="arrow" /></button>
-            : open
-              ? <button className="ob-btn primary" type="button" onClick={() => go(way === "assisted" ? "golive" : "services")}>{t.continue}<Ico name="arrow" /></button>
-              : <button className="ob-btn primary" type="button" disabled>{accepted ? t.plan.waitingPay : t.plan.waitingPrice}</button>}
+            ? <button className="ob-btn primary" type="button" disabled={busy} onClick={() => acceptQuote(() => go("golive"))}>{t.plan.accept}<Ico name="arrow" /></button>
+            : <button className="ob-btn primary" type="button" onClick={() => go("golive")}>{t.continue}<Ico name="arrow" /></button>}
         </>
       );
     }
@@ -866,6 +872,21 @@ export default function Start() {
               <button type="button" className="ob-link" onClick={() => changeStep(c.key, { owner: "alyr" })} disabled={busy}>{g.ask}</button>
             </div>
           )}
+          {c.key === "paid" && !done && pay?.status === "unpaid" && (
+            <section className="ob-check-more ob-pay" aria-label={t.plan.payTitle}>
+              <h2>{t.plan.payTitle}</h2>
+              <p className="ob-pay-total"><span>{t.plan.payTotal}</span><b className="num"><bdi dir="ltr">{pay.left_text}</bdi></b></p>
+              <small>{t.plan.paySetup(pay.setup_text)} · {t.plan.payPeriod(pay.period_months, pay.period_text)}</small>
+              {pay.paid > 0 && <small>{t.plan.paidSoFar(pay.paid_text, pay.left_text)}</small>}
+              <div className="ob-pay-how">
+                <b>{t.plan.payHow}</b>
+                {pay.bank ? <pre dir="ltr">{pay.bank}</pre> : <small>{t.plan.payNoBank}</small>}
+                <small>{t.plan.payRef}</small>
+                <code dir="ltr">{pay.reference}</code>
+              </div>
+              <p className="ob-pay-note"><span className="ob-pulse" />{t.plan.paySameDay}</p>
+            </section>
+          )}
           {choosing && c.key === "payments" && (
             <div className="ob-check-more">
               <p className="ob-kicker">{g.choosePayments}</p>
@@ -890,7 +911,7 @@ export default function Start() {
     );
     actions = (
       <>
-        <button className="ob-btn ghost" type="button" onClick={() => go(way === "assisted" ? "plan" : "try")}>{t.back}</button>
+        <button className="ob-btn ghost" type="button" onClick={() => go("plan")}>{t.back}</button>
         <button className="ob-btn primary" type="button" disabled={busy} onClick={finish}>{g.open}<Ico name="arrow" /></button>
       </>
     );

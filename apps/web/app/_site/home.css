@@ -1,6 +1,8 @@
 /* "How we work with you" (HowCards.tsx) is part of this stylesheet, so the homepage asks for
    no extra render-blocking file (ALY-226). */
 @import "./how.css";
+/* The hero's film (HeroFilm.tsx): its still, in the same file for the same reason. */
+@import "./film.css";
 
 /* ALYR homepage: the suite, led by ALYR Agent (docs/agent-dashboard/07-site-brief.md).
    Still a working drawing of an owner's business: Paper, a visible construction grid,
@@ -35,28 +37,23 @@ main[data-page="home"] { font-size: 1.0625rem; line-height: 1.55; }
   mask-image: radial-gradient(110% 60% at 30% 18%, #000 0%, transparent 72%);
   -webkit-mask-image: radial-gradient(110% 60% at 30% 18%, #000 0%, transparent 72%);
 }
-/* the headline across the start side; under it, one row: the promise on the start side, the
-   check-up and who replies on the end side, level with the promise's last line */
-.hero-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: auto auto; column-gap: var(--col-gap); align-items: end; padding-top: clamp(.5rem, 2vw, 1.5rem); }
-.hero-eyebrow { grid-column: 1 / span 9; grid-row: 1; margin-bottom: 1.5rem; align-self: end; }
-.hero .hero-title { grid-column: 1 / span 9; grid-row: 2; font-size: var(--display); line-height: 1; letter-spacing: -.045em; font-weight: 650; }
+/* The text on the start side: the headline, the promise, the check-up, who replies and the
+   facts as one quiet line. The film (film.css) is the far side; `--fz` scales its stage. */
+.hero { --fz: 1; --hf-top: 1.5rem; }
+.hero-text { display: grid; justify-items: start; padding-top: clamp(.5rem, 2vw, 1.5rem); }
+.hero .hero-title { font-size: var(--display); line-height: 1; letter-spacing: -.045em; font-weight: 650; }
 [lang="ar"] .hero .hero-title { line-height: 1.25; letter-spacing: 0; font-weight: 600; }
 .hl { display: block; overflow-x: visible; overflow-y: clip; padding-block-end: .1em; margin-block-end: -.1em; }
 .hl > span { display: inline-block; }
 .hl + .hl > span { color: var(--text); }
-.hero-side { grid-column: 1 / -1; grid-row: 3; display: grid; grid-template-columns: subgrid; align-items: end; row-gap: .875rem; margin-top: clamp(1.75rem, 3vw, 2.5rem); }
-.hero-side > .hero-lead { grid-column: 1 / span 6; grid-row: 1 / span 2; }
-.hero-side > .hero-actions { grid-column: 8 / -1; grid-row: 1; margin-top: 0; }
-.hero-side > .hero-note { grid-column: 8 / -1; grid-row: 2; margin-top: 0; }
-.hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1.5rem; margin-top: 1.5rem; }
+.hero-text > .hero-lead { margin-top: clamp(1.5rem, 2.5vw, 2rem); }
+.hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1.5rem; margin-top: 1.75rem; }
 .hero-note { margin-top: .875rem; max-width: 28rem; }
-.hero-facts { display: grid; grid-template-columns: repeat(3, auto); justify-content: start; margin-top: clamp(2rem, 4vw, 3rem); border-top: 1px solid var(--line); width: 100%; }
-.hero-facts li { padding: .875rem 1.25rem 0 0; font-size: .9375rem; font-weight: 500; line-height: 1.35; }
-.hero-facts li + li { border-inline-start: 1px solid var(--line); padding-inline-start: 1.25rem; }
-[dir="rtl"] .hero-facts li { padding: .875rem 0 0 1.25rem; }
-[dir="rtl"] .hero-facts li + li { padding-inline-start: 1.25rem; }
+.hero-facts { display: flex; flex-wrap: wrap; gap: .25rem .625rem; max-width: 34rem; margin-top: 1.5rem; color: var(--text-muted); }
+.hero-facts li { font-size: .875rem; font-weight: 500; line-height: 1.4; }
+.hero-facts li:not(:last-child)::after { content: "\00b7"; margin-inline-start: .625rem; }
 /* the plain promise under the headline: what ALYR does for the business, in one sentence */
-.hero-lead { max-width: 36rem; color: var(--text); font-size: clamp(1.1875rem, 1.05rem + .45vw, 1.375rem); font-weight: 600; line-height: 1.35; letter-spacing: -.012em; text-wrap: pretty; }
+.hero-lead { max-width: 34rem; color: var(--text); font-size: clamp(1.1875rem, 1.05rem + .45vw, 1.375rem); font-weight: 600; line-height: 1.35; letter-spacing: -.012em; text-wrap: pretty; }
 [lang="ar"] .hero-lead { letter-spacing: 0; line-height: 1.65; }
 .chip { display: inline-flex; align-items: center; min-height: 2.75rem; padding: .375rem .9375rem; border: 1px solid var(--line-strong); border-radius: 2px; background: var(--canvas); color: var(--text); font-size: .9375rem; font-weight: 500; line-height: 1.3; white-space: nowrap; text-decoration: none; transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease); }
 .chip:hover { border-color: var(--text); background: var(--surface); }
@@ -249,12 +246,6 @@ main[data-page="home"] .hs > .wrap > .rule { margin-bottom: var(--space-5); }
 
 /* --------------------------------------------------------------- phones */
 @media (max-width: 61.99rem) {
-  .hero-grid { grid-template-columns: minmax(0, 1fr); align-items: start; }
-  .hero-eyebrow, .hero .hero-title, .hero-side { grid-column: 1; grid-row: auto; }
-  .hero-side { display: grid; grid-template-columns: minmax(0, 1fr); row-gap: 0; padding: 0; margin-top: 1.5rem; }
-  .hero-side > :is(.hero-lead, .hero-actions, .hero-note) { grid-column: 1; grid-row: auto; }
-  .hero-side > .hero-actions { margin-top: 1.5rem; }
-  .hero-side > .hero-note { margin-top: .875rem; }
   .tally .mono-k, .tally ul { grid-column: 1 / -1; }
   .tally .mono-k { padding-top: 0; }
   .how-foot { grid-template-columns: minmax(0, 1fr); }
@@ -269,15 +260,12 @@ main[data-page="home"] .hs > .wrap > .rule { margin-bottom: var(--space-5); }
 @media (max-width: 30rem) {
   main[data-page="home"] { --col-gap: 1rem; }
   .hero { padding-top: 1.5rem; }
-  .hero-eyebrow { margin-bottom: 1rem; }
-  .hero-side { margin-top: 1.25rem; }
-  .hero-side > .hero-actions { margin-top: 1.25rem; display: grid; width: 100%; }
+  .hero-text { justify-items: stretch; }
+  .hero-text > .hero-lead { margin-top: 1.25rem; }
+  .hero-actions { display: grid; width: 100%; margin-top: 1.25rem; }
   .hero-actions .btn { width: 100%; }
   .hero-more { justify-self: start; }
-  .hero-side > .hero-note { margin-top: .75rem; font-size: .875rem; }
-  .hero-facts { grid-template-columns: minmax(0, 1fr); margin-top: 1.5rem; }
-  .hero-facts li, [dir="rtl"] .hero-facts li { padding: .6875rem 0; }
-  .hero-facts li + li, [dir="rtl"] .hero-facts li + li { border-inline-start: 0; padding-inline-start: 0; border-top: 1px solid var(--line); }
+  .hero-note { margin-top: .75rem; font-size: .875rem; }
   .agr-fields > div { grid-template-columns: minmax(0, 1fr); gap: .25rem; }
   .ledger > div { grid-template-columns: minmax(0, 1fr); gap: .25rem; }
   .price-cta .btn { width: 100%; }
@@ -301,26 +289,19 @@ main[data-page="home"] .hs > .wrap > .rule { margin-bottom: var(--space-5); }
    page's largest paint: hidden until hydration, it would count as late) */
 @keyframes hp-line { from { translate: 0 42%; } }
 @keyframes hp-settle { from { font-stretch: 88%; } }
-@keyframes hp-plate { from { opacity: 0; translate: calc(var(--dir) * 24px) 24px; } }
-@keyframes hp-window { from { opacity: 0; translate: 0 28px; } }
 @keyframes hp-flash { 0% { opacity: 1; } 100% { opacity: 0; } }
 
 @media (prefers-reduced-motion: no-preference) {
-  /* the hero, before hydration: the headline rises out of its mask and settles to width
-     (Latin only, and only where the lines never wrap); the plate arrives along 45°; the
-     window rises onto it; the status chip, then its dot, then the feed (AgentFigure), whose
-     first event arrives at 1.2 s at the earliest. */
-  .motion .hero-eyebrow { animation: hp-fade var(--dur-2) var(--ease) both; }
-  .motion .hl > span { animation: hp-line var(--dur-4) var(--ease) both; }
-  .motion .hl + .hl > span { animation-delay: 90ms; }
-  .motion .hero-lead { animation: hp-rise-solid var(--dur-3) var(--ease) both 260ms; }
-  .motion .hero-actions { animation: hp-rise-solid var(--dur-3) var(--ease) both 360ms; }
-  .motion .hero-note { animation: hp-rise-solid var(--dur-3) var(--ease) both 420ms; }
-  .motion .hero-facts li { animation: hp-rise-solid var(--dur-3) var(--ease) both; animation-delay: calc(480ms + var(--i, 0) * var(--stagger)); }
-  .motion .afig-hero .af-plate { animation: hp-plate var(--dur-4) var(--ease) both; }
-  .motion .afig-hero .aw { animation: hp-window var(--dur-4) var(--ease) both 240ms; }
-  .motion .afig-hero .af-status { animation: hp-fade var(--dur-3) var(--ease) both 500ms; }
-  .motion .afig-hero .cap { animation: hp-fade var(--dur-3) var(--ease) both 1000ms; }
+  /* the hero, before hydration, on the pace: the headline rises out of its mask and settles to
+     width (Latin only, and only where the lines never wrap); the lead, the check-up and the
+     facts follow. The film needs no entrance: its plate is there from the first paint, and its
+     first frame after load is the still it shows before. */
+  .motion .hl > span { animation: hp-line calc(1.3 * var(--play-4)) var(--ease) both; }
+  .motion .hl + .hl > span { animation-delay: calc(2 * var(--play-stagger)); }
+  .motion .hero-lead { animation: hp-rise-solid var(--play-4) var(--ease) both calc(6 * var(--play-stagger)); }
+  .motion .hero-actions { animation: hp-rise-solid var(--play-4) var(--ease) both calc(8 * var(--play-stagger)); }
+  .motion .hero-note { animation: hp-rise-solid var(--play-4) var(--ease) both calc(9 * var(--play-stagger)); }
+  .motion .hero-facts li { animation: hp-rise-solid var(--play-4) var(--ease) both; animation-delay: calc((10 + var(--i, 0)) * var(--play-stagger)); }
 
   /* section headings stay masked until the choreography splits them as they are reached */
   .motion [data-split]:not(.is-split) { clip-path: inset(0 0 100% 0); }
@@ -351,36 +332,40 @@ main[data-page="home"] .hs > .wrap > .rule { margin-bottom: var(--space-5); }
 }
 /* the width settle: Latin display type only, and only where its two lines never wrap */
 @media (prefers-reduced-motion: no-preference) and (min-width: 62rem) {
-  :root:not([lang="ar"]).motion .hl > span { animation: hp-line var(--dur-4) var(--ease) both, hp-settle var(--dur-4) var(--ease) both; }
-  :root:not([lang="ar"]).motion .hl + .hl > span { animation-delay: 90ms, 90ms; }
+  :root:not([lang="ar"]).motion .hl > span { animation: hp-line calc(1.3 * var(--play-4)) var(--ease) both, hp-settle calc(1.3 * var(--play-4)) var(--ease) both; }
+  :root:not([lang="ar"]).motion .hl + .hl > span { animation-delay: calc(2 * var(--play-stagger)), calc(2 * var(--play-stagger)); }
 }
+/* Beside the film: the hero is as tall as the plate, which runs to its foot; the headline's
+   lines never wrap and end before the fold, at every width (the film's stage steps down with
+   the screen, --fz). */
 @media (min-width: 62rem) {
-  /* the headline's second line ends before the body beside it, at every width */
-  .hero .hero-title { font-size: min(var(--display), 6.2vw); }
+  .hero { min-height: calc(var(--hf-top) + 724px * var(--fz)); padding-bottom: 0; }
+  .hero-text { max-width: 40rem; padding-bottom: 3rem; }
+  /* beside the fold the facts stand one under the other, so none reaches the plate */
+  .hero-facts { flex-direction: column; gap: .25rem; }
+  .hero-facts li:not(:last-child)::after { content: none; }
+  .hero .hero-title { font-size: min(var(--display), 5.4vw); }
   .hero .hero-title .hl { white-space: nowrap; }
 }
-
-/* A short laptop screen (1366 x 768, 1440 x 900): the plate starts higher, so the newest
-   events, the flag and its rule among them, are in the first screen. */
-@media (min-width: 62rem) and (max-height: 57.5rem) {
-  .hero { padding-top: clamp(1rem, 2vw, 1.5rem); }
-  .hero-grid { padding-top: 0; }
-  .hero-facts { margin-top: 1.5rem; }
-  .afig-hero { margin-top: 1.5rem; }
-}
-/* Phones: the agent comes before the facts, which follow the figure as one wrapped line. */
-@media (max-width: 47.99rem) {
-  .hero > .wrap { display: flex; flex-direction: column; }
-  .hero-facts { order: 1; display: flex; flex-wrap: wrap; gap: .25rem .625rem; margin-top: 1.25rem; border-top: 0; color: var(--text-muted); }
-  .hero-facts li, [dir="rtl"] .hero-facts li { padding: 0; font-size: .875rem; }
-  .hero-facts li + li, [dir="rtl"] .hero-facts li + li { border: 0; padding: 0; }
-  .hero-facts li + li::before { content: "·"; margin-inline-end: .625rem; }
-  .afig-hero { margin-top: 1.75rem; }
-  /* the chips scroll sideways in one row, fading at the far edge, rather than stacking four deep */
-}
+@media (min-width: 62rem) and (max-width: 67.99rem) { .hero { --fz: .7; } .hero-lead { max-width: 30rem; } }
+@media (min-width: 68rem) and (max-width: 74.99rem) { .hero { --fz: .76; } }
+@media (min-width: 75rem) and (max-width: 81.99rem) { .hero { --fz: .84; } }
+@media (min-width: 82rem) and (max-width: 89.99rem) { .hero { --fz: .92; } }
+@media (min-width: 48rem) and (max-width: 61.99rem) { .hero { --fz: .72; } }
+/* a phone: the film's stage as wide as the screen, up to 1.2 times its size */
+@media (max-width: 22.49rem) { .hero { --fz: .82; } }
+@media (min-width: 22.5rem) and (max-width: 23.99rem) { .hero { --fz: .923; } }
+@media (min-width: 24rem) and (max-width: 29.99rem) { .hero { --fz: .985; } }
+@media (min-width: 30rem) and (max-width: 47.99rem) { .hero { --fz: 1.2; } }
 
 /* a link to a section or a question lands under the header, not behind it */
 main[data-page="home"] [id] { scroll-margin-top: calc(var(--header) + 1rem); }
 /* the questions' heading scrolls with the page here: the homepage keeps its pins for the
    products' room and the agent's whole screen only */
 main[data-page="home"] .faq-head .head { position: static; }
+/* the homepage's motion plays like a video (founder, 29 Oct 2026): the flow's Pause is not on
+   show, only while the pointer is over the flow, with keyboard focus, or while paused (WCAG
+   2.2.2 keeps a way to stop it). The film's, How we work's and the products frame's are hidden
+   the same way (film.ts, loopStyle.ts). */
+main[data-page="home"] .fx .demo-toggle:not([data-paused]) { opacity: 0; transition: opacity var(--dur-2) var(--ease); }
+main[data-page="home"] .fx:hover .demo-toggle, main[data-page="home"] .fx .demo-toggle:focus-visible { opacity: 1; }

@@ -18,6 +18,9 @@ import { shelfAr, shelfEn, type ShelfPage } from "./copyShelf";
 import { guideMeta, guidesAr, guidesEn, type GuidesCopy } from "./copyGuides";
 import { sectorMeta, sectorsAr, sectorsEn, type SectorsCopy } from "./copySectors";
 import { privacyAr, privacyEn, type PrivacyPage } from "./copyPrivacy";
+import { filmAr, filmEn, type HeroFilmWords } from "./copyFilm";
+
+export type { HeroFilmWords };
 
 export type Locale = "en" | "ar";
 
@@ -227,6 +230,9 @@ export type LiveEvent = FeedEvent & {
    * order confirmed). `summary`: the dashboard sentence that says so while it is changed,
    * in the engine's words for that count. */
   needs?: { key: string; by: 1 | -1; summary?: string };
+  /** The event taken back: the dashboard as it stood just before it (the hero film's 16:19, a
+   * minute before the sample's moment). */
+  undo?: boolean;
 };
 
 export type AgentFigure = {
@@ -303,7 +309,8 @@ type Home = {
     facts: string[];
     /** The facts while prices are off the page (`OFFER_LIVE`). */
     factsNoOffer: string[];
-    figure: { label: string };
+    /** The film beside the headline (D-062, HeroFilm.tsx). */
+    film: HeroFilmWords;
   };
   /** One order followed from the first message to collection (FlowDiagram), and a count of
    * who did what in it. */
@@ -445,6 +452,8 @@ export type SuiteFrame = {
     title: string; day: string; times: string[];
     /** The time taken: drawn in Volt, the screen's current state. */
     time: string;
+    /** Times already taken by other bookings that day, in ink (Maha J.'s 6:30 pm, booked at 16:16). */
+    taken: string[];
     service: string; who: string; booked: string;
     reminder: string; before: string; sentAt: string;
   };
@@ -562,7 +571,7 @@ export type Copy = {
   loop: {
     pause: string;
     play: string;
-    names: Record<"how" | "frame" | "figure", { pause: string; play: string }>;
+    names: Record<"how" | "frame" | "figure" | "film", { pause: string; play: string }>;
   };
   report: ReportCopy;
   agent: AgentFigure;
@@ -750,6 +759,7 @@ const en: Copy = {
       how: { pause: "Pause the four scenes", play: "Play the four scenes" },
       frame: { pause: "Pause the six products", play: "Play the six products" },
       figure: { pause: "Pause the drawing", play: "Play the drawing" },
+      film: { pause: "Pause the film", play: "Play the film" },
     },
   },
   report: {
@@ -789,13 +799,13 @@ const en: Copy = {
           { at: "16:18", title: "Needs a look", flag: { from: "suggestion", key: "overdue" }, adds: [] },
         ],
         live: [
-          { at: "16:22", title: "Welcome menu sent", line: "To a new customer: “Welcome to Qirfa Bakery. How can we help?”", adds: ["sent"] },
+          { at: "16:22", title: "Order confirmation sent", line: "Order #1442 from Sara M., with its tracking page", adds: ["sent"] },
           { at: "16:23", title: "Order page sent", line: "Reem K. wrote “order”. The link went back at once.", adds: ["sent"] },
-          { at: "16:27", title: "Order received", line: "Order #1442 from Reem K., QAR\u00a0145, with its tracking page", adds: ["sent"], order: 145 },
+          { at: "16:27", title: "Order received", line: "Order #1443 from Reem K., QAR\u00a0145, with its tracking page", adds: ["sent"], order: 145 },
           { at: "16:30", title: "Booking reminder sent", line: "Cake tasting, today at 18:30\u00a0·\u00a0Maha J.", adds: ["sent", "booking_reminders"] },
           { at: "16:43", title: "Needs a look", flag: { from: "needs", key: "unconfirmed" }, adds: [], needs: { key: "unconfirmed", by: 1, summary: "3 orders need confirming." } },
-          { at: "16:45", title: "Ready message sent", line: "Order #1439 for Khalid A., ready for collection", adds: ["sent"] },
-          { at: "16:48", title: "Order confirmation sent", line: "Order #1442 from Reem K., with its tracking page", adds: ["sent"], needs: { key: "unconfirmed", by: -1 } },
+          { at: "16:45", title: "Ready message sent", line: "Order #1435 for Khalid A., ready for collection", adds: ["sent"] },
+          { at: "16:48", title: "Order confirmation sent", line: "Order #1443 from Reem K., with its tracking page", adds: ["sent"], needs: { key: "unconfirmed", by: -1 } },
         ],
       },
       salon: {
@@ -853,9 +863,7 @@ const en: Copy = {
       more: "See how we work",
       facts: ["We come to your shop, in Qatar", "From QAR 449 a month, no commission", "Arabic and English"],
       factsNoOffer: ["We come to your shop, in Qatar", "Six products, one workspace", "Arabic and English"],
-      figure: {
-        label: "The ALYR Agent home screen of a fictional bakery, and what ALYR did for it this afternoon",
-      },
+      film: filmEn,
     },
     see: {
       title: "One order, from the first message to collection",
@@ -1044,8 +1052,8 @@ const en: Copy = {
           inbox: "Inbox",
           rows: [
             { who: "Sara M.", text: "Here is our order page. Pick what you need.", at: "16:13" },
-            { who: "Lina F.", text: "Order #1441 received", at: "16:09" },
-            { who: "Noor A.", text: "Cake tasting, today at 18:00", at: "16:00" },
+            { who: "Omar A.", text: "Order #1440 is complete. Thank you.", at: "16:17" },
+            { who: "Maha J.", text: "Booking 113 confirmed: Cake tasting, today at 18:30", at: "16:16" },
           ],
           tag: "#1442 · New",
           newText: "Ordered 7 items, QAR 98",
@@ -1061,6 +1069,7 @@ const en: Copy = {
           day: "Thu 15 Oct",
           times: ["4:00 pm", "4:30 pm", "5:00 pm", "5:30 pm", "6:00 pm", "6:30 pm"],
           time: "6:00 pm",
+          taken: ["6:30 pm"],
           service: "Cake tasting",
           who: "Noor A.",
           booked: "Booked",
@@ -1383,7 +1392,7 @@ const en: Copy = {
       currency: "QAR",
       currencyFirst: true,
       period: "a month",
-      first: "for your first product. Add ALYR Chat, ALYR Bookings or ALYR Accounts for QAR 150 a month each. ALYR Agent and ALYR Shelf come with every one.",
+      first: "for your first product. Add ALYR Chat, ALYR Bookings or ALYR Accounts for QAR 50 a month each. ALYR Agent and ALYR Shelf come with every one.",
       setup: "Setup from QAR 1,500, quoted at your visit.",
       firstMonth: "Your first month is the subscription and the setup fee. After that, only the subscription.",
       includesLabel: "Every month includes",
@@ -1399,8 +1408,8 @@ const en: Copy = {
       combosLabel: "For example",
       combos: [
         { label: "A salon: ALYR Bookings", value: "from QAR 449" },
-        { label: "A bakery: ALYR Chat and ALYR Accounts", value: "from QAR 599" },
-        { label: "Home services: Bookings, Chat and Accounts", value: "from QAR 749" },
+        { label: "A bakery: ALYR Chat and ALYR Accounts", value: "from QAR 499" },
+        { label: "Home services: Bookings, Chat and Accounts", value: "from QAR 549" },
         { label: "ALYR Agent and ALYR Shelf", value: "included" },
       ],
       ledgerLabel: "Fees, said plainly",
@@ -1503,7 +1512,7 @@ const en: Copy = {
           id: "more-products",
           offer: true,
           q: "What if I need more than one product?",
-          a: "The first is from QAR 449 a month. ALYR Chat, ALYR Bookings and ALYR Accounts are QAR 150 a month each after that. ALYR Agent and ALYR Shelf come with all of them.",
+          a: "The first is from QAR 449 a month. ALYR Chat, ALYR Bookings and ALYR Accounts are QAR 50 a month each after that. ALYR Agent and ALYR Shelf come with all of them.",
         },
         {
           id: "busy-night",
@@ -2031,7 +2040,7 @@ const en: Copy = {
         lead:
           "Free times come from your opening hours, and the confirmation goes at once. Your team marks who came.",
         facts: ["Free times from your opening hours", "A reminder 2 hours before", "One booking at a time, for one chair or one\u00a0room"],
-        factsOffer: ["From QAR 449 a month, or QAR 150 beside ALYR Chat or ALYR Accounts"],
+        factsOffer: ["From QAR 449 a month, or QAR 50 beside ALYR Chat or ALYR Accounts"],
       },
       demo: {
         business: "Dafira Salon",
@@ -2531,7 +2540,7 @@ const en: Copy = {
         lead:
           "Record credit in one line. One press sends reminders whose tone follows how late the payment is.",
         facts: ["The oldest debt is settled first", "Never reminded twice within 3 days", "No reminders after “stop”"],
-        factsOffer: ["From QAR 449 a month, or QAR 150 beside ALYR Chat or ALYR Bookings"],
+        factsOffer: ["From QAR 449 a month, or QAR 50 beside ALYR Chat or ALYR Bookings"],
       },
       demo: {
         business: "Qirfa Bakery",
@@ -3071,6 +3080,7 @@ const ar: Copy = {
       how: { pause: "إيقاف حركة المشاهد الأربعة", play: "تشغيل حركة المشاهد الأربعة" },
       frame: { pause: "إيقاف حركة المنتجات الستة", play: "تشغيل حركة المنتجات الستة" },
       figure: { pause: "إيقاف حركة الرسم", play: "تشغيل حركة الرسم" },
+      film: { pause: "إيقاف حركة الفيلم", play: "تشغيل حركة الفيلم" },
     },
   },
   report: {
@@ -3110,13 +3120,13 @@ const ar: Copy = {
           { at: "16:18", title: "يحتاج نظرة", flag: { from: "suggestion", key: "overdue" }, adds: [] },
         ],
         live: [
-          { at: "16:22", title: "أُرسلت قائمة الترحيب", line: "لعميلة جديدة: «أهلاً بك في مخبز قرفة. كيف نقدر نساعدك؟»", adds: ["sent"] },
+          { at: "16:22", title: "أُرسل تأكيد الطلب", line: "الطلب رقم 1442 من سارة م.، مع صفحة تتبّعه", adds: ["sent"] },
           { at: "16:23", title: "أُرسلت صفحة الطلب", line: "كتبت ريم ك. «طلب»، فوصلها الرابط فوراً.", adds: ["sent"] },
-          { at: "16:27", title: "وصل طلب جديد", line: "الطلب رقم 1442 من ريم ك.، 145\u00a0ر.ق، مع صفحة تتبّعه", adds: ["sent"], order: 145 },
+          { at: "16:27", title: "وصل طلب جديد", line: "الطلب رقم 1443 من ريم ك.، 145\u00a0ر.ق، مع صفحة تتبّعه", adds: ["sent"], order: 145 },
           { at: "16:30", title: "أُرسل تذكير بموعد", line: "تذوّق الكيك، اليوم الساعة 18:30\u00a0·\u00a0مها ج.", adds: ["sent", "booking_reminders"] },
           { at: "16:43", title: "يحتاج نظرة", flag: { from: "needs", key: "unconfirmed" }, adds: [], needs: { key: "unconfirmed", by: 1, summary: "3 طلبات بحاجة إلى تأكيد." } },
-          { at: "16:45", title: "أُرسل إشعار الجاهزية", line: "الطلب رقم 1439 لخالد ع. جاهز للاستلام", adds: ["sent"] },
-          { at: "16:48", title: "أُرسل تأكيد الطلب", line: "الطلب رقم 1442 من ريم ك.، مع صفحة تتبّعه", adds: ["sent"], needs: { key: "unconfirmed", by: -1 } },
+          { at: "16:45", title: "أُرسل إشعار الجاهزية", line: "الطلب رقم 1435 لخالد ع. جاهز للاستلام", adds: ["sent"] },
+          { at: "16:48", title: "أُرسل تأكيد الطلب", line: "الطلب رقم 1443 من ريم ك.، مع صفحة تتبّعه", adds: ["sent"], needs: { key: "unconfirmed", by: -1 } },
         ],
       },
       salon: {
@@ -3174,9 +3184,7 @@ const ar: Copy = {
       more: "شاهد طريقة عملنا",
       facts: ["نأتي إلى محلك في قطر", "من 449 ر.ق شهرياً، بلا عمولة", "بالعربية والإنجليزية"],
       factsNoOffer: ["نأتي إلى محلك في قطر", "ستة منتجات في مساحة عمل واحدة", "بالعربية والإنجليزية"],
-      figure: {
-        label: "الشاشة الرئيسية لـ ALYR Agent في مخبز غير حقيقي، وما أنجزته ALYR له عصر اليوم",
-      },
+      film: filmAr,
     },
     see: {
       title: "طلب واحد، من الرسالة الأولى إلى الاستلام",
@@ -3365,8 +3373,8 @@ const ar: Copy = {
           inbox: "المحادثات",
           rows: [
             { who: "سارة م.", text: "حيّاك، اختاري طلبك من هنا.", at: "16:13" },
-            { who: "لينا ف.", text: "تم استلام الطلب رقم 1441", at: "16:09" },
-            { who: "نور أ.", text: "تذوّق الكيك، اليوم الساعة 18:00", at: "16:00" },
+            { who: "عمر ع.", text: "تم إنجاز الطلب رقم 1440. شكراً لك.", at: "16:17" },
+            { who: "مها ج.", text: "تم تأكيد الحجز رقم 113: تذوّق الكيك، اليوم الساعة 18:30", at: "16:16" },
           ],
           tag: "#1442 · جديد",
           newText: "طلبت 7 أصناف، 98 ر.ق",
@@ -3382,6 +3390,7 @@ const ar: Copy = {
           day: "الخميس 15 أكتوبر",
           times: ["4:00 م", "4:30 م", "5:00 م", "5:30 م", "6:00 م", "6:30 م"],
           time: "6:00 م",
+          taken: ["6:30 م"],
           service: "تذوّق الكيك",
           who: "نور أ.",
           booked: "محجوز",
@@ -3704,7 +3713,7 @@ const ar: Copy = {
       currency: "ر.ق",
       currencyFirst: false,
       period: "شهرياً",
-      first: "لأول منتج. وأضف ALYR Chat أو ALYR Bookings أو ALYR Accounts بـ\u00a0150 ر.ق شهرياً لكل منها. ويأتي ALYR Agent وALYR Shelf مع كل منتج.",
+      first: "لأول منتج. وأضف ALYR Chat أو ALYR Bookings أو ALYR Accounts بـ\u00a050 ر.ق شهرياً لكل منها. ويأتي ALYR Agent وALYR Shelf مع كل منتج.",
       setup: "ورسوم تجهيز تبدأ من 1,500 ر.ق، ونحدد مبلغها خلال زيارتنا لك.",
       firstMonth: "يشمل شهرك الأول الاشتراك ورسوم التجهيز، وبعده الاشتراك وحده.",
       includesLabel: "يشمل كل شهر",
@@ -3720,8 +3729,8 @@ const ar: Copy = {
       combosLabel: "مثلاً",
       combos: [
         { label: "صالون: ALYR Bookings", value: "من 449 ر.ق" },
-        { label: "مخبز: ALYR Chat وALYR Accounts", value: "من 599 ر.ق" },
-        { label: "خدمات منزلية: Bookings وChat وAccounts", value: "من 749 ر.ق" },
+        { label: "مخبز: ALYR Chat وALYR Accounts", value: "من 499 ر.ق" },
+        { label: "خدمات منزلية: Bookings وChat وAccounts", value: "من 549 ر.ق" },
         { label: "ALYR Agent وALYR Shelf", value: "مشمولان" },
       ],
       ledgerLabel: "الرسوم بوضوح",
@@ -3824,7 +3833,7 @@ const ar: Copy = {
           id: "more-products",
           offer: true,
           q: "وإن احتجت أكثر من منتج؟",
-          a: "الأول من 449 ر.ق شهرياً، ثم ALYR Chat وALYR Bookings وALYR Accounts بـ 150 ر.ق شهرياً لكل منها. ويأتي ALYR Agent وALYR Shelf معها كلها.",
+          a: "الأول من 449 ر.ق شهرياً، ثم ALYR Chat وALYR Bookings وALYR Accounts بـ 50 ر.ق شهرياً لكل منها. ويأتي ALYR Agent وALYR Shelf معها كلها.",
         },
         {
           id: "busy-night",
@@ -4352,7 +4361,7 @@ const ar: Copy = {
         lead:
           "تأتي الأوقات المتاحة من ساعات عملك، ويصل التأكيد فوراً. ويسجّل فريقك من حضر.",
         facts: ["الأوقات المتاحة من ساعات عملك", "تذكير قبل الموعد بساعتين", "حجز واحد في الوقت نفسه، لكرسي واحد أو غرفة واحدة"],
-        factsOffer: ["من 449 ر.ق شهرياً، أو 150 ر.ق مع ALYR Chat أو ALYR Accounts"],
+        factsOffer: ["من 449 ر.ق شهرياً، أو 50 ر.ق مع ALYR Chat أو ALYR Accounts"],
       },
       demo: {
         business: "صالون ضفيرة",
@@ -4853,7 +4862,7 @@ const ar: Copy = {
         lead:
           "سجّل البيع بالآجل بسطر واحد. وبضغطة واحدة تُرسل التذكيرات بنبرة تتدرّج مع تأخر السداد.",
         facts: ["يُسدَّد الأقدم أولاً", "لا تذكير مرتين خلال 3 أيام", "لا تذكير بعد طلب الإيقاف"],
-        factsOffer: ["من 449 ر.ق شهرياً، أو 150 ر.ق مع ALYR Chat أو ALYR Bookings"],
+        factsOffer: ["من 449 ر.ق شهرياً، أو 50 ر.ق مع ALYR Chat أو ALYR Bookings"],
       },
       demo: {
         business: "مخبز قرفة",
