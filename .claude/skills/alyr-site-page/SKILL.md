@@ -68,7 +68,7 @@ words under `home` in `copy.ts`):
    line is drawn; without scripts or with reduced motion nothing plays. Then a line button
    and "What we need from you".
 4. **Your business** (`#business`, `BusinessTabs.tsx`): one tab per business type plus
-   "Something else"; each panel has an anchor (`#bakery`, `#wholesale`, `#fashion`,
+   "Something else"; each panel has an anchor (`#bakery`, `#groceries` (added 28 Oct 2026, ALY-232), `#wholesale`, `#fashion`,
    `#restaurant`, `#salon`, `#home-services`, `#other`), the "Today" list (what a check-up
    finds, in the problems' own words: lost orders, the same questions, "Is my order ready?",
    the empty chair, regulars who owe, not knowing how the week compares), "With ALYR" row for

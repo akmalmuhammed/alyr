@@ -230,22 +230,7 @@ export const sectorsEn: SectorsCopy = {
       title: "How a grocery in Qatar can keep track of customers who buy on credit",
       answer:
         "Record each credit sale the moment it happens, with one line typed on the staff phone, and the customer gets a message with the new balance. ALYR Accounts keeps who owes what and for how long, and one press sends reminders to everyone 30 days or more behind, firmer as the debt ages. Customers can also order from your list in the chat.",
-      day: {
-        chats: [
-          { who: "Flat 12", kind: "voice", text: "0:31", at: "7:42 pm", n: 11 },
-          { who: "Ahmed", kind: "text", text: "Put it on my account, I’ll pay Thursday", at: "7:30 pm", n: 9 },
-          { who: "Fatma", kind: "text", text: "How much do I owe?", at: "7:12 pm", n: 8 },
-          { who: "Villa 7", kind: "photo", text: "This rice, 2 bags", at: "6:55 pm", n: 6 },
-          { who: "Saleh", kind: "text", text: "Do you have fresh milk?", at: "6:40 pm", n: 4 },
-        ],
-        orders: [
-          { ref: "#1188", who: "Flat 12", what: "Bread, eggs, 2 kg tomatoes", by: "Rafi", status: "On account", tone: "ok" },
-          { ref: "Credit", who: "Ahmed", what: "Credit sale, new balance sent", by: "Rafi", status: "Recorded", tone: "ok" },
-          { ref: "Credit", who: "Fatma", what: "Asked for her balance", by: "Rafi", status: "Balance sent", tone: "ok" },
-          { ref: "#1187", who: "Villa 7", what: "Basmati rice 5 kg × 2", by: "Joseph", status: "Ready, customer told", tone: "now" },
-          { ref: "Chat", who: "Saleh", what: "Asked about fresh milk", by: "Joseph", status: "Joseph is answering", tone: "wait" },
-        ],
-      },
+      row: "groceries",
       today: {
         title: "Your day today",
         items: [
@@ -660,22 +645,7 @@ export const sectorsAr: SectorsCopy = {
       title: "كيف تتابع بقالة في قطر العملاء الذين يشترون بالآجل",
       answer:
         "سجّل كل بيع آجل لحظة حدوثه بسطر واحد تكتبه على هاتف الموظف، فتصل إلى العميل رسالة برصيده الجديد. يحفظ ALYR Accounts من عليه مستحقات لك وكم ومنذ متى، وتُرسل بضغطة واحدة تذكيرات إلى كل من تأخر 30 يوماً أو أكثر، بنبرة أحزم كلما طال التأخير. ويستطيع العملاء أيضاً أن يطلبوا من قائمتك في المحادثة.",
-      day: {
-        chats: [
-          { who: "شقة 12", kind: "voice", text: "0:31", at: "7:42 م", n: 11 },
-          { who: "أحمد", kind: "text", text: "سجّلها على حسابي، أدفع الخميس", at: "7:30 م", n: 9 },
-          { who: "فاطمة", kind: "text", text: "كم علي؟", at: "7:12 م", n: 8 },
-          { who: "فيلا 7", kind: "photo", text: "هذا الرز، كيسين", at: "6:55 م", n: 6 },
-          { who: "صالح", kind: "text", text: "عندكم حليب طازج؟", at: "6:40 م", n: 4 },
-        ],
-        orders: [
-          { ref: "#1188", who: "شقة 12", what: "خبز، بيض، 2 كغ طماطم", by: "رفيع", status: "على الحساب", tone: "ok" },
-          { ref: "آجل", who: "أحمد", what: "بيع آجل، أُرسل الرصيد الجديد", by: "رفيع", status: "سُجّل", tone: "ok" },
-          { ref: "آجل", who: "فاطمة", what: "سألت عن رصيدها", by: "رفيع", status: "أُرسل الرصيد", tone: "ok" },
-          { ref: "#1187", who: "فيلا 7", what: "رز بسمتي 5 كغ × 2", by: "جوزيف", status: "جاهز، أُبلغ العميل", tone: "now" },
-          { ref: "محادثة", who: "صالح", what: "سأل عن الحليب الطازج", by: "جوزيف", status: "جوزيف يرد", tone: "wait" },
-        ],
-      },
+      row: "groceries",
       today: {
         title: "يومك اليوم",
         items: [

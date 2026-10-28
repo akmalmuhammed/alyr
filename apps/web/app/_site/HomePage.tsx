@@ -279,7 +279,7 @@ function Business({ locale }: { locale: Locale }) {
 }
 
 const BUSINESS_ICON: Record<string, IconName> = {
-  bakery: "bakery", wholesale: "crate", fashion: "hanger", restaurant: "cup", salon: "scissors", "home-services": "wrench",
+  bakery: "bakery", groceries: "basket", wholesale: "crate", fashion: "hanger", restaurant: "cup", salon: "scissors", "home-services": "wrench",
 };
 
 // ------------------------------------------------------------ one order, start to finish

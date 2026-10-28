@@ -105,9 +105,9 @@ export const guidesEn: GuidesCopy = {
       title: "Stop losing WhatsApp orders in the rush",
       short:
         "Orders get lost in a rush because each one arrives in a different shape: a voice note, a photo, half a sentence. Give them one shape before the rush starts. Send customers a list or menu to choose from, confirm every order in writing with a number and a time, keep all orders in one list your whole team works from, and give each order one person responsible. Close orders at a set time. The WhatsApp Business app and a notebook can do most of this; ALYR does it with an order page and one shared screen.",
-      published: "2026-10-25T09:00:00+03:00",
-      modified: "2026-10-25T09:00:00+03:00",
-      date: "25 Oct 2026",
+      published: "2026-10-28T09:00:00+03:00",
+      modified: "2026-10-28T09:00:00+03:00",
+      date: "28 Oct 2026",
       sections: [
         {
           id: "why",
@@ -171,9 +171,9 @@ export const guidesEn: GuidesCopy = {
       title: "Cut no-shows with reminders",
       short:
         "A customer who forgot cannot come, and a reminder fixes that. Confirm every booking in writing the moment it is made, with the day, the time and the service. Send a reminder a few hours before, with an easy way to cancel or move, so the slot can go to someone else. Mark who came and who did not, so you know your real no-show rate and who misses more than once. You can do this by hand with saved replies and one list; ALYR Bookings sends the confirmation and the reminder itself.",
-      published: "2026-10-25T09:00:00+03:00",
-      modified: "2026-10-25T09:00:00+03:00",
-      date: "25 Oct 2026",
+      published: "2026-10-28T09:00:00+03:00",
+      modified: "2026-10-28T09:00:00+03:00",
+      date: "28 Oct 2026",
       sections: [
         {
           id: "why",
@@ -240,9 +240,9 @@ export const guidesEn: GuidesCopy = {
       title: "Keep track of who owes you",
       short:
         "Record every credit sale when it happens, with the date, the amount and who took it, and tell the customer the new balance each time. Once a week, list who owes what and for how long, oldest first. Remind those more than 30 days behind, friendly at first and firmer as the debt ages, never twice in a few days. Agree a limit for each regular, record every promise to pay, and take each payment against the oldest purchase first. A credit book works if one person keeps it; ALYR Accounts does it from one line on the staff phone.",
-      published: "2026-10-25T09:00:00+03:00",
-      modified: "2026-10-25T09:00:00+03:00",
-      date: "25 Oct 2026",
+      published: "2026-10-28T09:00:00+03:00",
+      modified: "2026-10-28T09:00:00+03:00",
+      date: "28 Oct 2026",
       sections: [
         {
           id: "why",
@@ -339,9 +339,9 @@ export const guidesAr: GuidesCopy = {
       title: "لا تدع طلبات واتساب تضيع وقت الزحمة",
       short:
         "تضيع الطلبات وقت الزحمة لأن كل طلب يصل بشكل مختلف: رسالة صوتية، صورة، نصف جملة. اجعل لها شكلاً واحداً قبل أن تبدأ الزحمة. أرسل للعملاء قائمة يختارون منها، وأكّد كل طلب كتابةً برقم ووقت، واجمع الطلبات كلها في قائمة واحدة يعمل منها فريقك كله، واجعل لكل طلب شخصاً واحداً مسؤولاً عنه. وأغلق الطلبات في وقت محدد. يستطيع تطبيق واتساب للأعمال ودفتر واحد أن يؤديا أغلب هذا، وتؤديه ALYR بصفحة طلب وشاشة واحدة مشتركة.",
-      published: "2026-10-25T09:00:00+03:00",
-      modified: "2026-10-25T09:00:00+03:00",
-      date: "25 أكتوبر 2026",
+      published: "2026-10-28T09:00:00+03:00",
+      modified: "2026-10-28T09:00:00+03:00",
+      date: "28 أكتوبر 2026",
       sections: [
         {
           id: "why",
@@ -404,9 +404,9 @@ export const guidesAr: GuidesCopy = {
       title: "قلّل الغياب عن المواعيد بالتذكير",
       short:
         "العميل الذي نسي لا يستطيع أن يحضر، والتذكير يعالج ذلك. أكّد كل حجز كتابةً فور إجرائه، باليوم والوقت والخدمة. وأرسل تذكيراً قبل الموعد بساعات، مع طريقة سهلة للإلغاء أو التأجيل، ليذهب الوقت الفارغ إلى غيره. وسجّل من حضر ومن لم يحضر، لتعرف نسبة الغياب الحقيقية ومن يتغيب أكثر من مرة. تستطيع أن تفعل هذا يدوياً بالردود المحفوظة وقائمة واحدة، ويرسل ALYR Bookings التأكيد والتذكير بنفسه.",
-      published: "2026-10-25T09:00:00+03:00",
-      modified: "2026-10-25T09:00:00+03:00",
-      date: "25 أكتوبر 2026",
+      published: "2026-10-28T09:00:00+03:00",
+      modified: "2026-10-28T09:00:00+03:00",
+      date: "28 أكتوبر 2026",
       sections: [
         {
           id: "why",
@@ -472,9 +472,9 @@ export const guidesAr: GuidesCopy = {
       title: "تابِع من عليه مستحقات لك",
       short:
         "اكتب كل بيع آجل لحظة حدوثه، بالتاريخ والمبلغ ومن أخذه، وأبلغ العميل برصيده الجديد في كل مرة. ومرة كل أسبوع اكتب من عليه كم ومنذ متى، الأقدم أولاً. وذكّر من تأخر أكثر من 30 يوماً، بنبرة ودية أولاً ثم أحزم كلما طال التأخير، ولا تذكّر أحداً مرتين خلال أيام قليلة. واتفق على حدّ لكل زبون دائم، واكتب كل وعد بالسداد مع تاريخه، واخصم كل دفعة من أقدم مشترياته أولاً. دفتر الديون يكفي إن حفظه شخص واحد، ويفعل ALYR Accounts ذلك بسطر واحد من هاتف الموظف.",
-      published: "2026-10-25T09:00:00+03:00",
-      modified: "2026-10-25T09:00:00+03:00",
-      date: "25 أكتوبر 2026",
+      published: "2026-10-28T09:00:00+03:00",
+      modified: "2026-10-28T09:00:00+03:00",
+      date: "28 أكتوبر 2026",
       sections: [
         {
           id: "why",

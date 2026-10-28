@@ -116,3 +116,37 @@ The creative director's rulings are in `08-rulings.md`.
 **Not checked.** Without scripts (the capture script cannot turn them off: the figure then
 rests at 42 % on a phone too, as on the homepage); a real keyboard walk; a screen reader; Safari
 and a real iPhone; the Products menu open on the new pages; the Arabic by a native speaker.
+
+## Stage 4: main merged, the founder's go-ahead (28 to 29 Oct 2026)
+
+**Main merged twice** (PR #139 was out of date): the company page and privacy policy
+(`/company`, `/privacy`), the footer naming alyr software W.L.L. (CR 255539), the pace and
+motion always on (D-058, D-059), the hero film (D-062), PostHog (D-070). Kept their work:
+`PATHS` lists the plain pages first, then the sectors and guides; `build-site.sh` keeps
+main's `plain="company privacy"` and lists every other page from `PATHS`
+(`scripts/site/pages.mjs company privacy`); `structuredData.ts` keeps main's WebPage for the
+plain pages as a `plain` kind of `pageKind()`; `llms.mjs` keeps the company and privacy copies;
+the footer's site row is Questions, Guides, then the company's pages. Main's day-split changes
+(the pace tokens) merged with this branch's two.
+
+**The founder's decisions** (`00-founder-decisions.md`): D-057 accepted; the guides dated
+28 Oct 2026; the Arabic published as a draft; a Groceries tab.
+
+**The Groceries tab.** A new `home.business.rows` entry (`groceries`, after Bakeries, a
+`basket` line icon), its afternoon the rows the groceries page drew before (no business
+names; staff Rafi and Joseph), so `/for/groceries` now reads `row: "groceries"`. One quick
+critic (`09-critique-groceries-tab.md`): no P0; P1-1 (a line repeated from the groceries page)
+and P2-1 to P2-7 applied (the split's label is "The same hour" everywhere now; the basket's
+handle flat-topped like the crate). Not applied: the tab row's scroll on a deep link, which
+predates this change.
+
+**Checks (29 Oct 2026).** `tsc --noEmit` clean; `pnpm lint` clean; `pnpm test` 83 pass;
+`pnpm site:check` all five pass (build, EN/AR parity 7,686 strings, banned words, 3,294 links,
+the pace); axe: no serious or critical issue on `/`, `/ar` and all 20 new pages.
+Lighthouse mobile, lowest of 3: `/` 80 (LCP 3.16 s), `/for/groceries` 95 (2.86 s), `/guides`
+96 (2.71 s), Accessibility 100 and CLS 0. Below the LCP budget, but **main is the same**:
+`origin/main` built in a throwaway worktree on the same laptop gave `/` 83 (3.29 s) and `/chat`
+95 (2.86 s). The new pages match main's product pages; the homepage's drop came with main
+(the hero film, the consent prompt), not with this branch. For the site lane to look at
+separately.
+

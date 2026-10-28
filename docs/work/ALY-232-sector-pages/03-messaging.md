@@ -14,7 +14,7 @@ condition on the page.
 | A numbered receipt for each payment | home services, ALYR Docs row and question "receipts" | [G] ALYR Docs is built and off for every shop; framed as what we set up, never "available" |
 | "With a check-up at your bakery: about an hour" | bakeries, question "start" | [F] the homepage's check-up answer says "about an hour" |
 | Reminder "two hours before" | salons, home services, the no-shows guide | Built (`/bookings`); outside the 24-hour window it needs the reminder template approved on the shop's own number, as on `/bookings` |
-| Guides dated 25 Oct 2026 | all three guides | [F] set `published` to the day of publishing if later |
+| Guides dated 28 Oct 2026 | all three guides | Decided by the founder, 28 Oct 2026 |
 | Sample afternoon for groceries: first names and "Flat 12", "Villa 7"; staff Rafi and Joseph | groceries figure | No business names, so no register check; [F] glance at the names |
 | "Instagram bio" chat link | fashion | Built (a wa.me link with the shop's number); Instagram is named as a place, not a partner |
 
