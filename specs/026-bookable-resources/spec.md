@@ -1,6 +1,6 @@
 # Spec 026: Bookable resources (more than one customer at a time)
 
-Status: engine and API built in ALY-258 (step 2 of ALY-27). Decision: D-062. The workspace screens for resources, services and hours are the next issue.
+Status: engine and API built in ALY-258 (step 2 of ALY-27). Decision: D-069. The workspace screens for resources, services and hours are the next issue.
 
 ## The problem
 

@@ -1,4 +1,4 @@
--- ALY-258, decision D-062, spec 026: more than one customer at a time.
+-- ALY-258, decision D-069, spec 026: more than one customer at a time.
 --
 -- Until now the database refused any two overlapping bookings for a whole shop
 -- (`bookings_no_overlap`, migration 0010), so a salon with two chairs, a clinic with two

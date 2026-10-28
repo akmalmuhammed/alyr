@@ -1,4 +1,4 @@
-"""More than one customer at a time: bookable resources (ALY-258, D-062, spec 026).
+"""More than one customer at a time: bookable resources (ALY-258, D-069, spec 026).
 
 A shop that lists no resources is exactly as before (every test in test_bookings.py
 covers that and passes untouched). A shop that lists chairs, people or rooms takes one

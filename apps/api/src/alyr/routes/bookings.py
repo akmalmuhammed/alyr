@@ -307,7 +307,7 @@ async def set_active(
 
 
 def _managers_only(staff: Staff) -> None:
-    """Chairs and who does what are the owner's or an admin's to change (D-062)."""
+    """Chairs and who does what are the owner's or an admin's to change (D-069)."""
     if staff.role == "agent":
         raise HTTPException(status_code=403, detail="only an owner or admin can change this")
 

@@ -50,7 +50,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-058 | The homepage hero's ALYR Agent figure (and /agent's) moves continuously, the one exception to "plays once", with a pause button and calm pacing | Accepted |
 | D-059 | Motion is always on: the site's figures (How we work, the products frame, the signature figures, with the flows, demos and the live Agent) keep playing, each with a Pause control; text arrives once | Accepted |
 | D-061 | Company mail moves to Zoho Mail (free plan): hello@ with akmal@ and security@ as aliases, and a mailbox for Beevi Jinan, the registered owner; Resend still sends the product's email | Accepted |
-| D-062 | A shop's bookings are held to one customer at a time per resource (chair, person, room), not per shop; a shop with no resources is unchanged | Accepted |
+| D-069 | A shop's bookings are held to one customer at a time per resource (chair, person, room), not per shop; a shop with no resources is unchanged | Accepted |
 
 ---
 
@@ -1180,7 +1180,7 @@ Nothing claims more than the page, as before.
 
 ---
 
-## D-062 · One customer at a time per resource, not per shop
+## D-069 · One customer at a time per resource, not per shop
 **Date** 28 Oct 2026 · **Status** Accepted (the founder's 28 Oct instruction to build the open items of ALY-27) · Linear ALY-258, step 2 of ALY-27 · Spec `specs/026-bookable-resources/spec.md`
 
 **Where we were.** Since migration 0010 the database refused any two overlapping bookings of one shop. A salon with two chairs, a clinic with two doctors or a workshop with two technicians could take one customer at a time, and onboarding already offers these businesses a self-serve path (D-031).

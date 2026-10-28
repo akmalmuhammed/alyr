@@ -3,7 +3,7 @@
 All time arithmetic is done by PostgreSQL in the shop's own time zone, so "9 am" means
 9 am at the shop whatever machine runs this code.
 
-A shop can list its resources (chairs, people, rooms; D-062): one customer at a time per
+A shop can list its resources (chairs, people, rooms; D-069): one customer at a time per
 resource, so two customers can have the same time on two chairs. A shop that lists none is
 held to one customer at a time, as before. Which resource a booking takes is decided under
 the shop's lock, so two customers cannot be given the same last one.
