@@ -1,13 +1,15 @@
 // The hero's film, played (HeroFilm.tsx, filmScript.ts; D-062). The film is CSS: this only says
 // when, as loops.ts does for the figures that keep playing.
 //
-// - After load (HomeMotion calls it, only when motion is wanted), it has the rest of the canvas
+// - At load (HomeMotion calls it, only when motion is wanted), it has the rest of the canvas
 //   drawn (FilmScenes), then writes the film's tracks into the page and adds `is-on`: every
 //   track starts at the still, so the first frame is the one already on screen, and from there
-//   the film loops.
+//   the film loops. Each step waits a frame, not an idle moment: it moves at once.
 // - It stops when nobody is watching: off screen (an IntersectionObserver) or in a hidden tab,
-//   every track is paused where it is and carried on when it is back. Its Pause control holds
-//   the frame (as a film does) until Play.
+//   every track is paused where it is and carried on when it is back. Its Pause control, or a
+//   click on the film, holds the frame (as a film does) until Play. The control is not on show
+//   (founder, 29 Oct 2026: "it should feel like a video"): it appears while the pointer is over
+//   the film, with keyboard focus, or while paused.
 // - Reduced motion, chosen or changed while on the page: the still, and no Pause control.
 // - The last shot's numbers belong to the real dashboard (FilmDash.tsx): it is told when the film
 //   reaches 16:20 and when it goes back to 16:19 under the closing fold.
@@ -24,9 +26,12 @@ import { LOOP_CSS } from "./loopStyle";
 const STILL = "(prefers-reduced-motion: reduce)";
 const PHONE = "(max-width: 47.99rem)";
 
-/** The Pause control's place, at the end of the plate's bar. */
+/** The Pause control's place, at the end of the plate's bar. The film plays like a video
+ * (founder, 29 Oct 2026): the control is not on show, only while the pointer is over the film,
+ * when it has keyboard focus, or while the film is paused (WCAG 2.2.2 keeps a way to stop it). */
 const TOGGLE_CSS =
-  ".hf .hf-toggle{bottom:calc((44px * var(--fz) - 2.75rem) / 2);inset-inline-end:calc(48px * var(--fz) - .75rem);color:var(--on-band-quiet)}" +
+  ".hf .hf-toggle{bottom:calc((44px * var(--fz) - 2.75rem) / 2);inset-inline-end:calc(48px * var(--fz) - .75rem);color:var(--on-band-quiet);opacity:0;transition:opacity var(--dur-2) var(--ease)}" +
+  ".hf:hover .hf-toggle,.hf .hf-toggle:focus-visible,.hf[data-paused] .hf-toggle{opacity:1}" +
   ".hf .hf-toggle:hover{color:var(--on-band)}" +
   ".hf .hf-toggle:focus-visible{outline:var(--focus-width) solid var(--focus-on-band);outline-offset:-2px}" +
   "@media (max-width:47.99rem){.hf .hf-toggle{bottom:calc((40px * var(--fz) - 2.75rem) / 2);inset-inline-end:calc(var(--space-3) - .75rem)}}";
@@ -52,7 +57,8 @@ export function startFilm(): () => void {
   let drawn = false;
   let starting = false;
   let timer = 0;
-  const later = (fn: () => void) => (window.requestIdleCallback ? window.requestIdleCallback(fn, { timeout: 400 }) : window.setTimeout(fn, 0));
+  // the next frame, not the next idle moment: the film starts as soon as it is drawn
+  const later = (fn: () => void) => requestAnimationFrame(() => window.setTimeout(fn, 0));
 
   const running = () =>
     root.getAnimations({ subtree: true }).filter((a) => "animationName" in a && String((a as CSSAnimation).animationName).startsWith("hfk-"));
@@ -182,6 +188,13 @@ export function startFilm(): () => void {
     run();
   };
   toggle?.addEventListener("click", press);
+  // a click on the film itself pauses it and plays it again, as on a video (the stage is inert,
+  // so the click lands on the figure)
+  const tap = (event: MouseEvent) => {
+    if (!on || (toggle && toggle.contains(event.target as Node))) return;
+    press();
+  };
+  root.addEventListener("click", tap);
 
   begin();
 
@@ -192,6 +205,7 @@ export function startFilm(): () => void {
     reduce.removeEventListener("change", motion);
     phone.removeEventListener("change", layout);
     toggle?.removeEventListener("click", press);
+    root.removeEventListener("click", tap);
     window.clearTimeout(timer);
   };
 }
