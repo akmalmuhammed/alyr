@@ -31,6 +31,8 @@ type State = {
   steps: string[];
   step: string;
   finished: boolean;
+  // The language ALYR writes to the owner in (a reminder to finish setting up).
+  lang?: string;
   services: Service[];
   hours: Period[];
   quote: Quote;
@@ -241,6 +243,18 @@ export default function Start() {
     else if (step !== "loading") writeDraft(null);
   }, [step, email, token, kind, form]);
 
+  // ALYR writes to the owner in the language it has on record (a reminder to finish setup), so
+  // the record follows the language they are reading this in.
+  useEffect(() => {
+    if (!state || !state.lang || state.lang === lang) return;
+    let alive = true;
+    const first = setTimeout(async () => {
+      const answer = await call<State>("/api/onboarding/state", "PATCH", { lang }).catch(() => null);
+      if (alive && answer?.ok) setState(answer.data);
+    }, 0);
+    return () => { alive = false; clearTimeout(first); };
+  }, [state, lang]);
+
   function switchLang() {
     const next = lang === "en" ? "ar" : "en";
     setLang(next);
@@ -287,7 +301,7 @@ export default function Start() {
   const createBusiness = () => guard(async () => {
     const answer = await call("/api/onboarding/business", "POST", {
       signup_token: token, owner_name: form.owner, name: form.name, name_ar: form.nameAr, type: kind, area: form.area,
-      accepted_terms: termsList.map((v) => v.id),
+      accepted_terms: termsList.map((v) => v.id), lang,
     });
     if (answer.status === 401) { setStep("account"); return setError(t.basics.expired); }
     if (answer.status === 422) {

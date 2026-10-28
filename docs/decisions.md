@@ -56,6 +56,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-063 | Order businesses get a self-serve onboarding path (a third way, `orders`) made of thin screens over the Catalog's own APIs; one flow for both doors, automatic first, money later | Accepted |
 | D-064 | The owner's test order is marked in the database (a trigger sets `orders.is_test`), counted nowhere (a guard test reads every query), and cancelled with its stock returned when the test ends | Accepted |
 | D-067 | Terms and the privacy notice are versions ALYR publishes; an owner accepts them at sign-up and again when a new one is published, in an append-only record | Accepted |
+| D-068 | An owner who stops partway through setup gets two emails to come back, then none, and can stop them from the link; the funnel counts them | Accepted |
 
 ---
 
@@ -1368,3 +1369,22 @@ Nothing claims more than the page, as before.
 **Data.** The address and browser of the owner are stored with the acceptance, in the Qatar database, as evidence, for as long as the business exists. Add this to the record of processing (ALY-120).
 
 **Revisit when** the lawyer's agreement is ready (publish it), when a second person per business must accept for themselves (staff terms), or when an owner who will not accept must be stopped (the lawyer's call).
+
+---
+
+## D-068 · An owner who stops partway through setup gets two emails to come back, then none, and can stop them from the link
+**Date** 28 Oct 2026 · **Status** Accepted (built under the founder's instruction of 28 Oct to finish automatic onboarding; the shape is the issue's own) · Linear ALY-171, epic ALY-163 · Spec `specs/032-resume-reminders/spec.md` · Builds on D-031, D-049 (the funnel, ALY-169) and D-029 (email)
+
+**Where we were.** The step an owner stopped on was saved on the business, so `/start` reopened there, but nothing brought them back. The funnel could show where owners go quiet (ALY-169) and could do nothing about it.
+
+**The decision.**
+- **Two emails, then none.** One 24 hours after the owner last moved in setup, naming the next step with a link to `/start`; a second after three days (and a day after the first). Never a third, never after setup is finished or the business is live, never when the owner switched them off.
+- **The owner's language, kept on the business.** The sign-up screen sends the language it is in, and `/start` keeps the record equal to the screen after every switch, so the email is written in the language they read (English or Arabic, not both). The words for every step of every way are in `core/resume.py`.
+- **Stopping is one click from the email, no sign-in.** The link at the foot is a signed token for that business and that purpose (a fourth purpose beside order, booking and document; none opens another's page), valid a year, with no name or address in it. The record of reminders holds no address.
+- **At most once.** The reminder is recorded before it is sent and never retried; a missed reminder is better than two. Which businesses are due is a database function that reads across every business as the table owner, because the worker has none in scope; a second worker cannot send the same one (unique per business and number).
+- **Counted in the funnel.** The back office sees how many reminders went and how many owners came back (opened setup again after one).
+- **Email only for now.** WhatsApp waits for ALYR's own live number and an approved template. The button opens `/start`, where the owner enters the code ALYR emails them; a one-tap sign-in link is not added.
+
+**Chosen over** a daily digest of stuck businesses for the founder to chase by hand (it does not scale and the owner hears nothing), a drip of five or more emails (an owner who has not come back after two will not be won by more, and the sign-up address is ALYR's to protect), a magic sign-in link in the email (a sign-in token in an inbox is a bigger security decision than a reminder is worth), and guessing the language from the address or the business name.
+
+**Revisit when** ALYR has its own live WhatsApp number (the same reminder there, as a template), when the funnel shows the second email brings nobody back (drop it) or the first brings few (change the wording or the time), or when a one-tap sign-in is wanted for other reasons.
