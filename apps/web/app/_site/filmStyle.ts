@@ -6,7 +6,7 @@
 
 export const FILM_SCENE_CSS = `
 .hf-ib { position: relative; flex: 1; overflow: hidden; }
-.hf .hf-ibr { position: absolute; inset-inline: 0; top: 0; height: 54px; align-content: center; transform: translateY(calc(var(--r) * 1px)); }
+.hf .hf-ibr { position: absolute; inset-inline: 0; top: 0; height: 54px; padding-block: 0; align-content: center; transform: translateY(calc(var(--r) * 1px)); }
 .hf .sf-row-line.hf-sw { display: grid; }
 .hf-chat { position: relative; flex: 1; overflow: hidden; background: var(--d-chat); }
 .hf-th { position: absolute; inset: 0; transform: translateY(var(--y)); }
