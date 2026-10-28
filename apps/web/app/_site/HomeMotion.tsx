@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
+import { PLAY } from "./pace";
 
 // GSAP and its plugins arrive in their own chunk, only when motion is wanted and only
 // after the first paint, so they never hold up the first screen.
@@ -47,7 +48,28 @@ export function HomeMotion() {
     const idle = window.requestIdleCallback
       ? (run: () => void) => window.requestIdleCallback(run, { timeout: 1200 })
       : (run: () => void) => window.setTimeout(run, 200);
-    const start = () => idle(() => setChoreograph(true));
+    // The hero's film (film.ts) and its tracks arrive in their own chunk, after load, like the
+    // choreography: the first paint is its still.
+    let stopFilm: (() => void) | null = null;
+    let gone = false;
+    undo.push(() => {
+      gone = true;
+      stopFilm?.();
+    });
+    // The film's still (the ALYR Agent home at 16:20) holds while the page settles: the film is
+    // drawn and starts half a beat after the choreography, as the hero's live figure's first
+    // event did, so its work never competes with the first screen.
+    let filmTimer = 0;
+    undo.push(() => window.clearTimeout(filmTimer));
+    const start = () =>
+      idle(() => {
+        setChoreograph(true);
+        filmTimer = window.setTimeout(() => {
+          void import("./film").then(({ startFilm }) => {
+            if (!gone) stopFilm = startFilm();
+          });
+        }, PLAY.beat / 2);
+      });
     if (document.readyState === "complete") start();
     else window.addEventListener("load", start, { once: true });
     undo.push(() => window.removeEventListener("load", start));
