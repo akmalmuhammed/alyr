@@ -6,8 +6,11 @@
    part at once, when the figure is substantially in view; on a phone each part as it comes
    into view, its delays counted from its own first beat (`--t0`). The HTML is the end state; start
    states exist only under `.motion`, so without scripts or with reduced motion every figure
-   is complete. Every delay is a number of `--stagger` steps (60 ms); every duration a
-   `--dur-*` token. It plays once and ends before 3 s. */
+   is complete. Every delay is a number of `--play-stagger` beats; every duration a `--play-*`
+   token, so `--pace` tunes it (tokens.json, motion.pace). It ends by 1.8 s at pace 1 (2.3 s
+   at 1.3), holds while its new words are read, fades and plays again until its Pause control
+   stops it (founder, 26 Oct 2026: motion always on; loops.ts, and the cycle's rules inline in
+   loopStyle.ts). */
 
 .sig-sec .built-head { max-width: 50rem; }
 .sig { min-width: 0; }
@@ -117,29 +120,29 @@
   .motion .lo .lo-b:not(.is-in) .lo-dim { opacity: 1; }
 
   /* 0 to 600 ms: Aisha's phone, then Mariam's, then the stock card, along 45 degrees */
-  .motion .sig .sig-part.is-in { animation: sig-arrive var(--dur-3) var(--ease) both; animation-delay: calc(var(--p, 0) * var(--stagger)); }
+  .motion .sig .sig-part.is-in { animation: sig-arrive var(--play-3) var(--ease) both; animation-delay: calc(var(--p, 0) * var(--play-stagger)); }
   /* 600 ms: both bars pressed at once; 720 ms: "Placing your order…" */
-  .motion .lo .is-in .lo-bar { animation: sig-hold var(--dur-1) linear both, sig-out var(--dur-2) var(--ease) forwards; animation-delay: 0s, calc((28 - var(--t0, 0)) * var(--stagger)); }
-  .motion .lo .lo-b.is-in .lo-bar { animation-delay: 0s, calc((30 - var(--t0, 0)) * var(--stagger)); }
-  .motion .lo .is-in .lo-press { animation: sig-press var(--dur-2) var(--spring) both; animation-delay: calc((10 - var(--t0, 0)) * var(--stagger)); }
-  .motion .lo .is-in .lo-t1 { animation: sig-out var(--dur-1) var(--ease) both; animation-delay: calc((12 - var(--t0, 0)) * var(--stagger)); }
-  .motion .lo .is-in .lo-t2 { animation: sig-in var(--dur-1) var(--ease) both; animation-delay: calc((12 - var(--t0, 0)) * var(--stagger)); }
+  .motion .lo .is-in .lo-bar { animation: sig-hold var(--play-1) linear both, sig-out var(--play-2) var(--ease) forwards; animation-delay: 0s, calc((28 - var(--t0, 0)) * var(--play-stagger)); }
+  .motion .lo .lo-b.is-in .lo-bar { animation-delay: 0s, calc((30 - var(--t0, 0)) * var(--play-stagger)); }
+  .motion .lo .is-in .lo-press { animation: sig-press var(--play-2) var(--spring) both; animation-delay: calc((10 - var(--t0, 0)) * var(--play-stagger)); }
+  .motion .lo .is-in .lo-t1 { animation: sig-out var(--play-1) var(--ease) both; animation-delay: calc((12 - var(--t0, 0)) * var(--play-stagger)); }
+  .motion .lo .is-in .lo-t2 { animation: sig-in var(--play-1) var(--ease) both; animation-delay: calc((12 - var(--t0, 0)) * var(--play-stagger)); }
   /* 960 ms: the sale's row wipes into the log from the top */
-  .motion .lo .is-in .lo-new { animation: sig-wipe var(--dur-3) var(--ease) both; animation-delay: calc((16 - var(--t0, 0)) * var(--stagger)); }
+  .motion .lo .is-in .lo-new { animation: sig-wipe var(--play-3) var(--ease) both; animation-delay: calc((16 - var(--t0, 0)) * var(--play-stagger)); }
   /* 1200 ms: 1 leaves up along 45 degrees; 0 arrives from the other side */
-  .motion .lo .is-in .lo-d1 { animation: sig-hold var(--dur-1) linear both, sig-leave var(--dur-3) var(--ease) forwards; animation-delay: 0s, calc((20 - var(--t0, 0)) * var(--stagger)); }
-  .motion .lo .is-in .lo-d0 { animation: sig-enter var(--dur-3) var(--ease) both; animation-delay: calc((22 - var(--t0, 0)) * var(--stagger)); }
-  .motion .lo .is-in .lo-out { animation: sig-in var(--dur-2) var(--ease) both; animation-delay: calc((26 - var(--t0, 0)) * var(--stagger)); }
+  .motion .lo .is-in .lo-d1 { animation: sig-hold var(--play-1) linear both, sig-leave var(--play-3) var(--ease) forwards; animation-delay: 0s, calc((20 - var(--t0, 0)) * var(--play-stagger)); }
+  .motion .lo .is-in .lo-d0 { animation: sig-enter var(--play-3) var(--ease) both; animation-delay: calc((22 - var(--t0, 0)) * var(--play-stagger)); }
+  .motion .lo .is-in .lo-out { animation: sig-in var(--play-2) var(--ease) both; animation-delay: calc((26 - var(--t0, 0)) * var(--play-stagger)); }
   /* 1560 ms: the one Volt tick */
-  .motion .lo .is-in .lo-new .lo-tick { animation: sig-tick var(--dur-2) var(--spring) both; animation-delay: calc((26 - var(--t0, 0)) * var(--stagger)); }
+  .motion .lo .is-in .lo-new .lo-tick { animation: sig-tick var(--play-2) var(--spring) both; animation-delay: calc((26 - var(--t0, 0)) * var(--play-stagger)); }
   /* 1680 ms: Aisha's order is received, and her row no longer offers the last one */
-  .motion .lo .is-in .lo-res { animation: sig-rise var(--dur-2) var(--ease) both; animation-delay: calc((28 - var(--t0, 0)) * var(--stagger)); }
-  .motion .lo .lo-a.is-in .lo-pill, .motion .lo .lo-a.is-in .lo-step { animation: sig-hold var(--dur-1) linear both, sig-out var(--dur-2) var(--ease) forwards; animation-delay: 0s, calc((28 - var(--t0, 0)) * var(--stagger)); }
+  .motion .lo .is-in .lo-res { animation: sig-rise var(--play-2) var(--ease) both; animation-delay: calc((28 - var(--t0, 0)) * var(--play-stagger)); }
+  .motion .lo .lo-a.is-in .lo-pill, .motion .lo .lo-a.is-in .lo-step { animation: sig-hold var(--play-1) linear both, sig-out var(--play-2) var(--ease) forwards; animation-delay: 0s, calc((28 - var(--t0, 0)) * var(--play-stagger)); }
   /* 1800 ms: Mariam's row greys, says Sold out, and she is told */
-  .motion .lo .lo-b.is-in .lo-dim { animation: sig-dim var(--dur-3) var(--ease) both; animation-delay: calc((30 - var(--t0, 0)) * var(--stagger)); }
-  .motion .lo .lo-b.is-in .lo-pill, .motion .lo .lo-b.is-in .lo-step { animation: sig-hold var(--dur-1) linear both, sig-out var(--dur-2) var(--ease) forwards; animation-delay: 0s, calc((30 - var(--t0, 0)) * var(--stagger)); }
-  .motion .lo .is-in .lo-off { animation: sig-in var(--dur-2) var(--ease) both; animation-delay: calc((32 - var(--t0, 0)) * var(--stagger)); }
-  .motion .lo .is-in .lo-notice { animation: sig-rise var(--dur-3) var(--ease) both; animation-delay: calc((30 - var(--t0, 0)) * var(--stagger)); }
+  .motion .lo .lo-b.is-in .lo-dim { animation: sig-dim var(--play-3) var(--ease) both; animation-delay: calc((30 - var(--t0, 0)) * var(--play-stagger)); }
+  .motion .lo .lo-b.is-in .lo-pill, .motion .lo .lo-b.is-in .lo-step { animation: sig-hold var(--play-1) linear both, sig-out var(--play-2) var(--ease) forwards; animation-delay: 0s, calc((30 - var(--t0, 0)) * var(--play-stagger)); }
+  .motion .lo .is-in .lo-off { animation: sig-in var(--play-2) var(--ease) both; animation-delay: calc((32 - var(--t0, 0)) * var(--play-stagger)); }
+  .motion .lo .is-in .lo-notice { animation: sig-rise var(--play-3) var(--ease) both; animation-delay: calc((30 - var(--t0, 0)) * var(--play-stagger)); }
 }
 
 /* ------------------------------------------------------------------------- narrower */
@@ -204,18 +207,18 @@
   .motion .pf .sig-part:not(.is-in) .pp-in, .motion .pf .sig-part:not(.is-in) .pf-done, .motion .pf .sig-part:not(.is-in) .pf-doc,
   .motion .pf .sig-part:not(.is-in) .pf-sent { opacity: 0; }
 
-  .motion .pf .is-in .pf-press { animation: sig-press var(--dur-2) var(--spring) both; animation-delay: calc((10 - var(--t0, 0)) * var(--stagger)); }
-  .motion .pf .is-in .pf-done { animation: sig-rise var(--dur-2) var(--ease) both; animation-delay: calc((12 - var(--t0, 0)) * var(--stagger)); }
+  .motion .pf .is-in .pf-press { animation: sig-press var(--play-2) var(--spring) both; animation-delay: calc((10 - var(--t0, 0)) * var(--play-stagger)); }
+  .motion .pf .is-in .pf-done { animation: sig-rise var(--play-2) var(--ease) both; animation-delay: calc((12 - var(--t0, 0)) * var(--play-stagger)); }
   .motion .pf .pf-paper.is-in .pf-sheet {
     clip-path: polygon(calc(100% + 3rem) -3rem, calc(100% + 3rem - var(--wipe)) -3rem, calc(100% + 3rem) calc(var(--wipe) - 3rem));
-    animation: pf-wipe var(--dur-4) var(--ease) both; animation-delay: calc((16 - var(--t0, 0)) * var(--stagger));
+    animation: pf-wipe var(--play-4) var(--ease) both; animation-delay: calc((16 - var(--t0, 0)) * var(--play-stagger));
   }
   .motion[dir="rtl"] .pf .pf-paper:not(.is-in) .pf-sheet { clip-path: polygon(0 0, 0 0, 0 0); }
   .motion[dir="rtl"] .pf .pf-paper.is-in .pf-sheet { clip-path: polygon(-3rem -3rem, calc(var(--wipe) - 3rem) -3rem, -3rem calc(var(--wipe) - 3rem)); }
-  .motion .pf .is-in .pp-in { animation: sig-rise var(--dur-2) var(--ease) both; animation-delay: calc((18 + var(--k, 0) - var(--t0, 0)) * var(--stagger)); }
-  .motion .pf .is-in .pf-doc { animation: sig-rise var(--dur-3) var(--ease) both; animation-delay: calc((34 - var(--t0, 0)) * var(--stagger)); }
-  .motion .pf .is-in .pf-sent { animation: sig-in var(--dur-2) var(--ease) both; animation-delay: calc((44 - var(--t0, 0)) * var(--stagger)); }
-  .motion .pf .is-in .pf-sent-tick { animation: sig-tick var(--dur-2) var(--spring) both; animation-delay: calc((44 - var(--t0, 0)) * var(--stagger)); }
+  .motion .pf .is-in .pp-in { animation: sig-rise var(--play-2) var(--ease) both; animation-delay: calc((18 + var(--k, 0) - var(--t0, 0)) * var(--play-stagger)); }
+  .motion .pf .is-in .pf-doc { animation: sig-rise var(--play-3) var(--ease) both; animation-delay: calc((34 - var(--t0, 0)) * var(--play-stagger)); }
+  .motion .pf .is-in .pf-sent { animation: sig-in var(--play-2) var(--ease) both; animation-delay: calc((44 - var(--t0, 0)) * var(--play-stagger)); }
+  .motion .pf .is-in .pf-sent-tick { animation: sig-tick var(--play-2) var(--spring) both; animation-delay: calc((44 - var(--t0, 0)) * var(--play-stagger)); }
 }
 
 @media (max-width: 75rem) {

@@ -26,7 +26,7 @@
       "arabic": "Arabic",
       "caveats": {
         "bookings": "Today it takes one booking at a time for the whole business.",
-        "agent": "Its suggestions come from fixed, written rules over the shop's own records; the owner decides. A weekly report on WhatsApp starts once WhatsApp approves its wording."
+        "agent": "Its suggestions come from counts and comparisons of the shop's own records; the owner decides. A weekly report on WhatsApp starts once WhatsApp approves its wording."
       },
       "noApp": "Customers order and book on a page that opens from the WhatsApp chat, with no app, no account and no password."
     }

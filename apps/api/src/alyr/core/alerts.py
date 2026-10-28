@@ -1,8 +1,12 @@
-"""Alert rules and how a person is told (ALY-121, spec 022).
+"""Alert rules and how a person is told (ALY-121, spec 022, D-062).
 
-The job runner evaluates the rules every minute. A rule that starts to fail sends one message;
-while it lasts a reminder goes out every two hours; when it clears, one more says so. State lives
-in `alert_state`, so a restart does not repeat an alert.
+The job runner evaluates the rules every minute. They watch what an uptime check cannot see:
+messages waiting, jobs giving up, sends failing, customers' messages no longer arriving. A dead
+or hung runner cannot report itself; the uptime checks on `/health/worker` catch that.
+
+A rule that starts to fail sends one message; while it lasts a reminder goes out every two
+hours; when it clears, one more says so. State lives in `alert_state`, so a restart does not
+repeat an alert.
 
 An alert holds a rule's name, counts and ages. It never holds a name, a phone number or a
 message, because it leaves ALYR (ntfy, email) and hard rule 2 says what may leave.
@@ -12,17 +16,21 @@ import asyncio
 import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import httpx
 
 from alyr.config import get_settings
-from alyr.core import health, mail
+from alyr.core import mail
+from alyr.core.inbound import INBOUND
 from alyr.core.outbound import SEND
 from alyr.db import Database
 
 log = logging.getLogger("alyr.alerts")
 
 REMIND_EVERY = timedelta(hours=2)
+# A due job that has waited longer than this means messages are late.
+QUEUE_LATE_AFTER_SECONDS = 300
 CHECK_EVERY_SECONDS = 60
 # Sends: fire when more than this share failed in the window, once enough were tried.
 SEND_FAIL_SHARE = 0.05
@@ -33,6 +41,10 @@ BUSY_HOURS = range(9, 22)
 
 # Tests replace this with an httpx.MockTransport; nothing else should.
 transport: httpx.AsyncBaseTransport | None = None
+
+
+def doha_hour(now: datetime) -> int:
+    return now.astimezone(ZoneInfo("Asia/Qatar")).hour
 
 
 @dataclass(frozen=True)
@@ -50,17 +62,14 @@ async def evaluate(db: Database, now: datetime | None = None) -> dict[str, Alert
     now = now or datetime.now(UTC)
     results: dict[str, Alert | None] = {}
 
-    queue = await health.queue_numbers(db)
-    late = queue["oldest_due_seconds"] > health.QUEUE_LATE_AFTER_SECONDS
-    results["queue_late"] = Alert(
-        "queue_late", "Messages are waiting",
-        f"The oldest due job has waited {queue['oldest_due_seconds'] // 60} minutes "
-        f"({queue['queued']} queued).",
-        "Check /health/worker and the runner's logs; restart the container if it is silent.",
-    ) if late else None
-
     async with db.unscoped() as conn, conn.transaction():
+        # The runner's own setting lets these queries see every shop's jobs; they read counts
+        # and times only, never a payload.
         await conn.execute("select set_config('app.worker', 'on', true)")
+        queue = await conn.fetchrow(
+            "select coalesce(extract(epoch from now() - min(run_at))::int, 0) as oldest_due, "
+            "count(*) as due from jobs where status = 'queued' and run_at <= now()"
+        )
         parked = await conn.fetchval(
             "select count(*) from jobs where status = 'failed' "
             "and finished_at > now() - interval '30 minutes'"
@@ -74,6 +83,22 @@ async def evaluate(db: Database, now: datetime | None = None) -> dict[str, Alert
         real_numbers = await conn.fetchval(
             "select count(*) from channel_numbers where channel = 'meta'"
         )
+        # The webhook only queues a customer's message (routes/whatsapp_webhook.py), so the
+        # newest such job is when Meta last reached us with one, for a shop on a real number.
+        last_inbound = await conn.fetchval(
+            "select extract(epoch from now() - max(created_at))::int from jobs "
+            "where kind = $1 and tenant_id in "
+            "(select tenant_id from channel_numbers where channel = 'meta')",
+            INBOUND,
+        )
+
+    oldest = queue["oldest_due"]
+    results["queue_late"] = Alert(
+        "queue_late", "Messages are waiting",
+        f"The oldest due job has waited {oldest // 60} minutes ({queue['due']} due).",
+        "Check /health/worker and the worker pool's logs; restart it if it is silent.",
+    ) if oldest > QUEUE_LATE_AFTER_SECONDS else None
+
     results["job_parked"] = Alert(
         "job_parked", "A job gave up",
         f"{parked} job(s) used all their attempts in the last 30 minutes.",
@@ -91,12 +116,11 @@ async def evaluate(db: Database, now: datetime | None = None) -> dict[str, Alert
 
     # Only once a real number exists, and only when customers are likely to be writing.
     quiet = None
-    if real_numbers and health.doha_hour(now) in BUSY_HOURS:
-        age = await health.heartbeat_age(db, health.WEBHOOK)
-        if age is None or age > WEBHOOK_QUIET_AFTER_SECONDS:
+    if real_numbers and doha_hour(now) in BUSY_HOURS:
+        if last_inbound is None or last_inbound > WEBHOOK_QUIET_AFTER_SECONDS:
             quiet = Alert(
                 "webhook_quiet", "No WhatsApp message received",
-                "Nothing has reached the webhook for over 15 minutes in opening hours.",
+                "No customer message has arrived for over 15 minutes in opening hours.",
                 "Check the webhook subscription in Meta's app dashboard and /health/ready.",
                 urgent=False,
             )

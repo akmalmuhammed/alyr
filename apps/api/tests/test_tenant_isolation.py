@@ -26,9 +26,8 @@ GLOBAL_TABLES = {
     # What a client paid ALYR, before their products open (ALY-212, D-051): the owner reads
     # their own client's, only the back office writes. Forced row-level security.
     "client_payments",
-    # When each background process last checked in, and which alerts are firing (ALY-121):
-    # platform records with no customer data.
-    "heartbeats", "alert_state",
+    # Which alerts are firing (ALY-121, D-062): a platform record with no customer data.
+    "alert_state",
 }
 
 

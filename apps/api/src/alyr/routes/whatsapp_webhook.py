@@ -1,6 +1,5 @@
 import hmac
 import json
-import logging
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 
@@ -11,9 +10,6 @@ from alyr.channels.meta import (
     verify_signature,
 )
 from alyr.config import get_settings
-from alyr.core import health
-
-log = logging.getLogger("alyr.webhook")
 
 router = APIRouter(prefix="/webhooks/whatsapp", tags=["whatsapp"])
 
@@ -39,12 +35,6 @@ async def receive(request: Request) -> dict:
 
     payload = json.loads(raw)
     inbound = request.app.state.inbound
-    # Proof that Meta can still reach us, for the "no webhook for a while" alert. A failure
-    # here must never cost a customer's message, so it is swallowed.
-    try:
-        await health.beat(request.app.state.db, health.WEBHOOK, at_most_every=30)
-    except Exception:  # noqa: BLE001
-        log.warning("could not record the webhook heartbeat")
     # Meta expects a fast 200. Messages are only queued here; a job does the work.
     for update in parse_user_id_updates(payload):
         await inbound.handle_user_id_update(update)

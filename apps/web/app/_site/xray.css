@@ -152,21 +152,21 @@
 @keyframes xr-blue { 0%, 50% { stroke: var(--concrete); } 100% { stroke: var(--wa-tick); } }
 
 @media (prefers-reduced-motion: no-preference) {
-  .al-js .xr-item::before { transition: scale var(--dur-3) var(--ease); }
-  .al-js .xr-item h4 { transition: color var(--dur-2) var(--ease); }
-  .xr-phone { transition: inset-inline-end 700ms var(--ease), scale 700ms var(--ease); }
-  .xr-desk, .xr-path { translate: calc(var(--dir) * 1.5rem) 0; transition: opacity var(--dur-3) var(--ease), translate 700ms var(--ease), visibility 0s linear var(--dur-3); }
-  .xr[data-layer="team"] .xr-desk, .xr[data-layer="xray"] .xr-path { translate: 0 0; transition: opacity var(--dur-3) var(--ease) 120ms, translate 700ms var(--ease) 120ms, visibility 0s; }
-  .xr .wa-thread > li { animation: xr-in 380ms var(--ease) both; animation-delay: calc(var(--i, 0) * 160ms + 80ms); }
-  .xr-side > li { animation: xr-row 380ms var(--ease) both; animation-delay: calc(var(--i, 0) * 120ms + 240ms); }
+  .al-js .xr-item::before { transition: scale var(--play-3) var(--ease); }
+  .al-js .xr-item h4 { transition: color var(--play-2) var(--ease); }
+  .xr-phone { transition: inset-inline-end var(--play-4) var(--ease), scale var(--play-4) var(--ease); }
+  .xr-desk, .xr-path { translate: calc(var(--dir) * 1.5rem) 0; transition: opacity var(--play-3) var(--ease), translate var(--play-4) var(--ease), visibility 0s linear var(--play-3); }
+  .xr[data-layer="team"] .xr-desk, .xr[data-layer="xray"] .xr-path { translate: 0 0; transition: opacity var(--play-3) var(--ease) var(--play-1), translate var(--play-4) var(--ease) var(--play-1), visibility 0s; }
+  .xr .wa-thread > li { animation: xr-in calc(var(--play-2) + var(--play-1)) var(--ease) both; animation-delay: calc((3 * var(--i, 0) + 1) * var(--play-stagger)); }
+  .xr-side > li { animation: xr-row calc(var(--play-2) + var(--play-1)) var(--ease) both; animation-delay: calc((2 * var(--i, 0) + 4) * var(--play-stagger)); }
   /* X-ray: the fold sweeps across the phone once per feature, and a pulse runs down the path */
   .xr[data-layer="xray"] .xr-sweep {
     background-image: linear-gradient(135deg, transparent 44%, color-mix(in srgb, var(--volt) 14%, transparent) 49.6%, var(--volt) 49.7%, var(--volt) 50.3%, transparent 50.4%);
-    background-size: 260% 260%; animation: xr-sweep 1100ms var(--ease) both;
+    background-size: 260% 260%; animation: xr-sweep calc(1.5 * var(--play-4)) var(--ease) both;
   }
-  .xr[data-layer="xray"] .xr-pulse { animation: xr-travel 1400ms var(--ease) both 200ms; }
+  .xr[data-layer="xray"] .xr-pulse { animation: xr-travel calc(2 * var(--play-4)) var(--ease) both var(--play-2); }
   /* nothing lost: the clock waits, then the message goes */
-  .xr[data-layer="xray"] .xr-state.is-wait .xr-clock { display: block; animation: xr-clock 2200ms steps(1, end) both; }
-  .xr[data-layer="xray"] .xr-state.is-wait .wa-ticks { animation: xr-sent 2200ms steps(1, end) both; }
-  .xr[data-layer="xray"] .xr-state.is-read .wa-ticks { animation: xr-blue 1600ms var(--ease) both; }
+  .xr[data-layer="xray"] .xr-state.is-wait .xr-clock { display: block; animation: xr-clock calc(3 * var(--play-4)) steps(1, end) both; }
+  .xr[data-layer="xray"] .xr-state.is-wait .wa-ticks { animation: xr-sent calc(3 * var(--play-4)) steps(1, end) both; }
+  .xr[data-layer="xray"] .xr-state.is-read .wa-ticks { animation: xr-blue calc(2 * var(--play-4)) var(--ease) both; }
 }

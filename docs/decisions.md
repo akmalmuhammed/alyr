@@ -34,7 +34,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-026 | The homepage is about ALYR the company; ALYR Chat has its own page | Accepted |
 | D-027 | One workspace for every product, driven by a catalogue; ALYR has a back office | Accepted |
 | D-028 | Every item has one person responsible, and the team's work is on the record | Accepted |
-| D-029 | Email at @alyr.qa: Cloudflare Email Routing in, Resend out | Accepted |
+| D-029 | Email at @alyr.qa: Cloudflare Email Routing in, Resend out | Mail in replaced by D-061 (28 Oct 2026); Resend out stands |
 | D-030 | A weekly result report to the owner, one section per product | Accepted |
 | D-031 | Self-serve onboarding: sign up, create the business, start from a preset, try it on a private test line | Accepted |
 | D-032 | Prices are set per client from the back office: a price list, a quote per client, published live to the owner | Accepted |
@@ -46,6 +46,10 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-039 | The Catalog (items, stock, photos) is built complete before go-live; photos on Cloudflare R2; free now, charged by usage later | Accepted |
 | D-042 | Documents (receipts, invoices and the rest) are one engine: gapless numbers, issued paper nobody can change, Arabic first, a PDF drawn by fpdf2 and kept in the database; free now, metered later | Accepted |
 | D-046 | The public site adds ALYR Shelf (the Catalog) and ALYR Docs (Documents), each with its own page; Payroll leaves the site until it is built; every product's state is "Set up for you" | Accepted |
+| D-056 | Search and AI visibility: be found, described correctly and contacted in Qatar, in search and AI assistants; profiles and verification switch on from settings | Accepted |
+| D-058 | The homepage hero's ALYR Agent figure (and /agent's) moves continuously, the one exception to "plays once", with a pause button and calm pacing | Accepted |
+| D-059 | Motion is always on: the site's figures (How we work, the products frame, the signature figures, with the flows, demos and the live Agent) keep playing, each with a Pause control; text arrives once | Accepted |
+| D-061 | Company mail moves to Zoho Mail (free plan): hello@ with akmal@ and security@ as aliases, and a mailbox for Beevi Jinan, the registered owner; Resend still sends the product's email | Accepted |
 
 ---
 
@@ -1108,19 +1112,83 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 
 **Revisit when** Azure credits arrive (ALY-55, ALY-63), or the first paying client who has not agreed to data outside Qatar.
 
+## D-056 · Search and AI visibility
+**Date** 25 Oct 2026 · **Status** Accepted (founder: "improve and implement", 25 Oct) · Linear ALY-227 · Plan and audit: `docs/growth/visibility.md`
 
-## D-053 · Monitoring is built into ALYR and free first; outside tools see only counts
-**Date** 24 Oct 2026 · **Status** Accepted (the founder, 24 Oct: "i wanna start free then pay once we scale") · Linear ALY-121 · Spec `specs/022-monitoring/spec.md` · Runbook `docs/runbooks/monitoring.md`
+**Decision.**
+- The goal is to be found, described correctly and contacted when an owner in Qatar, or someone asking for them, searches or asks an AI assistant, in Arabic and English.
+- Global keywords are not a target; Qatar comes first, then the GCC.
+- Authority (other people mentioning ALYR) is the biggest gap, so most of the work is off the site: profiles, Google Business Profile, forums, partners, press and original data, in that order.
 
-**The decision.** Health checks, a worker heartbeat and the alert rules are part of the API and its job runner, stored in two platform tables (`heartbeats`, `alert_state`). Alerts go to a free ntfy topic and to an email through Resend. The Cloudflare Worker that already pings the container every 3 minutes also watches it from outside. A free UptimeRobot account is a second, independent watcher.
+**What changed in code.**
+- The Organization's structured data gains a contact point: the email, and WhatsApp once its number is set.
+- It also gains `sameAs` links to ALYR's profiles, listed in `NEXT_PUBLIC_ALYR_SAME_AS` and added only once each profile exists.
+- Google Search Console and Bing verification tags can be set from `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` and `NEXT_PUBLIC_BING_SITE_VERIFICATION`.
+
+Nothing claims more than the page, as before.
+
+**Kept.**
+- `llms.txt` and the markdown copies stay, although Google ignores `llms.txt`: they cost nothing and agents read them.
+- No fake reviews, no undisclosed posts, no AI claims about the product, no prices before the CR.
+
+## D-058 · The live Agent figure moves continuously
+**Date** 25 Oct 2026 · **Status** Accepted (the founder, 25 Oct 2026, relayed in the work's brief) · Branch `aly-hero-live-motion` · Rules: `.claude/skills/alyr-design/motion.md`, "The one exception" · Log: `docs/framer-review/06-live-motion-log.md`
+
+**Decision.**
+- The ALYR Agent dashboard with the "ALYR · Running" feed beside it (the homepage hero, Qirfa Bakery, and `/agent`'s opening with its three samples) keeps moving, the way the workspace does, instead of playing once and stopping. It is the one named exception to "plays once" (alyr-design principle 10).
+- Each sample plays a script of events the product really performs (order page, order received, order confirmation, ready message, welcome menu, booking page, booking confirmation and details, booking reminder, "Needs a look"), and the dashboard's numbers move with them and stay true to each other. Payment reminders are not automatic, so none is shown being sent.
+
+**Conditions.**
+- A pause button with its name in English and Arabic (WCAG 2.2.2).
+- It stops off screen, in a hidden tab and with reduced motion; reduced motion and no scripts show the settled picture, and the first paint is that picture.
+- About one event every 3 to 5 s; Volt only on what just became true, fading back; no flashing; transforms and opacity only; CLS stays 0.
+
+**Revisit when** a visitor or the founder finds it distracting, or another figure asks to keep moving (that needs his word, not this decision).
+
+---
+## D-059 · Motion is always on: the site's figures keep playing
+**Date** 26 Oct 2026 · **Status** Accepted (the founder, 26 Oct 2026, in his words, relayed in the work's brief: "animation is super fast now make it a bit slower, always it should be always on animations and motions") · Branch `aly-always-on`, stacked on `aly-pace-slower` (PR #142) · Rules: `.claude/skills/alyr-design/motion.md` rule 1 and "Figures that keep playing" · Log: `docs/framer-review/08-always-on-log.md`
+
+**Decision.**
+- "A bit slower" is the pace at 1.3 (PR #142); the live Agent figure's beat now follows it too (`--live-beat`: 5.2 s, 6.5 s on a phone).
+- "Always on": the figures that show the product at work keep playing while they are on screen, instead of playing once and resting: the homepage's How we work cards (the return line drawn again with Improve), the products frame's six tiles, and the signature figures on `/shelf` and `/docs`. The flows, the demos and the live Agent figure already did. This replaces "plays once" (alyr-design principle 10) for figures, and widens D-058 beyond its one figure.
+- Text and sections still arrive once, and the visitor's own controls (the business day's fold, `/chat`'s X-ray, tabs, hovers, presses) are unchanged: looping text would make the page unreadable, and a timer must not move a control under the visitor's hand.
+
+**Conditions** (D-058's, for every looping figure).
+- A Pause control per figure or section, its words in English and Arabic (WCAG 2.2.2), absent without scripts and with reduced motion.
+- It stops off screen and in a hidden tab; reduced motion and no scripts show the finished picture.
+- Its timing comes from the pace tokens, and each finished state holds while its words are read (at least `--dwell-min`).
+- The numbers in a scene stay true to each other on every cycle; no layout shift; the homepage's Lighthouse no worse than before.
+
+**Revisit when** a visitor or the founder finds it distracting, or a figure's cycle reads as too busy (its hold is one token away).
+
+## D-061 · Company mail moves to Zoho Mail
+**Date** 28 Oct 2026 (the move was made on 25 Oct 2026) · **Status** Accepted (the founder, 25 Oct 2026: "i want zoho email", then "i want akmal@alyr.qa running and working receiving and sending") · Replaces the mail-in half of D-029
+
+**Decision.**
+- alyr.qa's mail goes to **Zoho Mail** (free plan, 5 licences, Zoho's `.com` data centre). MX `mx.zoho.com` (10), `mx2` (20), `mx3` (50); SPF `include:zohomail.com` added beside Cloudflare's; DKIM selector `zmail` (2048-bit), verified in Zoho on 26 Oct.
+- One mailbox, `hello@alyr.qa` (the Zoho super administrator), with **akmal@** and **security@** as aliases that receive and send. A second mailbox, **beevi.jinan@alyr.qa**, for the company's registered owner, who holds the Meta business portfolio's admin role and receives Meta's business notices.
+- **Resend still sends the product's email** (sign-in codes, reports, documents) from `send.alyr.qa`, as D-029 says. Its records are untouched.
+- Cloudflare Email Routing is no longer used. Its rules still exist and do nothing (Cloudflare marks it "misconfigured" because the MX records are Zoho's).
+
+**Why.** Forwarding to a personal Gmail could not send as @alyr.qa, and Meta's business verification needed company addresses that work both ways.
+
+**Data.** Zoho is outside Qatar and may hold a customer's or a merchant's message when they write to us: a row in `docs/data-residency.md`. No merchant data is routed through it.
+
+**Revisit when** ALYR needs shared inboxes or more than five mailboxes (Zoho's paid plan, or the startup programme's mail, ALY-55), or a lawyer says company mail must stay in Qatar (ALY-51).
+
+## D-062 · Alert rules live in the worker; health checks and uptime stay with the Google Cloud setup
+**Date** 28 Oct 2026 · **Status** Accepted for review (the founder, 24 Oct 2026: "i wanna start free then pay once we scale"; ntfy parked, alert email later at ops@alyr.qa, he is on call) · Linear ALY-121 · Spec `specs/022-monitoring/spec.md` · Runbook `docs/runbooks/monitoring.md` · Builds on D-060
+
+**The decision.** The four alert rules (late queue, parked job, failing sends, quiet webhook) run inside the worker once a minute and keep their state in one platform table, `alert_state`. Alerts are log lines first, then a push through a free ntfy topic and an email through Resend once those are set. The health routes, the worker heartbeat and the uptime checks are D-060's (`/health/ready`, `/health/worker`, `worker_heartbeats`, Cloud Monitoring); this adds none of its own.
 
 **Why.**
-- The failures that matter here are ours (a late queue, a parked job, a quiet webhook); a generic uptime tool cannot see them, our own checks can.
-- Hard rule 2: an outside error tracker would receive messages and names. Our alerts carry counts and ages only, so the outside services (ntfy, Resend) receive no personal data.
-- Free hobby terms of outside tools are a stopgap, not a plan; the in-house part has no such limit.
+- An uptime check sees whether ALYR answers, not whether messages are going out; these rules see that, from our own tables.
+- Hard rule 2: an alert carries counts and ages only, so ntfy and Resend receive no personal data. A test fails if a customer's phone number or message appears in one.
+- One heartbeat and one set of health routes: the first version of this work (PR #120, 24 Oct) had its own, aimed at the Cloudflare host D-060 retired.
 
-**Costs and risks, said plainly.** ntfy's free service has no delivery guarantee, so email is the second route. UptimeRobot's free plan is for personal and non-profit use; pay (USD 12 a month) at the first paying client. Not deployed, so none of it has run against a phone yet.
+**Costs and risks, said plainly.** Free. ntfy has no delivery guarantee, so email is the second route and the log line the third. A dead worker cannot alert about itself; the uptime check on `/health/worker` covers that. Not yet sent to a real phone.
 
-**Chosen over** Sentry at once (customer data abroad, one seat, 5,000 errors) and Better Stack (free plan is for personal projects) and Cloudflare Health Checks (Pro plan).
+**Chosen over** an outside error tracker now (customer data abroad), and a second heartbeat table (two answers to one question).
 
-**Revisit when** the first paying client signs (move uptime to a paid plan), a second developer joins, or more than 5,000 errors a month (Sentry with scrubbing).
+**Revisit when** a client SLA exists (a paid pager), or a second worker instance runs (one evaluator, or a lock).

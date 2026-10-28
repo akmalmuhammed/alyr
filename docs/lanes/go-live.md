@@ -40,7 +40,7 @@ Last updated 24 Oct 2026 (site tooling, branch `aly-site-tooling`, `docs/site-au
   GitHub secrets; the `production` environment with him as reviewer; version URLs on for
   `alyr-site`. The steps are in `docs/runbooks/site-deploy.md`, "One-time setup".
   Until then the manual `pnpm site:deploy` (or `wrangler deploy`) still works.
-- Nothing has been tested against Meta. The Meta app exists; its five values are not in `apps/api/.env` yet.
+- **Meta business verification done 28 Oct 2026** (alyr software, CR 255539; domain alyr.qa verified). Next is Tech Provider approval (ALY-52): app settings with the privacy policy URL, two screen recordings, Advanced access to `whatsapp_business_messaging` and `whatsapp_business_management`, then App Review. The steps: `docs/runbooks/meta-tech-provider.md`. The first live round trip on Meta's test number worked on 12 Oct (docs/status.md); the test account's limit is 250 business-initiated conversations a day.
 - The webhook address `api.alyr.online` is a tunnel to the laptop and is down whenever the laptop is.
 - The public site is served from Cloudflare. `alyr.qa` is the main address and the redirect switch is on (since 12 Oct; `docs/status.md`).
 

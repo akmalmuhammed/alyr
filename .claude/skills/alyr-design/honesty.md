@@ -25,13 +25,23 @@ Until a model is in the product (D-012, D-035), nothing says or implies AI, not 
 - **Arabic:** ذكي، ذكاء، يتعلم، يفهم، يتوقع، يعرف (of the product)، مساعد، وكيل، خوارزمية.
 - **Visuals:** sparkles, shimmer, gradients on text, glowing brains, typing dots,
   "thinking…" loaders, avatars for the product, a first-person product voice.
-- **Say instead:** the product counts, compares, flags, sorts, suggests and shows the rule.
-  "By rule: …", "RULE · owed 30+ days, no reminder in 7 days · 4 customers". The owner is
-  the one who knows.
+- **Say instead:** the product counts, compares, flags, sorts and suggests, and says what it
+  counted or compared, in plain words: "QAR 3,400 owed for over 30 days", "Owed by 3
+  customers. The oldest is Ward Events, 104 days." The owner is the one who knows.
+- **Rule lines: in the product, not on the public site** (founder, 25 Oct 2026: "a new user
+  will not understand what's rule"). The workspace, `/agent-sample`, the report the owner gets
+  and the API keep "RULE · owed 30+ days, no reminder in 7 days · 4 customers" / «القاعدة · …»
+  and "Suggestions, by rule". The public site never says "rule" / «قاعدة» about ALYR (not in
+  copy, meta, `llms.txt`, alt text or a drawing): its Agent showcase passes
+  `ruleLines={false}` and titles the cards "Suggestions" / «اقتراحات»; the feed, the opened
+  card on `/agent` and the report drawn on the site leave the rule line out. Say "reason",
+  "what it counted" or "what it compares" instead. A sentence that truly needs the word about
+  something else may keep it («قاعدة البيانات», the database), and WhatsApp's 24-hour rule is
+  "the 24-hour window".
 - **"Agent" never carries a sentence alone.** Wherever "agent" appears, the same screen,
-  card or post shows a rule line or says "by rules you can check". ALYR (the company) is
-  the agent; ALYR Agent is its screen and report. ALYR Chat and ALYR Bookings send the
-  replies and reminders; ALYR Agent counts them.
+  card or post says what it counted or compared (in the product, its rule line). ALYR (the
+  company) is the agent; ALYR Agent is its screen and report. ALYR Chat and ALYR Bookings send
+  the replies and reminders; ALYR Agent counts them.
 - The API tests enforce part of this (`apps/api/tests/test_agent.py`,
   `test_report_card.py`, `test_agent_samples.py`). Nothing checks `copy.ts` yet; you do.
 
@@ -53,7 +63,7 @@ Until a model is in the product (D-012, D-035), nothing says or implies AI, not 
 | "Hosted in Qatar", "your data stays in Qatar", Azure Qatar Central | Production is not provisioned | "Each business's records are kept apart inside the database itself." |
 | "A local team", "our experts", a founder name or photo | One founder working with agents; no founder on the page (D-034) | "A person from ALYR replies." |
 | A response time ("within the hour"), 24/7, support hours, "whenever you message", written Arabic replies | Not agreed | "A person from ALYR reads every message." |
-| "Registered", "licensed", a legal name, a CR number | Not registered (ALY-59) | "ALYR. Built in Qatar." CR shows only from `TRUST_RECORDS` |
+| "Registered", "licensed", a legal name, a CR number | Not registered (ALY-59) | "ALYR. Built in Qatar." No CR anywhere until it is issued; the on-record slots (`TRUST_RECORDS`) left with the trust section on 25 Oct 2026, so showing a CR is a new decision |
 | "Official WhatsApp partner", "Meta Business Partner", "Tech Provider", the WhatsApp logo, WhatsApp green on ALYR's own surfaces | Not a partner | Footer: "ALYR uses the WhatsApp Business Platform. ALYR is not affiliated with, or endorsed by, WhatsApp or Meta." |
 | Clinics, patients, health data, "appointments, not medical records" | Health data needs the lawyer (ALY-51) | Leave clinics out |
 | Parallel bookings, chairs, tables, party sizes, per-stylist calendars | One booking at a time per business (until ALY-27) | "Two customers can never take the same slot." |

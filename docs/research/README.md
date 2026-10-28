@@ -38,7 +38,7 @@ Full sources that stay where they are:
 ## Studies
 
 <!-- INDEX:START -->
-52 studies. Status: **Current** is in force; **Partly superseded** still has useful parts; **Superseded** is history; **Draft** waits on a decision.
+53 studies. Status: **Current** is in force; **Partly superseded** still has useful parts; **Superseded** is history; **Draft** waits on a decision.
 
 
 ### Strategy and company plans (7)
@@ -80,10 +80,11 @@ Full sources that stay where they are:
 | 2026-10-19 | [Demo shops and five-minute walk-throughs for sales visits](studies/2026-10-19-demo-shops-walkthroughs.md) | Current |
 | 2026-10-17 | [Customer agreement notes: what ALYR may not do before its commercial registration](studies/2026-10-17-customer-agreement-registration-limits.md) | Current |
 
-### Growth: channels, content plans, expansion (5)
+### Growth: channels, content plans, expansion (6)
 
 | Date | Study | Status |
 |---|---|---|
+| 2026-10-25 | [Keyword map: the words owners in Qatar use, in Gulf Arabic and English](studies/2026-10-25-keyword-map-qatar-owners.md) | Current |
 | 2026-10-20 | [Global expansion plan: companies, markets, rules and stages for selling outside Qatar](studies/2026-10-20-global-expansion-plan.md) | Draft (not yet decided) |
 | 2026-10-20 | [Growth and content playbook: evidence-graded tactics, ethical game mechanics and a waitlist content plan](studies/2026-10-20-growth-content-playbook.md) | Partly superseded |
 | 2026-10-20 | [Selling across the GCC from Qatar](studies/2026-10-20-selling-across-gcc-from-qatar.md) | Draft (not yet decided) |

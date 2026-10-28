@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { startLoops } from "./loops";
 
 /**
  * The page's scroll behaviour, in one place: the header tightening, the header turning
@@ -32,40 +33,9 @@ export function SiteMotion() {
     );
     document.querySelectorAll("[data-reveal], [data-m]").forEach((node) => seen.observe(node));
 
-    // A product page's signature figure (LastOne, PaymentPaper) plays only once it is
-    // substantially in view, so its ending is seen (08-rulings.md): 60% of it on screen, or
-    // its top past the middle of the screen. On a wide screen the whole figure starts at
-    // once; on a phone, where its three parts stack, each part starts as it arrives
-    // (moment.css counts each part's delays from its own first beat).
-    const figures = Array.from(document.querySelectorAll<HTMLElement>("[data-sig]"));
-    const wide = window.matchMedia("(min-width: 62rem)").matches;
-    const started = new Set<Element>();
-    const start = (target: Element) => {
-      if (started.has(target)) return;
-      started.add(target);
-      enough.unobserve(target);
-      past.unobserve(target);
-      const parts = target.hasAttribute("data-sig") ? Array.from(target.querySelectorAll(".sig-part")) : [];
-      for (const node of [target, ...parts]) node.classList.add("is-in");
-    };
-    const enough = new IntersectionObserver(
-      (entries) => { for (const entry of entries) if (entry.intersectionRatio >= 0.6) start(entry.target); },
-      { threshold: 0.6 },
-    );
-    const past = new IntersectionObserver(
-      (entries) => { for (const entry of entries) if (entry.isIntersecting) start(entry.target); },
-      { rootMargin: "0px 0px -50% 0px" },
-    );
-    for (const figure of figures) {
-      const targets = wide ? [figure] : Array.from(figure.querySelectorAll(".sig-part"));
-      for (const target of targets) {
-        enough.observe(target);
-        past.observe(target);
-      }
-    }
-    // It can be read long after the first 4 s. The page has hydrated and these observers
-    // will start it, so the failsafe that drops `motion` is no longer needed here.
-    if (!still && figures.length) window.clearTimeout(window.__alyrMotion);
+    // The figures that keep playing: How we work's cards, the products frame's tiles and the
+    // product pages' signature figures (loops.ts; founder, 26 Oct 2026: motion always on).
+    const stopLoops = startLoops();
 
     // The language link keeps the section being read.
     const sections = Array.from(document.querySelectorAll<HTMLElement>("main section[id]"));
@@ -110,7 +80,7 @@ export function SiteMotion() {
         },
         { rootMargin: `-30px 0px -${Math.max(0, window.innerHeight - 31)}px 0px` },
       );
-      document.querySelectorAll(".band-in, .cta").forEach((node) => dark?.observe(node));
+      document.querySelectorAll(".cta").forEach((node) => dark?.observe(node));
     };
     watchDark();
 
@@ -139,6 +109,13 @@ export function SiteMotion() {
       watchBar.observe(heroButton);
       watchBar.observe(closing);
     }
+
+    // While the closing call is on screen, its Volt button is the page's one: the header's
+    // becomes the outlined twin (site.css). Without scripts both stay Volt.
+    const atClosing = closing
+      ? new IntersectionObserver(([entry]) => root.toggleAttribute("data-at-closing", entry.isIntersecting))
+      : null;
+    if (closing) atClosing?.observe(closing);
 
     let lit = -1;
     let queued = false;
@@ -170,10 +147,11 @@ export function SiteMotion() {
       document.removeEventListener("click", onLanguage, true);
       window.removeEventListener("hashchange", openQuestion);
       seen.disconnect();
-      enough.disconnect();
-      past.disconnect();
+      stopLoops();
       dark?.disconnect();
       watchBar?.disconnect();
+      atClosing?.disconnect();
+      root.removeAttribute("data-at-closing");
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
       window.removeEventListener("resize", watchDark);

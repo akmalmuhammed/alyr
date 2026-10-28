@@ -8,6 +8,7 @@
 // 2. EN/AR copy parity            scripts/site/copy-parity.mjs
 // 3. banned words and prices      scripts/site/banned-words.mjs (copy and built files)
 // 4. internal links               scripts/site/link-check.mjs
+// 5. the pace                     scripts/site/pace-check.mjs (timed pieces follow --pace)
 //
 // All checks run even when one fails, so one run shows everything; the exit code is 1 if
 // any failed.
@@ -23,6 +24,7 @@ const steps = [
   ["EN/AR copy parity", "node", [join(here, "copy-parity.mjs")]],
   ["banned words and prices", "node", [join(here, "banned-words.mjs")]],
   ["internal links", "node", [join(here, "link-check.mjs")]],
+  ["the pace", "node", [join(here, "pace-check.mjs")]],
 ];
 
 const results = [];

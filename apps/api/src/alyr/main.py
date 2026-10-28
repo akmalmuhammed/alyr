@@ -1,12 +1,10 @@
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
-from fastapi.responses import JSONResponse
 
 from alyr.channels.meta import MetaChannel
 from alyr.channels.simulator import SimulatorChannel
 from alyr.config import get_settings
-from alyr.core import health as health_checks
 from alyr.core.images import PhotoRefused
 from alyr.core.inbound import INBOUND, InboundHandler
 from alyr.core.jobs import JobRunner
@@ -150,24 +148,7 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     async def health() -> dict:
-        # Alive, nothing more: no database. The platform pings this to keep the container up.
         return {"status": "ok", "env": settings.env}
-
-    @app.get("/health/ready")
-    async def health_ready() -> JSONResponse:
-        ready, checks = await health_checks.readiness(app.state.db)
-        return JSONResponse(
-            {"status": "ok" if ready else "fail", **checks}, status_code=200 if ready else 503
-        )
-
-    @app.get("/health/worker")
-    async def health_worker() -> JSONResponse:
-        alive, checks = await health_checks.worker_status(
-            app.state.db, inline=settings.jobs_inline
-        )
-        return JSONResponse(
-            {"status": "ok" if alive else "fail", **checks}, status_code=200 if alive else 503
-        )
 
     app.include_router(whatsapp_webhook.router)
     # Each module's routes answer only for shops that have switched that module on.

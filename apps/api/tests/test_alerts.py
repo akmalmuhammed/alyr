@@ -1,4 +1,4 @@
-"""Monitoring (ALY-121, spec 022): the three health answers and the alert rules."""
+"""Alert rules (ALY-121, spec 022, D-062): one message per problem, counts only."""
 
 import asyncio
 from datetime import UTC, datetime, timedelta
@@ -9,7 +9,8 @@ import httpx
 import pytest
 
 from alyr.config import get_settings
-from alyr.core import alerts, health
+from alyr.core import alerts
+from alyr.core.inbound import INBOUND
 from alyr.core.outbound import SEND
 from alyr.db import Database
 from conftest import APP_DSN, OWNER_DSN
@@ -43,9 +44,8 @@ def with_db(fn):
 
 @pytest.fixture(autouse=True)
 def clean():
-    """Each test starts with an empty queue and no heartbeat or alert history."""
+    """Each test starts with an empty queue and no alert history."""
     owner("delete from jobs")
-    owner("delete from heartbeats")
     owner("delete from alert_state")
     yield
     owner("delete from jobs")
@@ -71,80 +71,6 @@ def add_jobs(kind, status, count, *, minutes_ago=0, finished_minutes_ago=1):
         )
 
 
-# ── the three answers ────────────────────────────────────
-
-
-def test_health_is_alive_without_a_database(client):
-    assert client.get("/health").json()["status"] == "ok"
-
-
-def test_ready_when_the_database_answers_and_nothing_waits(client):
-    answer = client.get("/health/ready")
-    assert answer.status_code == 200
-    body = answer.json()
-    assert body["status"] == "ok"
-    assert body["database"] == "ok" and body["migrations"] == "ok"
-    assert body["queue"]["oldest_due_seconds"] == 0
-
-
-def test_not_ready_when_a_due_job_has_waited_too_long(client):
-    add_jobs(SEND, "queued", 1, minutes_ago=10)
-    answer = client.get("/health/ready")
-    assert answer.status_code == 503
-    assert answer.json()["queue"]["late"] is True
-    assert answer.json()["queue"]["oldest_due_seconds"] >= 600
-
-
-def test_a_job_that_is_not_due_yet_is_not_late(client):
-    add_jobs(SEND, "queued", 1, minutes_ago=-30)
-    assert client.get("/health/ready").status_code == 200
-
-
-def test_not_ready_when_a_migration_is_missing(client):
-    owner("delete from schema_migrations where name = '0049_monitoring.sql'")
-    try:
-        answer = client.get("/health/ready")
-        assert answer.status_code == 503
-        assert "not applied" in answer.json()["migrations"]
-    finally:
-        owner("insert into schema_migrations (name) values ('0049_monitoring.sql')")
-
-
-def test_the_answer_holds_no_customer_text(client):
-    add_jobs(SEND, "failed", 2)
-    text = client.get("/health/ready").text
-    assert "97455" not in text and "payload" not in text
-
-
-def test_worker_answer_follows_its_heartbeat(client_factory, monkeypatch):
-    monkeypatch.setenv("ALYR_JOBS_INLINE", "false")
-    client = client_factory()
-    # Never started.
-    assert client.get("/health/worker").status_code == 503
-    with_db(lambda db: health.beat(db, health.WORKER))
-    assert client.get("/health/worker").json()["worker"] == "ok"
-    owner("update heartbeats set beat_at = now() - interval '5 minutes' where name = 'worker'")
-    answer = client.get("/health/worker")
-    assert answer.status_code == 503 and answer.json()["worker"] == "silent"
-
-
-def test_with_jobs_inline_there_is_no_runner_to_watch(client):
-    assert client.get("/health/worker").json() == {"status": "ok", "worker": "inline"}
-
-
-def test_a_webhook_records_that_meta_reached_us(client):
-    assert signed_post(client, meta_payload(message_id="wamid.monitor")).status_code == 200
-    seen = client.get("/health/ready").json()["last_webhook_seconds_ago"]
-    assert seen is not None and seen < 5
-
-
-def test_a_busy_webhook_does_not_write_on_every_call(client):
-    with_db(lambda db: health.beat(db, health.WEBHOOK))
-    first = owner("select beat_at from heartbeats where name = 'webhook'")[0]["beat_at"]
-    with_db(lambda db: health.beat(db, health.WEBHOOK, at_most_every=30))
-    assert owner("select beat_at from heartbeats where name = 'webhook'")[0]["beat_at"] == first
-
-
 # ── the alert rules ──────────────────────────────────────
 
 
@@ -164,7 +90,12 @@ def pushes(monkeypatch):
     get_settings.cache_clear()
 
 
-def run_rules(now=None):
+# 01:00 in Doha: outside opening hours, so the quiet-webhook rule stays out of tests of the others.
+NIGHT = datetime(2026, 10, 25, 22, 0, tzinfo=UTC)
+MIDDAY = datetime(2026, 10, 25, 9, 0, tzinfo=UTC)  # noon in Doha
+
+
+def run_rules(now=NIGHT):
     async def go(db):
         results = await alerts.evaluate(db, now)
         return results, await alerts.apply(db, results, now)
@@ -174,7 +105,7 @@ def run_rules(now=None):
 
 def test_a_late_queue_alerts_once_then_reminds_then_clears(pushes):
     add_jobs(SEND, "queued", 1, minutes_ago=10)
-    now = datetime.now(UTC)
+    now = NIGHT
     results, sent = run_rules(now)
     assert results["queue_late"] is not None and sent == ["queue_late"]
     assert pushes[0][0] == "Messages are waiting"
@@ -217,13 +148,20 @@ def test_a_parked_job_is_a_quiet_alert(pushes):
     assert run_rules()[0]["job_parked"] is None
 
 
+def add_inbound(tid, *, minutes_ago):
+    owner(
+        "insert into jobs (tenant_id, kind, status, created_at, finished_at) "
+        "values ($1, $2, 'done', now() - make_interval(mins => $3), now())",
+        tid, INBOUND, minutes_ago,
+    )
+
+
 def make_meta(number_id):
     owner("update channel_numbers set channel = 'meta' where number_id = $1", number_id)
 
 
-def test_a_quiet_webhook_alerts_only_with_a_real_number_in_opening_hours(pushes):
-    midday = datetime(2026, 10, 25, 9, 0, tzinfo=UTC)  # noon in Doha
-    night = datetime(2026, 10, 25, 22, 0, tzinfo=UTC)  # 01:00 in Doha
+def test_a_quiet_webhook_alerts_only_with_a_real_number_in_opening_hours(client, pushes):
+    midday, night = MIDDAY, NIGHT
     # The suite's own shop has a Meta number; set it aside to test "no real number yet".
     kept = owner("select number_id, tenant_id, channel from channel_numbers where channel = 'meta'")
     owner("update channel_numbers set channel = 'simulator' where channel = 'meta'")
@@ -232,10 +170,40 @@ def test_a_quiet_webhook_alerts_only_with_a_real_number_in_opening_hours(pushes)
         make_meta(kept[0]["number_id"])
         assert run_rules(night)[0]["webhook_quiet"] is None
         assert run_rules(midday)[0]["webhook_quiet"] is not None
+        # A customer's message queued 20 minutes ago is still quiet; one a minute ago is not.
+        add_inbound(kept[0]["tenant_id"], minutes_ago=20)
+        assert run_rules(midday)[0]["webhook_quiet"] is not None
+        add_inbound(kept[0]["tenant_id"], minutes_ago=1)
+        assert run_rules(midday)[0]["webhook_quiet"] is None
     finally:
         owner("update channel_numbers set channel = 'simulator' where channel = 'meta'")
         for row in kept:
             make_meta(row["number_id"])
+
+
+def test_a_message_through_the_webhook_counts_as_meta_reaching_us(client, pushes):
+    assert owner("select 1 from channel_numbers where channel = 'meta'"), "the suite's Meta number"
+    midday = MIDDAY
+    assert run_rules(midday)[0]["webhook_quiet"] is not None
+    assert signed_post(client, meta_payload(message_id="wamid.alerts")).status_code == 200
+    assert run_rules(midday)[0]["webhook_quiet"] is None
+
+
+def test_messages_on_a_simulator_number_do_not_count(client, pushes):
+    kept = owner("select number_id from channel_numbers where channel = 'meta'")
+    other = uuid4()
+    owner("insert into tenants (id, name) values ($1, 'Simulator shop')", other)
+    owner(
+        "insert into channel_numbers (number_id, tenant_id, channel) values ($1, $2, 'simulator')",
+        f"sim-{other}", other,
+    )
+    try:
+        add_inbound(other, minutes_ago=1)
+        assert kept and run_rules(MIDDAY)[0]["webhook_quiet"] is not None
+    finally:
+        owner("delete from jobs where tenant_id = $1", other)
+        owner("delete from channel_numbers where tenant_id = $1", other)
+        owner("delete from tenants where id = $1", other)
 
 
 def test_an_alert_never_carries_customer_data(pushes):
@@ -262,14 +230,3 @@ def test_an_alert_that_cannot_be_delivered_does_not_stop_the_watch(monkeypatch):
     add_jobs(SEND, "queued", 1, minutes_ago=10)
     assert run_rules()[1] == ["queue_late"]
     get_settings.cache_clear()
-
-
-def test_the_runner_writes_its_heartbeat_as_it_starts():
-    async def go(db):
-        task = asyncio.create_task(health.keep_beating(db))
-        await asyncio.sleep(0.5)
-        task.cancel()
-        return await health.heartbeat_age(db, health.WORKER)
-
-    age = with_db(go)
-    assert age is not None and age < 5

@@ -1,43 +1,30 @@
-# Runbook · Monitoring and alerts (ALY-121, D-053, spec 022)
+# Runbook · Monitoring and alerts (ALY-121, D-062, spec 022)
 
-Who gets woken, by what, and what to do first. Free tools only until a paying client or a
-second developer exists.
+Who gets woken, by what, and what to do first. Production is Google Cloud in Doha (D-060,
+`docs/hosting.md`); its uptime checks watch `/health/ready` and `/health/worker`. The alert
+rules below run inside the worker and watch what an uptime check cannot see.
 
-## One-time setup (about 15 minutes)
+## One-time setup
 
-1. **Phone alerts.** Install the free ntfy app, subscribe to a long random topic name (for
-   example 25 random characters; the name is the password, so treat it as a secret and never
-   put it in the repo or a chat).
-2. Give the same name to the Worker and the API container:
-   `cd infra/cloudflare/api && pnpm exec wrangler secret put ALYR_ALERT_NTFY_TOPIC`
-   `pnpm exec wrangler secret put ALYR_ALERT_EMAIL` (the inbox that should also get alerts).
-   Locally, the same two names go in `apps/api/.env`. Both empty means alerts are only logged.
-3. **Second watcher.** Make a free UptimeRobot account. Add HTTPS monitors, 5-minute checks,
-   alerts to the same email: `/health/ready` (keyword `"ready":true` is not needed; any 503
-   is a failure), `/health/worker`, the portal's `/login`, `alyr.qa`, and the public webhook
-   address. The free plan is for personal and non-profit use: it is a stopgap, switch to the
-   paid Solo plan (USD 12 a month) at the first paying client.
-4. Name who is on call. Today it is the founder; write it in `docs/access.md` when a second
-   person exists.
+1. **Phone alerts (parked by the founder, 24 Oct).** Install the free ntfy app and subscribe
+   to a long random topic name (the name is the password: never put it in the repo or a chat).
+   Store it in Secret Manager as `ALYR_ALERT_NTFY_TOPIC` and give it to the worker.
+2. **Email alerts.** Set `ALYR_ALERT_EMAIL` on the worker (planned: ops@alyr.qa, once it
+   exists). The worker also needs the Resend key, `ALYR_EMAIL_API_KEY`.
+3. Until both are set, alerts are only log lines (`ALERT ...` from `alyr.alerts`) in Cloud
+   Logging. A log-based alert on that line in Cloud Monitoring can email the founder without
+   either.
+4. On call: the founder (24 Oct). Write it in `docs/access.md` when a second person exists.
 
 ## What an alert means and the first step
 
 | Alert | Meaning | First step |
 |---|---|---|
-| Queue late | Jobs are due and nothing is taking them | Open `/health/worker`. 503: the runner is down, restart the container (`wrangler rollback` if a deploy caused it). 200: look for one slow or stuck job |
-| Job parked | A job failed 6 times and was given up | Read it in the failed-jobs list; fix the cause, then requeue it |
-| Sends failing | More than 5% of sends fail | Meta token expired or a template rejected: check the Meta app and `docs/runbooks/secret-rotation.md` |
-| Webhook quiet | Shops have a live number but Meta sends nothing | Check the webhook subscription and the callback address in Meta; the public address answering 404 is a cause |
-| Service not ready / worker silent (from the Worker) | The API cannot reach the database, a migration is missing, or the runner stopped | Open `/health/ready` to see which check names the failure |
+| Messages are waiting (`queue_late`) | Jobs are due and nothing is taking them | Open `/health/worker`. 503: the worker is down, restart the worker pool (roll back if a deploy caused it). 200: look for one slow or stuck job |
+| A job gave up (`job_parked`) | A job used all its attempts | Read it in `/ops`, failed jobs; fix the cause, then retry it |
+| WhatsApp sends are failing (`sends_failing`) | More than 5% of sends fail | Meta token expired or a template rejected: check the Meta app and `docs/runbooks/secret-rotation.md` |
+| No WhatsApp message received (`webhook_quiet`) | A shop has a live number but no customer message arrived for 15 minutes in opening hours | Check the webhook subscription and callback address in Meta; the public address answering 404 is a cause |
+| Uptime check failed (Cloud Monitoring) | The API cannot reach the database, or the worker stopped checking in | Open `/health/ready` and `/health/worker` |
 
 An alert never contains a customer's name, number or message. If you need them, look inside
 the workspace or the database, not in the alert.
-
-## Free tools and when to pay
-
-| Need | Now (free) | Pay when |
-|---|---|---|
-| Phone alerts | ntfy | Never needed; self-host if we want delivery guarantees |
-| Outside uptime | UptimeRobot free | First paying client: Solo, USD 12 a month |
-| Error tracking | In-house table (slice 2) | A second developer, or over 5,000 errors a month: Sentry Team |
-| Logs | Cloudflare Workers Logs (200k events a day, 3 days) | Longer history is needed |

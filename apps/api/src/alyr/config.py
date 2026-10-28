@@ -88,7 +88,7 @@ class Settings(BaseSettings):
     email_from: str = "ALYR <no-reply@alyr.qa>"
     email_reply_to: str = "hello@alyr.qa"
 
-    # Alerts to a person's phone and inbox (ALY-121, spec 022). Both empty: alerts are only
+    # Alerts to a person's phone and inbox (ALY-121, spec 022, D-062). Both empty: alerts are only
     # logged. The ntfy topic is a secret: anyone who knows it can read and send alerts. An alert
     # holds counts and ages only, never a name, a number or a message.
     alert_ntfy_topic: str = ""
