@@ -655,6 +655,14 @@ async def onboarding_board(request: Request, _: Staff = Depends(platform_admin))
     return {"businesses": board, "counts": counts}
 
 
+@router.get("/onboarding/funnel")
+async def onboarding_funnel(request: Request, _: Staff = Depends(platform_admin)) -> dict:
+    """Where businesses stop on the way to live, how long each step takes, and how many needed
+    ALYR's hand (ALY-169). Read from the record the onboarding engine keeps."""
+    return readiness.funnel(await _admin_call(
+        request, "select admin_onboarding_funnel()", fetch="fetchval"))
+
+
 @router.get("/businesses/{business_id}/readiness")
 async def business_readiness(
     business_id: UUID, request: Request, staff: Staff = Depends(platform_admin)
