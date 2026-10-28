@@ -17,7 +17,7 @@ from alyr.core.auth import Staff
 from alyr.core.normalise import fmt_qar
 from alyr.modules.documents import payments as manual_payments
 from alyr.modules.documents import refs as doc_refs
-from alyr.modules.items import clock
+from alyr.modules.items import access, clock
 from alyr.modules.items import service as items
 from alyr.modules.orders import pay_ways, service
 from alyr.routes.deps import current_staff, current_tenant
@@ -181,6 +181,8 @@ async def add_product(
     not asked for here; `/api/items` asks for it before an item goes live."""
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            # Adding an item sets a price: the same rule as the Catalog's (ALY-117).
+            await access.require_edit(conn, staff)
             await request.app.state.media.assert_can_add_item(conn)
             result = await items.create_item(
                 conn,

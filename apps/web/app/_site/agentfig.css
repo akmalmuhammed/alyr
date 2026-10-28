@@ -65,25 +65,8 @@ main .ag { font-weight: 400; }
 [lang="ar"] .af-line { line-height: 1.7; }
 .af-line bdi { white-space: nowrap; }
 
-/* motion: before the page's scripts run, the feed is hidden only when motion is wanted
-   (`.motion`, set before paint); after, the figure's own state says what shows. */
-@media (prefers-reduced-motion: no-preference) {
-  .motion .af-feed[data-phase="composed"] .af-item { opacity: 0; }
-  .af-feed[data-phase="waiting"] .af-item,
-  .af-feed[data-phase="playing"] .af-item:not(.is-on) { opacity: 0; translate: 0 -6px; }
-  .af-feed[data-phase="playing"] .af-item { transition: opacity var(--dur-3) var(--ease), translate var(--dur-3) var(--ease); }
-  .af-feed[data-phase="playing"]:not([data-start]) .af-list { transition: translate var(--dur-3) var(--ease); }
-  .af-feed[data-phase="playing"] .af-item.is-on .af-tick { animation: af-pop var(--dur-3) var(--spring) both 80ms; }
-  /* the status dot lights once, with one ring, when the feed starts */
-  .af-feed[data-phase="waiting"] .af-dot, .motion .af-feed[data-phase="composed"] .af-dot { background: var(--band-mark); }
-  .af-feed[data-phase="playing"] .af-dot { animation: af-light var(--dur-4) var(--ease) both var(--af-light, 0ms); }
-}
-@keyframes af-pop { from { scale: 0; } }
-@keyframes af-light {
-  0% { background: var(--band-mark); box-shadow: 0 0 0 0 rgb(183 243 74 / .55); }
-  40% { background: var(--volt); }
-  100% { background: var(--volt); box-shadow: 0 0 0 7px rgb(183 243 74 / 0); }
-}
+/* The status chip, the pause button and the live rows: liveStyle.ts, inline in the page's
+   head, so this render-blocking file stays as small as before (D-058). */
 
 /* -------------------------------------------------- hero: the Carbon plate */
 /* clipped sideways, so the plate's 45-degree entrance never widens the page on a phone */

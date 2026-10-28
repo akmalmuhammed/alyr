@@ -942,7 +942,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                       {composeMode === "reply" && savedReplies.map((r) => (
                         <span key={r.id} className="quickchip">
                           <button dir="auto" title={r.body} onClick={() => setReplyDraft(r.body)}>{r.title}</button>
-                          <button aria-label={`${t.remove}: ${r.title}`} onClick={() => deleteQuickReply(r.id)}>×</button>
+                          {canManage && <button aria-label={`${t.remove}: ${r.title}`} onClick={() => deleteQuickReply(r.id)}>×</button>}
                         </span>
                       ))}
                     </div>
@@ -1162,8 +1162,12 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
               </div>
 
               <div className="actions">
-                <button className="btn primary" onClick={remind} disabled={busy}>{t.remind}</button>
-                <span style={{ color: "var(--muted)", fontSize: 13.5 }}>{t.remindHint}</span>
+                {canManage && (
+                  <>
+                    <button className="btn primary" onClick={remind} disabled={busy}>{t.remind}</button>
+                    <span style={{ color: "var(--muted)", fontSize: 13.5 }}>{t.remindHint}</span>
+                  </>
+                )}
                 {note && <span className="note">{note}</span>}
               </div>
 

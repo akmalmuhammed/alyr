@@ -190,6 +190,8 @@ export function Shell({
           </nav>
           <nav className="foot-nav foot-site" aria-label={t.footer.links}>
             <a href={at("#questions")}>{t.nav.questions}</a>
+            <a href={PATHS.company[locale]} aria-current={page === "company" ? "page" : undefined}>{t.nav.company}</a>
+            <a href={PATHS.privacy[locale]} aria-current={page === "privacy" ? "page" : undefined}>{t.nav.privacy}</a>
             <a href={other} lang={otherLocale} hrefLang={otherLocale} data-lang>{t.nav.other}</a>
             {WORKSPACE_URL && <a href={WORKSPACE_URL}>{t.footer.workspace}</a>}
           </nav>
@@ -197,6 +199,7 @@ export function Shell({
             <p>
               <span><span dir="ltr">© 2026</span> {rich(t.footer.rights)}</span>
             </p>
+            <p>{t.footer.legal}</p>
             <p>{rich(t.footer.disclaimer)}</p>
           </div>
         </div>

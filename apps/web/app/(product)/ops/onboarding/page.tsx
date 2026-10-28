@@ -15,6 +15,7 @@ type Row = {
   stage: Stage; created_at: string; ready_at: string | null; live_at: string | null;
   days_in_stage: number; checked: boolean; left: string[]; alyr_owes: string[];
   blockers: Record<string, string>; choices: Record<string, string>; stuck: boolean; helped: number;
+  number: { number_id: string; waba_id: string | null; display_phone: string; attached_at: string; attached_by: string } | null;
   whatsapp: {
     way: string; status: WaStatus; phone: string; display_name: string; note: string;
     needs: { key: string; label: { en: string }; done: boolean }[];
@@ -46,6 +47,7 @@ export default function OnboardingBoard() {
   const [note, setNote] = useState<Record<string, string>>({});
   const [open, setOpen] = useState("");
   const [blocker, setBlocker] = useState<Record<string, string>>({});
+  const [ids, setIds] = useState<Record<string, { number?: string; waba?: string }>>({});
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
@@ -72,6 +74,24 @@ export default function OnboardingBoard() {
 
   async function connecting(id: string, state: "" | "connecting" | "failed", why = "") {
     const answer = await api(`/api/admin/businesses/${id}/whatsapp`, "PATCH", { state, note: why });
+    if (!answer.ok) return setError(answer.error);
+    setError("");
+    load();
+  }
+
+  // ALY-166: attach the business's number once Meta shows it connected; ALYR asks Meta first.
+  async function attach(id: string) {
+    const given = ids[id] ?? {};
+    const answer = await api(`/api/admin/businesses/${id}/whatsapp/number`, "POST", {
+      number_id: given.number ?? "", waba_id: given.waba ?? "",
+    });
+    if (!answer.ok) return setError(answer.error);
+    setError("");
+    setIds({ ...ids, [id]: {} });
+    load();
+  }
+  async function detach(id: string) {
+    const answer = await api(`/api/admin/businesses/${id}/whatsapp/number`, "DELETE");
     if (!answer.ok) return setError(answer.error);
     setError("");
     load();
@@ -134,6 +154,25 @@ export default function OnboardingBoard() {
                 {open === b.id && (
                   <tr className="norow">
                     <td colSpan={5}>
+                      <div className="ops-wa">
+                        {b.number ? (
+                          <div className="ops-step">
+                            <b>Meta number attached</b>
+                            <span dir="ltr">{b.number.display_phone || b.number.number_id}</span>
+                            <small>ID <span dir="ltr">{b.number.number_id}</span> · by {b.number.attached_by}</small>
+                            <button className="btn small ghost" type="button" onClick={() => detach(b.id)}>Detach</button>
+                          </div>
+                        ) : (
+                          <div className="ops-step">
+                            <b>Attach Meta number</b>
+                            <input aria-label="Phone number ID" placeholder="Phone number ID from Meta" inputMode="numeric" dir="ltr" maxLength={30}
+                              value={ids[b.id]?.number ?? ""} onChange={(e) => setIds({ ...ids, [b.id]: { ...ids[b.id], number: e.target.value } })} />
+                            <input aria-label="WhatsApp Business Account ID" placeholder="Account ID (optional)" inputMode="numeric" dir="ltr" maxLength={30}
+                              value={ids[b.id]?.waba ?? ""} onChange={(e) => setIds({ ...ids, [b.id]: { ...ids[b.id], waba: e.target.value } })} />
+                            <button className="btn small" type="button" disabled={!(ids[b.id]?.number ?? "").trim()} onClick={() => attach(b.id)}>Attach</button>
+                          </div>
+                        )}
+                      </div>
                       {b.whatsapp.way && b.whatsapp.status !== "connected" && (() => {
                         const w = b.whatsapp;
                         const why = note[b.id] ?? (w.status === "failed" ? w.note : "");
