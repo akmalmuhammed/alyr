@@ -49,7 +49,7 @@ export function HomeMotion() {
       : (run: () => void) => window.setTimeout(run, 200);
     // The hero's film (film.ts) and its tracks arrive in their own chunk at load: the first paint
     // is its still. It starts then, not when the page is idle (founder, 29 Oct 2026: "all
-    // animations should start right away"; D-063); the choreography still waits for an idle
+    // animations should start right away"; D-071); the choreography still waits for an idle
     // moment. (Fetching its chunks earlier, at hydration, made no difference to when it starts.)
     let stopFilm: (() => void) | null = null;
     let gone = false;
