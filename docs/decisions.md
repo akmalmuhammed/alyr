@@ -1173,6 +1173,20 @@ There is no separate Pay product: payment links stay a module of Chat and Bookin
 
 **Revisit when** Azure credits arrive (ALY-55, ALY-63), or the first paying client who has not agreed to data outside Qatar.
 
+## D-055 · Until a shop has an online account, the order page does not ask for money
+**Date** 25 Oct 2026 · **Status** Accepted (the founder, 25 Oct: "analyze what we can build now and do it accordingly"; D-044 already says the payment step never blocks go-live) · Linear ALY-170 · Spec `specs/024-pay-on-collection/spec.md`
+
+**The decision.** A shop chooses whether its order page offers a payment link. With the link off, an order is placed unpaid, keeps its stock, tells the customer how the shop takes payment (cash, bank transfer, card machine), and staff mark it paid by writing down the payment, which reuses the Documents payment code. The default is the link on, so nothing changes until a shop or its go-live choice turns it off.
+
+**Why.**
+- A link that cannot be paid for real, and a hold that gives the stock back after 30 minutes, make the order page useless for a shop that takes cash on pickup.
+- The payment is the shop's record of money it took (hard rule 3): ALYR never holds it.
+- One code path for a hand-written payment keeps receipts, numbers and the audit trail the same with or without Documents.
+
+**Chosen over** a third button next to "Pay" and "Put it on my account" (the shop would show a pay button that leads to a stand-in page), and over a separate "mark paid" table for shops without Documents (two records of one payment).
+
+**Revisit when** a shop has its own online account and wants both; that needs both buttons.
+
 ## D-054 · Staff attach a business's Meta number from the back office, after asking Meta
 **Date** 25 Oct 2026 · **Status** Accepted (the founder, 25 Oct: "analyze what we can build now and do it accordingly") · Linear ALY-166 · Spec `specs/023-attach-whatsapp-number/spec.md`
 

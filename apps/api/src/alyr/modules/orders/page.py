@@ -39,7 +39,7 @@ from alyr.modules.items import clock as shop_clock
 from alyr.modules.items import groups as price_groups
 from alyr.modules.items import service as items
 from alyr.modules.items.clock import ShopClock
-from alyr.modules.orders import service
+from alyr.modules.orders import pay_ways, service
 
 DEFAULT_PAGE = 48
 MAX_PAGE = 200
@@ -304,6 +304,8 @@ async def page(
             "wholesale_layout": shop["wholesale_layout"],
             "whatsapp_number": shop["whatsapp_number"],
             "whatsapp_mode": shop["whatsapp_mode"],
+            # How customers pay: online, or on collection by these ways (ALY-170).
+            "pay": await pay_ways.get(conn),
         },
         "categories": shown,
         "items": rows,
