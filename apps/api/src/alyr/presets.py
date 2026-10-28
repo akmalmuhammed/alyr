@@ -187,9 +187,10 @@ STEPS = {
 ORDER_TYPES = ("restaurant", "bakery", "grocery", "shop", "fashion")
 
 # The ways of working whose onboarding screens are built, so a type that follows one can be
-# switched to self-serve in the back office (D-032). `orders` joins when its screens and its
-# test order are built (ALY-164, ALY-168); until then an order business is set up with ALYR.
-BUILT_WAYS = ("appointments",)
+# switched to self-serve in the back office (D-032). `orders` joined with its screens and its
+# test order (ALY-164, ALY-168). That does not move any type: every one is still set up with
+# ALYR until the founder switches it in the back office.
+BUILT_WAYS = ("appointments", "orders")
 
 
 def self_serve_way(preset: Preset) -> str | None:

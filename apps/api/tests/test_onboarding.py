@@ -241,7 +241,9 @@ def test_finishing_clears_the_test_so_the_workspace_starts_clean(client):
     unanswered = {c["key"]: c for c in client.get("/api/workspace/home").json()["cards"]}
     assert unanswered["unanswered"]["value"] == 1
 
-    assert client.post(f"{BASE}/finish").json() == {"finished": True, "test_bookings_cancelled": 1}
+    assert client.post(f"{BASE}/finish").json() == {
+        "finished": True, "test_bookings_cancelled": 1, "test_orders_cancelled": 0,
+    }
     cards = {c["key"]: c for c in client.get("/api/workspace/home").json()["cards"]}
     assert cards["unanswered"]["value"] == 0
     statuses = owner_sql("select status from bookings where tenant_id = $1", tenant)

@@ -19,7 +19,7 @@ import asyncpg
 from alyr import catalog, presets, shop_templates
 from alyr.channels.base import InboundMessage
 from alyr.config import get_settings
-from alyr.core import auth, pricing, team
+from alyr.core import auth, identity, pricing, team
 from alyr.core.auth import Staff
 from alyr.core.normalise import fmt_qar
 from alyr.db import Database
@@ -27,7 +27,7 @@ from alyr.modules.items import clock as shop_clock
 from alyr.modules.items import template
 
 SIGNUP_MINUTES = 60
-TEST_PREFIX = "TEST."
+TEST_PREFIX = identity.TEST_PREFIX
 
 
 class OnboardingError(Exception):
@@ -286,6 +286,28 @@ async def end_test(conn: asyncpg.Connection, staff: Staff) -> int:
         )
     await conn.execute("update contacts set inbox_status = 'closed' where id = $1", contact_id)
     return len(rows)
+
+
+async def end_test_orders(conn: asyncpg.Connection, staff: Staff, outbound) -> int:
+    """The same for the owner's test orders (ALY-168): each is cancelled, whatever it had got
+    to (the owner may have marked it ready), and its stock goes back, so the shop starts with
+    what it counted. Nothing is sent to the test customer and nothing is owed. The order stays
+    in the list, marked Test, and is counted nowhere. Answers how many were cancelled."""
+    from alyr.modules.orders import service as orders  # orders reads core, so not at the top
+
+    ids = [
+        r["id"] for r in await conn.fetch(
+            "select o.id from orders o join contacts c on c.id = o.contact_id "
+            "where c.wa_user_id = $1 and o.is_test and o.status <> 'cancelled'",
+            test_key(staff),
+        )
+    ]
+    for order_id in ids:
+        await orders.cancel_order(
+            conn, order_id, outbound, team.actor_of(staff), restock=True,
+            reason="Test order: the test is over", notify=False,
+        )
+    return len(ids)
 
 
 async def test_conversation(conn: asyncpg.Connection, staff: Staff) -> list[dict]:

@@ -207,11 +207,17 @@ async def accept_quote(
 async def finish(request: Request, staff: Staff = Depends(current_staff)) -> dict:
     _owner(staff)
     async with request.app.state.db.tenant(staff.tenant_id) as conn:
-        # Checked first: the test booking it cancels still proves the owner tried it.
+        # Checked first: the test booking or order it cancels still proves the owner tried it.
         await readiness.run(conn, staff.name)
         cleared = await onboarding.end_test(conn, staff)
+        orders_cleared = await onboarding.end_test_orders(
+            conn, staff, request.app.state.outbound
+        )
         await onboarding.update(conn, step="", finished=True)
-    return {"finished": True, "test_bookings_cancelled": cleared}
+    return {
+        "finished": True, "test_bookings_cancelled": cleared,
+        "test_orders_cancelled": orders_cleared,
+    }
 
 
 @router.get("/readiness")
