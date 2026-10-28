@@ -194,10 +194,23 @@ case "${1:-}" in
     # start new copies of the API and the worker so they read it.
     name="${2:?usage: setup.sh set-secret <secret name, e.g. meta-access-token>}"
     secret_exists "$name" || { echo "setup: no secret called $name" >&2; exit 1; }
-    ask_secret "$name" "New value for $name"
+    read -r -s -p "New value for $name (paste once, then Enter): " value; echo
+    value="$(printf '%s' "$value" | tr -d '[:space:]')"
+    [ -n "$value" ] || { echo "Nothing typed; nothing changed."; exit 1; }
+    if [ "$name" = meta-access-token ]; then
+      # Ask Meta before storing. Only the result is shown: Meta's error text repeats the
+      # token back, so it is never printed.
+      verdict="$(curl -sS -H "Authorization: Bearer $value" "https://graph.facebook.com/v25.0/me" |
+        python -c "import json, sys; e = json.load(sys.stdin).get('error'); print('refused, error code %s' % e.get('code') if e else 'accepted')")"
+      echo "Meta: $verdict"
+      [ "$verdict" = accepted ] || { unset value; echo "Not stored; nothing changed."; exit 1; }
+    fi
+    put_secret "$name" "$value"
+    unset value
+    echo "  stored $name"
     stamp="$(date -u +%Y%m%dT%H%M%SZ)"
-    g run services update alyr-api --region="$REGION" --update-env-vars="ALYR_SECRETS_AT=$stamp" >/dev/null
-    g run worker-pools update alyr-worker --region="$REGION" --update-env-vars="ALYR_SECRETS_AT=$stamp" >/dev/null
+    g run services update alyr-api --region="$REGION" --update-env-vars="ALYR_SECRETS_AT=$stamp" >/dev/null 2>&1
+    g run worker-pools update alyr-worker --region="$REGION" --update-env-vars="ALYR_SECRETS_AT=$stamp" >/dev/null 2>&1
     echo "The API and the worker restarted with the new $name."
     ;;
 
