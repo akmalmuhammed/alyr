@@ -5,6 +5,7 @@
 #   infra/gcp/setup.sh infra         network, database, registry, accounts, export bucket, budget
 #   infra/gcp/setup.sh secrets       generate database passwords and the link secret; ask for the rest
 #   infra/gcp/setup.sh env-secrets <.env>  or: copy the R2, Meta and Resend values from a .env file
+#   infra/gcp/setup.sh set-secret <name>   replace one secret (typed, hidden) and restart the apps
 #   infra/gcp/setup.sh apps <tag>    migration job, API, worker, web app and the nightly export
 #   infra/gcp/setup.sh first-admin <tag> <email> <name>  the first person who can sign in
 #   infra/gcp/setup.sh github        let GitHub Actions deploy without a stored key; print its variables
@@ -63,7 +64,7 @@ SECRETS=(
 )
 secrets_flag() { local IFS=,; local s=("${SECRETS[@]/%/:latest}"); echo "${s[*]}"; }
 env_flag() {
-  echo "ALYR_ENV=production,ALYR_JOBS_INLINE=false,ALYR_PUBLIC_WEB_URL=${ALYR_PUBLIC_WEB_URL:-$(url alyr-web)},ALYR_R2_BUCKET=${ALYR_R2_BUCKET:-alyr-media},ALYR_MEDIA_BASE_URL=${ALYR_MEDIA_BASE_URL:-https://media.alyr.qa}"
+  echo "ALYR_ENV=production,ALYR_JOBS_INLINE=false,ALYR_PUBLIC_WEB_URL=${ALYR_PUBLIC_WEB_URL:-https://app.alyr.qa},ALYR_R2_BUCKET=${ALYR_R2_BUCKET:-alyr-media},ALYR_MEDIA_BASE_URL=${ALYR_MEDIA_BASE_URL:-https://media.alyr.qa}"
 }
 private_net=(--network="$NETWORK" --subnet="$SUBNET" --vpc-egress=private-ranges-only)
 
@@ -187,6 +188,18 @@ case "${1:-}" in
     echo "Done. Next: infra/gcp/push-images.sh <tag>, then infra/gcp/setup.sh apps <tag>"
     ;;
 
+  set-secret)
+    # Replace one secret, typed and hidden (for example a new Meta access token), then
+    # start new copies of the API and the worker so they read it.
+    name="${2:?usage: setup.sh set-secret <secret name, e.g. meta-access-token>}"
+    secret_exists "$name" || { echo "setup: no secret called $name" >&2; exit 1; }
+    ask_secret "$name" "New value for $name"
+    stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+    g run services update alyr-api --region="$REGION" --update-env-vars="ALYR_SECRETS_AT=$stamp" >/dev/null
+    g run worker-pools update alyr-worker --region="$REGION" --update-env-vars="ALYR_SECRETS_AT=$stamp" >/dev/null
+    echo "The API and the worker restarted with the new $name."
+    ;;
+
   env-secrets)
     # The founder's shortcut for `secrets`: copy the R2, Meta and Resend values already in
     # a local .env file straight into Secret Manager. Values are never shown; only the
@@ -287,7 +300,7 @@ case "${1:-}" in
       --set-secrets="ALYR_MIGRATION_URL=migration-url:latest,ALYR_DATABASE_URL=database-url:latest,ALYR_META_PHONE_NUMBER_ID=meta-phone-number-id:latest,ALYR_META_WABA_ID=meta-waba-id:latest" \
       --cpu=1 --memory=512Mi --max-retries=0 --task-timeout=5m
     g run jobs execute alyr-first-admin --region="$REGION" --wait
-    echo "Sign in at $(url alyr-web)/login with $email (a code is emailed)."
+    echo "Sign in at https://app.alyr.qa/login with $email (a code is emailed)."
     ;;
 
   github)
@@ -373,7 +386,7 @@ for c in json.load(sys.stdin).get('notificationChannels', []):
     ;;
 
   *)
-    sed -n '2,16p' "$0"
+    sed -n '2,17p' "$0"
     exit 1
     ;;
 esac

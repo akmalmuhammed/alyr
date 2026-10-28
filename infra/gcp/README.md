@@ -76,7 +76,7 @@ ALYR_ALERT_EMAIL=akmal@alyr.qa infra/gcp/setup.sh monitoring
 
 ## Meta's webhook
 
-Point the Meta app's webhook at `https://alyr-api-841433519399.me-central1.run.app/webhooks/whatsapp`
+Point the Meta app's webhook at `https://api.alyr.qa/webhooks/whatsapp`
 with the same verify phrase as in Secret Manager. Retire the laptop tunnel only after Meta
 verifies it and a test message arrives.
 
