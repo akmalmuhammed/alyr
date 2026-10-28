@@ -24,7 +24,7 @@ from alyr.core import links, ratelimit, team
 from alyr.core.auth import Staff
 from alyr.modules.bookings import service
 from alyr.routes import customer_link
-from alyr.routes.deps import current_staff, current_tenant
+from alyr.routes.deps import current_staff, current_tenant, require_manager
 
 public = APIRouter(prefix="/api/book", tags=["booking page"])
 router = APIRouter(prefix="/api", tags=["bookings"])
@@ -254,7 +254,7 @@ async def services(request: Request, tenant_id: UUID = Depends(current_tenant)) 
         return {"services": await service.list_services(conn)}
 
 
-@router.post("/services")
+@router.post("/services", dependencies=[Depends(require_manager)])
 async def add_service(
     body: NewService, request: Request, tenant_id: UUID = Depends(current_tenant)
 ) -> dict:
@@ -264,7 +264,7 @@ async def add_service(
         )}
 
 
-@router.patch("/services/{service_id}")
+@router.patch("/services/{service_id}", dependencies=[Depends(require_manager)])
 async def change_service(
     service_id: UUID, body: ServiceChange, request: Request,
     tenant_id: UUID = Depends(current_tenant),
@@ -277,7 +277,7 @@ async def change_service(
         return {"services": await service.list_services(conn)}
 
 
-@router.post("/services/{service_id}/active")
+@router.post("/services/{service_id}/active", dependencies=[Depends(require_manager)])
 async def set_active(
     service_id: UUID, body: Active, request: Request,
     tenant_id: UUID = Depends(current_tenant),
@@ -294,7 +294,7 @@ async def hours(request: Request, tenant_id: UUID = Depends(current_tenant)) -> 
         return {"periods": await service.hours(conn)}
 
 
-@router.put("/hours")
+@router.put("/hours", dependencies=[Depends(require_manager)])
 async def set_hours(
     body: Week, request: Request, tenant_id: UUID = Depends(current_tenant)
 ) -> dict:

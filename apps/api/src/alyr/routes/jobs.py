@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from alyr.core import jobs
-from alyr.routes.deps import current_tenant
+from alyr.routes.deps import current_tenant, require_manager
 
 router = APIRouter(prefix="/api/jobs", tags=["jobs"])
 
@@ -16,7 +16,7 @@ async def failed(request: Request, tenant_id: UUID = Depends(current_tenant)) ->
         return {"jobs": await jobs.failed_jobs(conn)}
 
 
-@router.post("/{job_id}/retry")
+@router.post("/{job_id}/retry", dependencies=[Depends(require_manager)])
 async def retry(job_id: UUID, request: Request, tenant_id: UUID = Depends(current_tenant)) -> dict:
     async with request.app.state.db.tenant(tenant_id) as conn:
         if not await jobs.retry(conn, job_id):
