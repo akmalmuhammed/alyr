@@ -41,6 +41,6 @@ export function termsSentence(terms: DepositTerms, lang: Lang): string {
 /** Card payments wait for the shop's own payment provider (hard rule 3, D-044). Until then a
  *  deposit link opens ALYR's test payment page, and every place that shows one says so. */
 export const STAND_IN = {
-  en: "Card payments start when the shop connects its payment provider. Until then the link opens a test payment page and no money moves.",
-  ar: "يبدأ الدفع بالبطاقة عندما يربط المحل مزوّد الدفع الخاص به. حتى ذلك الحين يفتح الرابط صفحة دفع تجريبية ولا تُنقل أي أموال.",
+  en: "Card payments go live with the shop's payment provider. Until then this link opens a test payment page and no money moves.",
+  ar: "يبدأ الدفع بالبطاقة مع مزوّد الدفع الخاص بالمحل. حتى ذلك الحين يفتح هذا الرابط صفحة دفع تجريبية ولا تُنقل أي أموال.",
 } as const;

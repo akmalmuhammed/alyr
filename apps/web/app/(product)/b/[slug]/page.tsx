@@ -68,7 +68,7 @@ const T = {
     startOnWhatsApp: (shop: string) => `للحجز، ابدأ من واتساب مع ${shop} وسيرسلون لك رابط الحجز الخاص بك.`,
     askShop: "راسل المتجر على واتساب", prefill: "حجز",
     service: "اختر الخدمة", day: "اختر اليوم", time: "اختر الوقت", minutes: (n: number) => `${n} دقيقة`,
-    who: "اختر مع من", anyone: "أي أحد", anyoneHint: "أول من يكون متاحاً",
+    who: "اختر من يخدمك", anyone: "أي أحد", anyoneHint: "أول من يكون متاحاً",
     depositTag: (a: string) => `العربون ${a}`,
     depositAsk: (a: string, m: number) => `عربون ${a} يحجز لك هذا الموعد لمدة ${m} دقيقة حتى تدفعه عبر الرابط.`,
     confirmPay: "احجز وادفع العربون",

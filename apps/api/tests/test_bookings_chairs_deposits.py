@@ -364,6 +364,12 @@ def test_a_deposit_holds_the_time_until_it_is_paid_then_the_visit_is_confirmed(c
     page = client.get(f"/api{path}").json()
     assert page["booking"]["number"] == made["number"]
     assert page["booking"]["deposit_terms"]["cancel_hours"] == 24
+    # The visit, the person and the rule; nothing that identifies the customer beyond a name.
+    assert set(page["booking"]) == {
+        "number", "service_name", "service_name_ar", "deposit_terms", "resource", "resource_ar",
+        "resource_kind", "when_text", "when_text_ar"}
+    me = ahmed(client)
+    assert me["id"] not in json.dumps(page) and AHMED_PHONE not in json.dumps(page)
     assert page["booking"]["resource"] is None  # the demo shop has no chairs here
     assert pay(client, path).status_code == 200
 
@@ -534,6 +540,9 @@ def test_a_paid_deposit_makes_a_deposit_receipt_and_counts_against_the_bill(
     assert rest.json()["payment"]["amount_minor"] == 30_000
     [final] = documents(shop, kind="receipt")
     assert (final["paid_minor"], final["total_minor"]) == (35_000, 35_000)
+    # This shop stays in the test database (its documents cannot be deleted); its visit's future
+    # reminder and hold job would be the only queued jobs left for the tests that count them.
+    owner_sql("delete from jobs where tenant_id = $1 and status = 'queued'", shop.tenant_id)
 
 
 # ----------------------------------------------------- the database, with and without the lock

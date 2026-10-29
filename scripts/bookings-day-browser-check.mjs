@@ -81,7 +81,7 @@ const run = async (name, fn) => {
 /** Set a React-controlled select or input by its id, as a person choosing would. */
 const choose = (id, value) => js(`(() => { const el = document.getElementById(${JSON.stringify(id)}); const proto = el instanceof HTMLSelectElement ? HTMLSelectElement.prototype : HTMLInputElement.prototype; Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, ${JSON.stringify(value)}); el.dispatchEvent(new Event(el instanceof HTMLSelectElement ? 'change' : 'input', { bubbles: true })); return el.value; })()`);
 const W = AR
-  ? { reem: "ريم", huda: "هدى", noor: "نور", add: "إضافة حضور مباشر", added: "تمت إضافة الحجز", moved: "تم تغيير الموعد", setup: "إعداد الحجوزات", anyone: "أي أحد", deposit: "عربون", rule: "يحتفظ المحل بالعربون", standIn: "صفحة دفع تجريبية", held: "محجوز لك", pay: "ادفع العربون", paid: "تم دفع", who: "اختر مع من", payTo: "عربون الحجز رقم" }
+  ? { reem: "ريم", huda: "هدى", noor: "نور", add: "إضافة حضور مباشر", added: "تمت إضافة الحجز", moved: "تم تغيير الموعد", setup: "إعداد الحجوزات", anyone: "أي أحد", deposit: "عربون", rule: "يحتفظ المحل بالعربون", standIn: "صفحة دفع تجريبية", held: "محجوز لك", pay: "ادفع العربون", paid: "تم دفع", who: "اختر من يخدمك", payTo: "عربون الحجز رقم" }
   : { reem: "Reem", huda: "Huda", noor: "Noor", add: "Add a walk-in", added: "Booking added", moved: "Moved", setup: "Set up bookings", anyone: "Anyone", deposit: "Deposit", rule: "the shop keeps the deposit", standIn: "test payment page", held: "is held for you", pay: "Pay the deposit", paid: "Paid", who: "Choose who", payTo: "Deposit for booking" };
 
 try {

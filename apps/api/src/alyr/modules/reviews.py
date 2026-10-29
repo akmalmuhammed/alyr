@@ -62,7 +62,9 @@ async def after_visit(
         return None
     arabic = contact["lang"] == "ar"
     if subject == "order":
-        number = await conn.fetchval("select number from orders where id = $1", subject_id)
+        number = await conn.fetchval(
+            "select number from orders where id = $1 and not is_test", subject_id
+        )
         day = ""
     else:
         number, day = await conn.fetchrow(

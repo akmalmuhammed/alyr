@@ -19,6 +19,8 @@ from test_track import an_order, track
 PAY_KEYS = {
     "amount", "status", "provider", "customer", "lang", "shop", "shop_ar", "slug",
     "order_number", "order_id", "amount_text",
+    # A booking's deposit (D-072): which visit and the shop's rule; null for an order's payment.
+    "booking",
 }
 
 
