@@ -83,7 +83,10 @@ export default function PayPage() {
   const shop = lang === "ar" && data.shop_ar ? data.shop_ar : data.shop;
   const money = formatPrice(data.amount, lang);
   const toggle = () => setLang(lang === "en" ? "ar" : "en");
-  const trackLink = data.order_id ? `/t/${tenant}/${data.order_id}` : null;
+  // The tracking page opens only by its own signed link now (SEC-8, D-080), which this page will
+  // be given with its own signed link (after the payment adapters, ALY-17). Until then it shows
+  // no way there; the customer's chat holds the link.
+  const trackLink = (data as { track_path?: string | null }).track_path ?? null;
 
   if (data.status === "paid") {
     return (

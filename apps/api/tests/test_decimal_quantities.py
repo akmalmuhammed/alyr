@@ -35,6 +35,7 @@ from test_items import (
     reconciled,
 )
 from test_orders import STORE
+from test_track import tracked as track_of
 
 KG = {"unit": "kg", "pack_size": "0.25", "min_order": "0.25"}
 
@@ -452,10 +453,7 @@ def test_the_orders_page_and_the_tracking_page_show_the_quantity_and_unit(by_wei
     item = dates(by_weight, 10)
     [who] = people(by_weight, 1)
     placed = order(by_weight, who, [line(item, "0.75")]).json()
-    tenant_order = placed["track_url"].rsplit("/t/", 1)[1]
-    tracked = by_weight.get(f"/api/track/{tenant_order}")
-    assert tracked.status_code == 200, tracked.text
-    [shown] = tracked.json()["order"]["items"]
+    [shown] = track_of(by_weight, placed)["items"]
     assert (shown["quantity"], shown["unit"], shown["line_total"]) == (0.75, "kg", 938)  # 937.5
 
 
