@@ -43,7 +43,9 @@ Until a model is in the product (D-012, D-035), nothing says or implies AI, not 
   company) is the agent; ALYR Agent is its screen and report. ALYR Chat and ALYR Bookings send
   the replies and reminders; ALYR Agent counts them.
 - The API tests enforce part of this (`apps/api/tests/test_agent.py`,
-  `test_report_card.py`, `test_agent_samples.py`). Nothing checks `copy.ts` yet; you do.
+  `test_report_card.py`, `test_agent_samples.py`). The sign-up copy (`start/copy.ts`) and the
+  inbox's words are checked by `apps/web/app/(product)/start/honesty.test.mjs` (ALY-273), the site
+  by `scripts/site/banned-words.mjs`. The rest of the workspace's copy is not checked; you do.
 
 ## 2. Must not claim (as of 17 Oct 2026)
 
