@@ -13,6 +13,7 @@ import os
 import socket
 
 from alyr.config import get_settings
+from alyr.core import resume
 from alyr.core.links import check_secret as check_link_secret
 from alyr.core.storage import check_store
 from alyr.main import create_app
@@ -71,6 +72,20 @@ async def keep_holds_swept(db, outbound) -> None:
         await asyncio.sleep(300)
 
 
+async def keep_owners_reminded(db) -> None:
+    """Email the owners who stopped partway through setting up, once their time has come
+    (ALY-171). Every hour; the database says who is due, and a reminder is recorded before it
+    is sent, so a restart or a second worker cannot send one twice."""
+    while True:
+        try:
+            sent = await resume.send_due(db)
+            if sent:
+                log.info("emailed %s owners to finish setting up", sent)
+        except Exception:  # never let a reminder stop the worker
+            log.exception("could not send the setup reminders")
+        await asyncio.sleep(3600)
+
+
 async def keep_meters_fresh(media) -> None:
     """Every shop has this month's photo and item meters, even in a month it uploaded
     nothing (ALY-103)."""
@@ -94,12 +109,14 @@ async def main() -> None:
     scheduler = asyncio.create_task(keep_reports_scheduled(app.state.db))
     sweeper = asyncio.create_task(keep_holds_swept(app.state.db, app.state.outbound))
     meters = asyncio.create_task(keep_meters_fresh(app.state.media))
+    reminders = asyncio.create_task(keep_owners_reminded(app.state.db))
     try:
         await app.state.jobs.run_forever(heartbeat=heartbeat(app.state.db))
     finally:
         scheduler.cancel()
         sweeper.cancel()
         meters.cancel()
+        reminders.cancel()
         await app.state.db.close()
 
 

@@ -30,6 +30,9 @@ GLOBAL_TABLES = {
     # What a client paid ALYR, before their products open (ALY-212, D-051): the owner reads
     # their own client's, only the back office writes. Forced row-level security.
     "client_payments",
+    # What owners are asked to accept: every shop may read it, only the back office adds to it
+    # (ALY-167). Forced row-level security.
+    "terms_versions",
 }
 
 

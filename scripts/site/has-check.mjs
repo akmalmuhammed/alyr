@@ -25,12 +25,12 @@ const APP = join(REPO, "apps", "web", "app");
 const DIRS = ["_site", "(site)", "(site-ar)"];
 const blank = (text) => text.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "));
 
-function cssFiles(dir) {
+function filesIn(dir, extension, skip = new Set()) {
   const out = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name);
-    if (entry.isDirectory()) out.push(...cssFiles(path));
-    else if (entry.name.endsWith(".css")) out.push(path);
+    if (entry.isDirectory()) { if (!skip.has(entry.name)) out.push(...filesIn(path, extension, skip)); }
+    else if (entry.name.endsWith(extension)) out.push(path);
   }
   return out;
 }
@@ -53,7 +53,7 @@ function hasArguments(css) {
 const problems = [];
 let count = 0;
 for (const dir of DIRS) {
-  for (const path of cssFiles(join(APP, dir)).sort()) {
+  for (const path of filesIn(join(APP, dir), ".css").sort()) {
     const file = path.slice(REPO.length + 1).replace(/\\/g, "/");
     const css = blank(readFileSync(path, "utf8"));
     for (const { at, argument } of hasArguments(css)) {
@@ -67,11 +67,9 @@ for (const dir of DIRS) {
 }
 
 const OUT = join(REPO, "apps", "web", "out-site");
-const pages = [];
+// every page, nested ones too (/for/bakeries, /ar/guides/...), not the scripts and fonts
+const pages = existsSync(OUT) ? filesIn(OUT, ".html", new Set(["_next"])).sort() : [];
 if (!existsSync(OUT)) problems.push("apps/web/out-site is not built: run pnpm site:build first");
-else for (const dir of [OUT, join(OUT, "ar")]) {
-  for (const name of readdirSync(dir).filter((n) => n.endsWith(".html")).sort()) pages.push(join(dir, name));
-}
 const opening = (html, tag) => html.match(new RegExp(`<${tag}\\b[^>]*>`))?.[0] ?? "";
 const carries = (tag, name) => new RegExp(`\\s${name}(?=[\\s=>])`).test(tag);
 for (const path of pages) {

@@ -174,11 +174,38 @@ PRESET_BY_KEY = {p.key: p for p in PRESETS}
 
 # The onboarding steps after the business exists, per way of working. Nothing is paid
 # first (ALY-242, D-053): the owner sets up and tries their business, then sees the plan,
-# and pays when going live.
+# and pays when going live. `orders` (ALY-164, D-063) is for a business that sells things:
+# its items, how customers get them and pay, a test order, then the same plan and go-live.
 STEPS = {
     "appointments": ("services", "hours", "try", "plan", "golive"),
+    "orders": ("products", "handover", "try", "plan", "golive"),
     "assisted": ("assisted", "plan", "golive"),
 }
+
+# The types that sell things and take their orders on the order page. Wholesale (credit,
+# price groups) and travel (requests) are not here: they stay with ALYR.
+ORDER_TYPES = ("restaurant", "bakery", "grocery", "shop", "fashion")
+
+# The ways of working whose onboarding screens are built, so a type that follows one can be
+# switched to self-serve in the back office (D-032). `orders` joined with its screens and its
+# test order (ALY-164, ALY-168). That does not move any type: every one is still set up with
+# ALYR until the founder switches it in the back office.
+BUILT_WAYS = ("appointments", "orders")
+
+
+def self_serve_way(preset: Preset) -> str | None:
+    """The way this type follows when its owner sets it up alone, or None if it has none.
+    `Preset.way` stays what it always was (where an older business is read from); this says
+    where the type goes if the back office switches it to self-serve."""
+    if preset.way == "appointments":
+        return "appointments"
+    return "orders" if preset.key in ORDER_TYPES else None
+
+
+def can_self_serve(preset: Preset) -> bool:
+    """May the back office switch this type to self-serve now: it has a way, and that way's
+    screens are built."""
+    return self_serve_way(preset) in BUILT_WAYS
 
 # Districts offered as quick choices; anything else can be typed.
 AREAS = ("Al Sadd", "West Bay", "Bin Mahmoud", "Al Wakra", "Lusail", "The Pearl",
