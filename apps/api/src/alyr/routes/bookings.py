@@ -286,6 +286,10 @@ async def bookings_day(
         )
         view = await service.day_view(conn, day or today)
         view["today"] = today.isoformat()
+        # The screen turns a typed time into a moment in the shop's own zone.
+        view["timezone"] = await conn.fetchval(
+            "select timezone from tenants where id = $1", tenant_id
+        )
         view["services"] = await service.list_services(conn, only_active=True)
         return view
 

@@ -1,0 +1,91 @@
+/* The Bookings day view and its setup (ALY-27, D-072, spec 033). Every colour, size, space and
+   radius is a generated token (design/tokens.json), so light, dark and right-to-left come from
+   the tokens. Rules before boxes: a column is a hairline and a heading, a booking a quiet card.
+   Volt only on the one main action (Add a walk-in, `.btn.volt`). Status is a word first, its
+   hue second. Nothing animates. */
+
+.bk { display: grid; gap: var(--space-3); min-width: 0; font-family: inherit; }
+.bk p { margin: 0; }
+.bk-quiet { color: var(--text-muted); font-size: var(--ui-small); line-height: var(--leading-ui); }
+.bk-said:empty { display: none; }
+.bk-said { font-size: var(--ui-small); color: var(--text-muted); }
+.bk-error { color: var(--bad); font-size: var(--ui-small); }
+
+/* ── the day bar ── */
+.bk-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); padding-block-end: var(--space-2); border-block-end: var(--rule-hairline) solid var(--line); }
+.bk-nav { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-width: 0; }
+.bk-title { margin: 0; margin-inline-start: var(--space-2); font-size: var(--ui-title-sm); font-weight: var(--weight-semibold); line-height: var(--leading-ui); }
+.bk-count { color: var(--text-muted); font-size: var(--ui-small); }
+.bk-ico { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: square; stroke-linejoin: miter; }
+[dir="rtl"] .bk-ico.ico-flip { transform: scaleX(-1); }
+
+/* ── the columns: one per person or chair ── */
+.bk-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: var(--space-3); min-width: 0; }
+.bk-col { display: grid; align-content: start; gap: var(--space-2); min-width: 0; padding-block-start: var(--space-2); border-block-start: 2px solid var(--text); }
+.bk-col.is-off { border-block-start-color: var(--line-strong); }
+.bk-colhead { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); flex-wrap: wrap; }
+.bk-colhead h3 { margin: 0; font-size: var(--ui-body); font-weight: var(--weight-semibold); }
+.bk-colhead span { font-family: var(--font-ui-mono); font-size: var(--ui-caption); color: var(--text-muted); }
+[dir="rtl"] .bk-colhead span { font-family: var(--font-ui-arabic); }
+.bk-empty { padding: var(--space-3); border: var(--rule-hairline) dashed var(--line-strong); border-radius: var(--radius-md); color: var(--text-muted); font-size: var(--ui-small); }
+.bk-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+
+/* ── a booking ── */
+.bk-card { display: grid; gap: var(--space-1); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--surface); box-shadow: inset 0 0 0 var(--rule-hairline) var(--line); min-width: 0; }
+.bk-card.is-cancelled { background: transparent; color: var(--text-muted); }
+.bk-card.is-cancelled .bk-when { text-decoration: line-through; }
+.bk-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.bk-when { font-size: var(--ui-body); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }
+.bk-status { font-size: var(--ui-caption); font-weight: var(--weight-semibold); padding: 0 var(--space-2); border-radius: var(--radius-sm); background: var(--surface-subtle); color: var(--text-muted); white-space: nowrap; }
+.bk-status.is-completed { background: var(--ok-soft); color: var(--ok); }
+.bk-status.is-no_show { background: var(--warn-soft); color: var(--warn); }
+.bk-who { font-size: var(--ui-body-sm); overflow-wrap: anywhere; }
+.bk-ref { font-family: var(--font-ui-mono); font-size: var(--ui-caption); color: var(--text-muted); }
+.bk-tag { margin-inline-start: var(--space-1); font-size: var(--ui-caption); font-weight: var(--weight-semibold); padding: 0 var(--space-1); border-radius: var(--radius-sm); box-shadow: inset 0 0 0 var(--rule-hairline) var(--line-strong); }
+.bk-what { font-size: var(--ui-body-sm); color: var(--text-muted); overflow-wrap: anywhere; }
+.bk-deposit { font-size: var(--ui-small); }
+.bk-deposit.is-due { color: var(--warn); }
+.bk-deposit.is-refund_due { color: var(--bad); }
+.bk-deposit.is-paid, .bk-deposit.is-refunded { color: var(--ok); }
+.bk-deposit.is-kept, .bk-deposit.is-expired { color: var(--text-muted); }
+.bk-note { font-size: var(--ui-small); color: var(--text-muted); overflow-wrap: anywhere; }
+.bk-acts { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-block-start: var(--space-1); }
+
+/* ── forms: adding, moving, cancelling, setup ── */
+.bk-form { display: grid; gap: var(--space-2); padding: var(--space-3); border-radius: var(--radius-md); background: var(--surface-subtle); min-width: 0; }
+.bk-form.inline { padding: var(--space-2); margin-block-start: var(--space-1); }
+.bk-form h3, .bk-form h4 { margin: 0; font-size: var(--ui-body); font-weight: var(--weight-semibold); }
+.bk-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: var(--space-2) var(--space-3); align-items: end; min-width: 0; }
+.bk-field { display: grid; gap: var(--space-1); min-width: 0; font-size: var(--ui-small); color: var(--text-muted); }
+.bk-field.wide { grid-column: 1 / -1; }
+.bk-field small { font-size: var(--ui-caption); }
+.bk-field input, .bk-field select, .bk-week input { min-width: 0; width: 100%; min-height: 44px; padding: 0 var(--space-2); border: var(--rule-hairline) solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font: inherit; font-size: var(--ui-input); }
+.bk-field input:focus-visible, .bk-field select:focus-visible, .bk-week input:focus-visible, .bk-check input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.bk-check { display: flex; align-items: center; gap: var(--space-2); min-height: 44px; font-size: var(--ui-body-sm); color: var(--text); cursor: pointer; }
+.bk-check input { width: 1.25em; height: 1.25em; flex: none; accent-color: var(--text); }
+.bk-choices { margin: 0; padding: 0; border: 0; display: grid; gap: 0; }
+.bk-choices legend { padding: 0 0 var(--space-1); font-size: var(--ui-small); color: var(--text-muted); }
+
+/* ── setup ── */
+.bk-setup { display: grid; gap: var(--space-2); justify-items: start; padding-block-start: var(--space-3); border-block-start: var(--rule-hairline) solid var(--line); }
+.bk-setup > div { width: 100%; }
+.bk-setup-body { display: grid; gap: var(--space-4); }
+.bk-setup-body h2 { margin: 0; font-size: var(--ui-title-sm); font-weight: var(--weight-semibold); }
+.bk-part { display: grid; gap: var(--space-2); min-width: 0; }
+.bk-part h3 { margin: 0; font-size: var(--ui-body); font-weight: var(--weight-semibold); }
+.bk-people { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.bk-person { display: grid; gap: var(--space-1); padding-block: var(--space-2); border-block-end: var(--rule-hairline) solid var(--line); min-width: 0; }
+.bk-svc { align-self: center; font-size: var(--ui-body-sm); overflow-wrap: anywhere; }
+.bk-addperson { padding-block-start: var(--space-2); }
+.bk-week { display: grid; gap: var(--space-1); }
+.bk-wday { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); }
+.bk-wday .bk-check { min-width: 9rem; }
+.bk-span { display: inline-flex; align-items: center; gap: var(--space-2); }
+.bk-span input { width: auto; }
+.bk-preview { padding: var(--space-2) var(--space-3); border-inline-start: 2px solid var(--line-strong); font-size: var(--ui-small); line-height: var(--leading-ui); }
+.bk-preview span { display: block; font-family: var(--font-ui-mono); font-size: var(--ui-micro); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--text-muted); }
+[dir="rtl"] .bk-preview span { font-family: var(--font-ui-arabic); letter-spacing: 0; text-transform: none; font-size: var(--ui-caption); }
+.bk-visually { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+[dir="rtl"] .bk { line-height: var(--leading-arabic-body); }
+/* A thumb needs 44 px: every button of the day view grows on a phone and a touch screen. */
+@media (max-width: 56rem), (pointer: coarse) { .bk .btn { height: auto; min-height: 44px; } }

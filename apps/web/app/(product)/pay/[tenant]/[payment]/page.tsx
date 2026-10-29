@@ -2,6 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { STAND_IN, termsSentence, type DepositTerms } from "../../../_customer/deposit";
 import { Done, Empty, Frame, Glyph } from "../../../_customer/Frame";
 import { amount as amountOf, currency, formatPrice, type Lang } from "../../../_customer/price";
 
@@ -9,10 +10,19 @@ import { amount as amountOf, currency, formatPrice, type Lang } from "../../../_
 // order that was not paid inside its hold (or was cancelled) is released, its items go back
 // on the shelf, and the link stops paying. Such a link says so and offers the way back to
 // the shop; it never keeps a Pay button that does nothing.
+//
+// A booking's deposit (ALY-27, D-072): the page names the visit and shows the shop's rule for
+// the deposit again before paying. A booking whose deposit was not paid in time is released,
+// and its link says so.
 
 type Payment = {
   shop: string; shop_ar: string | null; slug: string | null; customer: string; amount: number;
   status: "pending" | "paid" | "expired"; order_number: number | null; order_id: string | null; lang: Lang;
+  booking: {
+    number: number; service_name: string; service_name_ar: string | null; deposit_terms: DepositTerms;
+    resource: string | null; resource_ar: string | null; resource_kind: "person" | "place" | null;
+    when_text: string; when_text_ar: string;
+  } | null;
 };
 
 const T = {
@@ -27,6 +37,14 @@ const T = {
     expiredText: "It was not paid in time, so the items were put back for other customers. Nothing was charged.",
     again: "Order again", paying: "Paying…",
     failed: "The payment did not go through. Please try again.",
+    deposit: (n: number) => `Deposit for booking ${n}`,
+    visit: "Visit",
+    withWhom: (name: string, place: boolean) => (place ? `, ${name}` : ` with ${name}`),
+    rule: "The shop's rule",
+    depositPaid: "Your visit is confirmed. You can go back to WhatsApp; we sent the details there.",
+    releasedTitle: "This booking was released",
+    releasedText: "The deposit was not paid in time, so the time was given back. Nothing was charged.",
+    bookAgain: "Book again",
   },
   ar: {
     context: "دفع", eyebrow: "دفع آمن", pay: (shop: string) => `ادفع إلى ${shop}`,
@@ -39,6 +57,14 @@ const T = {
     expiredText: "لم يُدفع في الوقت المحدد، فأُعيدت الأصناف إلى القائمة. لم يُخصم أي مبلغ.",
     again: "اطلب مرة أخرى", paying: "جارٍ الدفع…",
     failed: "لم تتم عملية الدفع. حاول مرة أخرى.",
+    deposit: (n: number) => `عربون الحجز رقم ${n}`,
+    visit: "الموعد",
+    withWhom: (name: string, place: boolean) => (place ? `، ${name}` : ` مع ${name}`),
+    rule: "سياسة المحل",
+    depositPaid: "تم تأكيد موعدك. يمكنك العودة إلى واتساب، أرسلنا التفاصيل هناك.",
+    releasedTitle: "أُلغي هذا الحجز",
+    releasedText: "لم يُدفع العربون في الوقت المحدد، فأُعيد الموعد. لم يُخصم أي مبلغ.",
+    bookAgain: "احجز مرة أخرى",
   },
 };
 
@@ -84,15 +110,35 @@ export default function PayPage() {
   const money = formatPrice(data.amount, lang);
   const toggle = () => setLang(lang === "en" ? "ar" : "en");
   const trackLink = data.order_id ? `/t/${tenant}/${data.order_id}` : null;
+  const booking = data.booking;
+  const visit = booking
+    ? `${lang === "ar" && booking.service_name_ar ? booking.service_name_ar : booking.service_name}${
+      booking.resource ? t.withWhom(lang === "ar" && booking.resource_ar ? booking.resource_ar : booking.resource, booking.resource_kind === "place") : ""}`
+    : "";
+  const visitWhen = booking ? (lang === "ar" ? booking.when_text_ar : booking.when_text) : "";
 
   if (data.status === "paid") {
     return (
       <Frame lang={lang} onLang={toggle} shop={shop} context={t.context} short>
         <Done title={t.paid(money)}>
           {data.order_number && <p>{t.order(data.order_number)}</p>}
-          <p>{t.back}</p>
+          {booking && <p><bdi>{visit}</bdi> · <span className="num" dir="ltr">{visitWhen}</span></p>}
+          <p>{booking ? t.depositPaid : t.back}</p>
         </Done>
         {trackLink && <a className="cx-btn ink" href={trackLink}>{t.track}<Glyph name="arrow" className="flip" /></a>}
+      </Frame>
+    );
+  }
+
+  if (data.status === "expired" && booking) {
+    return (
+      <Frame lang={lang} onLang={toggle} shop={shop} context={t.context} short>
+        <section className="cx-done" role="status">
+          <h1>{t.releasedTitle}</h1>
+          <p>{t.deposit(booking.number)}</p>
+          <p>{t.releasedText}</p>
+        </section>
+        {data.slug && <a className="cx-btn" href={`/b/${data.slug}`}>{t.bookAgain}<Glyph name="arrow" className="flip" /></a>}
       </Frame>
     );
   }
@@ -120,9 +166,19 @@ export default function PayPage() {
           <b className="num" dir={lang === "ar" ? undefined : "ltr"}>{amountOf(data.amount)}<small>{currency(lang)}</small></b>
         </div>
         <div className="cx-kv"><span>{t.customer}</span><b>{data.customer}</b></div>
-        <div className="cx-kv"><span>{t.for}</span><b>{data.order_number ? t.order(data.order_number) : t.account}</b></div>
+        <div className="cx-kv"><span>{t.for}</span><b>{booking ? t.deposit(booking.number) : data.order_number ? t.order(data.order_number) : t.account}</b></div>
+        {booking && (
+          <div className="cx-kv"><span>{t.visit}</span><b><bdi>{visit}</bdi> · <span className="num" dir="ltr">{visitWhen}</span></b></div>
+        )}
         <div className="cx-kv"><span>{t.method}</span><b className="cx-card-brand"><i aria-hidden="true" />{t.card}</b></div>
       </section>
+      {booking && (
+        <section className="cx-card cx-terms" style={{ "--i": 2 } as React.CSSProperties}>
+          <h2>{t.rule}</h2>
+          <p>{termsSentence(booking.deposit_terms, lang)}</p>
+        </section>
+      )}
+      {booking && <p className="cx-note">{STAND_IN[lang]}</p>}
       {error && <p className="cx-error" role="alert" style={{ "--i": 2 } as React.CSSProperties}>{t.failed}</p>}
       <button className="cx-btn" style={{ "--i": 2 } as React.CSSProperties} onClick={pay} disabled={busy}>
         <Glyph name="card" />{busy ? t.paying : t.button(money)}

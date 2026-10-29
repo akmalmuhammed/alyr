@@ -831,3 +831,20 @@ def test_the_live_salon_has_three_stylists_side_by_side_and_deposits():
     assert {"b": finding.rows[0].detail["with"]["name"]} in detail
     _, detail_ar = insights._say_repeat_no_show(finding, f, "ar")
     assert " مع " in "".join(p for p in detail_ar if isinstance(p, str))
+
+
+def test_the_live_salon_can_be_reset_after_a_rehearsal_paid_a_deposit(client):
+    """A deposit paid while rehearsing the demo issues a receipt, which can never be deleted.
+    The next reset still works, and the receipt is still there."""
+    live_salon()
+    tid = SALON.tenant_id
+    [waiting] = owner_sql("select id from payment_requests where tenant_id = $1 "
+                          "and status = 'pending' and booking_id is not null", tid)
+    assert client.post(f"/api/pay/{tid}/{waiting['id']}/complete").status_code == 200
+    receipts = owner_sql("select id from documents where tenant_id = $1 "
+                         "and kind = 'deposit_receipt' and status = 'issued'", tid)
+    assert len(receipts) == 1
+    first, again, _ = live_salon()
+    assert first == again
+    assert owner_sql("select count(*) as n from documents where tenant_id = $1 "
+                     "and kind = 'deposit_receipt'", tid)[0]["n"] == 1

@@ -653,6 +653,13 @@ async def ensure_sample_tenant(owner_dsn: str, sample: Sample, now: datetime, da
             "values ($1, $2, 'simulator') on conflict (number_id) do nothing",
             f"sim-{sample.slug}", sample.tenant_id,
         )
+        # A deposit paid in a rehearsal of the salon demo issues a receipt (D-072). Documents can
+        # never be deleted, and their delivery rows hold on to the messages the reset removes,
+        # so the delivery rows of this fictional shop go first (the owner role: the app may not
+        # delete them). The receipts stay, as issued documents always do.
+        await conn.execute(
+            "delete from document_deliveries where tenant_id = $1", sample.tenant_id
+        )
         client = await conn.fetchval(
             "select client_id from tenants where id = $1", sample.tenant_id
         )

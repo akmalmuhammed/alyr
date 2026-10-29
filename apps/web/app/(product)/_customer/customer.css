@@ -46,6 +46,8 @@
 .cx-lang { height: 32px; padding: 0 12px; border: 0; border-radius: 16px; background: var(--card); box-shadow: var(--lift); font-size: var(--ui-small); font-weight: 600; }
 .cx-main { max-width: 34rem; margin: 0 auto; padding: 22px max(16px, env(safe-area-inset-right, 0px)) calc(150px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 22px; }
 .cx-main.short { padding-bottom: calc(48px + env(safe-area-inset-bottom, 0px)); }
+/* The deposit's rule is the last thing before confirming: it must scroll clear of the bar (D-072). */
+.cx-main:has(.cx-deposit) { padding-bottom: calc(15rem + env(safe-area-inset-bottom, 0px)); }
 .cx-enter > * { animation: cx-rise 0.5s var(--ease-product) both; animation-delay: calc(var(--i, 0) * 60ms); }
 @keyframes cx-rise { from { opacity: 0; transform: translateY(8px); } }
 
@@ -142,6 +144,10 @@
 .cx-amount > span, .cx-amount > h1 { margin: 0; font-size: var(--ui-body-sm); font-weight: 400; letter-spacing: 0; color: var(--ink-2); }
 .cx-amount b { display: flex; align-items: baseline; gap: 8px; font-size: clamp(40px, 13vw, 52px); font-weight: 600; letter-spacing: -0.05em; line-height: 1; }
 .cx-amount b small { font-family: var(--font-ui-mono); font-size: var(--ui-body-sm); font-weight: 500; letter-spacing: 0.04em; color: var(--ink-2); }
+/* A deposit's rule (ALY-27, D-072): sentences in a card, on the booking and payment pages. */
+.cx-terms { display: grid; gap: var(--space-2); padding: var(--space-3); font-size: var(--ui-body-sm); line-height: var(--leading-ui); }
+.cx-terms h2 { margin: 0; font-size: var(--ui-body-sm); font-weight: var(--weight-semibold); color: var(--ink-2); }
+.cx-terms p { margin: 0; }
 .cx-kv { display: flex; justify-content: space-between; gap: 16px; padding: 13px 18px; border-top: 1px solid var(--hair); font-size: var(--ui-body-sm); color: var(--ink-2); }
 .cx-kv b { color: var(--ink); font-weight: 500; text-align: end; }
 .cx-card-brand { display: inline-flex; align-items: center; gap: 6px; }
