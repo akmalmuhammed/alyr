@@ -119,7 +119,7 @@ export default function PayPage() {
           <h1>{t.pay(shop)}</h1>
           <b className="num" dir={lang === "ar" ? undefined : "ltr"}>{amountOf(data.amount)}<small>{currency(lang)}</small></b>
         </div>
-        <div className="cx-kv"><span>{t.customer}</span><b>{data.customer}</b></div>
+        {data.customer && <div className="cx-kv"><span>{t.customer}</span><b>{data.customer}</b></div>}
         <div className="cx-kv"><span>{t.for}</span><b>{data.order_number ? t.order(data.order_number) : t.account}</b></div>
         <div className="cx-kv"><span>{t.method}</span><b className="cx-card-brand"><i aria-hidden="true" />{t.card}</b></div>
       </section>

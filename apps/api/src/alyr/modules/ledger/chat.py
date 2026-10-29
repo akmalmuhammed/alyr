@@ -125,13 +125,10 @@ async def _pay(
     if not await pay_ways.online_possible(conn):
         # No account of the shop's own takes money online yet: a link would open a page that
         # cannot be paid (ALY-271). Say how the shop is paid instead.
-        how = pay_ways.say((await pay_ways.get(conn))["ways"], lang)
-        if lang == "ar":
-            body = f"رصيدك {fmt_qar(balance)}. ادفع للمحل {how}، وسيسجّل الدفعة في حسابك."
-        else:
-            body = (f"Your balance is {fmt_qar(balance)}. Pay the shop by {how}, "
-                    "and they will record it on your account.")
-        return OutboundMessage(to=to, body=body)
+        how = service.pay_the_shop((await pay_ways.get(conn))["ways"], lang)
+        balance_line = f"رصيدك {fmt_qar(balance)}." if lang == "ar" else (
+            f"Your balance is {fmt_qar(balance)}.")
+        return OutboundMessage(to=to, body=f"{balance_line} {how}")
     # "pay 500" pays part of the balance; never more than is owed.
     amount = min(part, balance) if part else balance
     link = await service.create_payment_request(conn, tenant_id, contact["id"], amount, web_url)

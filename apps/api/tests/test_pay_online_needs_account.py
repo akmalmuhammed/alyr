@@ -7,10 +7,12 @@ account is connected, or on a developer machine, where the stand-in plays the pr
 `ALYR_STAND_IN_PAYMENTS=false` shows a developer machine what production gets. Every test goes
 through the real path: HTTP in, real PostgreSQL, the chat on the simulator."""
 
+import re
 from uuid import UUID
 
 import pytest
 
+from alyr.core.normalise import shown_name
 from alyr.seed import AHMED_PHONE, DEMO_SLUG
 from test_consent import owner_sql
 from test_items import counted, line, order
@@ -105,7 +107,7 @@ def test_a_credit_customer_is_told_how_to_pay_the_shop_not_sent_a_link(productio
     before = owner_sql("select count(*)::int as n from payment_requests")[0]["n"]
     answer = chat(client, "pay")
     assert answer["body"].startswith("Your balance is QAR ")
-    assert "Pay the shop by cash or bank transfer" in answer["body"]
+    assert "You can pay us by cash or bank transfer" in answer["body"]
     assert "/pay/" not in answer["body"]
     assert owner_sql("select count(*)::int as n from payment_requests")[0]["n"] == before
 
@@ -123,3 +125,41 @@ def test_on_a_developer_machine_a_credit_customer_still_gets_the_stand_in_link(c
     assert [c["id"] for c in chat(client, "hello")["payload"]["choices"]] == [
         "order", "balance", "pay",
     ]
+
+
+# ── reminders, and a name that is only a phone number ────────────────────────────────────
+
+
+def test_a_reminder_says_how_to_pay_the_shop_with_no_link(production_like):
+    client = production_like
+    before = owner_sql("select count(*)::int as n from payment_requests")[0]["n"]
+    assert client.post("/api/ledger/reminders", json={"min_days": 30}).json()["sent"] >= 1
+    reminder = client.get(f"/sim/conversations/{AHMED_PHONE}").json()["messages"][-1]
+    assert reminder["payload"]["template"] == "payment_reminder_offline"
+    assert "/pay/" not in reminder["body"] and "QAR 1,850" in reminder["body"]
+    assert "You can pay us by cash or bank transfer" in reminder["body"]
+    assert reminder["payload"]["params"][3] == (
+        "You can pay us by cash or bank transfer, and we will record it on your account.")
+    assert [c["id"] for c in reminder["payload"]["choices"]] == ["promise"]
+    assert owner_sql("select count(*)::int as n from payment_requests")[0]["n"] == before
+    # The weekly figures count it as a reminder like the others.
+    from alyr.modules.ledger.report import REMINDERS
+
+    assert "payment_reminder_offline" in REMINDERS
+
+
+def test_on_a_developer_machine_a_reminder_still_carries_the_stand_in_link(client):
+    assert client.post("/api/ledger/reminders", json={"min_days": 30}).json()["sent"] >= 1
+    reminder = client.get(f"/sim/conversations/{AHMED_PHONE}").json()["messages"][-1]
+    assert reminder["payload"]["template"] == "payment_reminder"
+    assert "/pay/" in reminder["body"]
+
+
+def test_a_phone_number_is_never_printed_as_the_customers_name(client):
+    assert shown_name("+97455501234") == "" and shown_name("+974 5550 1234") == ""
+    assert shown_name("Ahmed Al-Kuwari") == "Ahmed Al-Kuwari" and shown_name(None) == ""
+    # A customer with no WhatsApp profile name is stored as "+<phone>" (core/identity.py).
+    owner_sql("update contacts set name = $1 where phone = $2", f"+{AHMED_PHONE}", AHMED_PHONE)
+    link = re.search(r"/pay/(\S+)/(\S+)", chat(client, "pay")["body"])
+    details = client.get(f"/api/pay/{link.group(1)}/{link.group(2)}").json()
+    assert details["customer"] == "" and AHMED_PHONE not in str(details)
