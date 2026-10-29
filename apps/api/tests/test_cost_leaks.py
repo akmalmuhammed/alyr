@@ -11,6 +11,7 @@ Where the cost lives (tables of its own) is the first line of defence; these are
 """
 
 import io
+import random
 import re
 import zipfile
 from uuid import UUID
@@ -34,18 +35,61 @@ from test_orders import say
 from test_sign_in import sign_in
 
 STORE = f"/api/store/{DEMO_SLUG}"
-# A cost, the margin it leaves, and the percentage: numbers nobody would meet by accident.
+# A cost, the margin it leaves, and the percentage. Unlikely numbers, but not impossible ones:
+# five digits turn up inside a random id or a time (below), so the numbers are searched as whole
+# numbers, and the percentages, which end in "%" or start with "(", as they are.
 COST, VARIANT_COST, PRICE = 31_337, 27_711, 50_000
-SECRETS = ("31337", "313.37", "18663", "186.63", "27711", "277.11", "37.3%", "(37.3")
+NUMBERS = ("31337", "313.37", "18663", "186.63", "27711", "277.11")
+PERCENTS = ("37.3%", "(37.3")
+# A whole number: not part of a longer run of digits, hex letters or a fraction. A UUID or a hash
+# is hex, and a time such as 22:29:18.277110 has six random digits after the dot; each held
+# `27711` or `18663` now and then, and plain substring search failed ci on 28 and 29 Oct (ALY-269).
+WHOLE = re.compile(
+    r"(?<![0-9A-Fa-f.])(?:" + "|".join(re.escape(n) for n in NUMBERS) + r")(?![0-9A-Fa-f]|\.\d)"
+)
 KEYS = re.compile(r'"(cost|unit_cost|margin|margins|margin_pct|cost_price|valuation)"\s*:')
 WORDS = re.compile(r"\b(unit cost|cost price|gross margin|your margin|it costs you)\b", re.I)
 
 
 def seen_in(text: str) -> list[str]:
-    found = [s for s in SECRETS if s in text]
+    found = WHOLE.findall(text)
+    found += [s for s in PERCENTS if s in text]
     found += KEYS.findall(text)
     found += WORDS.findall(text)
     return found
+
+
+# ── the search itself (a cost must be found, and a random id or time must not be) ───────────
+
+
+def test_a_cost_is_not_found_inside_an_id_or_a_time():
+    """Answers are full of random ids and times, and a cost's digits sit inside one now and then:
+    ci failed on 28 and 29 Oct on `27711` in a time and `18663` in an id (ALY-269). Every place
+    the three numbers can sit in a UUID, or in a time with microseconds, must read as harmless."""
+    rnd = random.Random(269)
+    hexa = "0123456789abcdef"
+    for number in (str(COST), str(PRICE - COST), str(VARIANT_COST)):
+        for group, size in ((0, 8), (4, 12)):  # the two UUID groups long enough for five digits
+            for at in range(size - len(number) + 1):
+                parts = ["".join(rnd.choice(hexa) for _ in range(n)) for n in (8, 4, 4, 4, 12)]
+                parts[group] = parts[group][:at] + number + parts[group][at + len(number):]
+                uuid = "-".join(parts)
+                assert seen_in(f'"id":"{uuid}"') == [], uuid
+                assert seen_in(f"'id': 'item:{uuid}'") == [], uuid
+        for at in (0, 1):  # a time such as 22:29:18.277110
+            fraction = "".join(rnd.choice("0123456789") for _ in range(6))
+            fraction = fraction[:at] + number + fraction[at + len(number):]
+            assert seen_in(f'"at":"2026-10-29T22:29:18.{fraction}+00:00"') == [], fraction
+
+
+def test_a_cost_is_still_found_as_a_number():
+    """…and the stricter search misses none of the shapes a leaked cost really takes."""
+    for leak in (
+        '"price": 31337', "{'cost': 31337}", "[31337]", ",31337,", "<v>31337</v>", "-31337",
+        "QAR 313.37", "313.37 QAR", "QAR 186.63", "1,313.37", ",277.11,", "<v>313.37</v>",
+        "(277.11)", "margin 37.3%", "(37.3 %)",
+    ):
+        assert seen_in(leak), leak
 
 
 @pytest.fixture
