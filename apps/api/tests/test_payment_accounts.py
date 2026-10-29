@@ -238,8 +238,8 @@ def test_an_order_paid_at_the_provider_is_settled_and_its_stock_sold(client):
     ref = details["checkout_url"].split("?sim=")[1]
     client.post(f"/sim/gateway/{ref}/pay")
     assert client.get(f"/api/pay/{tenant_id}/{payment_id}").json()["status"] == "paid"
-    assert owner_sql("select payment from orders where number = $1",
-                     order["number"])[0]["payment"] == "paid"
+    assert owner_sql("select payment from orders where tenant_id = $1 and number = $2",
+                     DEMO_TENANT_ID, order["number"])[0]["payment"] == "paid"
     assert last_message(client)["body"] == (
         f"We received QAR 450 for order {order['number']}. Thank you."
     )
