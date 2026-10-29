@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     jobs_inline: bool = True
     # First retry delay; it doubles on each further attempt.
     jobs_backoff_seconds: float = 5.0
+    # How many jobs one process runs at once (a customer's own jobs still one at a time, in
+    # order; ALY-276). Each running job may hold two database connections at a moment, so
+    # keep it at most half the pool (10 per process).
+    jobs_concurrency: int = 5
     # /health/worker answers 503 when the worker has not checked in for this long.
     worker_stale_seconds: int = 120
 
@@ -61,6 +65,15 @@ class Settings(BaseSettings):
 
     # Where payment links point. The web app serves /pay/...
     public_web_url: str = "http://localhost:3100"
+    # The stand-in payment page, which moves no money, plays a shop's payment provider on a
+    # developer machine only (env "local", ALY-114). False switches it off there too, to see
+    # what a shop with no payment account of its own gets (ALY-271). It can never switch it on.
+    stand_in_payments: bool = True
+    # Where the signed-in workspace is served, for the links at the end of an owner's
+    # answers in WhatsApp (D-065). Empty until it is hosted: today's public web address is
+    # the laptop tunnel, which serves customer pages only, so a workspace link would 404.
+    workspace_url: str = ""
+
     # Other web addresses a signed-in browser may post from, comma separated (ALY-118). The
     # address in `public_web_url` is always allowed; add the console's (ops.alyr.qa) or a
     # workers.dev address of the portal while that is where people sign in.
@@ -78,6 +91,13 @@ class Settings(BaseSettings):
     # look for months later, so its link lives longer than an order link; an older link is
     # answered with a page that says so, and the shop sends the document again.
     document_link_days: int = 90
+
+    # Seals the keys shops paste from their payment provider (AES-256-GCM, core/payment_keys.py,
+    # ALY-17): 32 random bytes, base64. Only a local machine may leave it empty (a built-in
+    # development key is used); anywhere else connecting a payment account is refused until it
+    # is set. Never in git. Changing it makes every connected account's keys unreadable: the
+    # shops connect again.
+    payment_keys_key: str = ""
 
     meta_app_secret: str = ""
     meta_verify_token: str = ""
@@ -114,6 +134,13 @@ class Settings(BaseSettings):
     email_api_key: str = ""
     email_from: str = "ALYR <no-reply@alyr.qa>"
     email_reply_to: str = "hello@alyr.qa"
+
+    # Alerts to a person's phone and inbox (ALY-121, spec 034, D-073). Both empty: alerts are only
+    # logged. The ntfy topic is a secret: anyone who knows it can read and send alerts. An alert
+    # holds counts and ages only, never a name, a number or a message.
+    alert_ntfy_topic: str = ""
+    alert_ntfy_url: str = "https://ntfy.sh"
+    alert_email: str = ""
 
     # Product photos (D-039, ALY-103). With the account ID and both keys set, photos go to
     # Cloudflare R2 and are served from `media_base_url`. With any of the three missing
@@ -156,6 +183,29 @@ class Settings(BaseSettings):
     # IBAN, shown to the owner beside the amount and their reference. Not a secret. Empty
     # until ALYR's company account is open; the owner is then told ALYR sends the details.
     bank_transfer_details: str = ""
+
+    # A client pays ALYR by card through Paddle (ALY-180, D-074). "paddle": every client is
+    # offered a card payment at go-live, unless the back office switches it off for one.
+    # Empty: no client is, whatever the back office says. It is only offered while the three
+    # Paddle values below are set. Paddle charges in US dollars (core/paddle.py).
+    card_billing: str = ""
+    # "sandbox" (sandbox-api.paddle.com, test cards) or "live" (api.paddle.com). Live waits
+    # for Paddle's approval of the website and for the customer agreement (ALY-98).
+    paddle_environment: str = "sandbox"
+    # The server API key, and the secret of the notification destination that signs
+    # webhooks. Both secrets: Secret Manager in production, never in git.
+    paddle_api_key: str = ""
+    paddle_webhook_secret: str = ""
+    # The client-side token Paddle.js opens the checkout with (starts with test_ or live_).
+    # Paddle makes it to be shown in a web page: not a secret.
+    paddle_client_token: str = ""
+
+    # A client whose next period is not paid (ALY-218, D-082): everything keeps working for
+    # this many days after the due date, with reminders to the owner. Then, while
+    # `billing_pause_sending` is on, ALYR pauses its automatic replies and templates for the
+    # client's businesses until they pay. Nothing is deleted and the workspace stays open.
+    billing_grace_days: int = 14
+    billing_pause_sending: bool = True
 
     # Per shop, to start (D-039; our estimate). A cap stops new items or photos with a
     # clear message and never deletes anything.

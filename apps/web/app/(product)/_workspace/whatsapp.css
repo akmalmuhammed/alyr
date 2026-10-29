@@ -1,0 +1,75 @@
+/* "Your WhatsApp" on the Team screen (ALY-131). It takes the shell's tokens (shell.css) and its
+   patterns: tiles on hairlines, the Volt only for the main action and for progress, pills.
+   Nothing here sets a colour of its own, so light, dark and right-to-left come for free.
+   Built at 375 px first: targets are 44 px or more and nothing scrolls sideways. */
+
+.wa { display: grid; gap: 14px; min-width: 0; }
+.wa-head h2 { margin: 0; font-size: var(--ui-body); font-weight: 600; }
+.wa-head p { margin: 2px 0 0; font-size: var(--ui-small); color: var(--ink-2); }
+.wa-note { margin: 0; font-size: var(--ui-body-sm); color: var(--ink-2); }
+.wa .num { font-variant-numeric: tabular-nums; }
+
+.wa-card { display: grid; gap: 12px; align-content: start; min-width: 0; padding: 18px; border-radius: 14px; background: var(--sheet); box-shadow: 0 0 0 1px var(--hair) inset; }
+.wa-card > * { margin: 0; }
+.wa-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.wa-card-head h3 { margin: 0; font-size: var(--ui-body); font-weight: 600; letter-spacing: -0.01em; }
+.wa-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: 14px; }
+
+.wa-quiet { font-size: var(--ui-small); line-height: 1.5; color: var(--ink-2); }
+.wa-number { font-size: var(--ui-body-sm); }
+.wa-number b { font-size: var(--ui-body); font-weight: 600; }
+.wa-ok, .wa-bad { font-size: var(--ui-small); font-weight: 500; }
+.wa-ok { color: var(--volt-ink); }
+.wa-bad { color: var(--bad); }
+.wa-link { border: 0; padding: 0; background: none; color: var(--ink); font: inherit; font-weight: 600; text-decoration: underline; min-height: 44px; }
+
+.wa-steps { margin: 0; padding: 0; list-style: none; counter-reset: step; display: grid; gap: 8px; }
+.wa-steps li { counter-increment: step; display: flex; gap: 10px; align-items: baseline; font-size: var(--ui-body-sm); }
+.wa-steps li::before { content: counter(step); flex: none; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: var(--raise); box-shadow: 0 0 0 1px var(--hair-2) inset; font-family: var(--font-ui-mono); font-size: var(--ui-caption); color: var(--ink-2); }
+
+.wa-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.sh .btn.wa-btn { height: auto; min-height: 44px; padding-inline: 16px; white-space: normal; text-align: center; }
+.sh .wa .btn.danger { background: var(--bad); color: var(--white); box-shadow: none; }
+.sh .wa .btn.danger-line { color: var(--bad); box-shadow: 0 0 0 1px var(--bad) inset; background: transparent; }
+.sh .wa .btn:disabled { opacity: 0.5; cursor: default; }
+.wa-confirm { display: grid; gap: 10px; padding: 14px; border-radius: 12px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair) inset; }
+.wa-confirm p { margin: 0; font-size: var(--ui-body-sm); }
+
+/* the code */
+.wa-code { display: grid; gap: 14px; }
+.wa-codebox { display: grid; gap: 8px; }
+.wa-label { font-family: var(--font-ui-mono); font-size: var(--ui-micro); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
+.sh[dir="rtl"] .wa-label { font-family: var(--face); letter-spacing: 0; font-size: var(--ui-caption); text-transform: none; }
+.wa-msgrow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; }
+.wa-msg { flex: 1 1 14rem; min-width: 0; display: flex; align-items: center; justify-content: center; padding: 10px 14px; border-radius: 12px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair-2) inset; font-family: var(--font-ui-mono); font-size: clamp(20px, 6vw, 28px); font-weight: 600; letter-spacing: 0.08em; user-select: all; }
+.wa-timer { display: grid; gap: 8px; }
+.wa-timer-line { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; font-size: var(--ui-small); }
+.wa-timer-line b { font-size: var(--ui-body-sm); font-weight: 600; }
+.wa-bar { height: 4px; border-radius: 2px; background: var(--raise); overflow: hidden; }
+.wa-bar span { display: block; height: 100%; background: var(--volt); border-radius: 2px; transition: width 0.5s linear; }
+
+/* where you work */
+.wa-choice { display: grid; gap: 8px; }
+.wa-choice button { display: grid; gap: 2px; justify-items: start; text-align: start; min-height: 44px; padding: 10px 14px; border: 0; border-radius: 12px; background: var(--sheet); color: var(--ink); box-shadow: 0 0 0 1px var(--hair-2) inset; transition: background 0.18s var(--ease-product), box-shadow 0.18s var(--ease-product); }
+.wa-choice button:hover { background: var(--raise); }
+.wa-choice b { font-size: var(--ui-body-sm); font-weight: 600; }
+.wa-choice small { font-size: var(--ui-caption); color: var(--ink-2); }
+.wa-choice button[aria-checked="true"] { background: var(--volt-wash); box-shadow: 0 0 0 2px var(--volt-ink) inset; }
+.wa-choice button[aria-checked="true"] small { color: var(--ink); }
+@media (min-width: 48rem) {
+  .wa-choice { grid-template-columns: repeat(3, 1fr); }
+  .wa-pair .wa-choice { grid-template-columns: 1fr; }
+}
+
+/* what you can send */
+.wa-cmds { margin: 0; padding: 0; list-style: none; border-radius: 12px; box-shadow: 0 0 0 1px var(--hair) inset; overflow: hidden; }
+.wa-cmds li { display: grid; grid-template-columns: minmax(6.5rem, 9rem) 1fr; align-items: center; gap: 12px; padding: 10px 14px; }
+.wa-cmds li + li { border-top: 1px solid var(--hair); }
+.wa-words { display: flex; flex-wrap: wrap; gap: 4px; }
+.wa-words code { padding: 2px 7px; border-radius: 6px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair-2) inset; font-family: var(--font-ui-mono); font-size: var(--ui-small); font-weight: 600; }
+.wa-words code[lang="ar"] { font-family: var(--font-ui-arabic); }
+.wa-what { display: grid; font-size: var(--ui-body-sm); }
+.wa-what small { font-size: var(--ui-caption); color: var(--ink-2); }
+@media (max-width: 30rem) {
+  .wa-cmds li { grid-template-columns: 1fr; gap: 6px; }
+}

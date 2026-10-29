@@ -154,6 +154,9 @@ jobs:
       # The Cloudflare token is set on the deploy step only (ALY-245).
       # Product analytics (D-070), production only: previews are not counted.
       NEXT_PUBLIC_POSTHOG_KEY: ${{ vars.POSTHOG_PROJECT_KEY }}
+      # Search engines' ownership tags in <head> (D-056); empty means no tag.
+      NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION: ${{ vars.GOOGLE_SITE_VERIFICATION }}
+      NEXT_PUBLIC_BING_SITE_VERIFICATION: ${{ vars.BING_SITE_VERIFICATION }}
     defaults:
       run:
         working-directory: apps/web

@@ -82,9 +82,9 @@ def test_names_are_forgiven_a_spelling_mistake_and_arabic_spellings_are_folded(c
 def test_a_name_that_matches_nothing_changes_nothing(client):
     item = mk(client, name="Shawarma", name_ar="شاورما")
     reply = talk(client, STAFF_PHONE, "sold out pizza")[-1]
-    assert "could not find an item called" in reply["body"] and "pizza" in reply["body"]
+    assert "No item is called" in reply["body"] and "pizza" in reply["body"]
     reply = talk(client, STAFF_PHONE, "نفذ بيتزا")[-1]
-    assert "لم أجد صنفاً" in reply["body"]
+    assert "لا يوجد صنف" in reply["body"]
     assert fresh(client, item)["available"] is True
 
 
@@ -177,12 +177,12 @@ def test_staff_change_a_price_in_english_and_arabic(client):
 def test_a_price_that_cannot_be_read_or_is_not_allowed_changes_nothing(client):
     item = mk(client, name="Shawarma", name_ar="شاورما", price=1200)
     assert "What is the new price" in talk(client, STAFF_PHONE, "price shawarma")[-1]["body"]
-    assert "could not read that price" in talk(client, STAFF_PHONE, "price shawarma 0")[-1]["body"]
+    assert "price could not be read" in talk(client, STAFF_PHONE, "price shawarma 0")[-1]["body"]
     assert "too high" in talk(client, STAFF_PHONE, "price shawarma 9999999")[-1]["body"]
     # A sale price must stay below the price: the service says no, and nothing changes.
     client.put(f"/api/items/{item['id']}", json={"sale_price": 1000})
     refused = talk(client, STAFF_PHONE, "price shawarma 9")[-1]
-    assert "I could not change Shawarma" in refused["body"]
+    assert "Shawarma could not be changed" in refused["body"]
     assert fresh(client, item)["price"] == 1200
     assert "already costs QAR 12" in talk(client, STAFF_PHONE, "price shawarma 12")[-1]["body"]
 

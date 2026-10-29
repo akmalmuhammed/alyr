@@ -11,12 +11,14 @@ from alyr.config import get_settings
 from alyr.core import (
     access,
     auth,
+    card_billing,
     links,
     mail,
     onboarding,
     pricing,
     ratelimit,
     readiness,
+    subscription,
     terms,
     whatsapp_setup,
 )
@@ -326,7 +328,40 @@ async def payment(request: Request, staff: Staff = Depends(current_staff)) -> di
     """What opens the workspace (ALY-212, D-051): the amount due, what was paid, how to pay,
     and whether the products are open."""
     async with request.app.state.db.tenant(staff.tenant_id) as conn:
-        return await access.summary(conn)
+        summary = await access.summary(conn)
+        client_id = await conn.fetchval("select own_client()")
+        # Where the plan stands after go-live (ALY-218): the workspace's banner reads it.
+        return summary | {
+            "subscription": subscription.view(await subscription.current(conn, client_id))
+            if client_id else None
+        }
+
+
+@router.post("/payment/card")
+async def pay_by_card(request: Request, staff: Staff = Depends(current_staff)) -> dict:
+    """The owner chooses to pay ALYR by card (ALY-180, D-074). ALYR makes the checkout with
+    Paddle in a job; the page asks `GET /payment/card` until it is open."""
+    _owner(staff)
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            return await card_billing.start(conn, get_settings(), staff.name or staff.email)
+    except card_billing.CardError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.get("/payment/card")
+async def card_checkout(request: Request, staff: Staff = Depends(current_staff)) -> dict:
+    """The owner's latest card checkout, and what Paddle.js opens it with."""
+    settings = get_settings()
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        checkout = await card_billing.latest(conn)
+    return {
+        "checkout": checkout,
+        # Paddle makes the client-side token to be shown in a page: it is not a secret.
+        "paddle": {"token": settings.paddle_client_token,
+                   "environment": settings.paddle_environment}
+        if checkout and checkout["provider"] == "paddle" else None,
+    }
 
 
 @router.patch("/whatsapp")

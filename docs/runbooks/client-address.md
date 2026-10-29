@@ -1,6 +1,6 @@
 # The visitor's address: how the per-address limits know who is asking
 
-Written 29 Oct 2026 (ALY-265, D-072, on top of ALY-116). The sign-in, sign-up, order and
+Written 29 Oct 2026 (ALY-265, D-083, on top of ALY-116). The sign-in, sign-up, order and
 booking doors count how often one address knocks (`apps/api/src/alyr/core/ratelimit.py`). This
 page says how the API learns that address in production on Google Cloud, how to turn it on, how to
 check it and how to turn it off again. Until it is turned on, the API logs "per-address rate

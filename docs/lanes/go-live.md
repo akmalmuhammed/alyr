@@ -25,7 +25,7 @@ Anything else belongs to another lane. If a task needs it, keep the change small
 
 Last updated 29 Oct 2026 (the visitor's address for the rate limits, ALY-265, branch `aly-ratelimit-trusted-client-ip`), on top of 24 Oct 2026 (site tooling, branch `aly-site-tooling`, `docs/site-audit/05-tooling-log.md`).
 
-- **Per-address rate limits in production (ALY-265, D-072), in a pull request, nothing applied
+- **Per-address rate limits in production (ALY-265, D-083), in a pull request, nothing applied
   to production.** The edge Worker (`infra/cloudflare/edge`) writes the visitor's address from
   `CF-Connecting-IP` and signs it; the web app passes it on; the API counts only a signed
   address and counts every other request in one shared bucket. `infra/gcp/setup.sh` gains

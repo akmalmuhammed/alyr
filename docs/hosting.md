@@ -72,7 +72,7 @@ verified in Google Search Console for akmal@alyr.qa (TXT record on alyr.qa).
 **Who is asking.** The `run.app` addresses are public too, so the API cannot believe a header
 that anyone could write. The Worker is the one place that knows the visitor: it writes the address
 from `CF-Connecting-IP` and signs it, and the API counts its per-address limits only by an address
-with a good signature (ALY-265, D-072; `runbooks/client-address.md`).
+with a good signature (ALY-265, D-083; `runbooks/client-address.md`).
 
 ## Production settings
 

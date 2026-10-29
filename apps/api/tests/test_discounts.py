@@ -32,6 +32,7 @@ from test_order_by_code import ids, orders_of, tap
 from test_orders import customer
 from test_sign_in import sign_in
 from test_templates import no_templates_left_over, office, owner  # noqa: F401  (fixtures by name)
+from test_track import tracked as track_of
 
 STORE = f"/api/store/{DEMO_SLUG}"
 
@@ -208,8 +209,7 @@ def test_a_percentage_coupon_comes_off_line_by_line_and_the_order_charges_exactl
                   if o["id"] == placed["order_id"])
     assert listed["subtotal"] == 27_500 and listed["discount_total"] == 2_750
     assert listed["discounts"][0]["code"] == "RAMADAN10" and listed["items"][0]["discount"]
-    tenant = owner_sql("select id from tenants where slug = $1", DEMO_SLUG)[0]["id"]
-    tracked = client.get(f"/api/track/{tenant}/{placed['order_id']}").json()["order"]
+    tracked = track_of(client, placed)
     assert tracked["discount_total"] == 2_750 and tracked["total"] == 24_750
     assert tracked["discounts"][0]["amount"] == 2_750
     # the message the customer gets says what came off

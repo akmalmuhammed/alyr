@@ -29,6 +29,8 @@ export type Quote = {
 export type ClientSummary = {
   id: string; name: string; contact_name: string; contact_email: string; contact_phone: string;
   note: string; price_mode: "automatic" | "prepared" | null; created_at: string;
+  // Where the plan stood at the last hourly check (ALY-218); '' before the first.
+  billing_state?: string; cancels_on?: string | null;
   businesses: Business[];
   quote: { id: string; number: number; status: Quote["status"]; totals: Totals } | null;
 };
@@ -40,6 +42,8 @@ export type ClientDetail = Omit<ClientSummary, "quote"> & {
 
 export type Item = {
   key: string; name: string; name_ar: string; kind: Kind; price: number; price_text: string;
+  // US cents for a card payment through Paddle (D-074); null: the riyal price at the peg.
+  price_usd: number | null;
   applies: string; active: boolean; sort: number; updated_at: string; updated_by: string;
 };
 export type TypeRow = {

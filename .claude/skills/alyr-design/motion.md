@@ -166,9 +166,11 @@ same as the figures above.
    after the page settles; its windows wait under `content-visibility: hidden` until they
    start. Its parts start in two frames (what the still shows first) and are then set to the
    camera's time. Reasons, measured: the canvas in the HTML grew the payload past a round
-   trip in Lighthouse's model (+0.15 s LCP on `/ar`); and on this site every DOM insertion
-   re-styles the whole page because of its `:root:has(...)` rules (about 10 to 20 ms on a
-   slowed phone), so the canvas goes in as one commit.
+   trip in Lighthouse's model (+0.15 s LCP on `/ar`); and the canvas goes in as one commit, so
+   the page re-styles once. (Every DOM insertion used to re-style the whole page: the cause was
+   a `:not()` inside the Agent figure's `:has()` rules, not the `:root:has(...)` ones; rewritten
+   on 28 Oct 2026, and `scripts/site/has-check.mjs` in `pnpm site:check` keeps it out. The
+   header's and product bar's states are now marks on `<html>`, the header and `<main>`.)
 4. **Pause holds the frame,** as a film does (the figures above finish their moves instead), and
    so does a click on the film; the control shows only on hover, focus or paused (D-071). The
    film starts at load, on the last moment before the fold closes (`STILL`), so it moves at once;
