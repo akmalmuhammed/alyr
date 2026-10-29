@@ -2,7 +2,7 @@ import { ChangeChoice } from "../_analytics/Consent";
 import { Shell } from "./Shell";
 import { copy, type Locale } from "./copy";
 
-// The privacy policy (ALY-72): every word in copyPrivacy.ts. A plain page of sections, each
+// The privacy policy (ALY-68): every word in copyPrivacy.ts. A plain page of sections, each
 // with an anchor; Meta's app settings link to `#delete` for the data deletion instructions.
 
 export function PrivacyPage({ locale }: { locale: Locale }) {
