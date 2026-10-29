@@ -203,6 +203,8 @@ def test_messages_on_a_simulator_number_do_not_count(client, pushes):
     finally:
         owner("delete from jobs where tenant_id = $1", other)
         owner("delete from channel_numbers where tenant_id = $1", other)
+        # Every shop gets its default price group when it is made (migration 0069).
+        owner("delete from price_groups where tenant_id = $1", other)
         owner("delete from tenants where id = $1", other)
 
 
