@@ -1,18 +1,21 @@
 "use client";
 
 // The price list and the sign-up switches (D-032). A change to the price list applies to
-// quotes made after it; quotes already made keep their own prices.
+// quotes made after it; quotes already made keep their own prices. Each item can also have a
+// dollar price, which a card payment through Paddle charges (D-074); left empty, the riyal price
+// is converted at the peg (QAR 3.64 to USD 1).
 
 import { useState } from "react";
 import { api, appliesLabel, fromDirhams, toDirhams, type Item, type Pricing, type TypeRow } from "./api";
 
-type Row = Omit<Item, "price_text" | "updated_at" | "updated_by"> & { priceText: string; isNew?: boolean };
+type Row = Omit<Item, "price_text" | "updated_at" | "updated_by"> & { priceText: string; usdText: string; isNew?: boolean };
 
 function rowOf(item: Item): Row {
-  return { ...item, priceText: fromDirhams(item.price) };
+  // Cents and dirhams are both hundredths, so the same conversion serves the dollar price.
+  return { ...item, priceText: fromDirhams(item.price), usdText: item.price_usd === null ? "" : fromDirhams(item.price_usd) };
 }
 
-const BLANK: Row = { key: "", name: "", name_ar: "", kind: "monthly", price: 0, priceText: "", applies: "manual", active: true, sort: 50, isNew: true };
+const BLANK: Row = { key: "", name: "", name_ar: "", kind: "monthly", price: 0, priceText: "", price_usd: null, usdText: "", applies: "manual", active: true, sort: 50, isNew: true };
 
 function AppliesSelect({ value, pricing, onChange }: { value: string; pricing: Pricing; onChange: (v: string) => void }) {
   return (
@@ -39,8 +42,10 @@ export function PriceList({ pricing, reload }: { pricing: Pricing; reload: () =>
     setMessage(""); setError("");
     const price = toDirhams(row.priceText);
     if (Number.isNaN(price) || price < 0) return setError("Give a price in QAR, 0 or more.");
+    const usd = row.usdText.trim() === "" ? null : toDirhams(row.usdText);
+    if (usd !== null && (Number.isNaN(usd) || usd < 0)) return setError("Give a price in USD, 0 or more, or leave it empty for the peg.");
     const answer = await api<Item>(`/api/admin/pricing/items/${row.key.trim()}`, "PUT", {
-      name: row.name, name_ar: row.name_ar, kind: row.kind, price, applies: row.applies, active: row.active, sort: row.sort,
+      name: row.name, name_ar: row.name_ar, kind: row.kind, price, price_usd: usd, applies: row.applies, active: row.active, sort: row.sort,
     });
     if (!answer.ok) return setError(answer.error);
     setMessage(`${answer.data.name} saved. New quotes use ${answer.data.price_text}; quotes already made keep their price.`);
@@ -61,6 +66,7 @@ export function PriceList({ pricing, reload }: { pricing: Pricing; reload: () =>
         </select>
       </td>
       <td><input className="ops-money" inputMode="decimal" value={row.priceText} onChange={(e) => set({ priceText: e.target.value })} aria-label="Price in QAR" /></td>
+      <td><input className="ops-money" inputMode="decimal" value={row.usdText} placeholder="at the peg" onChange={(e) => set({ usdText: e.target.value })} aria-label="Price in USD, for card payments" /></td>
       <td><AppliesSelect value={row.applies} pricing={pricing} onChange={(v) => set({ applies: v })} /></td>
       <td><input className="ops-qty" type="number" min={0} max={10000} value={row.sort} onChange={(e) => set({ sort: Number(e.target.value) || 0 })} aria-label="Order" /></td>
       <td><input type="checkbox" className="ops-tick" checked={row.active} onChange={(e) => set({ active: e.target.checked })} aria-label="In use" /></td>
@@ -72,12 +78,14 @@ export function PriceList({ pricing, reload }: { pricing: Pricing; reload: () =>
       <h2>Price list <span className="sh-count">{rows.length}</span></h2>
       <p className="sh-note ops-lead">
         What ALYR charges and when a new quote includes it. A quote is drafted from this list and then
-        priced per client in Clients. Changing a price here never changes a quote already made.
+        priced per client in Clients. Changing a price here never changes a quote already made. A card
+        payment through Paddle charges the dollar price of a line still at its list price; any other
+        line, or an empty dollar price, is the riyal price at the peg.
       </p>
       {message && <p className="ops-ok" role="status">{message}</p>}
       {error && <p className="ops-error" role="alert">{error}</p>}
       <div className="tablewrap"><table className="ops-lines">
-        <thead><tr><th>Key</th><th>Name (English · Arabic)</th><th>Charged</th><th>Price (QAR)</th><th>Included when</th><th>Order</th><th>In use</th><th /></tr></thead>
+        <thead><tr><th>Key</th><th>Name (English · Arabic)</th><th>Charged</th><th>Price (QAR)</th><th>By card (USD)</th><th>Included when</th><th>Order</th><th>In use</th><th /></tr></thead>
         <tbody>
           {rows.map((row) => (
             <tr key={row.key} className="norow">

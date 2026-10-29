@@ -11,6 +11,7 @@ import { FulfilDetails, FulfilFilters, FulfilPill, matchesFilter, type FulfilFil
 import type { Fulfilment } from "../_customer/fulfil";
 import { DELIVERY } from "./deliveryCopy";
 import { PRICING } from "./pricingCopy";
+import { usePolling } from "./poll";
 import "./pricing.css";
 
 type Choice = { id: string; title: string };
@@ -98,6 +99,7 @@ const BUCKET_KEYS = ["d0_30", "d31_60", "d61_90", "d90_plus"] as const;
 
 const T = {
   en: {
+    unreachable: "Cannot reach ALYR right now. This page tries again by itself.",
     ledger: "Credit ledger", sub: "Who owes what, and for how long", outstanding: "Outstanding",
     owing: (n: number) => `${n} customers owe money`, remind: "Send reminders",
     remindHint: "To customers whose oldest unpaid purchase is 30+ days old",
@@ -117,11 +119,11 @@ const T = {
     priceGroup: "Price group",
     noteMode: "Note", noteHere: "Write a note only your team can see", addNote: "Add note",
     noteLabel: "Staff note, not sent to the customer", saveReply: "Save as quick reply", quick: "Quick replies",
-    tabInbox: "Inbox", inboxSub: "Every customer conversation, answered by the assistant or by you",
+    tabInbox: "Inbox", inboxSub: "Every customer conversation, answered by automatic replies or by you",
     open: "Open", closed: "Closed", noChats: "No conversations here. As a customer in the chat, send \"hello\".",
-    pick: "Choose a conversation to read it.", you: "You", assistant: "Assistant", customerSays: "Customer",
-    paused: "You are answering", pausedHint: "The assistant is quiet for this customer until you close the conversation or hand it back.",
-    handBack: "Hand back to assistant", close: "Close", reopen: "Reopen", reply: "Reply", replyHere: "Write a reply",
+    pick: "Choose a conversation to read it.", you: "You", assistant: "Auto-reply", customerSays: "Customer",
+    paused: "You are answering", pausedHint: "Automatic replies are off for this customer until you close the conversation or turn them back on.",
+    handBack: "Turn automatic replies back on", close: "Close", reopen: "Reopen", reply: "Reply", replyHere: "Write a reply",
     windowOpen: (h: number) => (h < 1 ? "Free replies allowed for less than an hour" : `Free replies allowed for ${h} more hours`),
     windowClosed: "More than 24 hours since their last message. WhatsApp only allows an approved template now; typed replies are refused.",
     notSent: "Not sent",
@@ -146,7 +148,7 @@ const T = {
       went_elsewhere: "Went elsewhere", other: "Other",
     } as Record<string, string>,
     did: (a: Activity, outcomes: Record<string, string>, reasons: Record<string, string>) => {
-      const who = a.actor_name;
+      const who = a.actor_name === "Assistant" ? "Auto-reply" : a.actor_name;
       const n = a.detail.number ? ` #${a.detail.number}` : "";
       const thing = { conversation: "this conversation", order: `order${n}`, booking: `booking${n}`, account: "the credit account" }[a.subject];
       switch (a.action) {
@@ -171,6 +173,7 @@ const T = {
     },
   },
   ar: {
+    unreachable: "تعذّر الوصول إلى ALYR الآن. تعيد هذه الصفحة المحاولة تلقائياً.",
     ledger: "دفتر الديون", sub: "من عليه مبلغ، ومنذ متى", outstanding: "إجمالي المستحق",
     owing: (n: number) => `${n} عميل عليهم مبالغ`, remind: "إرسال التذكيرات",
     remindHint: "للعملاء الذين مضى على أقدم فاتورة غير مدفوعة ٣٠ يوماً أو أكثر",
@@ -190,11 +193,11 @@ const T = {
     priceGroup: "مجموعة الأسعار",
     noteMode: "ملاحظة", noteHere: "اكتب ملاحظة يراها فريقك فقط", addNote: "إضافة ملاحظة",
     noteLabel: "ملاحظة داخلية، لا تُرسل للعميل", saveReply: "حفظ كرد سريع", quick: "ردود سريعة",
-    tabInbox: "المحادثات", inboxSub: "كل محادثات العملاء، يرد عليها المساعد أو أنت",
+    tabInbox: "المحادثات", inboxSub: "كل محادثات العملاء، ترد عليها الردود التلقائية أو أنت",
     open: "مفتوحة", closed: "مغلقة", noChats: "لا توجد محادثات. أرسل \"hello\" كعميل في المحادثة.",
-    pick: "اختر محادثة لقراءتها.", you: "أنت", assistant: "المساعد", customerSays: "العميل",
-    paused: "أنت من يرد", pausedHint: "المساعد متوقف لهذا العميل حتى تغلق المحادثة أو تعيدها إليه.",
-    handBack: "إعادة للمساعد", close: "إغلاق", reopen: "إعادة فتح", reply: "إرسال", replyHere: "اكتب رداً",
+    pick: "اختر محادثة لقراءتها.", you: "أنت", assistant: "رد تلقائي", customerSays: "العميل",
+    paused: "أنت من يرد", pausedHint: "الردود التلقائية متوقفة لهذا العميل حتى تغلق المحادثة أو تعيد تشغيلها.",
+    handBack: "أعد تشغيل الردود التلقائية", close: "إغلاق", reopen: "إعادة فتح", reply: "إرسال", replyHere: "اكتب رداً",
     windowOpen: (h: number) => (h < 1 ? "الرد الحر متاح لأقل من ساعة" : `الرد الحر متاح لمدة ${h} ساعة`),
     windowClosed: "مضى أكثر من ٢٤ ساعة على آخر رسالة من العميل. واتساب يسمح الآن بالقوالب المعتمدة فقط، والردود المكتوبة مرفوضة.",
     notSent: "لم تُرسل",
@@ -219,7 +222,7 @@ const T = {
       went_elsewhere: "ذهب لغيرنا", other: "سبب آخر",
     } as Record<string, string>,
     did: (a: Activity, outcomes: Record<string, string>, reasons: Record<string, string>) => {
-      const who = a.actor_name === "Customer" ? "العميل" : a.actor_name === "Assistant" ? "المساعد" : a.actor_name;
+      const who = a.actor_name === "Customer" ? "العميل" : a.actor_name === "Assistant" ? "رد تلقائي" : a.actor_name;
       const n = a.detail.number ? ` رقم ${a.detail.number}` : "";
       const thing = { conversation: "المحادثة", order: `الطلب${n}`, booking: `الحجز${n}`, account: "الحساب الآجل" }[a.subject];
       switch (a.action) {
@@ -408,57 +411,53 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
 
   const refresh = useCallback(async () => {
     try {
-      const [s, c] = await Promise.all([
-        maybe<Summary | null>("/api/ledger/summary", null),
-        phone
-          ? getJson<{ messages: Message[] }>(`/sim/conversations/${phone}`)
-          : Promise.resolve({ messages: [] }),
-      ]);
-      setSummary(s);
-      setMessages(c.messages);
-      setOrders((await maybe<{ orders: OrderRow[] }>("/api/orders", { orders: [] })).orders);
+      // The workspace shows one screen and asks only for it (ALY-275 PERF-1). Beside the
+      // simulator's chat (the sales demo), every tab shows its count, so all are asked for.
+      const on = (screen: WorkspaceTab) => Boolean(phone) || tab === screen;
       const lookBack = show && SHOWS[show]?.tab === "bookings";
       const range = lookBack
         ? `?first=${new Date(Date.now() - 90 * DAY_MS).toISOString().slice(0, 10)}&last=${new Date(Date.now() + 8 * DAY_MS).toISOString().slice(0, 10)}`
         : "";
-      setBookings((await maybe<{ bookings: BookingRow[] }>(`/api/bookings${range}`, { bookings: [] })).bookings);
-      setMe(await getJson<Me>("/api/auth/me"));
-      setNow(Date.now());
-      {
-        const team = await getJson<{ members: Member[]; can_manage: boolean }>("/api/team");
-        setMembers(team.members);
-        setCanManage(team.can_manage);
-      }
-      const rows = (
-        await maybe<{ conversations: InboxRow[] }>(
-          `/api/inbox/conversations?status=${inboxFilter}&assigned=${assignedFilter}`,
-          { conversations: [] },
-        )
-      ).conversations;
-      setInboxRows(rows);
-      if (tab === "inbox") {
-        setSavedReplies((await getJson<{ replies: SavedReply[] }>("/api/inbox/saved-replies")).replies);
-      }
-      if (tab === "inbox" && chatId) {
+      // The open conversation, after the list: reading it on screen is what marks it read.
+      const inbox = async () => {
+        const rows = (
+          await maybe<{ conversations: InboxRow[] }>(
+            `/api/inbox/conversations?status=${inboxFilter}&assigned=${assignedFilter}`,
+            { conversations: [] },
+          )
+        ).conversations;
+        setInboxRows(rows);
+        if (tab !== "inbox" || !chatId) return;
         const loaded = await getJson<Thread>(`/api/inbox/conversations/${chatId}`);
         setThread(loaded);
-        setPriceGroups(await maybe("/api/price-groups", { groups: [], can_manage: false }));
         const closes = loaded.customer.window_closes_at;
         setHoursLeft(closes ? Math.floor((new Date(closes).getTime() - Date.now()) / 3_600_000) : 0);
-        // Reading a conversation on screen is what marks it read.
         if (rows.find((r) => r.id === chatId)?.unread) {
           await getJson(`/api/inbox/conversations/${chatId}/read`, { method: "POST" });
         }
-      }
-      if (selected) {
-        const e = await getJson<{ entries: Entry[] }>(`/api/ledger/customers/${selected}/entries`);
-        setEntries(e.entries);
-      }
+      };
+      // Independent of one another, so asked together rather than one after another.
+      await Promise.all([
+        // The credit accounts screen is the summary; elsewhere only its shop name is used.
+        on("ledger") ? maybe<Summary | null>("/api/ledger/summary", null).then(setSummary) : null,
+        phone
+          ? getJson<{ messages: Message[] }>(`/sim/conversations/${phone}`).then((c) => setMessages(c.messages))
+          : null,
+        on("orders") ? maybe<{ orders: OrderRow[] }>("/api/orders", { orders: [] }).then((o) => setOrders(o.orders)) : null,
+        on("bookings")
+          ? maybe<{ bookings: BookingRow[] }>(`/api/bookings${range}`, { bookings: [] }).then((b) => setBookings(b.bookings))
+          : null,
+        on("inbox") ? inbox() : null,
+        tab === "ledger" && selected
+          ? getJson<{ entries: Entry[] }>(`/api/ledger/customers/${selected}/entries`).then((e) => setEntries(e.entries))
+          : null,
+      ]);
+      setNow(Date.now());
       setError("");
     } catch {
-      setError("Cannot reach the Alyr API. Start it on port 8000, then this page recovers by itself.");
+      setError(t.unreachable);
     }
-  }, [phone, selected, inboxFilter, assignedFilter, tab, chatId, show]);
+  }, [phone, selected, inboxFilter, assignedFilter, tab, chatId, show, t]);
 
   useEffect(() => {
     // The simulator only exists in the demo.
@@ -466,14 +465,39 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
     return () => clearTimeout(first);
   }, [loadPersonas, embedded]);
 
+  // Every 10 s while the screen is on show (every 5 s in the demo, beside its chat), and at
+  // once when what is asked for changes or the person comes back to the tab.
+  usePolling(refresh, embedded ? 10_000 : 5_000);
+
+  // Who is signed in, the team for the "Handled by" menus, who may manage, and the shop's name
+  // over every screen change rarely: asked at the start and every 5 minutes, not with every
+  // look at the lists.
+  const loadShop = useCallback(async () => {
+    await Promise.all([
+      getJson<Me>("/api/auth/me").then(setMe),
+      getJson<{ members: Member[]; can_manage: boolean }>("/api/team").then((team) => {
+        setMembers(team.members);
+        setCanManage(team.can_manage);
+      }),
+      maybe<Summary | null>("/api/ledger/summary", null).then(setSummary),
+    ]);
+  }, []);
+  usePolling(loadShop, 300_000);
+
+  // Saved replies, and the price groups the conversation's side panel offers, change rarely:
+  // asked when the inbox or a conversation is opened.
   useEffect(() => {
-    const first = setTimeout(refresh, 0);
-    const timer = setInterval(refresh, 1500);
-    return () => {
-      clearTimeout(first);
-      clearInterval(timer);
-    };
-  }, [refresh]);
+    if (tab !== "inbox") return;
+    const ask = setTimeout(async () => {
+      try {
+        setSavedReplies((await getJson<{ replies: SavedReply[] }>("/api/inbox/saved-replies")).replies);
+        if (chatId) setPriceGroups(await maybe("/api/price-groups", { groups: [], can_manage: false }));
+      } catch {
+        // The polling's own error line says the API cannot be reached.
+      }
+    }, 0);
+    return () => clearTimeout(ask);
+  }, [tab, chatId]);
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ block: "end" });

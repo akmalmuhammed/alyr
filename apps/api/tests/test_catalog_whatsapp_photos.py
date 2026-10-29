@@ -309,7 +309,7 @@ def test_a_download_that_keeps_failing_tells_the_staff_member_to_send_it_again(c
         client.portal.call(handler.run, DEMO_TENANT_ID, payload)
     client.portal.call(handler.gave_up, DEMO_TENANT_ID, payload)  # after the last try
     last = sent(client, STAFF_PHONE)[-1]
-    assert "could not get that photo" in last["body"]
+    assert "That photo did not come through" in last["body"]
     client.portal.call(handler.gave_up, DEMO_TENANT_ID, {**payload, "lang": "ar"})
     assert ARABIC.search(sent(client, STAFF_PHONE)[-1]["body"])
 
@@ -389,8 +389,7 @@ def test_meta_downloads_a_file_in_two_steps_with_the_token_and_a_size_limit(monk
         seen.append((request.url.path, request.headers.get("authorization")))
         if request.url.host == "graph.facebook.com":
             return httpx.Response(200, json={
-                "url": "https://lookaside.example/file", "mime_type": "image/jpeg",
-                "file_size": 11, "id": "42",
+                "url": file_url, "mime_type": "image/jpeg", "file_size": 11, "id": "42",
             })
         return httpx.Response(200, content=b"hello world")
 
@@ -400,11 +399,26 @@ def test_meta_downloads_a_file_in_two_steps_with_the_token_and_a_size_limit(monk
         lambda **kwargs: real(transport=httpx.MockTransport(handler), **kwargs),
     )
     channel = meta.MetaChannel("TOKEN", "v21.0")
+    file_url = "https://lookaside.fbsbx.com/whatsapp_business/attachments/?mid=42"
     data, kind = asyncio.run(channel.download_media("42", 100))
     assert (data, kind) == (b"hello world", "image/jpeg")
-    assert seen == [("/v21.0/42", "Bearer TOKEN"), ("/file", "Bearer TOKEN")]
+    assert seen == [
+        ("/v21.0/42", "Bearer TOKEN"), ("/whatsapp_business/attachments/", "Bearer TOKEN")
+    ]
     with pytest.raises(ValueError):
         asyncio.run(channel.download_media("42", 5))
+
+    # The token goes with the download, so the download goes only to Meta, over https
+    # (ALY-278): an address anywhere else is refused before a request is made.
+    for elsewhere in (
+        "https://lookaside.example/file", "http://lookaside.fbsbx.com/file",
+        "https://fbsbx.com.example.net/file", "https://evil-facebook.com/file", "", None,
+    ):
+        seen.clear()
+        file_url = elsewhere
+        with pytest.raises(ValueError):
+            asyncio.run(channel.download_media("42", 100))
+        assert seen == [("/v21.0/42", "Bearer TOKEN")], elsewhere
 
 
 def test_inbound_messages_keep_the_file_id_for_a_photo(client):

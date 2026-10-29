@@ -47,8 +47,8 @@ WORDS: dict[str, tuple[str, str]] = {
         "تم: أصبح لدى «{name}» {n} في المخزون (كان {before}).",
     ),
     "stock_same": (
-        "{name} already has {n} in stock. I noted the count.",
-        "«{name}» لديه {n} في المخزون بالفعل. سجّلتُ الجرد.",
+        "{name} already has {n} in stock. The count is noted.",
+        "«{name}» لديه {n} في المخزون بالفعل. تم تسجيل الجرد.",
     ),
     "price_done": (
         "Done: {name} now costs {price} (it was {before}).",
@@ -72,9 +72,8 @@ WORDS: dict[str, tuple[str, str]] = {
         "لم يعد هذا السؤال قائماً. أرسل الرسالة مرة أخرى.",
     ),
     "none_found": (
-        "I could not find an item called \"{query}\". Check the spelling, or look in the "
-        "Catalog.",
-        "لم أجد صنفاً باسم «{query}». تأكد من الكتابة، أو راجع الكتالوج.",
+        "No item is called \"{query}\". Check the spelling, or look in the Catalog.",
+        "لا يوجد صنف باسم «{query}». تأكد من الكتابة، أو راجع الكتالوج.",
     ),
     "no_name": (
         "Which item? For example: {example}",
@@ -98,8 +97,8 @@ WORDS: dict[str, tuple[str, str]] = {
         "«{name}» يُعدّ بأعداد صحيحة. أرسل عدداً صحيحاً، مثلاً: مخزون {name} 20",
     ),
     "bad_price_number": (
-        "I could not read that price. Send it in riyals, for example: price {name} 12.5",
-        "لم أستطع قراءة السعر. أرسله بالريال، مثلاً: سعر {name} 12.5",
+        "That price could not be read. Send it in riyals, for example: price {name} 12.5",
+        "تعذّرت قراءة السعر. أرسله بالريال، مثلاً: سعر {name} 12.5",
     ),
     "price_too_big": (
         "That price is too high. The most is QAR 1,000,000.",
@@ -122,8 +121,8 @@ WORDS: dict[str, tuple[str, str]] = {
     "status_hidden": ("hidden item", "صنف مخفي"),
     "status_archived": ("archived item", "صنف مؤرشف"),
     "cannot_change": (
-        "I could not change {name}: {why}",
-        "لم أستطع تغيير «{name}»: {why}",
+        "{name} could not be changed: {why}",
+        "تعذّر تغيير «{name}»: {why}",
     ),
     # ── staff: undo ────────────────────────────────────────────────────────────────
     "undo_button": ("Undo", "تراجع"),
@@ -160,13 +159,13 @@ WORDS: dict[str, tuple[str, str]] = {
         "تم التراجع عن هذا التغيير من قبل.",
     ),
     "undo_changed": (
-        "I could not undo it: {name} was changed again since. Look in the Catalog.",
-        "لم أستطع التراجع: تغيّر «{name}» بعد ذلك. راجع الكتالوج.",
+        "It could not be undone: {name} was changed again since. Look in the Catalog.",
+        "تعذّر التراجع: تغيّر «{name}» بعد ذلك. راجع الكتالوج.",
     ),
     "undo_short": (
-        "I could not undo it: some of {name} was sold since, so putting the count back "
+        "It could not be undone: some of {name} was sold since, so putting the count back "
         "would be wrong. It has {n} now.",
-        "لم أستطع التراجع: بِيع جزء من «{name}» بعد ذلك، وإعادة الكمية قد تكون خاطئة. "
+        "تعذّر التراجع: بِيع جزء من «{name}» بعد ذلك، وإعادة الكمية قد تكون خاطئة. "
         "لديه الآن {n}.",
     ),
     # ── staff: photos ───────────────────────────────────────────────────────────────
@@ -214,12 +213,12 @@ WORDS: dict[str, tuple[str, str]] = {
         "هذه الصورة موجودة بالفعل على «{name}».",
     ),
     "photo_failed": (
-        "I could not get that photo. Please send it again.",
-        "لم أستطع تحميل الصورة. أرسلها مرة أخرى من فضلك.",
+        "That photo did not come through. Please send it again.",
+        "تعذّر تحميل الصورة. أرسلها مرة أخرى من فضلك.",
     ),
     "photo_not_image": (
-        "I can only use photos (JPEG or PNG). Please send the picture as a photo.",
-        "أستطيع استخدام الصور فقط (JPEG أو PNG). أرسل الصورة كصورة.",
+        "Only photos (JPEG or PNG) can be used. Please send the picture as a photo.",
+        "تُقبل الصور فقط (JPEG أو PNG). أرسل الصورة كصورة.",
     ),
     "photo_cap": (
         "The shop cannot hold more items or photos right now. Nothing was deleted. "
@@ -285,24 +284,24 @@ WORDS: dict[str, tuple[str, str]] = {
     ),
     # ── customers: tell me when it is back ──────────────────────────────────────────
     "notify_ask": (
-        "I can message you once when {name} is back in stock. By saying yes you agree to "
+        "We can message you once when {name} is back in stock. By saying yes you agree to "
         "get that one message from {shop} on WhatsApp. It is not a subscription and "
         "nothing else will be sent. Send STOP at any time to cancel it.",
-        "يمكنني مراسلتك مرة واحدة عند توفر «{name}». بالموافقة فإنك توافق على تلقي هذه "
+        "يمكننا مراسلتك مرة واحدة عند توفر «{name}». بالموافقة فإنك توافق على تلقي هذه "
         "الرسالة الواحدة من {shop} عبر واتساب. وهي ليست اشتراكاً ولن يُرسل لك غيرها. "
         "أرسل «إيقاف» في أي وقت لإلغائها.",
     ),
     "notify_done": (
-        "Done. I will message you once when {name} is back.",
-        "تم. سأراسلك مرة واحدة عند توفر «{name}».",
+        "Done. We will message you once when {name} is back.",
+        "تم. سنراسلك مرة واحدة عند توفر «{name}».",
     ),
     "notify_already": (
-        "You are already on the list for {name}. I will message you once when it is back.",
-        "أنت مسجّل بالفعل لـ«{name}». سأراسلك مرة واحدة عند توفره.",
+        "You are already on the list for {name}. We will message you once when it is back.",
+        "أنت مسجّل بالفعل لـ«{name}». سنراسلك مرة واحدة عند توفره.",
     ),
     "notify_declined": (
-        "No problem. I will not message you about {name}.",
-        "لا مشكلة. لن أراسلك بخصوص «{name}».",
+        "No problem. We will not message you about {name}.",
+        "لا مشكلة. لن نراسلك بخصوص «{name}».",
     ),
     "notify_in_stock": (
         "{name} is available now. You can order it here: {link}",
@@ -357,8 +356,8 @@ WORDS: dict[str, tuple[str, str]] = {
         "Code {coupon} added: {text}.", "تمت إضافة الرمز {coupon}: {text}."
     ),
     "coupon_saved": (
-        "Code {coupon} saved: {text}. Add items and I will take it off your total.",
-        "تم حفظ الرمز {coupon}: {text}. أضف أصنافاً وسأخصمه من إجمالي طلبك.",
+        "Code {coupon} saved: {text}. Add items and it comes off your total.",
+        "تم حفظ الرمز {coupon}: {text}. أضف أصنافاً ويُخصم من إجمالي طلبك.",
     ),
     "coupon_how": (
         "Send the code like this: coupon RAMADAN10",
@@ -389,9 +388,8 @@ WORDS: dict[str, tuple[str, str]] = {
         "أصبح إجمالي طلبك {total}. راجعه ثم اضغط إتمام الطلب.",
     ),
     "draft_more": (
-        "Send another code, link or name to add more, or tap Place order and I will send you "
-        "the payment link.",
-        "أرسل رمزاً أو رابطاً أو اسماً آخر للإضافة، أو اضغط إتمام الطلب لأرسل لك رابط الدفع.",
+        "Send another code, link or name to add more, or tap Place order.",
+        "أرسل رمزاً أو رابطاً أو اسماً آخر للإضافة، أو اضغط إتمام الطلب.",
     ),
     "draft_more_account": (
         "Send another code, link or name to add more, or place the order: pay by link or put "
@@ -406,9 +404,9 @@ WORDS: dict[str, tuple[str, str]] = {
         "Done. Your order is empty again.", "تم. أصبح طلبك فارغاً من جديد."
     ),
     "draft_full": (
-        "Your order already has {n} items, the most I can hold here. Place it first, or "
+        "Your order already has {n} items, the most we can hold here. Place it first, or "
         "order the rest on our page: {link}",
-        "طلبك يحتوي على {n} صنفاً، وهذا أقصى ما أستطيع حفظه هنا. أتمّه أولاً، أو اطلب الباقي "
+        "طلبك يحتوي على {n} صنفاً، وهذا أقصى ما نستطيع حفظه هنا. أتمّه أولاً، أو اطلب الباقي "
         "من صفحتنا: {link}",
     ),
     "change_ok": (
@@ -421,8 +419,8 @@ WORDS: dict[str, tuple[str, str]] = {
         "لا مشكلة. أرسل رمز الصنف الذي تريده أو رابطه أو اسمه، أو قل «نفس الطلب السابق».",
     ),
     "question_expired": (
-        "That question has run out. Send the code again and I will show it to you.",
-        "انتهت صلاحية هذا السؤال. أرسل الرمز مرة أخرى وسأعرضه عليك.",
+        "That question has run out. Send the code again to see it.",
+        "انتهت صلاحية هذا السؤال. أرسل الرمز مرة أخرى لتراه.",
     ),
     "variant_ask": (
         "Which one of {name} would you like?", "أي خيار من «{name}» تريد؟"
@@ -432,41 +430,39 @@ WORDS: dict[str, tuple[str, str]] = {
         "«{name}» له خيارات يجب اختيارها (مقاس أو إضافات). افتحه من هنا واختر: {link}",
     ),
     "not_found": (
-        "I could not find {what} in {shop}. Check the number on the shop's page, or search "
+        "We could not find {what} in {shop}. Check the number on the shop's page, or search "
         "by name.",
-        "لم أجد {what} في {shop}. تأكد من الرقم في صفحة المتجر، أو ابحث بالاسم.",
+        "لم نجد {what} في {shop}. تأكد من الرقم في صفحة المتجر، أو ابحث بالاسم.",
     ),
     "not_found_what_code": ("code {number}", "‏الكود {number}"),
     "not_found_what_sku": ("{sku}", "‏{sku}"),
     "not_found_what_link": ("that item", "هذا الصنف"),
     "not_found_what_category": ("that category", "هذا القسم"),
     "not_found_other_shop": (
-        "That link is for another shop, so I cannot use it here. Send a code or a link from "
+        "That link is for another shop, so we cannot use it here. Send a code or a link from "
         "{shop}'s page.",
-        "هذا الرابط لمتجر آخر فلا أستطيع استخدامه هنا. أرسل رمزاً أو رابطاً من صفحة {shop}.",
+        "هذا الرابط لمتجر آخر فلا نستطيع استخدامه هنا. أرسل رمزاً أو رابطاً من صفحة {shop}.",
     ),
     "search_by_name": (
         "Send the name of the item, for example: {example}",
         "أرسل اسم الصنف، مثلاً: {example}",
     ),
     "too_many_misses": (
-        "That is a lot of codes I could not find. A person from {shop} will look at this and "
+        "That is a lot of codes we could not find. A person from {shop} will look at this and "
         "reply here.",
-        "هذه رموز كثيرة لم أجدها. سيراجع أحد موظفي {shop} الأمر ويرد عليك هنا.",
+        "هذه رموز كثيرة لم نجدها. سيراجع أحد موظفي {shop} الأمر ويرد عليك هنا.",
     ),
     "cut_short": (
-        "I read the first {n} items of your message. Send the rest in another message.",
-        "قرأت أول {n} من الأصناف في رسالتك. أرسل الباقي في رسالة أخرى.",
+        "We read the first {n} items of your message. Send the rest in another message.",
+        "قرأنا أول {n} من الأصناف في رسالتك. أرسل الباقي في رسالة أخرى.",
     ),
     "person": (
         "Thank you. A person from {shop} will read this and reply here.",
         "شكراً لك. سيقرأ أحد موظفي {shop} رسالتك ويرد عليك هنا.",
     ),
     "person_unreadable": (
-        "Thank you, we received it. I cannot read pictures or voice messages, so a person "
-        "from {shop} will look at it and reply here.",
-        "شكراً لك، استلمنا رسالتك. لا أستطيع قراءة الصور أو الرسائل الصوتية، لذلك سيطلع عليها "
-        "أحد موظفي {shop} ويرد عليك هنا.",
+        "Thank you, we received it. A person from {shop} will look at it and reply here.",
+        "شكراً لك، استلمنا رسالتك. سيطلع عليها أحد موظفي {shop} ويرد عليك هنا.",
     ),
     "category_head": (
         "These are some of the items in {category} at {shop}. Pick one to see its photo and "
