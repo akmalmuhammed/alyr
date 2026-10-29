@@ -72,6 +72,14 @@ from alyr.routes.deps import require_any_module, require_module, require_module_
 log = logging.getLogger("alyr.main")
 
 
+async def close_channels(app: FastAPI) -> None:
+    """Close the connections a channel keeps open between sends (Meta's, ALY-276)."""
+    for channel in app.state.outbound.channels.values():
+        close = getattr(channel, "close", None)
+        if close is not None:
+            await close()
+
+
 def create_app() -> FastAPI:
     settings = get_settings()
 
@@ -83,6 +91,7 @@ def create_app() -> FastAPI:
         check_store(settings, app.state.media.store)
         await app.state.db.connect()
         yield
+        await close_channels(app)
         await app.state.db.close()
 
     # Interactive API docs only on a developer machine; elsewhere they map our surface
@@ -114,7 +123,9 @@ def create_app() -> FastAPI:
         app.state.db, app.state.outbound, settings.public_web_url, app.state.media
     )
 
-    app.state.jobs = JobRunner(app.state.db, settings.jobs_backoff_seconds)
+    app.state.jobs = JobRunner(
+        app.state.db, settings.jobs_backoff_seconds, settings.jobs_concurrency
+    )
     app.state.jobs.register(SEND, app.state.outbound.deliver, app.state.outbound.gave_up)
     app.state.jobs.register(INBOUND, app.state.inbound.process)
     app.state.jobs.register(REMINDER, Reminders(app.state.db, app.state.outbound).send)
