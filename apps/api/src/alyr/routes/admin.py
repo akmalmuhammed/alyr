@@ -27,6 +27,7 @@ from alyr.core import (
     pricing,
     readiness,
     terms,
+    welcome,
     whatsapp_attach,
     whatsapp_setup,
 )
@@ -307,6 +308,12 @@ async def create_business(
             await template.apply(
                 conn, target, await shop_clock.load(conn), samples_too=False, by=_by(staff)
             )
+    # The owner learns the workspace exists and how to sign in to it (specs/037).
+    async with request.app.state.db.tenant(tenant_id) as conn:
+        owner = await conn.fetchval(
+            "select user_id from memberships where role = 'owner' order by created_at limit 1"
+        )
+        await welcome.queue(conn, welcome.INVITE, owner)
     return {"id": str(tenant_id), "slug": slug, "modules": modules,
             "template": target.key if target else None}
 

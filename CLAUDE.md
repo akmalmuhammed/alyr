@@ -46,8 +46,12 @@ These are not style preferences. Do not write code that breaks them, and stop an
 apps/api/                     FastAPI service (Python 3.13, managed with uv)
   migrations/                 Plain SQL, applied in order by `python -m alyr.migrate`. Never edit an applied one
   src/alyr/channels/          Message channels: Meta Cloud API and the local simulator, same interface
+  src/alyr/gateways/          Payment providers: one adapter each, same interface, and the local simulator
+                              (specs/033); core/payments.py makes links on the shop's own account, and
+                              core/payment_keys.py seals its keys
   src/alyr/core/              Inbound path, contact identity, outbound layer (consent, 24-hour window), jobs,
-                              sign-in (auth), email (mail), sign-up (onboarding), pricing, back office,
+                              sign-in (auth), email (mail), the welcome and invite emails (welcome, specs/037),
+                              sign-up (onboarding), pricing, back office,
                               team accountability (team, D-028), workspace shell (workspace), templates,
                               signed customer links (links: a customer's order or booking link carries a token made for that page, never a contact ID),
                               actions (one set of actions behind the workspace and WhatsApp, D-065) and
@@ -153,7 +157,7 @@ scripts/api-in-docker.sh uv run pytest -q # where Windows blocks the compiled da
 ## Conventions
 
 - Modules receive `InboundMessage` and return `OutboundMessage` objects. They do not know which channel is in use, so everything works against the simulator first.
-- Every outgoing message goes through `core/outbound.py`, which records it and queues a job; `core/jobs.py` delivers it with retries. Never call a channel or a slow outside service directly from a request: enqueue a job.
+- Every outgoing message goes through `core/outbound.py`, which records it and queues a job; `core/jobs.py` delivers it with retries. Never call a channel or a slow outside service directly from a request: enqueue a job. Jobs run several at a time; a job about one customer names them in its payload (`contact_id`, or the sender's number) so it runs after that customer's earlier jobs, in order (D-077).
 - Compliance outputs (SIF files, UBL invoices), when they exist, are tested against golden files in `fixtures/` (to be created with them), byte for byte.
 - User-facing text exists in Arabic and English. No hard-coded strings in UI code.
 - Amounts are integers in dirhams (1 QAR = 100 dirhams). Never floats.

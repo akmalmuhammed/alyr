@@ -59,7 +59,8 @@ export function siteMetadata(locale: Locale, page: PageKey = "home"): Metadata {
       url: PATHS[page][locale], locale: locale === "ar" ? "ar_QA" : "en_US",
       // Each English product page has its own card (app/(site)/<page>/opengraph-image.tsx),
       // which Next names with a hash and fills in itself when no image is given here. The
-      // homepage and the Arabic pages share the homepage's English card (socialCard.tsx).
+      // homepage and the Arabic pages share the homepage's English card at /opengraph-image
+      // (app/opengraph-image/route.tsx; socialCard.tsx says why it is in English).
       ...(locale === "en" && page !== "home" && page !== "company" && page !== "privacy" ? {} : { images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "ALYR" }] }),
     },
     twitter: { card: "summary_large_image", title: t.title, description },
