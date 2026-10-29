@@ -49,7 +49,9 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
   src/alyr/core/              Inbound path, contact identity, outbound layer (consent, 24-hour window), jobs,
                               sign-in (auth), email (mail), sign-up (onboarding), pricing, back office,
                               team accountability (team, D-028), workspace shell (workspace), templates,
-                              signed customer links (links: a customer's order or booking link carries a token made for that page, never a contact ID)
+                              signed customer links (links: a customer's order or booking link carries a token made for that page, never a contact ID),
+                              actions (one set of actions behind the workspace and WhatsApp, D-065) and
+                              staff_link (links a staff number to a person by a one-time code)
   src/alyr/modules/           What answers customers: ledger, orders, bookings, inbox, agent (the owner's
                               weekly view), report.py (weekly report card); router.py picks the module.
                               items/ is the Catalog's engine (what a shop sells: variants, availability,
@@ -84,7 +86,9 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               with API keys, CSV import), authority says who numbers each kind of
                               document, webhooks send events out (specs/016, ALY-142, docs/connect-api.md)
                               items/codes.py reads a customer's message for item codes, links and
-                              SKUs and items/wa_order.py orders by them in the chat (specs/010)
+                              SKUs and items/wa_order.py orders by them in the chat (specs/010);
+                              owner/ is what an owner or staff member can ask from WhatsApp, and
+                              LINK proves a staff phone (specs/029-owner-actions, D-065)
   src/alyr/routes/            HTTP routes. deps.py: who is calling, which shop, which modules are on
   src/alyr/catalog.py         What ALYR sells: modules and products (D-027)
   src/alyr/db.py              `Database.tenant(id)`: one transaction scoped to one tenant
