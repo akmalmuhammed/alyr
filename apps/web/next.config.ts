@@ -27,6 +27,17 @@ const policy = [
   "frame-ancestors 'none'",
 ].join("; ");
 
+// The one page that opens Paddle's checkout, for an owner paying ALYR by card (ALY-180,
+// D-074): Paddle.js from Paddle's CDN, its checkout frame from Paddle's checkout address
+// (sandbox or live), and the browser's payment sheet inside that frame for Apple Pay and
+// Google Pay. Everything else stays as above.
+const paddleHosts = "https://*.paddle.com";
+const billingPolicy = policy
+  .replace("script-src 'self' 'unsafe-inline'", "script-src 'self' 'unsafe-inline' https://cdn.paddle.com")
+  .replace("connect-src 'self'", `connect-src 'self' ${paddleHosts}`)
+  .replace("form-action 'self'", `form-action 'self' ${paddleHosts}`)
+  .concat(`; frame-src https://buy.paddle.com https://sandbox-buy.paddle.com`);
+
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
@@ -52,7 +63,17 @@ const nextConfig: NextConfig = {
   // server must accept its own assets being requested from that address.
   allowedDevOrigins: ["app.alyr.online"],
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    // A later entry overrides the same header of an earlier one, so /app/billing gets its own.
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      {
+        source: "/app/billing",
+        headers: [
+          { key: "Permissions-Policy", value: 'camera=(), microphone=(), geolocation=(), payment=(self "https://buy.paddle.com" "https://sandbox-buy.paddle.com")' },
+          ...(production ? [{ key: "Content-Security-Policy", value: billingPolicy }] : []),
+        ],
+      },
+    ];
   },
   // The browser only ever talks to this app; it forwards API calls to FastAPI.
   async rewrites() {

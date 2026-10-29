@@ -106,6 +106,21 @@ def test_today_shows_failures_as_counts_never_what_customers_wrote(client, offic
     assert "private reply" not in str(today(office))
 
 
+def test_today_says_why_messages_failed_in_alyrs_or_whatsapps_words(client, office):
+    say(client, AHMED_PHONE, "hello")
+    for error in ("could not be delivered", "Message undeliverable", "Message undeliverable"):
+        owner_sql(
+            "insert into messages (tenant_id, contact_id, direction, kind, body, status, error) "
+            "select $1, id, 'out', 'text', 'A private reply', 'failed', $2 "
+            "from contacts where tenant_id = $1 limit 1",
+            DEMO_TENANT_ID, error,
+        )
+    [failing] = [i for i in today(office)["items"] if i["kind"] == "delivery"
+                 and i["business_id"] == str(DEMO_TENANT_ID)]
+    assert "Why: Message undeliverable (2); could not be delivered (1)." in failing["detail"]
+    assert "private reply" not in str(today(office))
+
+
 def test_staff_can_be_added_and_removed_but_never_the_last_one(office):
     added = office.post(f"{ADMIN}/staff", json={"email": "Sara@ALYR.example", "name": "Sara"})
     assert added.status_code == 200, added.text

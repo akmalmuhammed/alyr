@@ -58,9 +58,10 @@ export function MarkPaid({ orderId, lang, onDone }: { orderId: string; lang: Lan
   );
 }
 
-type Ways = { online: boolean; ways: string[] };
+type Ways = { online: boolean; ways: string[]; online_possible: boolean };
 
-/** For owners: online link, or cash, transfer and card machine on collection. */
+/** For owners: online link, or cash, transfer and card machine on collection. The link is
+ *  offered only once the shop's own payment account is connected (ALY-271). */
 export function PayWays({ lang }: { lang: Lang }) {
   const t = ORDER_PAY[lang];
   const [now, setNow] = useState<Ways | null>(null);
@@ -85,8 +86,14 @@ export function PayWays({ lang }: { lang: Lang }) {
   return (
     <fieldset className="payways">
       <legend>{t.waysTitle}</legend>
-      <label><input type="radio" name="pay-online" checked={now.online} onChange={() => change({ online: true })} /> {t.waysOnline}</label>
-      <label><input type="radio" name="pay-online" checked={!now.online} onChange={() => change({ online: false })} /> {t.waysLater}</label>
+      {now.online_possible ? (
+        <>
+          <label><input type="radio" name="pay-online" checked={now.online} onChange={() => change({ online: true })} /> {t.waysOnline}</label>
+          <label><input type="radio" name="pay-online" checked={!now.online} onChange={() => change({ online: false })} /> {t.waysLater}</label>
+        </>
+      ) : (
+        <small>{t.waysNoAccount}</small>
+      )}
       {!now.online && (
         <div role="group" aria-label={t.waysPick}>
           {WAYS.map((w) => (

@@ -16,6 +16,8 @@ dependencies = [
     # A page of a PDF as a picture, for the workspace screens (ALY-146, render/raster.py). Was a
     # development dependency (the tests read PDFs with it); the API needs it now.
     "pypdfium2>=4.30",
+    # Payment providers' keys are kept sealed (AES-256-GCM; ALY-17, core/payment_keys.py).
+    "cryptography>=50,<51",
 ]
 
 [dependency-groups]

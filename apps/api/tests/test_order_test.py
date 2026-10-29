@@ -245,6 +245,8 @@ FINE_WITHOUT = {
         "one order's status by its ID",
     ("modules/orders/service.py", "select o.id, o.number, o.status, o.payment, o.total"):
         "one order on its customer's own tracking page, by a signed link",
+    ("core/payments.py", "select p.account_id, p.amount, p.status, p.checkout_url, o.number"):
+        "one payment's own order number, for the provider's page (a test order has no payment)",
     ("routes/pay.py", "select p.amount, p.status, p.provider"):
         "one payment page by its ID",
     ("routes/store.py", "select true from orders where contact_id = $1"):

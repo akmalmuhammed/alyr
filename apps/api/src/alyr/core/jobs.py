@@ -9,6 +9,10 @@ person can see it.
 Delivery is at least once. If the process dies after a channel accepted a message but
 before we recorded that, the job is retried and the message can go out twice. Meta gives
 us no way to make a send idempotent, so that small window is accepted.
+
+A runner works on several jobs at once (`concurrency`), because a send mostly waits for
+Meta. The jobs about one customer still run one after another, in the order they were
+queued, so a customer's messages arrive in the order they were written (ALY-276).
 """
 
 import asyncio
@@ -40,17 +44,32 @@ async def enqueue(
     """Add a job for the current tenant. `conn` must be tenant-scoped, so the job commits
     or rolls back with everything else in the transaction. `max_attempts` overrides the
     table's default of 6 for work that should keep trying for hours."""
+    # The clock, not the transaction's start: two jobs queued in one transaction (two
+    # messages to one customer) are claimed, and so sent, in the order they were queued.
     return await conn.fetchval(
         "insert into jobs (kind, payload, run_at, max_attempts) "
-        "values ($1, $2, coalesce($3, now()), coalesce($4, 6)) returning id",
+        "values ($1, $2, coalesce($3, clock_timestamp()), coalesce($4, 6)) returning id",
         kind, payload, run_at, max_attempts,
     )
 
 
+def lane(job: asyncpg.Record) -> str:
+    """Jobs in one lane run one after another. A job about a customer (a message to send
+    names the contact, a message received names the sender) shares its lane with that
+    customer's other jobs in the business; any other job has a lane of its own."""
+    payload = job["payload"] if isinstance(job["payload"], dict) else {}
+    who = payload.get("contact_id") or payload.get("from_user_id") or payload.get("from_number")
+    return f"{job['tenant_id']}:{who}" if who else str(job["id"])
+
+
 class JobRunner:
-    def __init__(self, db: Database, backoff_seconds: float = 5.0) -> None:
+    def __init__(
+        self, db: Database, backoff_seconds: float = 5.0, concurrency: int = 1
+    ) -> None:
         self._db = db
         self._backoff = backoff_seconds
+        self._concurrency = max(1, concurrency)
+        self._stopping = False
         self._handlers: dict[str, Handler] = {}
         self._on_dead: dict[str, Handler] = {}
         self._draining = False
@@ -72,16 +91,61 @@ class JobRunner:
         self._draining = True
         done = 0
         try:
-            while True:
+            while not self._stopping:
                 self._again = False
                 batch = await self._claim()
-                for job in batch:
-                    await self._run(job)
-                done += len(batch)
+                done += await self._run_batch(batch)
                 if not batch and not self._again:
                     return done
+            return done
         finally:
             self._draining = False
+
+    def stop(self) -> None:
+        """Finish the jobs already started and claim no more. The worker calls this when
+        the platform asks it to shut down (SIGTERM on a deploy): the jobs it had claimed
+        but not started go back in the queue at once, instead of waiting five minutes to
+        count as abandoned (ALY-276)."""
+        self._stopping = True
+
+    async def _run_batch(self, batch: list[asyncpg.Record]) -> int:
+        """Run a claimed batch: up to `concurrency` jobs at a time, each lane's jobs one after
+        another in the order they were claimed. Answers how many ran."""
+        lanes: dict[str, list[asyncpg.Record]] = {}
+        for job in sorted(batch, key=lambda j: j["run_at"]):
+            lanes.setdefault(lane(job), []).append(job)
+        gate = asyncio.Semaphore(self._concurrency)
+        ran = 0
+
+        async def run_lane(queue: list[asyncpg.Record]) -> None:
+            nonlocal ran
+            for n, job in enumerate(queue):
+                if self._stopping:
+                    await self._release(queue[n:])
+                    return
+                async with gate:
+                    await self._run(job)
+                ran += 1
+
+        # Every lane finishes before the next claim, even when one fails, so no job of this
+        # batch is still running while the next is claimed.
+        outcomes = await asyncio.gather(
+            *(run_lane(queue) for queue in lanes.values()), return_exceptions=True
+        )
+        for outcome in outcomes:
+            if isinstance(outcome, BaseException):
+                raise outcome
+        return ran
+
+    async def _release(self, batch: list[asyncpg.Record]) -> None:
+        """Put claimed jobs that never started back in the queue, their attempt not spent."""
+        async with self._db.unscoped() as conn, conn.transaction():
+            await conn.execute("select set_config('app.worker', 'on', true)")
+            await conn.execute(
+                "update jobs set status = 'queued', locked_at = null, attempts = attempts - 1 "
+                "where id = any($1::uuid[]) and status = 'running'",
+                [job["id"] for job in batch],
+            )
 
     async def run_forever(
         self,
@@ -92,7 +156,7 @@ class JobRunner:
         """The worker process's loop. `heartbeat` is called from inside the loop at most
         every `heartbeat_seconds`, so it stops being called if the loop itself stops."""
         last_beat = 0.0
-        while True:
+        while not self._stopping:
             try:
                 now = time.monotonic()
                 if heartbeat is not None and now - last_beat >= heartbeat_seconds:
@@ -117,7 +181,7 @@ class JobRunner:
                 "update jobs set status = 'running', locked_at = now(), attempts = attempts + 1 "
                 "where id in (select id from jobs where status = 'queued' and run_at <= now() "
                 "             order by run_at for update skip locked limit $1) "
-                "returning id, tenant_id, kind, payload, attempts, max_attempts",
+                "returning id, tenant_id, kind, payload, attempts, max_attempts, run_at",
                 BATCH,
             )
 

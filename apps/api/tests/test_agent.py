@@ -44,6 +44,7 @@ CASES = {
     "waiting": ([{}], {"waiting": [row(minutes=11, nobody=True)]}),
     "unconfirmed": ([{}], {"unconfirmed": [row(number=1001, minutes=16)]}),
     "unmarked": ([{}], {"unmarked": [row(number=101, starts_at=NOW)]}),
+    "not_sent": ([{}], {"not_sent": [row(minutes=30)]}),
     "overdue": (
         [{"accounts": [account(oldest_days=29)]},
          {"accounts": [account(promised=True)]},
