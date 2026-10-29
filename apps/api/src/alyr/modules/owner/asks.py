@@ -48,12 +48,12 @@ async def today(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
         made = await conn.fetchrow(
             "select count(*) filter (where status <> 'cancelled') as count, "
             "coalesce(sum(total) filter (where status <> 'cancelled'), 0)::bigint as value "
-            "from orders where created_at >= $1 and created_at < $2",
+            "from orders where not is_test and created_at >= $1 and created_at < $2",
             start, end,
         )
         open_now = await conn.fetchrow(
             "select count(*) filter (where status in ('new', 'confirmed')) as waiting, "
-            "count(*) filter (where status = 'ready') as ready from orders"
+            "count(*) filter (where status = 'ready') as ready from orders where not is_test"
         )
         sections["orders"] = {
             "count": made["count"],
@@ -112,15 +112,16 @@ async def today(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
 
 @register("orders", ALL_ROLES, module="orders")
 async def orders(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
-    """Orders still to be handled, newest first."""
+    """Orders still to be handled, newest first. The owner's test order (D-064) is never
+    one of them, as it is in no report."""
     rows = await conn.fetch(
         "select o.number, o.status, o.payment, o.total, o.created_at, c.name "
         "from orders o join contacts c on c.id = o.contact_id "
-        "where o.status = any($1) order by o.created_at desc limit $2",
+        "where not o.is_test and o.status = any($1) order by o.created_at desc limit $2",
         list(OPEN_ORDERS), LIST_LIMIT,
     )
     open_total = await conn.fetchval(
-        "select count(*) from orders where status = any($1)", list(OPEN_ORDERS)
+        "select count(*) from orders where not is_test and status = any($1)", list(OPEN_ORDERS)
     )
     return {
         "open": open_total,
