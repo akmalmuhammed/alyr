@@ -8,6 +8,7 @@ ended. Sends to Meta go through one HTTP client (a recording transport stands in
 
 import asyncio
 import time
+from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 import httpx
@@ -30,6 +31,13 @@ def runner(client_factory, monkeypatch):
     client = client_factory()
     log: list[tuple[str, str, float]] = []
 
+    client.app.state.jobs.register(KIND, log_and_wait(log, client))
+    yield client, log
+    owner_sql("delete from jobs where kind = $1", KIND)
+
+
+def log_and_wait(log: list, client=None):
+    """A handler that writes down when it started and ended, and takes 100 ms."""
     async def handler(tenant_id: UUID, payload: dict) -> None:
         log.append((payload["name"], "start", time.monotonic()))
         await asyncio.sleep(0.1)
@@ -37,9 +45,7 @@ def runner(client_factory, monkeypatch):
             client.app.state.jobs.stop()
         log.append((payload["name"], "end", time.monotonic()))
 
-    client.app.state.jobs.register(KIND, handler)
-    yield client, log
-    owner_sql("delete from jobs where kind = $1", KIND)
+    return handler
 
 
 def queue(client, jobs_to_add: list[dict]) -> list[UUID]:
@@ -142,3 +148,39 @@ def test_the_meta_channel_keeps_one_connection_for_every_send():
     assert (first, second, same) == ("wamid.1", "wamid.2", True)
     # A send still gives up after ten seconds.
     assert seen == [("/v21.0/100200/messages", 10), ("/v21.0/100200/messages", 10)]
+
+
+# ------------------------------------------------------------------ customers first (PERF-5)
+
+def test_customers_jobs_are_claimed_before_background_ones(runner):
+    """Nine on Sunday: every shop's weekly report is due, and a customer writes. Before, the
+    customer waited behind every report (ALY-276 PERF-5, p95 166 s at 300 shops)."""
+    client, log = runner
+    client.app.state.jobs.register("test.report", log_and_wait(log), background=True)
+    an_hour_ago = datetime.now(UTC) - timedelta(hours=1)
+    reports = [str(uuid4()) for _ in range(8)]
+
+    async def go():
+        async with client.app.state.db.tenant(DEMO_TENANT_ID) as conn:
+            for name in reports:
+                await jobs.enqueue(conn, "test.report", {"name": f"report-{name}"},
+                                   datetime.now(UTC) - timedelta(minutes=1))
+            await jobs.enqueue(conn, KIND, {"name": "customer", "contact_id": str(uuid4())})
+            # A report that has waited past the limit takes its turn like any other job.
+            await jobs.enqueue(conn, "test.report", {"name": "report-late"}, an_hour_ago)
+
+    client.portal.call(go)
+    claimed = client.portal.call(client.app.state.jobs._claim)
+    # Back in the queue, as if never claimed (another test's job too, if one was due).
+    owner_sql("update jobs set status = 'queued', locked_at = null, attempts = attempts - 1 "
+              "where id = any($1::uuid[])", [job["id"] for job in claimed])
+    names = [job["payload"].get("name") for job in claimed
+             if job["kind"] in (KIND, "test.report")]
+    on_time = [n for n in names if n.startswith("report-") and n != "report-late"]
+    # The customer's job and the late report come first, ahead of reports queued earlier
+    # than the customer's; then no more reports than the runner runs at once (3).
+    assert set(names[:2]) == {"customer", "report-late"}
+    assert 1 <= len(on_time) <= 3
+    assert drain(client) >= 10
+    assert len([n for n, what, _ in log if what == "end"]) == 10
+    owner_sql("delete from jobs where kind = 'test.report'")

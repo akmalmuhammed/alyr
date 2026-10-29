@@ -129,7 +129,10 @@ def create_app() -> FastAPI:
     app.state.jobs.register(SEND, app.state.outbound.deliver, app.state.outbound.gave_up)
     app.state.jobs.register(INBOUND, app.state.inbound.process)
     app.state.jobs.register(REMINDER, Reminders(app.state.db, app.state.outbound).send)
-    app.state.jobs.register(report.JOB, report.WeeklyReports(app.state.db, app.state.outbound).send)
+    # Work no customer is waiting for is `background`: it runs after theirs (ALY-276).
+    app.state.jobs.register(
+        report.JOB, report.WeeklyReports(app.state.db, app.state.outbound).send, background=True
+    )
     app.state.jobs.register(
         EXPIRE_JOB, order_holds.HoldExpiry(app.state.db, app.state.outbound).run
     )
@@ -139,7 +142,7 @@ def create_app() -> FastAPI:
     app.state.jobs.register(DELIVERY_JOB, document_sender.run, document_sender.gave_up)
     # Events out to the shop's other system (ALY-142): signed, retried, guarded.
     app.state.webhooks = connect_webhooks.WebhookSender(app.state.db)
-    app.state.jobs.register(connect_webhooks.JOB, app.state.webhooks.run)
+    app.state.jobs.register(connect_webhooks.JOB, app.state.webhooks.run, background=True)
     # The Catalog on WhatsApp (ALY-106): back-in-stock messages, owner alerts, and photos sent
     # by staff turned into drafts. Each is a job, so none holds a request open.
     app.state.jobs.register(
@@ -158,7 +161,7 @@ def create_app() -> FastAPI:
     app.state.media.register(app.state.jobs)
     # Photos that come with an imported spreadsheet are added after it is applied (ALY-108).
     photos_job = ImportPhotos(app.state.db, app.state.media)
-    app.state.jobs.register(IMPORT_PHOTOS, photos_job.run, photos_job.gave_up)
+    app.state.jobs.register(IMPORT_PHOTOS, photos_job.run, photos_job.gave_up, background=True)
     # One message to the owner after an import that counted stock (ALY-108).
     app.state.jobs.register(
         IMPORT_ALERT, ImportAlert(app.state.db, app.state.outbound).run

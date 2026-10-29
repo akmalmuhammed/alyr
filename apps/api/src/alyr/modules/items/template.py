@@ -127,11 +127,11 @@ async def hints(conn: asyncpg.Connection) -> dict:
     }
 
 
-async def public(conn: asyncpg.Connection) -> dict:
+async def public(conn: asyncpg.Connection, feats: features.Features | None = None) -> dict:
     """What a customer's page may know: the section's name, the layout (its style and the four
     things it can offer) and what a sold-out item should look like. Nothing about stock
     numbers, alerts or samples."""
-    feats = await features.load(conn)
+    feats = feats or await features.load(conn)
     setup = feats.template.setup
     mine = await _shop_values(conn)
     name = section_of(setup, mine)
