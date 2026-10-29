@@ -24,6 +24,7 @@ const SETTINGS: NavItem[] = [
   { href: "/ops/prices", label: "Price list", icon: "price" },
   { href: "/ops/templates", label: "Templates", icon: "templates" },
   { href: "/ops/signup", label: "Sign-up", icon: "door" },
+  { href: "/ops/terms", label: "Terms", icon: "audit" },
   { href: "/ops/staff", label: "Staff", icon: "staff" },
   { href: "/ops/audit", label: "Audit log", icon: "audit" },
 ];

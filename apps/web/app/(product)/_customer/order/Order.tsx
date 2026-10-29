@@ -18,10 +18,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Done, Frame, Glyph, Who } from "../Frame";
 import { formatPrice, type Lang } from "../price";
 import { matches, searchWords } from "../fold";
+import { sitePath } from "../link";
 import { addQty, fmtQtyUnit, minQty, unitFor } from "../qty";
 import { ApiError, loadItem, loadLive, loadStore, orderAgain } from "./api";
 import { count, keyOf, most, total as totalOf, unitPrice, type Line } from "./cart";
-import { say, T } from "./copy";
+import { say, T, waysText } from "./copy";
 import { ItemCard } from "./ItemCard";
 import type { Chosen } from "./ItemSheet";
 import type { Checked, Item, Live, LiveItem, Placed, Store } from "./types";
@@ -417,12 +418,15 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
   const offerList = store.pricing?.discounts?.offers ?? [];
 
   if (placed) {
-    const link = placed.payment === "link" && placed.pay_url ? new URL(placed.pay_url).pathname : null;
+    const link = placed.payment === "link" && placed.pay_url ? sitePath(placed.pay_url) : null;
     return (
       <Frame lang={lang} onLang={toggle} shop={shopName} context={t.context} short>
         <Done title={t.placed(placed.number)}>
           {placed.payment === "account" && <p><b className="num"><Price value={placed.total} lang={lang} /></b> · {t.onAccount}</p>}
           {placed.payment === "link" && <p><b className="num"><Price value={placed.total} lang={lang} /></b></p>}
+          {placed.payment === "later" && (
+            <p><b className="num"><Price value={placed.total} lang={lang} /></b> · {t.payOnCollect(waysText(lang, placed.pay_ways ?? []))}</p>
+          )}
           {placed.pricing && placed.pricing.discount_total > 0 && (
             <p className="ox-discount-line">{t.discountOnOrder(`−${formatPrice(placed.pricing.discount_total, lang)}`)}</p>
           )}
@@ -450,7 +454,7 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
           </section>
         )}
         {link && <a className="cx-btn" href={link}><Glyph name="card" />{t.payNow(formatPrice(placed.total, lang))}</a>}
-        {placed.track_url && <a className="cx-btn ink" href={new URL(placed.track_url).pathname}>{t.track}<Glyph name="arrow" className="flip" /></a>}
+        {placed.track_url && <a className="cx-btn ink" href={sitePath(placed.track_url)}>{t.track}<Glyph name="arrow" className="flip" /></a>}
       </Frame>
     );
   }
@@ -486,7 +490,7 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
         <span className="cx-eyebrow">{section || (canOrder ? t.eyebrow : t.eyebrowMenu)}</span>
         <h1>{t.title}</h1>
         <div className="ox-who">
-          {customer && <Who label={t.hello(customer.first_name)} />}
+          {customer?.first_name && <Who label={t.hello(customer.first_name)} />}
           {store.table && <span className="ox-table"><Glyph name="table" />{t.table(store.table)}</span>}
         </div>
       </section>
@@ -625,7 +629,7 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
           onClose={() => setListOpen(false)} />
       )}
       {review && token && customer && (
-        <ReviewSheet slug={slug} token={token} lang={lang} lines={lines} lookup={lookup} customer={customer} table={store.table} askDay={offers.pickup_date}
+        <ReviewSheet slug={slug} token={token} lang={lang} lines={lines} lookup={lookup} customer={customer} payLater={store.settings.pay?.online === false ? store.settings.pay.ways : undefined} table={store.table} askDay={offers.pickup_date}
           forDate={forDate} onForDate={setForDate} setQty={setQty} remove={remove} accept={accept} swap={swap}
           whatsapp={partsOf(lines)} discounts={!!store.pricing?.discounts}
           delivery={store.pricing?.delivery} whatsappFor={(choice) => partsOf(lines, choice)}
@@ -633,7 +637,7 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
           onPlaced={(p) => {
             setReview(false); setCart([]); setFlagged(new Set());
             try { sessionStorage.removeItem(storageKey); } catch { /* nothing kept */ }
-            if (p.pay_url) window.location.href = new URL(p.pay_url).pathname;
+            if (p.pay_url) window.location.href = sitePath(p.pay_url);
             else setPlaced(p);
           }}
           onClose={() => setReview(false)} />

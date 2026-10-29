@@ -9,6 +9,7 @@
 
 import { useMemo, useState } from "react";
 import { Done, Frame, Glyph, Who } from "../Frame";
+import { sitePath } from "../link";
 import { formatPrice, type Lang } from "../price";
 import type { Item, Placed, Store } from "./types";
 
@@ -19,7 +20,7 @@ const T = {
     context: "Order", title: "What would you like?", eyebrow: "Order from your chat",
     hello: (n: string) => <>Ordering as <b>{n}</b></>,
     noCustomer: "Open this page from the link in your chat so we know who is ordering.",
-    items: (n: number) => `${n} ${n === 1 ? "item" : "items"}`, pay: (amount: string) => `Pay ${amount}`,
+    items: (n: number) => `${n} ${n === 1 ? "item" : "items"}`, pay: (amount: string) => `Pay ${amount}`, placeOrder: "Place order",
     account: "Put it on my account", placed: (n: number) => `Order #${n} received`,
     onAccount: "It has been added to your account.",
     backToChat: "You can go back to WhatsApp. We will message you as your order moves along.",
@@ -30,7 +31,7 @@ const T = {
     context: "طلب", title: "ماذا تود أن تطلب؟", eyebrow: "طلب من المحادثة",
     hello: (n: string) => <>الطلب باسم <b>{n}</b></>,
     noCustomer: "افتح هذه الصفحة من الرابط في المحادثة لنعرف صاحب الطلب.",
-    items: (n: number) => `${n} صنف`, pay: (amount: string) => `ادفع ${amount}`,
+    items: (n: number) => `${n} صنف`, pay: (amount: string) => `ادفع ${amount}`, placeOrder: "أرسل الطلب",
     account: "سجّله على حسابي", placed: (n: number) => `تم استلام الطلب رقم ${n}`,
     onAccount: "تمت إضافته إلى حسابك.",
     backToChat: "يمكنك العودة إلى واتساب. سنراسلك عند كل تحديث لطلبك.",
@@ -104,7 +105,7 @@ export default function LegacyOrder({ slug, token, initial, lang: first }: Props
           <p>{t.backToChat}</p>
         </Done>
         {placed.track_url && (
-          <a className="cx-btn ink" href={new URL(placed.track_url).pathname}>{t.track}<Glyph name="arrow" className="flip" /></a>
+          <a className="cx-btn ink" href={sitePath(placed.track_url)}>{t.track}<Glyph name="arrow" className="flip" /></a>
         )}
       </Frame>
     );
@@ -115,7 +116,7 @@ export default function LegacyOrder({ slug, token, initial, lang: first }: Props
       <section className="cx-hero" style={{ "--i": 0 } as React.CSSProperties}>
         <span className="cx-eyebrow">{t.eyebrow}</span>
         <h1>{t.title}</h1>
-        {store.customer ? <Who label={t.hello(store.customer.name)} /> : <p className="cx-warn">{t.noCustomer}</p>}
+        {store.customer ? (store.customer.name && <Who label={t.hello(store.customer.name)} />) : <p className="cx-warn">{t.noCustomer}</p>}
       </section>
 
       {categories.length > 1 && (
@@ -158,7 +159,7 @@ export default function LegacyOrder({ slug, token, initial, lang: first }: Props
               <b className="num"><bdi>{formatPrice(total, lang)}</bdi></b>
             </div>
             <button className="cx-btn" disabled={busy || !store.customer} onClick={() => checkout("link")}>
-              <Glyph name="card" />{t.pay(formatPrice(total, lang))}
+              <Glyph name={store.settings.pay?.online === false ? "check" : "card"} />{store.settings.pay?.online === false ? t.placeOrder : t.pay(formatPrice(total, lang))}
             </button>
             {store.customer?.can_use_account && (
               <button className="cx-btn ghost" disabled={busy} onClick={() => checkout("account")}>{t.account}</button>

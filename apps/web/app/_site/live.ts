@@ -111,13 +111,14 @@ export function liveView(base: AgentView, script: LiveEvent[], step: number): Ag
   const needs: Record<string, number> = {};
   let needsSummary: string | null = null;
   for (const e of events) {
+    const by = e.undo ? -1 : 1;
     for (const key of e.adds) {
-      if (key === "sent") sent += 1;
-      else reminders += 1;
+      if (key === "sent") sent += by;
+      else reminders += by;
     }
     if (e.order) {
-      orders += 1;
-      sales += e.order * 100;
+      orders += by;
+      sales += by * e.order * 100;
     }
     if (e.booking) {
       bookings += 1;

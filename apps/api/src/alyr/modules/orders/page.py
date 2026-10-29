@@ -39,18 +39,18 @@ from alyr.modules.items import clock as shop_clock
 from alyr.modules.items import groups as price_groups
 from alyr.modules.items import service as items
 from alyr.modules.items.clock import ShopClock
-from alyr.modules.orders import service
+from alyr.modules.orders import pay_ways, service
 
 DEFAULT_PAGE = 48
 MAX_PAGE = 200
 SOLD_OUT_REASONS = ("off", "sold_out")
 
 
-async def settings(conn: asyncpg.Connection) -> dict:
+async def settings(conn: asyncpg.Connection, feats: features.Features | None = None) -> dict:
     row = await conn.fetchrow(
         "select wholesale_layout, whatsapp_number, whatsapp_mode, low_stock_at from shop_settings"
     )
-    feats = await features.load(conn)
+    feats = feats or await features.load(conn)
     return {
         # How a sold-out item looks is the shop's "Sold-out items" feature (ALY-148).
         "sold_out_display": feats.sold_out_mode,
@@ -235,12 +235,14 @@ async def _with_photos(
 
 
 async def _visible(
-    conn: asyncpg.Connection, clock: ShopClock, contact_id: UUID | None, only: UUID | None = None
+    conn: asyncpg.Connection, clock: ShopClock, contact_id: UUID | None, only: UUID | None = None,
+    feats: features.Features | None = None, group: dict | None = None,
 ) -> tuple[list[tuple[items.Loaded, availability.State]], dict, dict]:
     """The live items a customer may see, in menu order, with their states; the customer's
-    price group; and the shop's order-page choices."""
-    shop = await settings(conn)
-    group = await price_groups.group_of(conn, contact_id)
+    price group; and the shop's order-page choices. A caller that has read the shop's
+    features or the customer's group already passes them in."""
+    shop = await settings(conn, feats)
+    group = group or await price_groups.group_of(conn, contact_id)
     where, args = ("i.status = 'live'", ()) if only is None else (
         "i.status = 'live' and i.id = $1", (only,)
     )
@@ -262,40 +264,47 @@ async def _visible(
 async def page(
     conn: asyncpg.Connection, media: MediaService, contact_id: UUID | None = None, *,
     q: str = "", category: str | None = None, offset: int = 0, limit: int | None = None,
-    now: datetime | None = None,
+    now: datetime | None = None, feats: features.Features | None = None,
+    group: dict | None = None,
 ) -> dict:
     """The order page's data: the shop's choices, its categories with counts, the customer's
     price group, and one page of items (all of them when `limit` is None)."""
     clock = await shop_clock.load(conn, now)
-    kept, context, shop = await _visible(conn, clock, contact_id)
+    kept, context, shop = await _visible(conn, clock, contact_id, feats=feats, group=group)
     group_id = price_groups.pricing_id(context["group"])
     low_at = shop["low_stock_at"]
-    rows = [public_row(entry, state, clock, group_id, low_at, shop["fields"])
-            for entry, state in kept]
-    if not shop["tags"]:  # the shop switched tags off: customers neither see nor search them
-        for row in rows:
+
+    def made(entry: items.Loaded, state: availability.State) -> dict:
+        row = public_row(entry, state, clock, group_id, low_at, shop["fields"])
+        if not shop["tags"]:  # the shop switched tags off: customers neither see nor search them
             row["tags"] = []
+        return row
 
     names_ar = {c["name"]: c["name_ar"] for c in context["categories"]}
     counts: dict[str, int] = {}
-    for row in rows:
-        counts[row["category"]] = counts.get(row["category"], 0) + 1
-    shown = [
-        {"name": name, "name_ar": names_ar.get(name, ""), "count": counts[name]}
-        for name in dict.fromkeys(r["category"] for r in rows)
-    ]
+    for entry, _ in kept:
+        counts[entry.item["category"]] = counts.get(entry.item["category"], 0) + 1
+    shown = [{"name": name, "name_ar": names_ar.get(name, ""), "count": n}
+             for name, n in counts.items()]
 
-    words = text.search_words(q)
     if category is not None:
-        rows = [r for r in rows if r["category"] == category]
+        kept = [(entry, state) for entry, state in kept if entry.item["category"] == category]
+    words = text.search_words(q)
     if words:
+        # A search reads every item's words, so every item's row is made.
         rows = [
-            r for r in rows
-            if text.matches(words, *_haystack(r, names_ar.get(r["category"], "")))
+            row for row in (made(entry, state) for entry, state in kept)
+            if text.matches(words, *_haystack(row, names_ar.get(row["category"], "")))
         ]
-    total = len(rows)
-    if limit is not None:
-        rows = rows[offset: offset + min(limit, MAX_PAGE)]
+        total = len(rows)
+        if limit is not None:
+            rows = rows[offset: offset + min(limit, MAX_PAGE)]
+    else:
+        # Only the page's rows are made (ALY-276): a shop of 200 items made 200 to send 48.
+        total = len(kept)
+        if limit is not None:
+            kept = kept[offset: offset + min(limit, MAX_PAGE)]
+        rows = [made(entry, state) for entry, state in kept]
     await _with_photos(conn, media, rows, full=False)
     return {
         "group": price_groups.public(context["group"]),
@@ -304,6 +313,8 @@ async def page(
             "wholesale_layout": shop["wholesale_layout"],
             "whatsapp_number": shop["whatsapp_number"],
             "whatsapp_mode": shop["whatsapp_mode"],
+            # How customers pay: online, or on collection by these ways (ALY-170).
+            "pay": await pay_ways.get(conn),
         },
         "categories": shown,
         "items": rows,

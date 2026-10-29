@@ -16,7 +16,7 @@ from zoneinfo import ZoneInfo
 import asyncpg
 
 from alyr import catalog
-from alyr.core import team
+from alyr.core import not_sent, team
 from alyr.core.auth import Staff
 from alyr.modules import report
 from alyr.modules.ledger import service as ledger
@@ -59,6 +59,8 @@ class Facts:
     first_name: str = ""
     money: bool = True
     has_records: bool = True
+    # Messages that did not reach a customer in the last 48 hours (specs/036), any module
+    not_sent: list = field(default_factory=list)
     # The team inbox
     waiting: list = field(default_factory=list)
     wrote: int = 0
@@ -220,13 +222,19 @@ async def gather(conn: asyncpg.Connection, staff: Staff, now: datetime | None = 
     chart = (ws - timedelta(days=7), now)  # last week and this week, by day
 
     f.has_records = bool(await conn.fetchval(
-        "select exists (select 1 from orders where created_at <= $1) "
+        "select exists (select 1 from orders where not is_test and created_at <= $1) "
         "or exists (select 1 from bookings where created_at <= $1) "
         "or exists (select 1 from ledger_entries where created_at <= $1) "
         "or exists (select 1 from messages m join contacts c on c.id = m.contact_id "
-        "           where c.role = 'customer' and m.direction = 'in' and m.created_at <= $1)",
+        "           where c.role = 'customer' and c.wa_user_id not like 'TEST.%' and m.direction "
+        "= 'in' and m.created_at <= $1)",
         now,
     ))
+    f.not_sent = [
+        Row(str(r["id"]), r["name"] or "",
+            {"minutes": int((now - r["created_at"]).total_seconds() // 60)})
+        for r in await not_sent.failed_recently(conn, now)
+    ]
     if "inbox" in modules:
         await _inbox(conn, f, span, last, chart)
         f.team = await team.performance(conn, staff, 7, now)
@@ -278,7 +286,8 @@ async def _inbox(conn, f: Facts, span, last, chart) -> None:
             "  where m.contact_id = c.id and coalesce(m.status, '') <> 'blocked' "
             "    and m.created_at <= $1 order by created_at desc limit 1) l on true "
             "left join users u on u.id = c.assigned_to "
-            "where c.role = 'customer' and c.inbox_status = 'open' and l.direction = 'in' "
+            "where c.role = 'customer' and c.wa_user_id not like 'TEST.%' and c.inbox_status = "
+            "'open' and l.direction = 'in' "
             f"  and l.created_at < $1::timestamptz - interval '{WAITING_MINUTES} minutes' "
             "order by l.created_at",
             now,
@@ -290,7 +299,8 @@ async def _inbox(conn, f: Facts, span, last, chart) -> None:
         "count(distinct m.contact_id) filter (where m.created_at >= $3 and m.created_at < $4) as "
         "wrote_last "
         "from messages m join contacts c on c.id = m.contact_id "
-        "where c.role = 'customer' and m.direction = 'in' and m.created_at >= $3 and m.created_at "
+        "where c.role = 'customer' and c.wa_user_id not like 'TEST.%' and m.direction = 'in' and "
+        "m.created_at >= $3 and m.created_at "
         "< $2",
         *span, *last,
     )
@@ -298,7 +308,7 @@ async def _inbox(conn, f: Facts, span, last, chart) -> None:
     row = await conn.fetchrow(
         "select count(*) filter (where created_at >= $1 and created_at < $2) as new, "
         "count(*) filter (where created_at >= $3 and created_at < $4) as new_last "
-        "from contacts where role = 'customer'",
+        "from contacts where role = 'customer' and wa_user_id not like 'TEST.%'",
         *span, *last,
     )
     f.new_customers, f.new_customers_last = row["new"], row["new_last"]
@@ -321,7 +331,7 @@ async def _inbox(conn, f: Facts, span, last, chart) -> None:
             "select (m.created_at at time zone $3::text)::date as d, "
             "count(distinct m.contact_id)::int as n from messages m "
             "join contacts c on c.id = m.contact_id "
-            "where c.role = 'customer' and m.direction = 'in' "
+            "where c.role = 'customer' and c.wa_user_id not like 'TEST.%' and m.direction = 'in' "
             "and m.created_at >= $1 and m.created_at < $2 group by 1",
             *chart, f.tz,
         )
@@ -365,12 +375,14 @@ async def _orders(conn, f: Facts, span, last, chart) -> None:
         "coalesce(sum(total) filter (where created_at >= $1 and created_at < $2), 0)::bigint as v, "
         "count(*) filter (where created_at >= $3 and created_at < $4) as ln, "
         "coalesce(sum(total) filter (where created_at >= $3 and created_at < $4), 0)::bigint as lv "
-        "from orders where status <> 'cancelled' and created_at >= $3 and created_at < $2",
+        "from orders where not is_test and status <> 'cancelled' and created_at >= $3 and "
+        "created_at < $2",
         *span, *last,
     )
     f.orders, f.sales, f.orders_last, f.sales_last = row["n"], row["v"], row["ln"], row["lv"]
     came_back = (
-        "select count(distinct o.contact_id) from orders o where o.status <> 'cancelled' "
+        "select count(distinct o.contact_id) from orders o where not o.is_test and o.status <> "
+        "'cancelled' "
         "and o.created_at >= $1 and o.created_at < $2 and exists (select 1 from orders p "
         "where p.contact_id = o.contact_id and p.status <> 'cancelled' and p.created_at < $1)"
     )
@@ -390,7 +402,7 @@ async def _orders(conn, f: Facts, span, last, chart) -> None:
             int((now - r["created_at"]).total_seconds() // 60)})
         for r in await conn.fetch(
             "select o.id, o.number, c.name, o.created_at from orders o "
-            "join contacts c on c.id = o.contact_id where o.status = 'new' "
+            "join contacts c on c.id = o.contact_id where not o.is_test and o.status = 'new' "
             f"and o.created_at < $1::timestamptz - interval '{UNCONFIRMED_MINUTES} minutes' "
             "order by o.created_at",
             now,
@@ -404,7 +416,8 @@ async def _orders(conn, f: Facts, span, last, chart) -> None:
             "join contacts c on c.id = o.contact_id "
             "join lateral (select max(created_at) as at from activity where subject = 'order' "
             "  and subject_id = o.id and action = 'ready') a on true "
-            f"where o.status = 'ready' and a.at < $1::timestamptz - interval '{READY_HOURS} hours' "
+            "where not o.is_test and o.status = 'ready' and a.at < $1::timestamptz - interval "
+            f"'{READY_HOURS} hours' "
             "order by a.at",
             now,
         )
@@ -414,7 +427,8 @@ async def _orders(conn, f: Facts, span, last, chart) -> None:
         for r in await conn.fetch(
             "select o.id, o.number, c.name, p.amount from payment_requests p "
             "join orders o on o.id = p.order_id join contacts c on c.id = o.contact_id "
-            "where p.status = 'pending' and p.created_at < $1::timestamptz - interval "
+            "where not o.is_test and p.status = 'pending' and p.created_at < $1::timestamptz - "
+            "interval "
             f"'{LINK_HOURS} hours' "
             "and o.status not in ('cancelled', 'done') order by p.created_at",
             now,
@@ -424,7 +438,8 @@ async def _orders(conn, f: Facts, span, last, chart) -> None:
         r["d"]: (r["n"], r["v"])
         for r in await conn.fetch(
             "select (created_at at time zone $3::text)::date as d, count(*)::int as n, "
-            "coalesce(sum(total), 0)::bigint as v from orders where status <> 'cancelled' "
+            "coalesce(sum(total), 0)::bigint as v from orders where not is_test and status <> "
+            "'cancelled' "
             "and created_at >= $1 and created_at < $2 group by 1",
             *chart, f.tz,
         )
@@ -436,7 +451,8 @@ async def _orders(conn, f: Facts, span, last, chart) -> None:
             "as cur, "
             "coalesce(sum(i.quantity) filter (where o.created_at < $2), 0) as prev "
             "from order_items i join orders o on o.id = i.order_id "
-            "where o.status <> 'cancelled' and o.created_at >= $1 and o.created_at < $3 "
+            "where not o.is_test and o.status <> 'cancelled' and o.created_at >= $1 and "
+            "o.created_at < $3 "
             "group by i.name order by cur desc, i.name",
             now - timedelta(days=56), now - timedelta(days=28), now,
         )
@@ -448,13 +464,14 @@ async def _orders(conn, f: Facts, span, last, chart) -> None:
             "coalesce(sum(i.quantity) filter (where o.created_at >= $3), 0) as cur, "
             "coalesce(sum(i.quantity) filter (where o.created_at < $2), 0) as prev "
             "from order_items i join orders o on o.id = i.order_id "
-            "where o.status <> 'cancelled' and o.created_at >= $1 and o.created_at < $4 "
+            "where not o.is_test and o.status <> 'cancelled' and o.created_at >= $1 and "
+            "o.created_at < $4 "
             "and (o.created_at < $2 or o.created_at >= $3) group by i.name",
             last[0], last[1], span[0], span[1],
         )
     ]
     f.orders_30d = await conn.fetchval(
-        "select count(*) from orders where status <> 'cancelled' "
+        "select count(*) from orders where not is_test and status <> 'cancelled' "
         "and created_at >= $1 and created_at < $2",
         now - timedelta(days=30), now,
     )
@@ -462,7 +479,7 @@ async def _orders(conn, f: Facts, span, last, chart) -> None:
         "select p.id, p.name, p.name_ar from items p "
         "where p.available and p.status = 'live' and p.created_at < $1 "
         "and not exists (select 1 from order_items i join orders o on o.id = i.order_id "
-        "  where i.item_id = p.id and o.status <> 'cancelled' "
+        "  where i.item_id = p.id and not o.is_test and o.status <> 'cancelled' "
         "  and o.created_at >= $1 and o.created_at < $2) order by p.sort, p.name",
         now - timedelta(days=30), now,
     ), name_ar="name_ar")
@@ -664,7 +681,7 @@ async def _quiet_regulars(conn, f: Facts) -> None:
     if "orders" in f.modules:
         parts.append(
             "select contact_id, created_at as at from orders "
-            "where status <> 'cancelled' and created_at < $3"
+            "where not is_test and status <> 'cancelled' and created_at < $3"
         )
     if "bookings" in f.modules:
         parts.append(
@@ -679,7 +696,7 @@ async def _quiet_regulars(conn, f: Facts) -> None:
             "select c.id, c.name, count(*) filter (where ev.at >= $1 and ev.at < $2)::int as "
             "times, "
             "max(ev.at) as last from ev join contacts c on c.id = ev.contact_id "
-            "where c.role = 'customer' group by c.id, c.name "
+            "where c.role = 'customer' and c.wa_user_id not like 'TEST.%' group by c.id, c.name "
             "having count(*) filter (where ev.at >= $1 and ev.at < $2) >= 3 and max(ev.at) < $2 "
             "order by max(ev.at) desc",
             f.now - timedelta(days=120), f.now - timedelta(days=30), f.now,
@@ -692,7 +709,8 @@ async def _done(conn, f: Facts, span) -> None:
     paid through its links."""
     f.sent_for_you = await conn.fetchval(
         "select count(*) from messages m join contacts c on c.id = m.contact_id "
-        "where c.role = 'customer' and m.direction = 'out' and m.sent_by = '' "
+        "where c.role = 'customer' and c.wa_user_id not like 'TEST.%' and m.direction = 'out' and "
+        "m.sent_by = '' "
         "and m.status in ('sent', 'delivered', 'read') and m.created_at >= $1 and m.created_at < "
         "$2",
         *span,
@@ -719,7 +737,7 @@ async def _hours(conn, f: Facts) -> None:
     """When the business is busiest, over 28 days: orders placed, visits, or customers
     writing, whichever the business mainly runs on."""
     if "orders" in f.modules:
-        source = "select created_at as at from orders where status <> 'cancelled'"
+        source = "select created_at as at from orders where not is_test and status <> 'cancelled'"
     elif "bookings" in f.modules:
         source = (
             "select starts_at as at from bookings "
@@ -728,7 +746,7 @@ async def _hours(conn, f: Facts) -> None:
     else:
         source = (
             "select m.created_at as at from messages m join contacts c on c.id = m.contact_id "
-            "where c.role = 'customer' and m.direction = 'in'"
+            "where c.role = 'customer' and c.wa_user_id not like 'TEST.%' and m.direction = 'in'"
         )
     f.hours_grid = {
         (r["dow"], r["hour"]): r["n"]
@@ -762,7 +780,7 @@ async def _last_by_now(conn, f: Facts) -> None:
     if "orders" in f.modules:
         row = await conn.fetchrow(
             "select count(*)::int as n, coalesce(sum(total), 0)::bigint as v from orders "
-            "where status <> 'cancelled' and created_at >= $1 and created_at < $2",
+            "where not is_test and status <> 'cancelled' and created_at >= $1 and created_at < $2",
             start, end,
         )
         f.last_by_now["orders"] = row["n"]
@@ -791,7 +809,8 @@ async def _last_by_now(conn, f: Facts) -> None:
     if "inbox" in f.modules:
         f.last_by_now["chats"] = await conn.fetchval(
             "select count(distinct m.contact_id)::int from messages m "
-            "join contacts c on c.id = m.contact_id where c.role = 'customer' "
+            "join contacts c on c.id = m.contact_id where c.role = 'customer' and c.wa_user_id "
+            "not like 'TEST.%' "
             "and m.direction = 'in' and m.created_at >= $1 and m.created_at < $2",
             start, end,
         )

@@ -14,6 +14,7 @@ from uuid import UUID
 
 import asyncpg
 
+from alyr.core import ratelimit
 from alyr.db import Database
 
 log = logging.getLogger("alyr.auth")
@@ -22,7 +23,7 @@ COOKIE = "alyr_session"
 SESSION_DAYS = 30
 CODE_MINUTES = 10
 MAX_GUESSES = 5
-MAX_CODES_PER_HOUR = 5
+MAX_CODES_PER_HOUR = ratelimit.CODES_PER_EMAIL.count
 ROLES = ("owner", "admin", "agent")
 
 
@@ -31,7 +32,9 @@ class AuthError(Exception):
 
 
 class TooManyCodes(AuthError):
-    pass
+    def __init__(self, message: str, retry_after: int = 3600) -> None:
+        super().__init__(message)
+        self.retry_after = retry_after
 
 
 @dataclass(frozen=True)
@@ -49,6 +52,11 @@ def _hash(value: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()
 
 
+def token_hash(token: str) -> str:
+    """How a session cookie value is kept in `sessions`."""
+    return _hash(token)
+
+
 def clean_email(email: str) -> str:
     return email.strip().lower()
 
@@ -59,6 +67,14 @@ async def request_code(db: Database, email: str, allow_new: bool = False) -> str
     form to learn who has an account. With `allow_new` (sign-up, D-031) a code is made
     for any address, so the person can prove they own it."""
     email = clean_email(email)
+    # Counted before anything is looked up, so an unknown email is refused after five asks
+    # just as a known one is, and the 429 tells nobody who has an account (ALY-116).
+    try:
+        await ratelimit.hit(db, "code-email", email, ratelimit.CODES_PER_EMAIL)
+    except ratelimit.TooManyRequests as error:
+        raise TooManyCodes(
+            "too many codes requested; try again in an hour", error.retry_after
+        ) from error
     async with db.unscoped() as conn:
         known = await conn.fetchval("select true from users where email = $1", email)
         if not known and not allow_new:
@@ -81,26 +97,32 @@ async def request_code(db: Database, email: str, allow_new: bool = False) -> str
 
 
 async def check_code(db: Database, email: str, code: str) -> None:
-    """Spend a correct code, or count a wrong guess. Raises AuthError when refused."""
+    """Spend a correct code, or count a wrong guess. Raises AuthError when refused.
+
+    The code's row stays locked until a wrong guess has been counted and saved: a guess that
+    queued on the lock must see the count of the one before it, or parallel guesses could try
+    far more than MAX_GUESSES codes (ALY-244)."""
     email = clean_email(email)
     refused = AuthError("that code is wrong or has expired")
-    async with db.unscoped() as conn, conn.transaction():
-        row = await conn.fetchrow(
-            "select id, code_hash, attempts from login_codes "
-            "where email = $1 and not used and expires_at > now() "
-            "order by created_at desc limit 1 for update",
-            email,
-        )
-        if row is None or row["attempts"] >= MAX_GUESSES:
-            raise refused
-        if hmac.compare_digest(row["code_hash"], _hash(f"{email}:{code.strip()}")):
-            await conn.execute("update login_codes set used = true where id = $1", row["id"])
-            return
-        # Counted outside this transaction's fate: the raise below must not undo it.
-        wrong = row["id"]
     async with db.unscoped() as conn:
-        await conn.execute("update login_codes set attempts = attempts + 1 where id = $1", wrong)
-    raise refused
+        async with conn.transaction():
+            row = await conn.fetchrow(
+                "select id, code_hash, attempts from login_codes "
+                "where email = $1 and not used and expires_at > now() "
+                "order by created_at desc limit 1 for update",
+                email,
+            )
+            if row is not None and row["attempts"] < MAX_GUESSES:
+                if hmac.compare_digest(row["code_hash"], _hash(f"{email}:{code.strip()}")):
+                    await conn.execute(
+                        "update login_codes set used = true where id = $1", row["id"]
+                    )
+                    return
+                await conn.execute(
+                    "update login_codes set attempts = attempts + 1 where id = $1", row["id"]
+                )
+        # Raised after the transaction block, so the count above is committed, not undone.
+        raise refused
 
 
 async def create_session(conn: asyncpg.Connection, user_id: UUID, tenant_id: UUID) -> str:
@@ -115,7 +137,8 @@ async def create_session(conn: asyncpg.Connection, user_id: UUID, tenant_id: UUI
 
 
 async def session_for(db: Database, email: str) -> str | None:
-    """A session in the person's first shop, or None if they work for no shop yet."""
+    """A session in the business the person opened last, else the first they joined; None if
+    they work for none yet (go-live item 40, D-081)."""
     email = clean_email(email)
     async with db.unscoped() as conn, conn.transaction():
         user_id = await conn.fetchval("select id from users where email = $1", email)
@@ -123,7 +146,10 @@ async def session_for(db: Database, email: str) -> str | None:
             return None
         await conn.execute("select set_config('app.user_id', $1, true)", str(user_id))
         tenant_id = await conn.fetchval(
-            "select tenant_id from memberships where user_id = $1 order by created_at limit 1",
+            "select m.tenant_id from memberships m join users u on u.id = m.user_id "
+            "where m.user_id = $1 "
+            "order by m.tenant_id is not distinct from u.last_tenant_id desc, m.created_at "
+            "limit 1",
             user_id,
         )
         if tenant_id is None:

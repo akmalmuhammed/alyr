@@ -6,10 +6,13 @@ import { fmtQtyUnit, lineUnit } from "../_customer/qty";
 import { formatPrice } from "../_customer/price";
 import { OrderMargin, useOrderMargins } from "./Margin";
 import { OrderSum } from "./OrderSum";
+import { MarkPaid, PayWays } from "./OrderPay";
+import { ForgetCustomer } from "./Forget";
 import { FulfilDetails, FulfilFilters, FulfilPill, matchesFilter, type FulfilFilter } from "./OrderFulfil";
 import type { Fulfilment } from "../_customer/fulfil";
 import { DELIVERY } from "./deliveryCopy";
 import { PRICING } from "./pricingCopy";
+import { usePolling } from "./poll";
 import "./pricing.css";
 
 type Choice = { id: string; title: string };
@@ -59,6 +62,8 @@ type OrderRow = {
   assigned: Person | null;
   // The table the order is for, from a QR code on a table ("" for none).
   table?: string;
+  // The owner's own test order from the test line (ALY-168): marked, never counted, cannot be paid.
+  test?: boolean;
   // The price group the order was charged under, as named then (null for orders before groups).
   price_group?: { name: string; name_ar: string; is_default: boolean } | null;
   // The receipt or invoice the order made, for a shop with Documents on (ALY-146).
@@ -95,6 +100,7 @@ const BUCKET_KEYS = ["d0_30", "d31_60", "d61_90", "d90_plus"] as const;
 
 const T = {
   en: {
+    unreachable: "Cannot reach ALYR right now. This page tries again by itself.",
     ledger: "Credit ledger", sub: "Who owes what, and for how long", outstanding: "Outstanding",
     owing: (n: number) => `${n} customers owe money`, remind: "Send reminders",
     remindHint: "To customers whose oldest unpaid purchase is 30+ days old",
@@ -114,11 +120,11 @@ const T = {
     priceGroup: "Price group",
     noteMode: "Note", noteHere: "Write a note only your team can see", addNote: "Add note",
     noteLabel: "Staff note, not sent to the customer", saveReply: "Save as quick reply", quick: "Quick replies",
-    tabInbox: "Inbox", inboxSub: "Every customer conversation, answered by the assistant or by you",
+    tabInbox: "Inbox", inboxSub: "Every customer conversation, answered by automatic replies or by you",
     open: "Open", closed: "Closed", noChats: "No conversations here. As a customer in the chat, send \"hello\".",
-    pick: "Choose a conversation to read it.", you: "You", assistant: "Assistant", customerSays: "Customer",
-    paused: "You are answering", pausedHint: "The assistant is quiet for this customer until you close the conversation or hand it back.",
-    handBack: "Hand back to assistant", close: "Close", reopen: "Reopen", reply: "Reply", replyHere: "Write a reply",
+    pick: "Choose a conversation to read it.", you: "You", assistant: "Auto-reply", customerSays: "Customer",
+    paused: "You are answering", pausedHint: "Automatic replies are off for this customer until you close the conversation or turn them back on.",
+    handBack: "Turn automatic replies back on", close: "Close", reopen: "Reopen", reply: "Reply", replyHere: "Write a reply",
     windowOpen: (h: number) => (h < 1 ? "Free replies allowed for less than an hour" : `Free replies allowed for ${h} more hours`),
     windowClosed: "More than 24 hours since their last message. WhatsApp only allows an approved template now; typed replies are refused.",
     notSent: "Not sent",
@@ -128,12 +134,14 @@ const T = {
     bk: { booked: "Booked", completed: "Came", cancelled: "Cancelled", no_show: "No-show" } as Record<string, string>,
     tabLedger: "Credit ledger", tabOrders: "Orders", ordersSub: "Placed through the order link",
     noOrders: "No orders yet. In the chat, tap \"Place an order\" as a customer.", table: (label: string) => `Table ${label}`,
+    testOrder: "Test order",
     docLink: (kind: string, number: string, status: string) => `${({ receipt: "Receipt", invoice: "Invoice", deposit_receipt: "Deposit receipt" } as Record<string, string>)[kind] ?? "Document"} ${number}${status === "void" ? " (cancelled)" : ""}`,
     orderNo: "Order", items: "Items", payment: "Payment", status: "Status",
     pay: { unpaid: "Not paid", paid: "Paid", on_account: "On account" } as Record<string, string>,
     st: { new: "New", confirmed: "Confirmed", ready: "Ready", done: "Done", cancelled: "Cancelled" } as Record<string, string>,
     next: { new: "Confirm", confirmed: "Mark ready", ready: "Mark done" } as Record<string, string>,
     followsUp: "Follows up", total: "Total",
+    notDelivered: "Not delivered",
     howEnded: "How did it end?", cancelClose: "Keep open", why: "Why was it lost?",
     outcomes: { sold: "Sold", booked: "Booked", answered: "Answered", lost: "Lost" } as Record<string, string>,
     reasons: {
@@ -141,11 +149,12 @@ const T = {
       went_elsewhere: "Went elsewhere", other: "Other",
     } as Record<string, string>,
     did: (a: Activity, outcomes: Record<string, string>, reasons: Record<string, string>) => {
-      const who = a.actor_name;
+      const who = a.actor_name === "Assistant" ? "Auto-reply" : a.actor_name;
       const n = a.detail.number ? ` #${a.detail.number}` : "";
       const thing = { conversation: "this conversation", order: `order${n}`, booking: `booking${n}`, account: "the credit account" }[a.subject];
       switch (a.action) {
         case "took": return `${who} took ${thing}`;
+        case "data_exported": return `${who} downloaded this customer's data`;
         case "assigned": return a.detail.to ? `${who} gave ${thing} to ${a.detail.to}` : `${who} took ${thing} back from ${a.detail.from}`;
         case "closed": return a.detail.outcome
           ? `${who} closed it: ${outcomes[a.detail.outcome]}${a.detail.reason ? `, ${reasons[a.detail.reason].toLowerCase()}` : ""}`
@@ -160,11 +169,13 @@ const T = {
         case "moved": return `${who} moved booking${n}`;
         case "price_group": return `${who} changed the price group from ${a.detail.from} to ${a.detail.to}`;
         case "asked_person": return `${who} needs a person to reply (the chat could not read or help with the message)`;
+        case "message_retried": return `${who} sent a message again that had not reached the customer`;
         default: return `${who}: ${thing} ${a.action}`;
       }
     },
   },
   ar: {
+    unreachable: "تعذّر الوصول إلى ALYR الآن. تعيد هذه الصفحة المحاولة تلقائياً.",
     ledger: "دفتر الديون", sub: "من عليه مبلغ، ومنذ متى", outstanding: "إجمالي المستحق",
     owing: (n: number) => `${n} عميل عليهم مبالغ`, remind: "إرسال التذكيرات",
     remindHint: "للعملاء الذين مضى على أقدم فاتورة غير مدفوعة ٣٠ يوماً أو أكثر",
@@ -184,11 +195,11 @@ const T = {
     priceGroup: "مجموعة الأسعار",
     noteMode: "ملاحظة", noteHere: "اكتب ملاحظة يراها فريقك فقط", addNote: "إضافة ملاحظة",
     noteLabel: "ملاحظة داخلية، لا تُرسل للعميل", saveReply: "حفظ كرد سريع", quick: "ردود سريعة",
-    tabInbox: "المحادثات", inboxSub: "كل محادثات العملاء، يرد عليها المساعد أو أنت",
+    tabInbox: "المحادثات", inboxSub: "كل محادثات العملاء، ترد عليها الردود التلقائية أو أنت",
     open: "مفتوحة", closed: "مغلقة", noChats: "لا توجد محادثات. أرسل \"hello\" كعميل في المحادثة.",
-    pick: "اختر محادثة لقراءتها.", you: "أنت", assistant: "المساعد", customerSays: "العميل",
-    paused: "أنت من يرد", pausedHint: "المساعد متوقف لهذا العميل حتى تغلق المحادثة أو تعيدها إليه.",
-    handBack: "إعادة للمساعد", close: "إغلاق", reopen: "إعادة فتح", reply: "إرسال", replyHere: "اكتب رداً",
+    pick: "اختر محادثة لقراءتها.", you: "أنت", assistant: "رد تلقائي", customerSays: "العميل",
+    paused: "أنت من يرد", pausedHint: "الردود التلقائية متوقفة لهذا العميل حتى تغلق المحادثة أو تعيد تشغيلها.",
+    handBack: "أعد تشغيل الردود التلقائية", close: "إغلاق", reopen: "إعادة فتح", reply: "إرسال", replyHere: "اكتب رداً",
     windowOpen: (h: number) => (h < 1 ? "الرد الحر متاح لأقل من ساعة" : `الرد الحر متاح لمدة ${h} ساعة`),
     windowClosed: "مضى أكثر من ٢٤ ساعة على آخر رسالة من العميل. واتساب يسمح الآن بالقوالب المعتمدة فقط، والردود المكتوبة مرفوضة.",
     notSent: "لم تُرسل",
@@ -198,12 +209,14 @@ const T = {
     bk: { booked: "محجوز", completed: "حضر", cancelled: "ملغي", no_show: "لم يحضر" } as Record<string, string>,
     tabLedger: "دفتر الديون", tabOrders: "الطلبات", ordersSub: "الطلبات الواردة من رابط الطلب",
     noOrders: "لا توجد طلبات بعد. في المحادثة اضغط \"اطلب الآن\" كعميل.", table: (label: string) => `طاولة ${label}`,
+    testOrder: "طلب تجريبي",
     docLink: (kind: string, number: string, status: string) => `${({ receipt: "إيصال", invoice: "فاتورة", deposit_receipt: "إيصال عربون" } as Record<string, string>)[kind] ?? "مستند"} ${number}${status === "void" ? " (ملغى)" : ""}`,
     orderNo: "الطلب", items: "الأصناف", payment: "الدفع", status: "الحالة",
     pay: { unpaid: "غير مدفوع", paid: "مدفوع", on_account: "على الحساب" } as Record<string, string>,
     st: { new: "جديد", confirmed: "مؤكد", ready: "جاهز", done: "منجز", cancelled: "ملغي" } as Record<string, string>,
     next: { new: "تأكيد", confirmed: "جاهز للاستلام", ready: "تم الإنجاز" } as Record<string, string>,
     followsUp: "المتابع", total: "المجموع",
+    notDelivered: "لم تصل",
     howEnded: "كيف انتهت؟", cancelClose: "أبقِها مفتوحة", why: "لماذا خسرناه؟",
     outcomes: { sold: "تم البيع", booked: "تم الحجز", answered: "تمت الإجابة", lost: "خسرناه" } as Record<string, string>,
     reasons: {
@@ -211,11 +224,12 @@ const T = {
       went_elsewhere: "ذهب لغيرنا", other: "سبب آخر",
     } as Record<string, string>,
     did: (a: Activity, outcomes: Record<string, string>, reasons: Record<string, string>) => {
-      const who = a.actor_name === "Customer" ? "العميل" : a.actor_name === "Assistant" ? "المساعد" : a.actor_name;
+      const who = a.actor_name === "Customer" ? "العميل" : a.actor_name === "Assistant" ? "رد تلقائي" : a.actor_name;
       const n = a.detail.number ? ` رقم ${a.detail.number}` : "";
       const thing = { conversation: "المحادثة", order: `الطلب${n}`, booking: `الحجز${n}`, account: "الحساب الآجل" }[a.subject];
       switch (a.action) {
         case "took": return `${who} تولّى ${thing}`;
+        case "data_exported": return `${who} نزّل بيانات هذا العميل`;
         case "assigned": return a.detail.to ? `${who} أسند ${thing} إلى ${a.detail.to}` : `${who} سحب ${thing} من ${a.detail.from}`;
         case "closed": return a.detail.outcome
           ? `${who} أغلقها: ${outcomes[a.detail.outcome]}${a.detail.reason ? `، ${reasons[a.detail.reason]}` : ""}`
@@ -230,6 +244,7 @@ const T = {
         case "moved": return `${who} غيّر موعد الحجز${n}`;
         case "price_group": return `${who} غيّر مجموعة الأسعار من ${a.detail.from} إلى ${a.detail.to}`;
         case "asked_person": return `${who} يحتاج رداً من موظف (لم تستطع المحادثة قراءة الرسالة أو مساعدته)`;
+        case "message_retried": return `${who} أعاد إرسال رسالة لم تصل إلى العميل`;
         default: return `${who}: ${thing} ${a.action}`;
       }
     },
@@ -241,6 +256,7 @@ const BLOCK_REASON: Record<string, string> = {
   no_consent: "customer has not agreed to messages",
   no_marketing_consent: "customer has not agreed to offers",
   window_closed: "more than 24 hours since their last message",
+  billing_paused: "ALYR paused automatic messages until your payment is recorded",
 };
 const NEXT_STATUS: Record<string, string> = { new: "confirmed", confirmed: "ready", ready: "done" };
 
@@ -399,57 +415,53 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
 
   const refresh = useCallback(async () => {
     try {
-      const [s, c] = await Promise.all([
-        maybe<Summary | null>("/api/ledger/summary", null),
-        phone
-          ? getJson<{ messages: Message[] }>(`/sim/conversations/${phone}`)
-          : Promise.resolve({ messages: [] }),
-      ]);
-      setSummary(s);
-      setMessages(c.messages);
-      setOrders((await maybe<{ orders: OrderRow[] }>("/api/orders", { orders: [] })).orders);
+      // The workspace shows one screen and asks only for it (ALY-275 PERF-1). Beside the
+      // simulator's chat (the sales demo), every tab shows its count, so all are asked for.
+      const on = (screen: WorkspaceTab) => Boolean(phone) || tab === screen;
       const lookBack = show && SHOWS[show]?.tab === "bookings";
       const range = lookBack
         ? `?first=${new Date(Date.now() - 90 * DAY_MS).toISOString().slice(0, 10)}&last=${new Date(Date.now() + 8 * DAY_MS).toISOString().slice(0, 10)}`
         : "";
-      setBookings((await maybe<{ bookings: BookingRow[] }>(`/api/bookings${range}`, { bookings: [] })).bookings);
-      setMe(await getJson<Me>("/api/auth/me"));
-      setNow(Date.now());
-      {
-        const team = await getJson<{ members: Member[]; can_manage: boolean }>("/api/team");
-        setMembers(team.members);
-        setCanManage(team.can_manage);
-      }
-      const rows = (
-        await maybe<{ conversations: InboxRow[] }>(
-          `/api/inbox/conversations?status=${inboxFilter}&assigned=${assignedFilter}`,
-          { conversations: [] },
-        )
-      ).conversations;
-      setInboxRows(rows);
-      if (tab === "inbox") {
-        setSavedReplies((await getJson<{ replies: SavedReply[] }>("/api/inbox/saved-replies")).replies);
-      }
-      if (tab === "inbox" && chatId) {
+      // The open conversation, after the list: reading it on screen is what marks it read.
+      const inbox = async () => {
+        const rows = (
+          await maybe<{ conversations: InboxRow[] }>(
+            `/api/inbox/conversations?status=${inboxFilter}&assigned=${assignedFilter}`,
+            { conversations: [] },
+          )
+        ).conversations;
+        setInboxRows(rows);
+        if (tab !== "inbox" || !chatId) return;
         const loaded = await getJson<Thread>(`/api/inbox/conversations/${chatId}`);
         setThread(loaded);
-        setPriceGroups(await maybe("/api/price-groups", { groups: [], can_manage: false }));
         const closes = loaded.customer.window_closes_at;
         setHoursLeft(closes ? Math.floor((new Date(closes).getTime() - Date.now()) / 3_600_000) : 0);
-        // Reading a conversation on screen is what marks it read.
         if (rows.find((r) => r.id === chatId)?.unread) {
           await getJson(`/api/inbox/conversations/${chatId}/read`, { method: "POST" });
         }
-      }
-      if (selected) {
-        const e = await getJson<{ entries: Entry[] }>(`/api/ledger/customers/${selected}/entries`);
-        setEntries(e.entries);
-      }
+      };
+      // Independent of one another, so asked together rather than one after another.
+      await Promise.all([
+        // The credit accounts screen is the summary; elsewhere only its shop name is used.
+        on("ledger") ? maybe<Summary | null>("/api/ledger/summary", null).then(setSummary) : null,
+        phone
+          ? getJson<{ messages: Message[] }>(`/sim/conversations/${phone}`).then((c) => setMessages(c.messages))
+          : null,
+        on("orders") ? maybe<{ orders: OrderRow[] }>("/api/orders", { orders: [] }).then((o) => setOrders(o.orders)) : null,
+        on("bookings")
+          ? maybe<{ bookings: BookingRow[] }>(`/api/bookings${range}`, { bookings: [] }).then((b) => setBookings(b.bookings))
+          : null,
+        on("inbox") ? inbox() : null,
+        tab === "ledger" && selected
+          ? getJson<{ entries: Entry[] }>(`/api/ledger/customers/${selected}/entries`).then((e) => setEntries(e.entries))
+          : null,
+      ]);
+      setNow(Date.now());
       setError("");
     } catch {
-      setError("Cannot reach the Alyr API. Start it on port 8000, then this page recovers by itself.");
+      setError(t.unreachable);
     }
-  }, [phone, selected, inboxFilter, assignedFilter, tab, chatId, show]);
+  }, [phone, selected, inboxFilter, assignedFilter, tab, chatId, show, t]);
 
   useEffect(() => {
     // The simulator only exists in the demo.
@@ -457,14 +469,39 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
     return () => clearTimeout(first);
   }, [loadPersonas, embedded]);
 
+  // Every 10 s while the screen is on show (every 5 s in the demo, beside its chat), and at
+  // once when what is asked for changes or the person comes back to the tab.
+  usePolling(refresh, embedded ? 10_000 : 5_000);
+
+  // Who is signed in, the team for the "Handled by" menus, who may manage, and the shop's name
+  // over every screen change rarely: asked at the start and every 5 minutes, not with every
+  // look at the lists.
+  const loadShop = useCallback(async () => {
+    await Promise.all([
+      getJson<Me>("/api/auth/me").then(setMe),
+      getJson<{ members: Member[]; can_manage: boolean }>("/api/team").then((team) => {
+        setMembers(team.members);
+        setCanManage(team.can_manage);
+      }),
+      maybe<Summary | null>("/api/ledger/summary", null).then(setSummary),
+    ]);
+  }, []);
+  usePolling(loadShop, 300_000);
+
+  // Saved replies, and the price groups the conversation's side panel offers, change rarely:
+  // asked when the inbox or a conversation is opened.
   useEffect(() => {
-    const first = setTimeout(refresh, 0);
-    const timer = setInterval(refresh, 1500);
-    return () => {
-      clearTimeout(first);
-      clearInterval(timer);
-    };
-  }, [refresh]);
+    if (tab !== "inbox") return;
+    const ask = setTimeout(async () => {
+      try {
+        setSavedReplies((await getJson<{ replies: SavedReply[] }>("/api/inbox/saved-replies")).replies);
+        if (chatId) setPriceGroups(await maybe("/api/price-groups", { groups: [], can_manage: false }));
+      } catch {
+        // The polling's own error line says the API cannot be reached.
+      }
+    }, 0);
+    return () => clearTimeout(ask);
+  }, [tab, chatId]);
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ block: "end" });
@@ -716,7 +753,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                     ))}
                   </div>
                 )}
-                {m.status === "failed" && <span className="tag bad" dir="ltr">Not delivered</span>}
+                {m.status === "failed" && <span className="tag bad">{t.notDelivered}</span>}
                 {m.status === "blocked" && (
                   <span className="tag bad" dir="ltr">Not sent: {BLOCK_REASON[m.error ?? ""] ?? "blocked"}</span>
                 )}
@@ -922,7 +959,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                           {m.payload.choices && (
                             <span className="tag" dir="ltr">Buttons: {m.payload.choices.map((c) => c.title).join(" · ")}</span>
                           )}
-                          {m.status === "failed" && <span className="tag bad" dir="ltr">Not delivered</span>}
+                          {m.status === "failed" && <span className="tag bad">{t.notDelivered}</span>}
                           {m.status === "blocked" && (
                             <span className="tag bad" dir="ltr">Not sent: {BLOCK_REASON[m.error ?? ""] ?? "blocked"}</span>
                           )}
@@ -941,7 +978,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                       {composeMode === "reply" && savedReplies.map((r) => (
                         <span key={r.id} className="quickchip">
                           <button dir="auto" title={r.body} onClick={() => setReplyDraft(r.body)}>{r.title}</button>
-                          <button aria-label={`${t.remove}: ${r.title}`} onClick={() => deleteQuickReply(r.id)}>×</button>
+                          {canManage && <button aria-label={`${t.remove}: ${r.title}`} onClick={() => deleteQuickReply(r.id)}>×</button>}
                         </span>
                       ))}
                     </div>
@@ -967,6 +1004,14 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                         disabled={composeMode === "reply" && !openThread.customer.window_open}
                       >{composeMode === "note" ? t.addNote : t.reply}</button>
                     </form>
+                    {canManage && (
+                      <ForgetCustomer
+                        key={openThread.customer.id}
+                        contactId={openThread.customer.id}
+                        lang={lang}
+                        onDone={() => { setChatId(null); refresh(); }}
+                      />
+                    )}
                   </>
                 )}
               </div>
@@ -1066,6 +1111,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
             )
           )}
 
+          {tab === "orders" && canManage && <PayWays lang={lang} />}
           {tab === "orders" && filterLine}
           {tab === "orders" && <FulfilFilters value={fulfilFilter} onChange={setFulfilFilter} lang={lang} show={orders.some((o) => o.fulfilment)} />}
           {tab === "orders" && (
@@ -1093,6 +1139,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                             <><br /><span className="pill none">{lang === "ar" ? o.price_group.name_ar || o.price_group.name : o.price_group.name}</span></>
                           )}
                           {o.table && <><br /><span className="pill p1">{t.table(o.table)}</span></>}
+                          {o.test && <><br /><span className="pill p1">{t.testOrder}</span></>}
                           {o.document && embedded && canManage && (
                             <><br /><a className="doc-link" href={`/app/documents?d=${o.document.id}`}>{t.docLink(o.document.kind, o.document.number, o.document.status)}</a></>
                           )}
@@ -1106,7 +1153,12 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                           {o.discount_total || o.fulfilment?.mode === "delivery" ? <OrderSum order={o} lang={lang} /> : null}
                           {orderMargins && <OrderMargin lang={lang} margin={orderMargins[o.id]} />}</td>
                         <td className="r num" dir="ltr">{o.total_text}</td>
-                        <td><span className={`pill ${o.payment === "unpaid" ? "p1" : "p0"}`}>{t.pay[o.payment]}</span></td>
+                        <td>
+                          <span className={`pill ${o.payment === "unpaid" ? "p1" : "p0"}`}>{t.pay[o.payment]}</span>
+                          {o.payment === "unpaid" && o.status !== "cancelled" && canManage && !o.test && (
+                            <MarkPaid orderId={o.id} lang={lang} onDone={refresh} />
+                          )}
+                        </td>
                         <td>
                           <AssignSelect value={o.assigned} members={members} label={t.assignedTo} nobody={t.nobody}
                             onChange={(id) => giveTo(`/api/orders/${o.id}/assign`, id)} />
@@ -1155,8 +1207,12 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
               </div>
 
               <div className="actions">
-                <button className="btn primary" onClick={remind} disabled={busy}>{t.remind}</button>
-                <span style={{ color: "var(--muted)", fontSize: 13.5 }}>{t.remindHint}</span>
+                {canManage && (
+                  <>
+                    <button className="btn primary" onClick={remind} disabled={busy}>{t.remind}</button>
+                    <span style={{ color: "var(--muted)", fontSize: 13.5 }}>{t.remindHint}</span>
+                  </>
+                )}
                 {note && <span className="note">{note}</span>}
               </div>
 

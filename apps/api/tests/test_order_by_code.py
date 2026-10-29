@@ -421,7 +421,7 @@ def test_an_unknown_code_is_not_found_and_offers_a_name_search_or_a_person(clien
 
 def test_the_not_found_message_is_arabic_for_an_arabic_customer(client):
     reply = talk(client, STRANGER, "كود 9999")[-1]
-    assert "لم أجد الكود 9999 في النور للكهربائيات" in reply["body"].replace("\u200f", "")
+    assert "لم نجد الكود 9999 في النور للكهربائيات" in reply["body"].replace("\u200f", "")
     assert titles(reply) == ["البحث بالاسم", "التحدث مع موظف"]
 
 
@@ -681,8 +681,8 @@ def test_a_voice_message_goes_to_a_person_with_a_polite_reply(client):
     client.portal.call(client.app.state.inbound.accept, message)
     drain(client)
     reply = sent(client, STRANGER)[-1]
-    assert "cannot read pictures or voice messages" in reply["body"]
-    assert "a person from Al Noor Electricals" in reply["body"]
+    assert "we received it. A person from" in reply["body"]
+    assert "A person from Al Noor Electricals" in reply["body"]
     assert owner_sql("select count(*) as n from activity where action = 'asked_person' "
                      "and tenant_id = $1", DEMO_TENANT_ID)[0]["n"] == 1
     # The conversation is open in the team inbox for a person to answer.
@@ -697,7 +697,7 @@ def test_a_picture_without_a_code_goes_to_a_person_and_one_with_a_code_is_read(c
                              headers={"content-type": "image/jpeg"})
     assert sent_photo.status_code == 200
     reply = sent(client, STRANGER)[-1]
-    assert "cannot read pictures or voice messages" in reply["body"]
+    assert "we received it. A person from" in reply["body"]
     client.post("/sim/photos", params={"from_number": OTHER, "caption": f"#{item['code']}"},
                 content=b"\xff\xd8\xff\xe0jpeg", headers={"content-type": "image/jpeg"})
     assert "*Oud Royal*" in sent(client, OTHER)[-1]["body"]
@@ -733,10 +733,10 @@ def test_too_many_codes_that_match_nothing_hand_the_sender_to_a_person(client):
     for n in range(4):
         assert "could not find" in talk(client, STRANGER, str(9000 + n))[-1]["body"]
     limited = talk(client, STRANGER, "9004")[-1]
-    assert "a lot of codes I could not find" in limited["body"]
+    assert "a lot of codes we could not find" in limited["body"]
     # While limited nothing is looked up, even a code that exists.
     held = talk(client, STRANGER, str(item["code"]))[-1]
-    assert "a lot of codes I could not find" in held["body"] and not choices(held)
+    assert "a lot of codes we could not find" in held["body"] and not choices(held)
     # One record, not one a message.
     assert owner_sql("select count(*) as n from activity where action = 'asked_person' "
                      "and tenant_id = $1", DEMO_TENANT_ID)[0]["n"] == 1

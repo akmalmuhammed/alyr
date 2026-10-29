@@ -15,11 +15,15 @@ echo "== api: lint"
 echo "== api: tests"
 (cd "$root/apps/api" && ALYR_ENV=local uv run pytest -q)
 echo "== api: known vulnerabilities"
-(cd "$root/apps/api" && uvx pip-audit --progress-spinner off)
+(cd "$root/apps/api" \
+  && uv export --frozen --no-emit-project --no-hashes > "${TMPDIR:-/tmp}/alyr-locked.txt" \
+  && uvx pip-audit -r "${TMPDIR:-/tmp}/alyr-locked.txt" --no-deps --disable-pip --progress-spinner off)
 echo "== web: lint"
 (cd "$root/apps/web" && pnpm lint)
 echo "== web: tests (search folding, prices, cart, QR codes)"
 (cd "$root/apps/web" && pnpm test)
+echo "== edge worker: tests (the visitor's address, signed; CI does not run these yet, ALY-265)"
+(cd "$root/infra/cloudflare/edge" && node --test "test/*.test.mjs")
 echo "== web: types"
 (cd "$root/apps/web" && pnpm exec tsc --noEmit)
 echo "== web: known vulnerabilities"

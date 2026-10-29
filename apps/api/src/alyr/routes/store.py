@@ -18,13 +18,12 @@ from datetime import UTC, date, datetime
 from urllib.parse import quote
 from uuid import UUID
 
-from fastapi import APIRouter, Header, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
 
 from alyr.config import get_settings
-from alyr.core import links
-from alyr.core.normalise import fmt_qar, fmt_qar_ar
-from alyr.core.workspace import module_enabled
+from alyr.core import links, ratelimit
+from alyr.core.normalise import fmt_qar, fmt_qar_ar, shown_name
 from alyr.modules.items import clock, delivery, demand, discounts, features, template, text
 from alyr.modules.items import groups as price_groups
 from alyr.modules.items.cart import CartLine
@@ -143,10 +142,13 @@ class Live(BaseModel):
 
 
 async def _shop(request: Request, slug: str):
-    async with request.app.state.db.unscoped() as conn:
-        shop = await conn.fetchrow(
-            "select id, name, name_ar, slug, timezone from tenants where slug = $1", slug
-        )
+    # The router's module check has looked the shop up already (`require_module_for_slug`).
+    shop = getattr(request.state, "shop", None)
+    if shop is None or shop["slug"] != slug:
+        async with request.app.state.db.unscoped() as conn:
+            shop = await conn.fetchrow(
+                "select id, name, name_ar, slug, timezone from tenants where slug = $1", slug
+            )
     if shop is None:
         raise HTTPException(status_code=404, detail="shop not found")
     return shop
@@ -161,19 +163,17 @@ def _refused(error: service.OrderError) -> HTTPException:
     return HTTPException(status_code=_STATUS_FOR.get(error.code, 422), detail=detail)
 
 
-async def _pricing(request: Request, shop_id: UUID, contact_id: UUID | None) -> dict:
+async def _pricing(conn, feats: features.Features, group: dict) -> dict:
     """What the order page needs to know of the shop's pricing features (ALY-150): empty when
     they are all off, so a shop that uses none is told nothing new."""
     out: dict = {}
-    async with request.app.state.db.tenant(shop_id) as conn:
-        feats = await features.load(conn)
-        if feats.on("discounts"):
-            group = price_groups.pricing_id(await price_groups.group_of(conn, contact_id))
-            out["discounts"] = {
-                "offers": await discounts.offers(conn, group, datetime.now(UTC)),
-            }
-        if feats.on("delivery_fees"):
-            out["delivery"] = await delivery.public(conn, await clock.load(conn))
+    if feats.on("discounts"):
+        out["discounts"] = {
+            "offers": await discounts.offers(
+                conn, price_groups.pricing_id(group), datetime.now(UTC)),
+        }
+    if feats.on("delivery_fees"):
+        out["delivery"] = await delivery.public(conn, await clock.load(conn))
     return out
 
 
@@ -189,7 +189,9 @@ async def _identify(conn, link: links.Link | None) -> dict | None:
     if row is None:
         return None
     return {
-        "name": row["name"], "first_name": row["name"].split(" ")[0], "lang": row["lang"],
+        # A name that is only the phone number is not printed (ALY-271, CJ-17).
+        "name": shown_name(row["name"]), "first_name": shown_name(row["name"]).split(" ")[0],
+        "lang": row["lang"],
         "can_use_account": bool(row["credit_limit"] and row["credit_limit"] > 0),
         "has_last_order": bool(await conn.fetchval(
             "select true from orders where contact_id = $1 and status <> 'cancelled' limit 1",
@@ -214,21 +216,25 @@ async def storefront(
     customer_link.keep_private(response)
     shop = await _shop(request, slug)
     link, state = customer_link.state(x_order_link or t, shop["id"], links.ORDER)
-    async with request.app.state.db.tenant(shop["id"]) as conn:
+    # The page only reads (ALY-275): PostgreSQL refuses a write here. One transaction, one
+    # connection, and the shop's features read once (ALY-276).
+    async with request.app.state.db.tenant(shop["id"], readonly=True) as conn:
         customer = await _identify(conn, link)
         if link is not None and customer is None:
             state = "invalid"
         contact_id = link.contact_id if customer is not None and link is not None else None
+        feats = await features.load(conn)
+        group = await price_groups.group_of(conn, contact_id)
         data = await page.page(
             conn, request.app.state.media, contact_id, q=q, category=category,
-            offset=offset, limit=limit,
+            offset=offset, limit=limit, feats=feats, group=group,
         )
         # What the shop's type says about its page (the section's name, the layout, how a
         # sold-out item looks); null for a shop without the Catalog (ALY-107).
-        hints = await template.public(conn) if await template.enabled(conn) else None
-    catalog_on = await module_enabled(request.app.state.db, shop["id"], "catalog")
+        catalog_on = feats.catalog
+        hints = await template.public(conn, feats) if catalog_on else None
+        pricing = await _pricing(conn, feats, group)
     items = data["items"]
-    pricing = await _pricing(request, shop["id"], contact_id)
     return {
         "shop": {
             "name": shop["name"], "name_ar": shop["name_ar"], "slug": shop["slug"],
@@ -259,7 +265,7 @@ async def one_item(
     customer_link.keep_private(response)
     shop = await _shop(request, slug)
     link, _ = customer_link.state(x_order_link or t, shop["id"], links.ORDER)
-    async with request.app.state.db.tenant(shop["id"]) as conn:
+    async with request.app.state.db.tenant(shop["id"], readonly=True) as conn:
         customer = await _identify(conn, link)
         row = await page.one(
             conn, request.app.state.media, item_id, link.contact_id if customer else None
@@ -275,7 +281,7 @@ async def live(slug: str, body: Live, request: Request) -> dict:
     while the page is open and in front. Small on purpose."""
     shop = await _shop(request, slug)
     link, _ = customer_link.state(body.token, shop["id"], links.ORDER)
-    async with request.app.state.db.tenant(shop["id"]) as conn:
+    async with request.app.state.db.tenant(shop["id"], readonly=True) as conn:
         customer = await _identify(conn, link)
         return await page.live(conn, body.ids, link.contact_id if customer else None)
 
@@ -290,7 +296,7 @@ async def share(
     always the normal prices, and the same for everyone."""
     shop = await _shop(request, slug)
     base = get_settings().public_web_url.rstrip("/")
-    async with request.app.state.db.tenant(shop["id"]) as conn:
+    async with request.app.state.db.tenant(shop["id"], readonly=True) as conn:
         found = await page.one(conn, request.app.state.media, item) if item else None
         listing = None
         if found is None:
@@ -385,7 +391,8 @@ async def check_cart(slug: str, body: CartCheck, request: Request) -> dict:
         raise _refused(error) from error
 
 
-@router.post("/{slug}/orders")
+@router.post("/{slug}/orders",
+    dependencies=[Depends(ratelimit.per_address("order-placed", "PLACED_PER_ADDRESS"))])
 async def place_order(slug: str, body: NewOrder, request: Request) -> dict:
     shop = await _shop(request, slug)
     link = customer_link.require(body.token, shop["id"], links.ORDER, required=True)
@@ -403,7 +410,8 @@ async def place_order(slug: str, body: NewOrder, request: Request) -> dict:
         raise _refused(error) from error
 
 
-@router.post("/{slug}/orders/repeat")
+@router.post("/{slug}/orders/repeat",
+    dependencies=[Depends(ratelimit.per_address("order-placed", "PLACED_PER_ADDRESS"))])
 async def repeat_order(slug: str, body: Repeat, request: Request) -> dict:
     """"Same as last time": order again what the customer's last order held. What can no
     longer be ordered is left out and named in the answer."""

@@ -16,12 +16,22 @@ class Settings(BaseSettings):
     # Migrations and demo-tenant setup connect as the owner.
     migration_url: str = "postgresql://alyr:alyr_local@localhost:5432/alyr"
     redis_url: str = "redis://localhost:6379/0"
+    # The read-only role the nightly backup signs in as (scripts/backup). Only migrations
+    # use this setting, to create the role; the app never connects with it. Empty: no
+    # backup role is created.
+    backup_url: str = ""
 
     # Run queued jobs inside the API process after each request. Convenient locally
     # and in tests. In production set this to false and run `python -m alyr.worker`.
     jobs_inline: bool = True
     # First retry delay; it doubles on each further attempt.
     jobs_backoff_seconds: float = 5.0
+    # How many jobs one process runs at once (a customer's own jobs still one at a time, in
+    # order; ALY-276). Each running job may hold two database connections at a moment, so
+    # keep it at most half the pool (10 per process).
+    jobs_concurrency: int = 5
+    # /health/worker answers 503 when the worker has not checked in for this long.
+    worker_stale_seconds: int = 120
 
     # Local only: let the workspace be used without signing in, as the demo shop.
     # Ignored everywhere except env "local".
@@ -30,6 +40,23 @@ class Settings(BaseSettings):
     # Self-serve sign-up at /start (D-031). Unset: open on a local machine, closed
     # everywhere else until the founder decides to open it.
     signup_open: bool | None = None
+
+    # Where the visitor's address is read from, for the rate limits (ALY-116). Empty: the address
+    # the connection came from. A header the visitor can write must never be trusted by
+    # accident, so nothing is read from one until this names it. On Google Cloud set
+    # "x-alyr-client-ip" together with `client_ip_keys` below (ALY-265).
+    client_ip_header: str = ""
+    # How many proxies of ours add to a list header such as x-forwarded-for: the address is read
+    # that many places from the right, where a visitor cannot have written it. Only used when
+    # `client_ip_keys` is empty.
+    client_ip_proxies: int = 1
+    # Keys that vouch for the address in `client_ip_header` (ALY-265). The edge Worker signs the
+    # address it writes (HMAC-SHA256, in the header named like this one plus "-sig") with one of
+    # these; the API believes the address only with a signature that matches, and counts every
+    # other request in one shared bucket. Comma separated so a key can be replaced without a gap
+    # (the edge signs with the first; the API accepts all). Secret. Empty: the header is believed
+    # as it stands, which is only safe where nothing but our own proxy can reach the API.
+    client_ip_keys: str = ""
     # Prices and the promise are set in the back office, not here (D-032).
 
     # Local only: read the ALYR Agent as if it were this moment (ISO 8601, with an offset),
@@ -38,6 +65,19 @@ class Settings(BaseSettings):
 
     # Where payment links point. The web app serves /pay/...
     public_web_url: str = "http://localhost:3100"
+    # The stand-in payment page, which moves no money, plays a shop's payment provider on a
+    # developer machine only (env "local", ALY-114). False switches it off there too, to see
+    # what a shop with no payment account of its own gets (ALY-271). It can never switch it on.
+    stand_in_payments: bool = True
+    # Where the signed-in workspace is served, for the links at the end of an owner's
+    # answers in WhatsApp (D-065). Empty until it is hosted: today's public web address is
+    # the laptop tunnel, which serves customer pages only, so a workspace link would 404.
+    workspace_url: str = ""
+
+    # Other web addresses a signed-in browser may post from, comma separated (ALY-118). The
+    # address in `public_web_url` is always allowed; add the console's (ops.alyr.qa) or a
+    # workers.dev address of the portal while that is where people sign in.
+    allowed_origins: str = ""
 
     # Signs the order links sent to one customer (HMAC-SHA256, core/links.py, ALY-112). Only
     # a local machine may leave it empty (a built-in development value is used); anywhere
@@ -51,6 +91,13 @@ class Settings(BaseSettings):
     # look for months later, so its link lives longer than an order link; an older link is
     # answered with a page that says so, and the shop sends the document again.
     document_link_days: int = 90
+
+    # Seals the keys shops paste from their payment provider (AES-256-GCM, core/payment_keys.py,
+    # ALY-17): 32 random bytes, base64. Only a local machine may leave it empty (a built-in
+    # development key is used); anywhere else connecting a payment account is refused until it
+    # is set. Never in git. Changing it makes every connected account's keys unreadable: the
+    # shops connect again.
+    payment_keys_key: str = ""
 
     meta_app_secret: str = ""
     meta_verify_token: str = ""
@@ -88,6 +135,13 @@ class Settings(BaseSettings):
     email_from: str = "ALYR <no-reply@alyr.qa>"
     email_reply_to: str = "hello@alyr.qa"
 
+    # Alerts to a person's phone and inbox (ALY-121, spec 034, D-073). Both empty: alerts are only
+    # logged. The ntfy topic is a secret: anyone who knows it can read and send alerts. An alert
+    # holds counts and ages only, never a name, a number or a message.
+    alert_ntfy_topic: str = ""
+    alert_ntfy_url: str = "https://ntfy.sh"
+    alert_email: str = ""
+
     # Product photos (D-039, ALY-103). With the account ID and both keys set, photos go to
     # Cloudflare R2 and are served from `media_base_url`. With any of the three missing
     # they go to local disk under `media_local_dir` and the API serves them itself, so a
@@ -98,6 +152,11 @@ class Settings(BaseSettings):
     r2_bucket: str = "alyr-media"
     media_base_url: str = "https://media.alyr.qa"
     media_local_dir: str = ".media"
+    # Outside a developer machine, photos on local disk are refused at start-up
+    # (`storage.check_store`): a cloud container's disk is wiped on every restart and is not
+    # shared between copies. Only a single server whose `media_local_dir` is a kept volume
+    # may switch this on (the rehearsal in docker-compose.prod.yml does).
+    media_allow_local: bool = False
 
     # What one upload may be. The web page shrinks a photo before sending it, so these
     # only stop a damaged or hostile file. A 12-megapixel phone photo is about 4 MB.
@@ -124,6 +183,29 @@ class Settings(BaseSettings):
     # IBAN, shown to the owner beside the amount and their reference. Not a secret. Empty
     # until ALYR's company account is open; the owner is then told ALYR sends the details.
     bank_transfer_details: str = ""
+
+    # A client pays ALYR by card through Paddle (ALY-180, D-074). "paddle": every client is
+    # offered a card payment at go-live, unless the back office switches it off for one.
+    # Empty: no client is, whatever the back office says. It is only offered while the three
+    # Paddle values below are set. Paddle charges in US dollars (core/paddle.py).
+    card_billing: str = ""
+    # "sandbox" (sandbox-api.paddle.com, test cards) or "live" (api.paddle.com). Live waits
+    # for Paddle's approval of the website and for the customer agreement (ALY-98).
+    paddle_environment: str = "sandbox"
+    # The server API key, and the secret of the notification destination that signs
+    # webhooks. Both secrets: Secret Manager in production, never in git.
+    paddle_api_key: str = ""
+    paddle_webhook_secret: str = ""
+    # The client-side token Paddle.js opens the checkout with (starts with test_ or live_).
+    # Paddle makes it to be shown in a web page: not a secret.
+    paddle_client_token: str = ""
+
+    # A client whose next period is not paid (ALY-218, D-082): everything keeps working for
+    # this many days after the due date, with reminders to the owner. Then, while
+    # `billing_pause_sending` is on, ALYR pauses its automatic replies and templates for the
+    # client's businesses until they pay. Nothing is deleted and the workspace stays open.
+    billing_grace_days: int = 14
+    billing_pause_sending: bool = True
 
     # Per shop, to start (D-039; our estimate). A cap stops new items or photos with a
     # clear message and never deletes anything.

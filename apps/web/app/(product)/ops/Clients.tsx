@@ -11,6 +11,7 @@ import {
 } from "./api";
 import { BusinessTemplate } from "./BusinessTemplate";
 import { ClientAccess } from "./ClientAccess";
+import { BusinessTerms } from "./BusinessTerms";
 
 type DraftLine = Line & { priceText: string };
 type Draft = { period_months: number; discount_pct: number; show_promise: boolean; note: string; lines: DraftLine[] };
@@ -32,6 +33,9 @@ function progress(b: ClientSummary["businesses"][number]) {
     </span>
   );
 }
+
+// A client whose plan needs a look, as the hourly check left it (ALY-218).
+const LATE: Record<string, string> = { past_due: "Past due", suspended: "Paused: overdue", cancelled: "Cancelled" };
 
 export function Clients({ pricing, onChange, initialClient }: { pricing: Pricing | null; onChange: () => void; initialClient?: string }) {
   const [list, setList] = useState<ClientSummary[]>([]);
@@ -167,6 +171,8 @@ export function Clients({ pricing, onChange, initialClient }: { pricing: Pricing
                       </span>
                     </>
                   ) : <small>no price yet</small>}
+                  {c.billing_state && LATE[c.billing_state] && <><br /><span className="sh-pill wait">{LATE[c.billing_state]}</span></>}
+                  {c.cancels_on && c.billing_state !== "cancelled" && <><br /><small>Cancels on {c.cancels_on}</small></>}
                 </td>
               </tr>
             ))}
@@ -197,6 +203,9 @@ export function Clients({ pricing, onChange, initialClient }: { pricing: Pricing
               <h3>Payment and access</h3>
               <ClientAccess clientId={detail.id} access={detail.access} onDone={() => { openClient(detail.id); loadList(); onChange(); }} />
             </>}
+
+            <h3>Terms and privacy</h3>
+            {detail.businesses.map((b) => <BusinessTerms key={b.id} business={b} />)}
 
             <h3>Businesses</h3>
             <div className="tablewrap"><table>

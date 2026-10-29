@@ -430,6 +430,9 @@ def test_undo_withdraws_the_documents_of_the_newest_import_and_frees_their_numbe
     token = links.mint(shop.tenant_id, ids[0], purpose=links.DOCUMENT)
     page = shop.owner.get(f"/api/d/{shop.shop.slug}", headers={"X-Order-Link": token}).json()
     assert page["document"]["number"] == "R-1" and page["document"]["external"] is True
+    # The page says it in both languages, with the sentence the PDF carries (ALY-203).
+    note = page["document"]["external_note"]
+    assert "seller's own system" in note["en"] and "نظام البائع" in note["ar"]
 
     undone = shop.owner.post("/api/connect-setup/imports/undo")
     assert undone.status_code == 200 and undone.json()["withdrawn"] == 2
@@ -545,3 +548,30 @@ def test_the_json_of_an_import_is_plain_data(shop):
     json.dumps(preview)
     assert set(preview) >= {"id", "headers", "mapping", "options", "columns", "missing",
                             "counts", "sales", "problems", "hash", "can_apply"}
+
+
+# ── read once (ALY-278) ──────────────────────────────────────────────────────────────────
+
+
+def test_a_sales_file_is_read_once_in_a_worker_thread_and_never_again(shop, monkeypatch):
+    from alyr.modules.items import sheets
+    from test_catalog_import_photos import where_it_ran
+
+    read: list[str] = []
+    monkeypatch.setattr(sheets, "read_table", where_it_ran(read, sheets.read_table))
+    preview = preview_of(shop, GOOD)
+    assert read == ["worker thread"]
+    again = shop.owner.get(f"/api/connect-setup/imports/{preview['id']}")
+    assert again.status_code == 200 and again.json()["hash"] == preview["hash"]
+    done = apply(shop, preview)
+    assert done.status_code == 200, done.text
+    assert read == ["worker thread"]
+    kept = owner_sql("select file, sheet from sale_imports where id = $1", preview["id"])
+    assert dict(kept[0]) == {"file": None, "sheet": None}
+
+
+def test_a_sales_preview_kept_before_files_were_read_once_is_gone(shop):
+    preview = preview_of(shop, GOOD)
+    owner_sql("update sale_imports set sheet = null where id = $1", preview["id"])
+    answer = shop.owner.get(f"/api/connect-setup/imports/{preview['id']}")
+    assert answer.status_code == 404, answer.text

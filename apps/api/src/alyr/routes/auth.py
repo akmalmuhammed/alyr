@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from alyr.config import get_settings
-from alyr.core import auth, mail
+from alyr.core import auth, mail, ratelimit, welcome
 from alyr.core.auth import Staff
 from alyr.routes.deps import current_staff
 
@@ -38,6 +38,8 @@ def _me(staff: Staff) -> dict:
         "signed_in": staff.user_id is not None,
         "id": str(staff.user_id) if staff.user_id else None,
         "name": staff.name, "email": staff.email, "role": staff.role,
+        # So the workspace can count use per business (D-070); an ID, nothing else.
+        "business_id": str(staff.tenant_id) if staff.user_id else None,
     }
 
 
@@ -45,10 +47,13 @@ def _me(staff: Staff) -> dict:
 async def send_code(body: CodeRequest, request: Request) -> dict:
     """Always answers the same way, whether or not the email has an account."""
     settings = get_settings()
+    await ratelimit.check(request, "code-address", ratelimit.CODES_PER_ADDRESS)
     try:
         code = await auth.request_code(request.app.state.db, body.email)
     except auth.TooManyCodes as error:
-        raise HTTPException(status_code=429, detail=str(error)) from error
+        raise HTTPException(
+            status_code=429, detail=str(error), headers={"Retry-After": str(error.retry_after)}
+        ) from error
     answer: dict = {"sent": True}
     if code is not None and mail.configured():
         subject, text, html = mail.sign_in_message(code, auth.CODE_MINUTES)
@@ -71,6 +76,7 @@ async def send_code(body: CodeRequest, request: Request) -> dict:
 @router.post("/auth/verify")
 async def verify(body: CodeCheck, request: Request, response: Response) -> dict:
     db = request.app.state.db
+    await ratelimit.check(request, "guess-address", ratelimit.GUESSES_PER_ADDRESS)
     try:
         token = await auth.verify_code(db, body.email, body.code)
     except auth.AuthError as error:
@@ -117,6 +123,8 @@ async def add_member(
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
             user_id = await auth.add_member(conn, staff.role, body.email, body.name, body.role)
+            # Who added them, as what, and how to sign in (specs/037).
+            await welcome.queue(conn, welcome.INVITE, user_id, staff.user_id)
     except (auth.AuthError, PermissionError) as error:
         raise _refuse(error) from error
     return {"id": str(user_id)}

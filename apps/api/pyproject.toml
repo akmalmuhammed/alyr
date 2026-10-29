@@ -10,12 +10,14 @@ dependencies = [
     "asyncpg>=0.30",
     "resvg-py==0.5.0",
     "fonttools>=4.55",
-    "pillow>=12.3,<13",
+    "pillow>=13,<14",
     "fpdf2>=2.8.9,<2.9",
     "uharfbuzz>=0.53",
     # A page of a PDF as a picture, for the workspace screens (ALY-146, render/raster.py). Was a
     # development dependency (the tests read PDFs with it); the API needs it now.
     "pypdfium2>=4.30",
+    # Payment providers' keys are kept sealed (AES-256-GCM; ALY-17, core/payment_keys.py).
+    "cryptography>=50,<51",
 ]
 
 [dependency-groups]

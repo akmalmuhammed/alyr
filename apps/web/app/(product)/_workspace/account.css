@@ -1,0 +1,42 @@
+/* "Your account" (specs/040). It takes the shell's tokens (shell.css) and its patterns: tiles on
+   hairlines, the Volt only for the main action, pills. Nothing here sets a colour of its own, so
+   light, dark and right-to-left come for free. Built at 375 px first: targets are 44 px or more
+   and nothing scrolls sideways. */
+
+.ac { display: grid; gap: 14px; min-width: 0; }
+.ac-card { display: grid; gap: 12px; align-content: start; min-width: 0; padding: 18px; border-radius: 14px; background: var(--sheet); box-shadow: 0 0 0 1px var(--hair) inset; }
+.ac-card > * { margin: 0; }
+.ac-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ac-card-head h2 { margin: 0; font-size: var(--ui-body); font-weight: 600; letter-spacing: -0.01em; }
+
+.ac-quiet { margin: 0; font-size: var(--ui-small); line-height: 1.5; color: var(--ink-2); }
+.ac-note { margin: 0; font-size: var(--ui-body-sm); color: var(--ink-2); }
+.ac-email { font-size: var(--ui-body); font-weight: 600; overflow-wrap: anywhere; text-align: start; }
+.sh[dir="rtl"] .ac-email { text-align: right; }
+.ac-ok, .ac-bad { margin: 0; font-size: var(--ui-small); font-weight: 500; }
+.ac-ok { color: var(--volt-ink); }
+.ac-bad { color: var(--bad); }
+.ac-dev { font-size: var(--ui-caption); color: var(--ink-2); padding: 8px 12px; border-radius: 10px; background: var(--raise); }
+.ac-link { border: 0; padding: 0; background: none; color: var(--ink); font: inherit; font-weight: 600; text-decoration: underline; min-height: 44px; }
+
+.ac-form { display: grid; gap: 12px; }
+.ac-field { display: grid; gap: 6px; font-size: var(--ui-small); color: var(--ink-2); }
+.ac-field input { min-height: 44px; padding: 0 12px; border: 0; border-radius: 10px; background: var(--sheet); color: var(--ink); box-shadow: 0 0 0 1px var(--hair-2) inset; font: inherit; font-size: var(--ui-body); min-width: 0; }
+.ac-field input:focus-visible { outline: 2px solid var(--volt-ink); outline-offset: 1px; }
+.ac-field input.ac-code { font-family: var(--font-ui-mono); letter-spacing: 0.2em; font-size: clamp(20px, 6vw, 24px); max-width: 14rem; }
+
+.ac-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.sh .btn.ac-btn { height: auto; min-height: 44px; padding-inline: 16px; white-space: normal; text-align: center; }
+.sh .ac .btn:disabled { opacity: 0.5; cursor: default; }
+
+.ac-list { margin: 0; padding: 0; list-style: none; border-radius: 12px; box-shadow: 0 0 0 1px var(--hair) inset; overflow: hidden; }
+.ac-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 60px; padding: 8px 14px; }
+.ac-list li + li { border-top: 1px solid var(--hair); }
+.ac-list li.on { background: var(--raise); }
+.ac-biz { display: grid; gap: 2px; min-width: 0; }
+.ac-biz b { font-size: var(--ui-body-sm); font-weight: 600; overflow-wrap: anywhere; }
+.ac-biz small { font-size: var(--ui-caption); color: var(--ink-2); }
+
+.ac-inside { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.ac-inside li { display: flex; gap: 10px; align-items: baseline; font-size: var(--ui-body-sm); }
+.ac-inside li::before { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--ink-2); transform: translateY(-2px); }

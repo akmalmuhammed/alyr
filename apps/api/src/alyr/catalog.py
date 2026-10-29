@@ -205,7 +205,7 @@ MODULES: tuple[Module, ...] = (
             Card(
                 "orders_today",
                 Text("Orders today", "طلبات اليوم"),
-                "(select count(*) from orders where (created_at at time zone (select timezone from tenants "
+                "(select count(*) from orders where not is_test and (created_at at time zone (select timezone from tenants "
                 "where id = nullif(current_setting('app.tenant_id', true), '')::uuid))::date = "
                 + _TODAY
                 + ")",
@@ -302,10 +302,10 @@ PRODUCTS: tuple[Product, ...] = (
         Text("ALYR Chat", "ALYR Chat"),
         Text("WhatsApp orders and team inbox", "طلبات واتساب وصندوق الفريق"),
         Text(
-            "Your WhatsApp number as your front desk: one team inbox, an order page, order "
-            "tracking and payment links.",
-            "رقم واتساب الخاص بك كمكتب استقبال: صندوق واحد للفريق وصفحة للطلب وتتبّع الطلب "
-            "وروابط دفع.",
+            "Your WhatsApp number as your front desk: one team inbox, an order page and order "
+            "tracking. Payment links once your own payment account is connected.",
+            "رقم واتساب الخاص بك كمكتب استقبال: صندوق واحد للفريق وصفحة للطلب وتتبّع الطلب. "
+            "وروابط الدفع بعد ربط حسابك لدى بوابة دفع.",
         ),
         modules=("inbox", "orders", "payments"),
     ),
@@ -326,10 +326,10 @@ PRODUCTS: tuple[Product, ...] = (
         Text("ALYR Agent", "ALYR Agent"),
         Text("Your business in numbers", "نشاطك بالأرقام"),
         Text(
-            "Your numbers on the home screen, and a report every Sunday morning that compares "
-            "the week with the one before.",
-            "أرقام نشاطك في الشاشة الرئيسية، وتقرير صباح كل أحد يقارن أسبوعك بالأسبوع الذي "
-            "قبله.",
+            "Your numbers on the home screen, and a weekly report that compares the week with "
+            "the one before. The first reports go out once WhatsApp approves the report's wording.",
+            "أرقام نشاطك في الشاشة الرئيسية، وتقرير أسبوعي يقارن أسبوعك بالأسبوع الذي قبله. "
+            "تبدأ أول التقارير بعد موافقة واتساب على صيغتها.",
         ),
         status="included",
         parts=(
@@ -342,8 +342,8 @@ PRODUCTS: tuple[Product, ...] = (
         Text("ALYR Accounts", "ALYR Accounts"),
         Text("Credit accounts", "الحسابات الآجلة"),
         Text(
-            "Customer accounts, statements and polite reminders with a payment link.",
-            "حسابات العملاء وكشوفاتهم وتذكيرات لبقة برابط دفع.",
+            "Customer accounts, their balances and polite reminders that one press sends.",
+            "حسابات العملاء وأرصدتهم وتذكيرات لبقة ترسلها بضغطة واحدة.",
         ),
         modules=("ledger",),
     ),
@@ -355,6 +355,8 @@ ACCOUNT_SCREENS: tuple[Screen, ...] = (
     Screen("products", Text("Products", "المنتجات"), "apps", MANAGERS),
     Screen("connections", Text("Connections", "الاتصالات"), "plug", MANAGERS),
     Screen("team", Text("Team", "الفريق"), "users"),
+    # The person's own: their businesses, sign-in email and the data download (specs/040).
+    Screen("account", Text("Your account", "حسابك"), "user"),
 )
 
 MODULE_BY_KEY = {m.key: m for m in MODULES}

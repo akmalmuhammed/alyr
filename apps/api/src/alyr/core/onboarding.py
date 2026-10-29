@@ -19,7 +19,7 @@ import asyncpg
 from alyr import catalog, presets, shop_templates
 from alyr.channels.base import InboundMessage
 from alyr.config import get_settings
-from alyr.core import auth, pricing, team
+from alyr.core import auth, identity, pricing, team, terms, welcome
 from alyr.core.auth import Staff
 from alyr.core.normalise import fmt_qar
 from alyr.db import Database
@@ -27,7 +27,7 @@ from alyr.modules.items import clock as shop_clock
 from alyr.modules.items import template
 
 SIGNUP_MINUTES = 60
-TEST_PREFIX = "TEST."
+TEST_PREFIX = identity.TEST_PREFIX
 
 
 class OnboardingError(Exception):
@@ -101,10 +101,17 @@ async def _free_slug(conn: asyncpg.Connection, name: str) -> str:
 
 async def create_business(
     db: Database, token: str, owner_name: str, name: str, name_ar: str, type_key: str,
-    area: str,
+    area: str, accepted_terms: list[UUID] | None = None, ip: str = "", user_agent: str = "",
+    lang: str = "en",
 ) -> tuple[UUID, str]:
     """Create the business, its owner and its starting setup. Returns the tenant and a
-    session cookie value for the owner."""
+    session cookie value for the owner. The owner must have accepted every current version of
+    the terms and the privacy notice (ALY-167): without that nothing is created, and with it
+    each acceptance is recorded with who, when and from where."""
+    async with db.unscoped() as conn:
+        required = {t["id"] for t in await terms.current(conn)}
+    if required - {str(t) for t in accepted_terms or []}:
+        raise OnboardingError("accept the terms and the privacy notice to create your business")
     preset = presets.PRESET_BY_KEY.get(type_key)
     if preset is None or not preset.offered(catalog_on()):
         raise OnboardingError("choose the type of business")
@@ -140,6 +147,17 @@ async def create_business(
             "select email from signup_tokens where token_hash = $1", _hash(token)
         )
     async with db.tenant(tenant_id) as conn:
+        # The language the owner reads, so a reminder to finish setup is written in it (ALY-171).
+        await conn.execute("select update_own_resume($1, null)", "ar" if lang == "ar" else "en")
+        owner = await conn.fetchval(
+            "select user_id from memberships where role = 'owner' order by created_at limit 1"
+        )
+        # How to get back in, in the language they signed up in (specs/037).
+        await welcome.queue(conn, welcome.WELCOME, owner)
+        if required:
+            await terms.accept(
+                conn, [UUID(t) for t in sorted(required)], owner, owner_name, ip, user_agent
+            )
         for sort, s in enumerate(preset.services):
             await conn.execute(
                 "insert into services (name, name_ar, duration_minutes, price, sort) "
@@ -176,9 +194,13 @@ async def create_business(
 
 async def state(conn: asyncpg.Connection, staff: Staff) -> dict:
     """Everything the onboarding screens need, for the signed-in owner's business."""
+    # The owner is back: any reminder that went is now answered (ALY-171).
+    await conn.execute(
+        "update onboarding_reminders set returned_at = now() where returned_at is null"
+    )
     shop = await conn.fetchrow(
         "select name, name_ar, slug, business_type, area, onboarding_way, onboarding_step, "
-        "onboarded_at, booking_reminders from tenants "
+        "onboarded_at, booking_reminders, owner_lang from tenants "
         "where id = nullif(current_setting('app.tenant_id', true), '')::uuid"
     )
     preset = presets.PRESET_BY_KEY.get(shop["business_type"])
@@ -201,6 +223,8 @@ async def state(conn: asyncpg.Connection, staff: Staff) -> dict:
         "steps": list(presets.STEPS[way]),
         "step": shop["onboarding_step"],
         "finished": shop["onboarded_at"] is not None,
+        # The language ALYR writes to the owner in (a reminder to finish setting up).
+        "lang": shop["owner_lang"],
         "services": [
             {"id": str(r["id"]), "name": r["name"], "name_ar": r["name_ar"],
              "duration_minutes": r["duration_minutes"], "price": r["price"],
@@ -223,7 +247,7 @@ async def state(conn: asyncpg.Connection, staff: Staff) -> dict:
 async def update(
     conn: asyncpg.Connection, *, name: str | None = None, name_ar: str | None = None,
     area: str | None = None, step: str | None = None, reminders: bool | None = None,
-    finished: bool = False,
+    finished: bool = False, lang: str | None = None, resume_reminders: bool | None = None,
 ) -> None:
     """Change the business's own onboarding details. `conn` is tenant-scoped."""
     every_step = {s for steps in presets.STEPS.values() for s in steps} | {""}
@@ -233,6 +257,10 @@ async def update(
         "select update_own_business($1, $2, $3, $4, $5, $6)",
         name, name_ar, area, step, reminders, finished,
     )
+    if lang is not None or resume_reminders is not None:
+        if lang not in (None, "en", "ar"):
+            raise OnboardingError("choose English or Arabic")
+        await conn.execute("select update_own_resume($1, $2)", lang, resume_reminders)
 
 
 def test_key(staff: Staff) -> str:
@@ -286,6 +314,28 @@ async def end_test(conn: asyncpg.Connection, staff: Staff) -> int:
         )
     await conn.execute("update contacts set inbox_status = 'closed' where id = $1", contact_id)
     return len(rows)
+
+
+async def end_test_orders(conn: asyncpg.Connection, staff: Staff, outbound) -> int:
+    """The same for the owner's test orders (ALY-168): each is cancelled, whatever it had got
+    to (the owner may have marked it ready), and its stock goes back, so the shop starts with
+    what it counted. Nothing is sent to the test customer and nothing is owed. The order stays
+    in the list, marked Test, and is counted nowhere. Answers how many were cancelled."""
+    from alyr.modules.orders import service as orders  # orders reads core, so not at the top
+
+    ids = [
+        r["id"] for r in await conn.fetch(
+            "select o.id from orders o join contacts c on c.id = o.contact_id "
+            "where c.wa_user_id = $1 and o.is_test and o.status <> 'cancelled'",
+            test_key(staff),
+        )
+    ]
+    for order_id in ids:
+        await orders.cancel_order(
+            conn, order_id, outbound, team.actor_of(staff), restock=True,
+            reason="Test order: the test is over", notify=False,
+        )
+    return len(ids)
 
 
 async def test_conversation(conn: asyncpg.Connection, staff: Staff) -> list[dict]:

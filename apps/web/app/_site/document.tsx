@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { SiteAnalytics } from "../_analytics/SiteAnalytics";
 import { IBM_Plex_Mono, IBM_Plex_Sans_Arabic, Instrument_Sans } from "next/font/google";
 import { copy, type Locale } from "./copy";
 import { OFFER_LIVE, PATHS, SITE_URL, SITE_VERIFICATION, type PageKey } from "./site";
@@ -58,7 +59,8 @@ export function siteMetadata(locale: Locale, page: PageKey = "home"): Metadata {
       url: PATHS[page][locale], locale: locale === "ar" ? "ar_QA" : "en_US",
       // Each English product page has its own card (app/(site)/<page>/opengraph-image.tsx),
       // which Next names with a hash and fills in itself when no image is given here. The
-      // homepage and the Arabic pages share the homepage's English card (socialCard.tsx).
+      // homepage and the Arabic pages share the homepage's English card at /opengraph-image
+      // (app/opengraph-image/route.tsx; socialCard.tsx says why it is in English).
       ...(locale === "en" && page !== "home" && page !== "company" && page !== "privacy" ? {} : { images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "ALYR" }] }),
     },
     twitter: { card: "summary_large_image", title: t.title, description },
@@ -224,7 +226,7 @@ export function SiteDocument({ locale, children }: { locale: Locale; children: R
       <head>
         <script dangerouslySetInnerHTML={{ __html: `${THEME};${MENUS};${BEFORE_PAINT}` }} />
       </head>
-      <body>{children}</body>
+      <body>{children}<SiteAnalytics /></body>
     </html>
   );
 }

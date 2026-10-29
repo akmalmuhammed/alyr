@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Build the public ALYR site as plain files that any static host can serve.
 #
-# Only the public pages are published: the homepage and the six product pages (/chat,
-# /bookings, /agent, /accounts, /shelf, /docs), each in English and Arabic (/ar, /ar/chat, ...). The
+# Only the public pages are published: the homepage, the six product pages (/chat,
+# /bookings, /agent, /accounts, /shelf, /docs), the sector pages (/for/bakeries, ...), the
+# guides (/guides, /guides/...), each in English and Arabic (/ar, /ar/chat, ...). The
 # workspace, sign-in, payment and order pages need the API and are not part of this
 # output, so nothing here can reach customer data.
 #
@@ -22,13 +23,17 @@ NEXT_PUBLIC_ALYR_WORKSPACE_URL="" pnpm build >/dev/null
 
 app=".next/server/app"
 mkdir -p out-site/_next
-pages="chat bookings agent accounts shelf docs"
-# a plain page: no social card of its own (it uses the homepage's), so it is not in `pages`
+# a plain page: no social card of its own (it uses the homepage's)
 plain="company privacy"
+# Every other page in PATHS (apps/web/app/_site/site.ts) but the homepage: chat, ..., for/bakeries,
+# guides, guides/stop-losing-whatsapp-orders. A page added there is published here.
+pages="$(node "$root/scripts/site/pages.mjs" $plain)"
+[ -n "$pages" ] || { echo "build-site: no pages listed by scripts/site/pages.mjs" >&2; exit 1; }
 cp "$app/index.html" out-site/index.html
 cp "$app/ar.html" out-site/ar.html
 mkdir -p out-site/ar
 for page in $pages; do
+  mkdir -p "$(dirname "out-site/$page.html")" "$(dirname "out-site/ar/$page.html")"
   cp "$app/$page.html" "out-site/$page.html"
   cp "$app/ar/$page.html" "out-site/ar/$page.html"
 done
@@ -41,7 +46,7 @@ cp "$app/robots.txt.body" out-site/robots.txt
 cp "$app/sitemap.xml.body" out-site/sitemap.xml
 cp "$app/icon.svg.body" out-site/icon.svg
 cp "$app/opengraph-image.body" out-site/opengraph-image
-# each English product page has its own card, which Next names with a hash
+# each English page but the homepage has its own card, which Next names with a hash
 for page in $pages; do
   for card in "$app/$page"/opengraph-image-*.body; do
     [ -e "$card" ] || { echo "no social card for /$page" >&2; exit 1; }
@@ -71,6 +76,8 @@ cat > out-site/_headers <<'EOF'
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+  Content-Security-Policy: frame-ancestors 'none'; base-uri 'self'; object-src 'none'
 EOF
 
 # The site for machines: llms.txt, llms-full.txt and a markdown copy of each page (index.md,

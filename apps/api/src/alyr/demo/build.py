@@ -77,8 +77,8 @@ async def ensure_tenant(conn: asyncpg.Connection, shop: Shop, now: datetime) -> 
     )
     if not await conn.fetchval("select client_id from tenants where id = $1", shop.tenant_id):
         client_id = await conn.fetchval(
-            "insert into clients (name, contact_name, contact_email, access_from, access_note) "
-            "values ($1, $2, $3, now(), 'Demo shop') returning id", shop.name, shop.owner[1], shop.owner[0],
+            "insert into clients (name, contact_name, contact_email, access_from, payment_waived_at, access_note) "
+            "values ($1, $2, $3, now(), now(), 'Demo shop') returning id", shop.name, shop.owner[1], shop.owner[0],
         )
         await conn.execute(
             "update tenants set client_id = $2 where id = $1", shop.tenant_id, client_id
@@ -252,8 +252,9 @@ async def start(conn: asyncpg.Connection, shop: Shop, now: datetime, history_sta
         )
         made.hours.append((weekday, opens, closes))
 
-    # Price groups: the default one is the normal price; the shop adds its own.
-    default = await groups.default_group(conn)
+    # Price groups: the default one is the normal price; the shop adds its own. The wipe took
+    # the default group the shop was made with.
+    default = await groups.remake_default(conn)
     made.group_ids[""] = default["id"]
     made.group_names[default["id"]] = (default["name"], default["name_ar"])
     for key, name, name_ar in shop.groups:

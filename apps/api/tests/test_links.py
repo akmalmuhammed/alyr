@@ -192,7 +192,7 @@ def test_a_link_is_made_and_read_for_a_named_purpose_only():
         links.mint(DEMO_TENANT_ID, CONTACT, settings=settings())  # no purpose named
     with pytest.raises(TypeError):
         links.read("x.y", DEMO_TENANT_ID, settings=settings())
-    for unknown in ("", "pay", "track", "ORDER", None):
+    for unknown in ("", "pay", "tracking", "ORDER", None):
         with pytest.raises(ValueError):
             make(purpose=unknown, settings=settings())
         with pytest.raises(ValueError):
@@ -259,9 +259,15 @@ def test_the_server_does_not_start_without_a_secret_outside_local(client_factory
     with pytest.raises(links.LinkSecretMissing), TestClient(create_app()):
         pass
     monkeypatch.setenv("ALYR_LINK_SECRET", SECRET)
+    # A production server also needs photo storage that survives a restart (ALY-63); this
+    # test is about the secret, so it says its local folder is kept.
+    monkeypatch.setenv("ALYR_MEDIA_ALLOW_LOCAL", "true")
     get_settings.cache_clear()
     with TestClient(create_app()) as started:
-        assert started.get("/health").json()["env"] == "production"
+        # In production the interactive docs are off and sign-in is required (ALY-114).
+        assert started.get("/health").json() == {"status": "ok"}
+        assert started.get("/docs").status_code == 404
+        assert started.get("/api/auth/me").status_code == 401
     get_settings.cache_clear()
 
 

@@ -24,6 +24,7 @@ from alyr.modules.bookings import chat as bookings_chat
 from alyr.modules.items import wa_customer, wa_order, wa_staff
 from alyr.modules.ledger import chat as ledger_chat
 from alyr.modules.orders import chat as orders_chat
+from alyr.modules.owner import chat as owner_chat
 
 
 async def handle(
@@ -35,6 +36,10 @@ async def handle(
     outbound: Outbound,
     media: MediaService | None = None,
 ) -> list[OutboundMessage]:
+    # A staff number asking about the shop, or anyone proving a phone with LINK (D-065).
+    replies = await owner_chat.maybe_handle(conn, contact, message)
+    if replies is not None:
+        return replies
     rows = await conn.fetch("select module_key from tenant_modules where enabled")
     modules = {r["module_key"] for r in rows}
     if contact["role"] == "staff":
@@ -74,6 +79,14 @@ async def handle(
         return await ledger_chat.handle(conn, tenant_id, contact, message, web_url)
     if "bookings" in modules and contact["role"] != "staff":
         return await bookings_chat.greeting(conn, tenant_id, contact, message)
+    if "orders" in modules or "catalog" in modules:
+        # An order shop greets with its order link and menu, not "we will reply" (ALY-272).
+        replies = await orders_chat.greeting(
+            conn, tenant_id, contact, message, web_url,
+            "orders" in modules, "catalog" in modules and media is not None,
+        )
+        if replies is not None:
+            return replies
     return _acknowledge(contact, message)
 
 

@@ -550,7 +550,10 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 .foot-products { padding-top: 1rem; border-top: 1px solid var(--line); }
 .foot-products a { color: var(--text); font-weight: 600; }
 .foot-products a[aria-current="page"] { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .25em; }
-.foot-site { padding-top: 0; border-top: 0; margin-top: -1rem; }
+.foot-sectors, .foot-site { padding-top: 0; border-top: 0; margin-top: -1rem; }
+.foot-k { display: inline-flex; align-items: center; min-height: 2.75rem; }
+.foot-sectors a, .foot-site a { min-width: 2.75rem; justify-content: center; }
+.foot-sectors a[aria-current="page"], .foot-site a[aria-current="page"] { color: var(--text); text-decoration: underline; text-decoration-thickness: var(--rule-hairline); text-underline-offset: .25em; }
 
 /* The phone's contact bar, on every page with an opening button: in once that button has
    gone, out at the closing call. */
@@ -567,8 +570,9 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
   }
   .bar[data-show] { transform: none; visibility: visible; transition: transform var(--dur-3) var(--ease), visibility 0s; }
   .bar .btn { width: 100%; }
-  /* one Volt button on screen at a time: the header's steps aside while the bar is up */
-  :root:has(.bar[data-show]) .top .btn-volt { visibility: hidden; }
+  /* one Volt button on screen at a time: the header's steps aside while the bar is up
+     (SiteMotion sets data-bar-up on <html> with the bar's data-show) */
+  :root[data-bar-up] .top .btn-volt { visibility: hidden; }
 }
 /* with reduced motion the bar is simply there or not; it never slides */
 @media (max-width: 53rem) and (prefers-reduced-motion: reduce) {
@@ -866,17 +870,18 @@ h4 { margin: 0; }
 
 /* The homepage's hero and every product page's opening have their own Volt button. Until it
    scrolls away (SiteMotion sets data-hero-gone), the header's button is its outlined twin, so
-   one Volt button is on screen. */
+   one Volt button is on screen. Shell marks the header of such a page (`data-hero`) from the
+   server, so the twin is right from the first paint and without scripts. */
 /* The same while the closing call, whose button is Volt, is on screen (SiteMotion sets
    data-at-closing; framer-review P4). Over the Carbon call the header is Carbon too, so there
    the twin is drawn in the band's colours. */
-:root:has([data-hero-cta]):not([data-hero-gone]) .top .btn-volt, :root[data-at-closing] .top .btn-volt { color: var(--text); }
-:root:has([data-hero-cta]):not([data-hero-gone]) .top .btn-volt::before, :root[data-at-closing] .top .btn-volt::before { background: var(--text); }
-:root:has([data-hero-cta]):not([data-hero-gone]) .top .btn-volt::after, :root[data-at-closing] .top .btn-volt::after {
+:root:not([data-hero-gone]) .top[data-hero] .btn-volt, :root[data-at-closing] .top .btn-volt { color: var(--text); }
+:root:not([data-hero-gone]) .top[data-hero] .btn-volt::before, :root[data-at-closing] .top .btn-volt::before { background: var(--text); }
+:root:not([data-hero-gone]) .top[data-hero] .btn-volt::after, :root[data-at-closing] .top .btn-volt::after {
   content: ""; position: absolute; z-index: -1; inset: 1.5px; border-radius: 1px; background: var(--canvas);
   clip-path: polygon(0 0, calc(100% - var(--notch) + .88px) 0, 100% calc(var(--notch) - .88px), 100% 100%, 0 100%);
 }
-[dir="rtl"]:has([data-hero-cta]):not([data-hero-gone]) .top .btn-volt::after, [dir="rtl"][data-at-closing] .top .btn-volt::after { clip-path: polygon(calc(var(--notch) - .88px) 0, 100% 0, 100% 100%, 0 100%, 0 calc(var(--notch) - .88px)); }
+[dir="rtl"]:not([data-hero-gone]) .top[data-hero] .btn-volt::after, [dir="rtl"][data-at-closing] .top .btn-volt::after { clip-path: polygon(calc(var(--notch) - .88px) 0, 100% 0, 100% 100%, 0 100%, 0 calc(var(--notch) - .88px)); }
 :root[data-at-closing] .top[data-on-dark] .btn-volt { color: var(--on-band); }
 :root[data-at-closing] .top[data-on-dark] .btn-volt::before { background: var(--on-band); }
 :root[data-at-closing] .top[data-on-dark] .btn-volt::after { background: var(--band); }

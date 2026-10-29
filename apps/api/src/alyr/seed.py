@@ -14,6 +14,7 @@ from alyr.channels.simulator import SIMULATOR_NUMBER_ID
 from alyr.config import get_settings
 from alyr.core import consent
 from alyr.db import Database
+from alyr.modules.items import groups as price_groups
 from alyr.modules.ledger import service
 
 DEMO_TENANT_ID = UUID("0a1f0000-0000-4000-8000-00000000a1f0")
@@ -140,7 +141,8 @@ async def ensure_demo_tenant(
         for tenant_id in (DEMO_TENANT_ID, ALYR_TENANT_ID):
             if not await conn.fetchval("select client_id from tenants where id = $1", tenant_id):
                 client_id = await conn.fetchval(
-                    "insert into clients (name, access_from, access_note) select name, now(), "
+                    "insert into clients (name, access_from, payment_waived_at, access_note) "
+                    "select name, now(), now(), "
                     "'Demo shop' from tenants where id = $1 returning id",
                     tenant_id,
                 )
@@ -164,12 +166,15 @@ async def reset_demo_data(db: Database) -> None:
                       "business_hours",
                       "saved_replies", "memberships",
                       "jobs", "messages", "processed_messages", "order_items",
-                      "payment_requests", "orders", "chat_carts", "items",
+                      "payment_events", "payment_requests", "payment_accounts",
+                      "orders", "chat_carts", "items",
                       "item_code_counters", "item_categories", "ledger_entries",
                       "ledger_accounts", "contacts", "discount_rules", "delivery_zones",
                       "delivery_settings", "price_groups", "tenant_modules",
                       "shop_settings", "shop_features", "custom_fields"):
             await conn.execute(f"delete from {table}")
+        # A shop's default price group is made with it (migration 0069); the wipe took it.
+        await price_groups.remake_default(conn)
         await conn.execute(
             "insert into tenant_modules (module_key, enabled_by) "
             "select unnest($1::text[]), 'demo setup'", DEMO_MODULES,

@@ -28,7 +28,7 @@
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { launch } from "./browser-kit.mjs";
+import { launch, trackPath } from "./browser-kit.mjs";
 import { COPY } from "../apps/web/app/(product)/_workspace/catalogCopy.ts";
 import { T } from "../apps/web/app/(product)/_customer/order/copy.ts";
 
@@ -69,7 +69,7 @@ async function signUp() {
   const email = `dq-${stamp}@shop.example`;
   const code = (await call("/api/onboarding/code", { method: "POST", body: { email }, as: "" })).data.dev_code;
   const verified = await call("/api/onboarding/verify", { method: "POST", body: { email, code }, as: "" });
-  const made = await call("/api/onboarding/business", { method: "POST", as: "", body: { signup_token: verified.data.signup_token, owner_name: "Hamad", name: `Baqala ${stamp.slice(-4)}`, name_ar: "بقالة الدوحة", type: "grocery", area: "Al Sadd" } });
+  const made = await call("/api/onboarding/business", { method: "POST", as: "", body: { accepted_terms: (await call("/api/onboarding/terms/current", { as: "" })).data.current.map((t) => t.id), signup_token: verified.data.signup_token, owner_name: "Hamad", name: `Baqala ${stamp.slice(-4)}`, name_ar: "بقالة الدوحة", type: "grocery", area: "Al Sadd" } });
   if (made.status !== 200) throw new Error(`could not create a grocery: ${made.status} ${JSON.stringify(made.data)}`);
   cookie = made.cookie;
   const state = (await call("/api/onboarding/state")).data;
@@ -302,11 +302,10 @@ async function main() {
   await call("/api/items/settings", { method: "PUT", body: { wholesale_layout: false } });
 
   // ── 5. tracking page ──
-  const track = placed ? `${BASE}/t/${placed.track_tenant ?? ""}` : "";
   if (placed?.id) {
     const tenant = (await call("/api/workspace")).data?.tenant_id ?? "";
     if (tenant) {
-      await b.go(`${BASE}/t/${tenant}/${placed.id}${AR ? "?lang=ar" : ""}`, 1200);
+      await b.go(`${BASE}${trackPath(tenant, shop.slug, placed.id)}${AR ? "&lang=ar" : ""}`, 1200);
       const t = await body();
       check(t.includes(pick("1 kg", "1 كغ")) && t.includes(pick("250 ml", "250 مل")), "the tracking page reads 1 kg and 250 ml");
       await shot("11-tracking");

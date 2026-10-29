@@ -75,10 +75,13 @@ def test_a_channel_that_never_works_parks_the_job_and_marks_the_message(
     assert parked[0]["kind"] == "send_message"
     assert "ConnectionError" in parked[0]["last_error"]
 
-    # The channel comes back; a person sends the job round again.
+    # The channel comes back; a person sends the job round again, and the message goes.
     channel.failures = 0
     assert client.post(f"/api/jobs/{parked[0]['id']}/retry").status_code == 200
     assert client.get("/api/jobs/failed").json()["jobs"] == []
+    assert len(channel.sent) == 1
+    reply = [m for m in meta_conversation(client) if m["direction"] == "out"][-1]
+    assert reply["status"] == "sent"
 
 
 def test_webhook_only_queues_and_a_later_worker_does_the_work(client_factory, monkeypatch):
@@ -114,6 +117,35 @@ def test_a_job_abandoned_by_a_dead_process_is_picked_up_again(client_factory, mo
             await conn.close()
 
     asyncio.run(abandon())
+    drain(client)
+    assert len(channel.sent) == 1
+
+
+def test_a_runner_looks_for_abandoned_jobs_once_a_minute_not_on_every_claim(
+    client_factory, monkeypatch
+):
+    """Looking on every claim was most of the database's time in a burst of messages
+    (ALY-275). A job counts as abandoned only after five minutes, so a minute more is nothing."""
+    monkeypatch.setenv("ALYR_JOBS_INLINE", "false")
+    client = client_factory()
+    channel = use(client, FlakyChannel())
+    drain(client)  # the minute's look happens here, and finds nothing of ours
+    signed_post(client, meta_payload(message_id="wamid.abandoned-later"))
+
+    async def abandon():
+        conn = await asyncpg.connect(OWNER_DSN)
+        try:
+            await conn.execute(
+                "update jobs set status = 'running', locked_at = now() - interval '10 minutes' "
+                "where status = 'queued' and payload::text like '%wamid.abandoned-later%'"
+            )
+        finally:
+            await conn.close()
+
+    asyncio.run(abandon())
+    drain(client)
+    assert channel.sent == []  # looked less than a minute ago
+    client.app.state.jobs._reclaimed_at -= jobs.RECLAIM_EVERY_SECONDS
     drain(client)
     assert len(channel.sent) == 1
 

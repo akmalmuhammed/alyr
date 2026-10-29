@@ -27,9 +27,9 @@ def pricing_restored():
     for r in items:
         owner_sql(
             "insert into price_items (key, name, name_ar, kind, price, applies, active, sort, "
-            "updated_by) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+            "updated_by, price_usd) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
             r["key"], r["name"], r["name_ar"], r["kind"], r["price"], r["applies"],
-            r["active"], r["sort"], r["updated_by"],
+            r["active"], r["sort"], r["updated_by"], r["price_usd"],
         )
     owner_sql("delete from business_type_settings")
     for r in types:
@@ -98,7 +98,7 @@ def test_a_trader_is_quoted_alyr_accounts_and_asks_alyr_under_it(client, office)
     # The inbox and payment links of a trader count for ALYR Chat, as before the split;
     # ALYR Accounts is the product it adds, at the extra-product price.
     assert [(x["item_key"], x["name"], x["unit_price"]) for x in lines] == [
-        ("chat", "ALYR Chat", 44900), ("credit", "ALYR Accounts, added product", 15000),
+        ("chat", "ALYR Chat", 44900), ("credit", "ALYR Accounts, added product", 5000),
         ("agent", "ALYR Agent, included", 0),
         ("setup", "Setup: number connection, data and training", 250000),
     ]
@@ -111,8 +111,8 @@ def test_a_trader_is_quoted_alyr_accounts_and_asks_alyr_under_it(client, office)
 
 
 def test_each_product_a_business_adds_costs_the_extra_price(office):
-    """The founder's combination pricing (D-035): QAR 449 for the first product, QAR 150
-    for each one added, ALYR Agent included at QAR 0."""
+    """The founder's combination pricing (D-035, price changed by D-053): QAR 449 for the
+    first product, QAR 50 for each one added, ALYR Agent included at QAR 0."""
 
     def monthly(products, slug):
         created = office.post(f"{ADMIN}/businesses", json={
@@ -132,10 +132,10 @@ def test_each_product_a_business_adds_costs_the_extra_price(office):
 
     assert monthly(["chat"], "one") == (44900, [("chat", 44900), ("agent", 0)])
     assert monthly(["chat", "bookings"], "two") == (
-        59900, [("chat", 44900), ("bookings", 15000), ("agent", 0)],
+        49900, [("chat", 44900), ("bookings", 5000), ("agent", 0)],
     )
     assert monthly(["chat", "bookings", "accounts"], "three") == (
-        74900, [("chat", 44900), ("bookings", 15000), ("credit", 15000), ("agent", 0)],
+        54900, [("chat", 44900), ("bookings", 5000), ("credit", 5000), ("agent", 0)],
     )
     # ALYR changes the extra price in the back office; new drafts follow it.
     item = {k: v for k, v in next(
@@ -315,9 +315,11 @@ def test_alyr_decides_which_types_may_sign_up_alone(client, client_factory, offi
 
 
 def test_a_type_without_screens_cannot_be_made_self_serve(office):
-    refused = office.put(f"{ADMIN}/pricing/types/restaurant",
-                         json={"availability": "self_serve", "price_mode": "prepared"})
-    assert refused.status_code == 422 and "set up with ALYR" in refused.json()["detail"]
+    """Wholesale (credit, price groups) and travel (requests) have no self-serve way."""
+    for key in ("wholesale", "travel"):
+        refused = office.put(f"{ADMIN}/pricing/types/{key}",
+                             json={"availability": "self_serve", "price_mode": "prepared"})
+        assert refused.status_code == 422 and "set up with ALYR" in refused.json()["detail"]
 
 
 def test_price_list_changes_reach_new_quotes_only(client, client_factory, office):
@@ -406,3 +408,25 @@ def test_the_workspace_tells_the_owner_when_a_price_waits_for_them(client, offic
     office.post(f"{ADMIN}/quotes/{quote['id']}/publish")
     plan = client.get("/api/workspace").json()["plan"]
     assert plan == {"status": "published", "monthly_total_text": "QAR 449", "number": 1}
+
+
+def test_what_a_client_saves_by_combining_is_only_a_real_price():
+    """D-053: the saving shown on the plan is the products' own list prices against what is
+    charged. Three products are QAR 549 against QAR 1,347 one by one: 59% off. A single
+    product shows nothing, and a line charged at or above its list price adds no saving."""
+    from alyr.core import pricing
+
+    listed = {"chat": 44900, "bookings": 44900, "credit": 44900, "agent": 0}
+
+    def line(key, price):
+        return {"item_key": key, "kind": "monthly", "quantity": 1, "unit_price": price}
+
+    three = [line("chat", 44900), line("bookings", 5000), line("credit", 5000), line("agent", 0)]
+    saved = pricing.together(three, listed)
+    assert (saved["alone"], saved["price"], saved["saving"], saved["saving_pct"]) == (
+        134700, 54900, 79800, 59,
+    )
+    assert saved["saving_text"] == "QAR 798"
+    assert pricing.together([line("chat", 44900), line("agent", 0)], listed) is None
+    # A line ALYR priced above its list price (an edited quote) never makes up a saving.
+    assert pricing.together([line("chat", 60000)], listed) is None

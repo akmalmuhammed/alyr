@@ -93,7 +93,8 @@ async def numbers(conn: asyncpg.Connection, start: datetime, end: datetime, tz: 
         "max(l.unit) as unit, bool_or(l.unit_shown) as shown "
         "from order_items l join orders o on o.id = l.order_id "
         "left join items i on i.id = l.item_id "
-        "where o.created_at >= $1 and o.created_at < $2 and o.status <> 'cancelled' "
+        "where not o.is_test and o.created_at >= $1 and o.created_at < $2 "
+        "and o.status <> 'cancelled' "
         "group by coalesce(l.item_id::text, l.name)",
         start, end,
     )]
@@ -114,7 +115,7 @@ async def numbers(conn: asyncpg.Connection, start: datetime, end: datetime, tz: 
                 "select i.id, i.name, i.name_ar from items i "
                 "where i.status = 'live' and i.created_at < $2 "
                 "and not exists (select 1 from order_items l join orders o on o.id = l.order_id "
-                "                where l.item_id = i.id and o.created_at >= $1 "
+                "                where l.item_id = i.id and not o.is_test and o.created_at >= $1 "
                 "                and o.created_at < $2 and o.status <> 'cancelled') "
                 "order by i.category, i.sort, i.name",
                 start, end,
@@ -147,7 +148,8 @@ async def _margin(conn: asyncpg.Connection, start: datetime, end: datetime) -> d
         "coalesce(sum(round(c.unit_cost * l.quantity)), 0)::bigint as cost "
         "from orders o join order_items l on l.order_id = o.id "
         "left join order_item_costs c on c.order_item_id = l.id "
-        "where o.created_at >= $1 and o.created_at < $2 and o.status <> 'cancelled'",
+        "where not o.is_test and o.created_at >= $1 and o.created_at < $2 "
+        "and o.status <> 'cancelled'",
         start, end,
     )
     by_item = await conn.fetch(
@@ -157,7 +159,8 @@ async def _margin(conn: asyncpg.Connection, start: datetime, end: datetime) -> d
         "sum(round(c.unit_cost * l.quantity))::bigint as cost "
         "from order_items l join orders o on o.id = l.order_id "
         "join order_item_costs c on c.order_item_id = l.id left join items i on i.id = l.item_id "
-        "where o.created_at >= $1 and o.created_at < $2 and o.status <> 'cancelled' "
+        "where not o.is_test and o.created_at >= $1 and o.created_at < $2 "
+        "and o.status <> 'cancelled' "
         "group by coalesce(l.item_id::text, l.name)",
         start, end,
     )
@@ -190,7 +193,8 @@ async def _delivery(conn: asyncpg.Connection, start: datetime, end: datetime) ->
         "select count(*) filter (where fulfilment = 'delivery')::int as deliveries, "
         "coalesce(sum(delivery_fee) filter (where fulfilment = 'delivery'), 0)::bigint as fees, "
         "count(*) filter (where fulfilment = 'pickup')::int as pickups "
-        "from orders where created_at >= $1 and created_at < $2 and status <> 'cancelled'",
+        "from orders where not is_test and created_at >= $1 and created_at < $2 "
+        "and status <> 'cancelled'",
         start, end,
     )
     return dict(row)
@@ -203,7 +207,8 @@ async def _discounts(conn: asyncpg.Connection, start: datetime, end: datetime) -
         "select count(distinct d.order_id)::int as orders, "
         "coalesce(sum(d.amount_off), 0)::bigint as given "
         "from order_discounts d join orders o on o.id = d.order_id "
-        "where o.created_at >= $1 and o.created_at < $2 and o.status <> 'cancelled' "
+        "where not o.is_test and o.created_at >= $1 and o.created_at < $2 "
+        "and o.status <> 'cancelled' "
         "and d.returned_at is null",
         start, end,
     )
@@ -212,7 +217,8 @@ async def _discounts(conn: asyncpg.Connection, start: datetime, end: datetime) -
         "coalesce(nullif(d.code, ''), nullif(d.name_ar, ''), d.rule_text_ar) as label_ar, "
         "count(*)::int as orders, sum(d.amount_off)::bigint as given "
         "from order_discounts d join orders o on o.id = d.order_id "
-        "where o.created_at >= $1 and o.created_at < $2 and o.status <> 'cancelled' "
+        "where not o.is_test and o.created_at >= $1 and o.created_at < $2 "
+        "and o.status <> 'cancelled' "
         "and d.returned_at is null group by 1, 2 order by given desc, label limit $3",
         start, end, LIST_MAX,
     )

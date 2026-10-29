@@ -17,7 +17,7 @@ from alyr import presets, presets_catalog
 from alyr.seed import AGENT_EMAIL, DEMO_TENANT_ID
 from order_links import token
 from test_consent import owner_sql
-from test_onboarding import BASE, new_business
+from test_onboarding import BASE, accepted_terms, new_business
 from test_sign_in import sign_in
 
 ARABIC = re.compile(r"[؀-ۿ]")
@@ -149,14 +149,16 @@ def test_with_the_setting_off_the_types_offered_are_the_ones_offered_today(off):
 def test_with_the_setting_off_a_type_that_exists_for_the_catalog_cannot_be_created(off):
     client = off
     for kind in NEW_TYPES:
-        body = {"signup_token": "x" * 40, "owner_name": "A", "name": "Nope", "type": kind}
+        body = {"signup_token": "x" * 40, "owner_name": "A", "name": "Nope", "type": kind,
+                "accepted_terms": accepted_terms(client)}
         answer = client.post(f"{BASE}/business", json=body)
         assert answer.status_code in (401, 422), kind  # never a business
     # A real token is refused for the type itself, not for the token.
     from test_onboarding import signup_token
 
     token = signup_token(client, f"new-{uuid4().hex[:6]}@shop.example")
-    body = {"signup_token": token, "owner_name": "A", "name": "Nope", "type": "bakery"}
+    body = {"signup_token": token, "owner_name": "A", "name": "Nope", "type": "bakery",
+            "accepted_terms": accepted_terms(client)}
     refused = client.post(f"{BASE}/business", json=body)
     assert refused.status_code == 422 and "type of business" in refused.json()["detail"]
 
@@ -271,7 +273,7 @@ def test_a_salon_with_the_catalog_keeps_its_bookings_flow_unchanged(on):
     tenant, _ = make(on, "salon")
     preset = presets.PRESET_BY_KEY["salon"]
     s = state(on)
-    assert (s["way"], s["step"]) == ("appointments", "plan")
+    assert (s["way"], s["step"]) == ("appointments", "services")
     assert [x["name"] for x in s["services"]] == [x.name for x in preset.services]
     assert s["services"][0]["price_text"] == "QAR 60"
     assert len(s["hours"]) == len(preset.hours)

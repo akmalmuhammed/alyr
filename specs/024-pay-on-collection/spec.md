@@ -1,0 +1,56 @@
+# 024 · Pay on collection, and marking an order paid
+
+Linear ALY-170 · Decision D-055 · Builds on spec 013 (payments written down by hand) and D-044 (a shop's payment step never blocks go-live)
+
+## What it is for
+
+A shop with no online account yet (nearly every pilot) still has to take orders. Before this, the order
+page always ended in a payment link, and an unpaid link order gives its stock back after 30 minutes. So a
+bakery taking cash on pickup could not use the order page at all. Now the shop says how it is paid, the page
+stops asking for money, the order keeps its stock, and staff mark it paid when the cash or the transfer arrives.
+
+## How it works
+
+- **The shop's choice.** `shop_settings.pay_online` (default on: nothing changes for any shop) and
+  `pay_later_ways` (cash, bank transfer, card machine). Turning the link off needs at least one way.
+  Set from the Orders tab (owners and admins), by `PUT /api/orders-payment-ways`, or by the go-live list's
+  payments choice: *cash and transfer* turns the link off and opens cash and transfer; *online* turns it on.
+- **Only where the link can take money (ALY-271, 29 Oct).** `pay_ways.online_possible` is true once the
+  shop's own payment account is connected (the "payments" connection in `catalog.py`; none can be yet) or
+  on a developer machine, where the stand-in page plays the provider. Until then every shop is paid on
+  collection whatever it saved, with cash and transfer when it chose no ways; `PUT` refuses `online: true`
+  (422); the Orders tab shows no online choice; the go-live list offers only *cash and transfer*.
+  `ALYR_STAND_IN_PAYMENTS=false` shows a developer machine what production gets. The credit-account
+  chat follows the same rule: no Pay now button, and "pay" is answered with the balance and how the shop
+  is paid, not a link. The credit reminders follow it too: they go on `payment_reminder_offline`,
+  `payment_reminder_overdue_offline` and `payment_reminder_final_offline`, whose last blank is how the
+  shop is paid ("You can pay us by cash or bank transfer, and we will record it on your account."),
+  with only the "I'll pay within a week" button and no payment request made. Like every template they
+  need Meta's approval on the shop's account before they reach a customer outside 24 hours (ALY-172).
+- **A phone number is not a name (ALY-271, CJ-17).** A customer with no WhatsApp profile name is stored
+  as "+974…". The pay page and the order page print no name for them (`normalise.shown_name`), rather
+  than the number, so a forwarded link does not show it.
+- **The page and the chat.** Both still ask for "link". With the link off, `create_order` makes it a *later*
+  order: placed unpaid (`orders.payment = 'unpaid'`), no payment request, stock committed at once (nothing
+  expires), the customer told "Pay by cash or bank transfer when you collect." in the order page's confirmation
+  and in the WhatsApp message (approved template `order_received_later`, ALY-172 to register it). The page's
+  button reads "Place order" instead of "Pay QAR x". Credit-account orders are unchanged.
+- **Mark paid.** `POST /api/orders/{id}/paid {method, reference}` on an unpaid order, by cash, bank transfer,
+  cheque or card machine. It calls `documents/payments.py` (not a copy): the order becomes paid, its stock is
+  sold, it is on the activity record with who and how, a webhook goes out, and a shop with Documents on also gets
+  its receipt. Owners and admins; an agent only where the shop allows it. A second tap is refused (409).
+- **Counting.** The Sunday report's orders section counts it under "Paid" (it said "Paid online"; wrong now).
+  The Agent's *paid by link* does not count it, which is true: it was not paid by link.
+- **Cancelling** an unpaid later order gives its stock back and owes no refund.
+
+## Checked
+
+`tests/test_pay_later.py` (cash order end to end on a counted item; mark paid; reference; refusals; cancel;
+settings rules; the go-live choice; Documents on gives a receipt) and the order page, templates, readiness,
+reports, orders, documents payments and migration suites. The page change is type-checked and linted.
+Not checked: the page and Orders tab in a browser; the template at Meta.
+
+## Not here (new issues)
+
+Offering the link *and* pay-on-collection together once a shop has an online account; the chat's own
+confirmation of "paid" to the customer; a "paid" filter by method on the Orders tab; the tracking page's wording.

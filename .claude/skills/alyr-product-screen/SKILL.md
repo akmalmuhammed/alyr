@@ -1,6 +1,6 @@
 ---
 name: alyr-product-screen
-description: Design or change a screen inside the ALYR product. Use for the workspace (/app and its sections, including the ALYR Agent dashboard on the home), the back office (/ops), sign-in (/login), onboarding (/start), the sales demo (/whatsapp), /agent-sample, and the customer pages opened from WhatsApp (order /s, booking /b, payment /pay, tracking /t); for tables, forms, buttons, empty states, status pills, setup checklists, KPI strips, charts and suggestion cards; and for anything under apps/web/app/(product) or apps/web/app/_agent. Load alyr-design first.
+description: Design or change a screen inside the ALYR product. Use for the workspace (/app and its sections, including the ALYR Agent dashboard on the home), the back office (/ops), sign-in (/login), onboarding (/start), the founder's in-shop sales demo (/demo/bakery, ALY-263: its own scene engine, words in its copy.ts, shop colours and stage sizes in the tokens; the old /whatsapp demo is gone), /agent-sample, and the customer pages opened from WhatsApp (order /s, booking /b, payment /pay, tracking /t); for tables, forms, buttons, empty states, status pills, setup checklists, KPI strips, charts and suggestion cards; and for anything under apps/web/app/(product) or apps/web/app/_agent. Load alyr-design first.
 ---
 
 # A product screen
@@ -35,7 +35,7 @@ how it looks (`docs/lanes/`). Say in the PR which lane's files you touch.
 | Workspace home | `_agent/AgentDashboard.tsx` from `GET /api/agent?lang=` | [agent-dashboard.md](agent-dashboard.md) |
 | Back office | `(product)/ops/` (`Shell.tsx`, `ops.css` overrides `shell.css` by import order) | English only today; Today queue, clients, prices, requests, staff, audit |
 | Onboarding | `(product)/start/` (`copy.ts`, `start.css`, `.ob`) | The one product area with a copy file |
-| Customer pages | `(product)/s/[slug]`, `b/[slug]`, `pay/[tenant]/[payment]`, `t/[tenant]/[order]`; frame `_customer/Frame.tsx`, `customer.css` (`.cx`) | Phone first; opened from a WhatsApp link; the shop's name and monogram lead, "ALYR" is small in the foot |
+| Customer pages | `(product)/s/[slug]`, `b/[slug]`, `pay/[tenant]/[payment]`, `t/[slug]`; frame `_customer/Frame.tsx`, `customer.css` (`.cx`) | Phone first; opened from a WhatsApp link; the shop's name and monogram lead, "ALYR" is small in the foot |
 
 ## Rules for every product screen
 

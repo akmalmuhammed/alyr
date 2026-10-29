@@ -411,6 +411,34 @@ def test_the_export_and_the_template_carry_a_column_for_each_field(client):
     assert "Serves" not in csv_text(client)[0]
 
 
+def test_a_field_named_like_a_formula_is_written_as_text_and_still_read_back(client):
+    # A shop names its own fields, and each name is a column heading in its files: a heading
+    # a spreadsheet could run gets the apostrophe every other such text gets (ALY-278, SEC-12),
+    # and the import still finds the field by its name.
+    import csv
+    import io
+
+    from alyr.modules.items import xlsx
+
+    new_shop(client)
+    field = make(client, "=2+3", "text", label_ar="@حقل")
+    mk(client, name="Tea", name_ar="شاي", custom={field["key"]: "hot"})
+    for lang, heading in (("en", "'=2+3"), ("ar", "'@حقل")):
+        rows = list(csv.reader(io.StringIO(
+            client.get("/api/items/export", params={"format": "csv", "lang": lang})
+            .content.decode("utf-8-sig"))))
+        assert rows[0][-1] == heading and rows[1][-1] == "hot"
+        sheet = xlsx.read(client.get("/api/items/export", params={"lang": lang}).content)
+        assert sheet.rows[0][-1] == heading
+        template = client.get("/api/items/import/template", params={
+            "kind": "generic", "format": "csv", "lang": lang}).content.decode("utf-8-sig")
+        assert next(csv.reader(io.StringIO(template)))[-1] == heading
+    shown = preview_of(client, client.get("/api/items/export", params={"format": "csv"}).content,
+                       "items.csv")
+    assert not [n for n in shown["notes"] if n["code"] == "unknown_column"], shown["notes"]
+    assert shown["summary"]["unchanged"] == shown["summary"]["items"] == 1
+
+
 def own(*rows):
     return csv_of([["Name (English)", "Name (Arabic)", "Price (QAR)", "Serves", "Allergens",
                     "Roast"], *rows])

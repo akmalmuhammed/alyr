@@ -13,7 +13,7 @@ from uuid import UUID, uuid4
 
 import asyncpg
 
-from alyr.core import jobs, team, templates
+from alyr.core import identity, jobs, payments, team, templates
 from alyr.core.normalise import fmt_qar, fmt_qar_ar
 from alyr.core.outbound import Outbound
 from alyr.core.team import Actor
@@ -42,19 +42,13 @@ from alyr.modules.items.clock import ShopClock
 from alyr.modules.items.service import MAX_QUANTITY
 from alyr.modules.items.service import load as load_items
 from alyr.modules.ledger import service as ledger
-from alyr.modules.orders import totals
+from alyr.modules.orders import pay_ways, staff_alert, totals, track_link
 
 STATUSES = ("new", "confirmed", "ready", "done", "cancelled")
 # The job that gives back the stock of an order nobody paid for.
 EXPIRE_JOB = "stock_hold_expiry"
 # How many unpaid pay-link orders may hold stock for one customer at a time.
 MAX_UNPAID_HOLDS = 3
-
-
-def track_url(web_url: str, tenant_id: UUID, order_id: UUID) -> str:
-    """The customer's own page for one order. Like a payment link, it carries the shop's
-    ID because the customer is not signed in, and the order's ID, which cannot be guessed."""
-    return f"{web_url}/t/{tenant_id}/{order_id}"
 
 
 def _track_line(url: str, arabic: bool) -> str:
@@ -410,7 +404,7 @@ async def create_order(
     page (`totals`); `expected_total` is what the customer was shown, and if it is not what the
     order now comes to, the order is refused with the new figures (`total_changed`)."""
     contact = await conn.fetchrow(
-        "select id, lang, credit_limit, assigned_to, price_group_id from contacts "
+        "select id, lang, credit_limit, assigned_to, price_group_id, wa_user_id from contacts "
         "where id = $1", contact_id
     )
     if contact is None:
@@ -469,13 +463,19 @@ async def create_order(
             extra={"pricing": pricing, "total": total},
         )
 
+    # A shop with no online account yet takes its money when the customer collects (ALY-170,
+    # spec 024): the page and the chat still ask for "link", and it means "pay on collection".
+    ways = await pay_ways.get(conn)
+    # The owner's own test order moves no money, whatever the page offered (ALY-168).
+    if payment == "link" and (not ways["online"] or identity.is_test_user(contact["wa_user_id"])):
+        payment = "later"
     if payment == "account":
         if not contact["credit_limit"] > 0:
             raise _plain("no_account")
         balance = (await ledger.aged(conn, contact_id)).balance
         if balance + total > contact["credit_limit"]:
             raise _plain("over_limit", limit_amount=contact["credit_limit"])
-    elif payment != "link":
+    elif payment not in ("link", "later"):
         raise _plain("bad_payment")
 
     # Take the stock before anything else is written, in one step per line. Another order
@@ -531,6 +531,8 @@ async def create_order(
         {"number": number, "total": fmt_qar(total), "payment": payment,
          "table": table[:20] or None},
     )
+    # The staff numbers marked for new orders are told on WhatsApp (D-079).
+    await staff_alert.queue(conn, order_id, contact["wa_user_id"])
     # A pay-link order holds its stock until it is paid or the hold runs out.
     minutes = await clock.hold_minutes(conn)
     held_until = (
@@ -615,13 +617,19 @@ async def create_order(
             f"تم تسجيله على حسابك. رصيدك الآن {fmt_qar(balance)}." if arabic
             else f"Put on your account. Your balance is now {fmt_qar(balance)}."
         )
+    elif payment == "later":
+        # Nothing to pay now: the order is the shop's to prepare, and staff mark it paid when
+        # the money arrives. Its stock is already committed, so no hold runs out.
+        how = pay_ways.say(ways["ways"], contact["lang"])
+        delivering = choice is not None and choice.mode == "delivery"
+        if arabic:
+            closing = f"الدفع {how} عند الاستلام."
+        else:
+            closing = f"Pay by {how} " + ("on delivery." if delivering else "when you collect.")
     else:
-        pay_url = await conn.fetchval(
-            "insert into payment_requests (contact_id, amount, order_id) values ($1, $2, $3) "
-            "returning id",
-            contact_id, total, order_id,
-        )
-        pay_url = f"{web_url}/pay/{tenant_id}/{pay_url}"
+        # On the shop's own payment account when it has connected one (ALY-17).
+        payment_id = await payments.request(conn, contact_id, total, order_id)
+        pay_url = f"{web_url}/pay/{tenant_id}/{payment_id}"
         closing = f"للدفع: {pay_url}" if arabic else f"Pay here: {pay_url}"
         if held_until is not None:
             closing += (
@@ -631,7 +639,8 @@ async def create_order(
 
     head = f"تم استلام الطلب رقم {number}." if arabic else f"Order #{number} received."
     total_line = f"الإجمالي: {fmt_qar(total)}" if arabic else f"Total: {fmt_qar(total)}"
-    track = _track_line(track_url(web_url, tenant_id, order_id), arabic)
+    tracked = await track_link.url(conn, web_url, order_id)
+    track = _track_line(tracked, arabic)
     skipped = ""
     if left_out:
         names = "، ".join(left_out) if arabic else ", ".join(left_out)
@@ -642,14 +651,18 @@ async def create_order(
     # The tracking link goes in the module's own wording. An approved template cannot
     # change, so a notice sent after the 24-hour window arrives without it.
     await outbound.send(conn, templates.notice(
-        contact_id, "order_received_account" if payment == "account" else "order_received_pay",
+        contact_id,
+        {"account": "order_received_account", "later": "order_received_later"}.get(
+            payment, "order_received_pay"),
         contact["lang"], f"{head}\n{summary}\n{total_line}\n{closing}{skipped}\n{track}",
-        number, items, fmt_qar(total), fmt_qar(balance) if payment == "account" else pay_url,
+        number, items, fmt_qar(total),
+        fmt_qar(balance) if payment == "account" else closing if payment == "later" else pay_url,
     ))
     return {
         "order_id": str(order_id), "number": number, "total": total,
         "total_text": fmt_qar(total), "payment": payment, "pay_url": pay_url,
-        "track_url": track_url(web_url, tenant_id, order_id),
+        "pay_ways": ways["ways"] if payment == "later" else [],
+        "track_url": tracked,
         "fulfil_on": max(dates).isoformat() if dates else None,
         "hold_expires_at": held_until.isoformat() if held_until else None,
         # The group whose prices the order was charged.
@@ -734,9 +747,10 @@ _STATUS_TEXT = {
 async def cancel_order(
     conn: asyncpg.Connection, order_id: UUID, outbound: Outbound,
     actor: Actor = team.ASSISTANT, restock: bool | None = None, reason: str = "",
-    held_minutes: int | None = None,
+    held_minutes: int | None = None, notify: bool = True,
 ) -> dict | None:
-    """Cancel an order, and tell the customer.
+    """Cancel an order, and tell the customer (unless `notify` is off: the owner's own test
+    order, cancelled when the test is over, tells nobody).
 
     Stock goes back when the order had not been made yet (new or confirmed): the customer
     changed their mind, or nobody paid in time. For an order already ready or done the
@@ -760,7 +774,8 @@ async def cancel_order(
         order_id,
     )
     row = await conn.fetchrow(
-        "select number, status, payment, total, contact_id from orders where id = $1 for update",
+        "select number, status, payment, total, contact_id, is_test from orders "
+        "where id = $1 for update",
         order_id,
     )
     if row is None:
@@ -779,7 +794,8 @@ async def cancel_order(
         returned = await stock_holds.release(
             conn, order_id, actor, reason or "Order cancelled"
         )
-    refund_due = row["payment"] == "paid"
+    # Money for a test order never moved, so none is due back.
+    refund_due = row["payment"] == "paid" and not row["is_test"]
     # An order on the customer's credit account was a debt; cancelled, it is not.
     reversed_amount = 0
     if row["payment"] == "on_account":
@@ -805,6 +821,17 @@ async def cancel_order(
         # Nobody else would know: the money is in the shop's own payment account, and
         # only the shop can send it back. Tell the owner and managers (ALY-106).
         await alerts.refund_due(conn, outbound, row["number"], fmt_qar(row["total"]))
+    result = {
+        "number": row["number"], "status": "cancelled", "already": False,
+        "stock_returned": returned,
+        "refund_due": refund_due,
+        "refund_amount": row["total"] if refund_due else 0,
+        "refund_text": fmt_qar(row["total"]) if refund_due else None,
+        "credit_reversed": reversed_amount,
+        "credit_reversed_text": fmt_qar(reversed_amount) if reversed_amount else None,
+    }
+    if not notify:
+        return result
     lang = await conn.fetchval("select lang from contacts where id = $1", row["contact_id"])
     if held_minutes is not None:
         body = text.say("hold_expired", lang, {"number": row["number"], "minutes": held_minutes})
@@ -826,15 +853,7 @@ async def cancel_order(
             row["contact_id"], lang, shop["name"], shop["name_ar"], "reversal", reversed_amount,
             balance, row["number"],
         ))
-    return {
-        "number": row["number"], "status": "cancelled", "already": False,
-        "stock_returned": returned,
-        "refund_due": refund_due,
-        "refund_amount": row["total"] if refund_due else 0,
-        "refund_text": fmt_qar(row["total"]) if refund_due else None,
-        "credit_reversed": reversed_amount,
-        "credit_reversed_text": fmt_qar(reversed_amount) if reversed_amount else None,
-    }
+    return result
 
 
 async def set_status(
@@ -869,10 +888,7 @@ async def set_status(
     english, arabic = _STATUS_TEXT[status]
     body = (arabic if lang == "ar" else english).format(n=row["number"])
     if web_url:
-        tenant_id = await conn.fetchval(
-            "select nullif(current_setting('app.tenant_id', true), '')::uuid"
-        )
-        body += "\n" + _track_line(track_url(web_url, tenant_id, order_id), lang == "ar")
+        body += "\n" + _track_line(await track_link.url(conn, web_url, order_id), lang == "ar")
     await outbound.send(conn, templates.notice(
         row["contact_id"], f"order_{status}", lang, body, row["number"],
     ))
@@ -884,7 +900,7 @@ async def list_orders(conn: asyncpg.Connection) -> list[dict]:
         "select o.id, o.number, o.status, o.payment, o.total, o.created_at, o.fulfil_on, "
         "       o.table_label, o.subtotal, o.discount_total, o.fulfilment, o.delivery_fee, "
         "       o.delivery_zone_name, o.delivery_zone_name_ar, o.delivery_address, "
-        "       o.delivery_note, o.delivery_on, "
+        "       o.delivery_note, o.delivery_on, o.is_test, "
         "       c.name as customer, o.assigned_to, u.name as assignee, "
         "       o.price_group_name, o.price_group_name_ar, coalesce(g.is_default, false) "
         "         as price_group_default "
@@ -919,6 +935,9 @@ async def list_orders(conn: asyncpg.Connection) -> list[dict]:
             "id": str(o["id"]), "number": o["number"], "status": o["status"],
             "payment": o["payment"], "total": o["total"], "total_text": fmt_qar(o["total"]),
             "customer": o["customer"], "created_at": o["created_at"].isoformat(),
+            # The owner's own test order from the test line (ALY-168): marked in the list, and
+            # never counted anywhere that adds orders up.
+            "test": o["is_test"],
             # What the goods came to and what came off, only on an order that was given a
             # discount (ALY-150); an order without one reads exactly as it always did.
             **({"subtotal": o["subtotal"], "subtotal_text": fmt_qar(o["subtotal"]),

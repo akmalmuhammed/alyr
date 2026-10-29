@@ -64,10 +64,13 @@ async def record(
     actor: Actor,
     contact_id: UUID | None = None,
     detail: dict | None = None,
+    channel: str = "portal",
 ) -> None:
+    """Put one thing on the record. `channel` says which door it came through: the
+    workspace ("portal"), a message ("whatsapp"), or ALYR itself ("system") (D-065)."""
     await conn.execute(
         "insert into activity (subject, subject_id, contact_id, action, detail, actor_id, "
-        "actor_name) values ($1, $2, $3, $4, $5, $6, $7)",
+        "actor_name, channel) values ($1, $2, $3, $4, $5, $6, $7, $8)",
         subject,
         subject_id,
         contact_id,
@@ -76,6 +79,7 @@ async def record(
          if v is not None},
         actor.id,
         actor.name,
+        channel,
     )
 
 
@@ -291,7 +295,8 @@ async def performance(
         "select assigned_to, count(*)::int as orders, coalesce(sum(total), 0)::bigint as sales, "
         "  coalesce(sum(total) filter (where payment in ('paid', 'on_account')), 0)::bigint "
         "    as settled "
-        "from orders where created_at >= $1 and created_at <= $2 and status <> 'cancelled' "
+        "from orders where not is_test and created_at >= $1 and created_at <= $2 and status <> "
+        "'cancelled' "
         "group by assigned_to",
         since, now,
     ):

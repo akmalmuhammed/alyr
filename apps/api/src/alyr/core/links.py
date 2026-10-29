@@ -20,10 +20,20 @@ for table 7 cannot be turned into table 3 by editing it. A tampered, malformed, 
 wrong-shop or wrong-purpose token is refused; a customer who opens an old link asks for a new
 one in their chat.
 
+A fourth purpose, "resume" (ALY-171), is the link at the foot of a reminder email that stops
+the reminders: the ID in the token is the business's own, the life is a year, and it opens nothing
+else (a customer's link, a document's link and this one are not interchangeable).
+
 A third purpose, "document" (ALY-139), makes the link to one issued receipt or invoice: the ID in
 the token is the document's, not a customer's, the life is `ALYR_DOCUMENT_LINK_DAYS`, and the same
 rule holds: an order or booking token opens nothing on the document page, and a document token
 opens nothing on those pages.
+
+A fifth purpose, "track" (SEC-8, D-080), makes the link to one order's tracking page: the ID in
+the token is the order's, the life is `ALYR_LINK_DAYS`, and it opens that page only. Until then
+the page opened by the shop's ID and the order's ID in the address, which never ran out and
+which anyone who had seen the order's ID (a webhook to the shop's own system, a list in the
+workspace, a log) could open.
 
 A public link (an item, a category, a QR code on a counter or a table, a shop's booking
 page) never carries a contact ID or a token: it opens the page for anyone, and the page
@@ -55,7 +65,9 @@ CONTEXT = b"alyr-link-v2\x00"
 ORDER = "order"
 BOOKING = "booking"
 DOCUMENT = "document"
-_CODES = {ORDER: 1, BOOKING: 2, DOCUMENT: 3}
+RESUME = "resume"
+TRACK = "track"
+_CODES = {ORDER: 1, BOOKING: 2, DOCUMENT: 3, RESUME: 4, TRACK: 5}
 _PURPOSES = {code: name for name, code in _CODES.items()}
 HEADER = 22  # version, purpose, contact ID, expiry
 MAC_BYTES = 16
@@ -83,7 +95,8 @@ class LinkError(Exception):
 @dataclass(frozen=True)
 class Link:
     # Who or what the link is for: a customer's contact ID for the order and booking pages, a
-    # document's ID for the document page (`subject_id` says it plainly there).
+    # document's ID for the document page, an order's for the tracking page (`subject_id` says
+    # it plainly there).
     contact_id: UUID
     table: str
     expires_at: int
@@ -210,6 +223,12 @@ def read(
     return Link(UUID(bytes=payload[2:18]), table, expires, made_for)
 
 
+def resume_stop_url(web_url: str, slug: str, tenant_id: UUID) -> str:
+    """The link at the foot of a reminder email that switches the reminders off. It needs no
+    sign-in: whoever holds the email can stop it, and it can do nothing else."""
+    return f"{web_url}/start/stop?b={slug}&t={mint(tenant_id, tenant_id, purpose=RESUME, days=365)}"
+
+
 def order_url(
     web_url: str, slug: str, tenant_id: UUID, contact_id: UUID, table: str = "",
     item: UUID | str = "",
@@ -236,3 +255,10 @@ def document_url(
     after `ALYR_DOCUMENT_LINK_DAYS`. There is no bare ID in the address."""
     token = mint(tenant_id, document_id, purpose=DOCUMENT, now=now, settings=settings)
     return f"{web_url}/d/{slug}?t={token}"
+
+
+def track_url(web_url: str, slug: str, tenant_id: UUID, order_id: UUID) -> str:
+    """The link to one order's tracking page (SEC-8, D-080). The token names the order and the
+    shop, opens the tracking page only, and runs out after `ALYR_LINK_DAYS`; each message about
+    the order carries a fresh one. There is no bare ID in the address."""
+    return f"{web_url}/t/{slug}?t={mint(tenant_id, order_id, purpose=TRACK)}"

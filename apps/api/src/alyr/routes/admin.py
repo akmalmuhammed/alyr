@@ -20,7 +20,19 @@ from pydantic import BaseModel, Field
 
 from alyr import catalog, presets
 from alyr.config import get_settings
-from alyr.core import access, auth, backoffice, pricing, readiness, whatsapp_setup
+from alyr.core import (
+    access,
+    auth,
+    backoffice,
+    card_billing,
+    pricing,
+    readiness,
+    subscription,
+    terms,
+    welcome,
+    whatsapp_attach,
+    whatsapp_setup,
+)
 from alyr.core.auth import Staff
 from alyr.modules.items import clock as shop_clock
 from alyr.modules.items import template, template_change
@@ -53,6 +65,20 @@ class ItemChange(BaseModel):
     applies: str = Field(max_length=60)
     active: bool = True
     sort: int = Field(default=0, ge=0, le=10_000)
+    # In US cents, for a card payment through Paddle (D-074); null: the riyal price at the
+    # peg. Left out: unchanged.
+    price_usd: int | None = Field(default=None, ge=0, le=10_000_000)
+
+
+class TermsVersion(BaseModel):
+    kind: Literal["agreement", "privacy"]
+    version: str = Field(min_length=1, max_length=40)
+    title: str = Field(min_length=1, max_length=160)
+    title_ar: str = Field(min_length=1, max_length=160)
+    url: str = Field(min_length=1, max_length=300)
+    url_ar: str = Field(min_length=1, max_length=300)
+    changes: str = Field(default="", max_length=400)
+    changes_ar: str = Field(default="", max_length=400)
 
 
 class TypeChange(BaseModel):
@@ -133,6 +159,16 @@ class Payment(BaseModel):
     note: str = Field(default="", max_length=500)
 
 
+class CardBillingChange(BaseModel):
+    # Null: the platform's setting (ALYR_CARD_BILLING). "off": this client pays by transfer.
+    card_billing: Literal["off", "paddle"] | None
+
+
+class Cancellation(BaseModel):
+    # How the client asked: "email from the owner, 29 Oct", "call with Fatima".
+    note: str = Field(min_length=1, max_length=500)
+
+
 class OpenWithout(BaseModel):
     reason: str = Field(min_length=1, max_length=500)
 
@@ -145,6 +181,11 @@ class WhatsappChange(BaseModel):
     # ...and where ALYR is with the connection; a failure says why, for the owner to read.
     state: Literal["", "connecting", "failed"] | None = None
     note: str = Field(default="", max_length=500)
+
+
+class AttachNumber(BaseModel):
+    number_id: str = Field(max_length=30)
+    waba_id: str = Field(default="", max_length=30)
 
 
 class NewStaff(BaseModel):
@@ -282,6 +323,12 @@ async def create_business(
             await template.apply(
                 conn, target, await shop_clock.load(conn), samples_too=False, by=_by(staff)
             )
+    # The owner learns the workspace exists and how to sign in to it (specs/037).
+    async with request.app.state.db.tenant(tenant_id) as conn:
+        owner = await conn.fetchval(
+            "select user_id from memberships where role = 'owner' order by created_at limit 1"
+        )
+        await welcome.queue(conn, welcome.INVITE, owner)
     return {"id": str(tenant_id), "slug": slug, "modules": modules,
             "template": target.key if target else None}
 
@@ -388,16 +435,18 @@ async def save_item(
     try:
         async with _back_office(request) as conn:
             before = await conn.fetchrow(
-                "select price, active from price_items where key = $1", key
+                "select price, price_usd, active from price_items where key = $1", key
             )
             saved = await pricing.save_item(
                 conn, key, body.name, body.name_ar, body.kind, body.price, body.applies,
-                body.active, body.sort, _by(staff),
+                body.active, body.sort, _by(staff), price_usd=body.price_usd,
+                set_usd="price_usd" in body.model_fields_set,
             )
             await backoffice.audit(
                 conn, staff, "price_item.saved", "price_item", key,
                 detail={"before": dict(before) if before else None,
-                        "after": {"price": body.price, "active": body.active,
+                        "after": {"price": body.price, "price_usd": saved["price_usd"],
+                                  "active": body.active,
                                   "applies": body.applies, "kind": body.kind}},
             )
             return saved
@@ -447,7 +496,7 @@ async def client(client_id: UUID, request: Request, _: Staff = Depends(platform_
     try:
         async with _back_office(request) as conn:
             return await pricing.client(conn, client_id) | {
-                "access": await access.summary(conn, client_id)
+                "access": await _access(conn, client_id)
             }
     except pricing.PricingError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
@@ -642,6 +691,52 @@ async def onboarding_board(request: Request, _: Staff = Depends(platform_admin))
     return {"businesses": board, "counts": counts}
 
 
+@router.get("/onboarding/funnel")
+async def onboarding_funnel(request: Request, _: Staff = Depends(platform_admin)) -> dict:
+    """Where businesses stop on the way to live, how long each step takes, and how many needed
+    ALYR's hand (ALY-169). Read from the record the onboarding engine keeps."""
+    return {
+        **readiness.funnel(await _admin_call(
+            request, "select admin_onboarding_funnel()", fetch="fetchval")),
+        # How many reminders to finish setting up went, and how many owners came back (ALY-171).
+        "reminders": await _admin_call(request, "select admin_resume_stats()", fetch="fetchval"),
+    }
+
+
+@router.get("/terms")
+async def terms_versions(request: Request, _: Staff = Depends(platform_admin)) -> dict:
+    """Every version of the customer agreement and the privacy notice ALYR has published."""
+    async with _back_office(request) as conn:
+        return {"versions": await terms.versions(conn)}
+
+
+@router.post("/terms")
+async def publish_terms(
+    body: TermsVersion, request: Request, staff: Staff = Depends(platform_admin)
+) -> dict:
+    """Publish a version. It becomes the current one of its kind, and every owner is asked to
+    accept it once. It can never be changed: a correction is a new version."""
+    try:
+        async with _back_office(request) as conn:
+            published = await terms.publish(conn, by=_by(staff), **body.model_dump())
+            await backoffice.audit(
+                conn, staff, "terms.published", "terms_version", published["id"],
+                detail={"kind": body.kind, "version": body.version},
+            )
+            return published
+    except terms.TermsError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.get("/businesses/{business_id}/terms")
+async def business_terms(
+    business_id: UUID, request: Request, _: Staff = Depends(platform_admin)
+) -> dict:
+    """What one business has accepted, who and when, and what it has not accepted yet."""
+    async with _in_business(request, business_id) as conn:
+        return {**await terms.state(conn), "accepted": await terms.history(conn)}
+
+
 @router.get("/businesses/{business_id}/readiness")
 async def business_readiness(
     business_id: UUID, request: Request, staff: Staff = Depends(platform_admin)
@@ -716,47 +811,169 @@ async def change_whatsapp(
         raise HTTPException(status_code=422, detail=str(error)) from error
 
 
-# ── pay before access (ALY-212, D-051) ────────────────────
+@router.post("/businesses/{business_id}/whatsapp/number")
+async def attach_number(
+    business_id: UUID, body: AttachNumber, request: Request,
+    staff: Staff = Depends(platform_admin),
+) -> dict:
+    """Attach the business's Meta number (ALY-166) once Meta shows it connected. Messages to
+    it reach the business from then on, and the go-live check sees WhatsApp as done."""
+    try:
+        async with _in_business(request, business_id) as conn:
+            attached = await whatsapp_attach.attach(
+                conn, request.app.state.outbound.channels["meta"], business_id,
+                body.number_id, body.waba_id, _by(staff),
+            )
+            await backoffice.audit(
+                conn, staff, "whatsapp.attached", "business", business_id,
+                business_id=business_id, detail=attached,
+            )
+            return await readiness.run(conn, _by(staff), by_alyr=True)
+    except whatsapp_attach.AttachError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.delete("/businesses/{business_id}/whatsapp/number")
+async def detach_number(
+    business_id: UUID, request: Request, staff: Staff = Depends(platform_admin)
+) -> dict:
+    """Take the business's Meta number off (a wrong number, or a move). The test line stays."""
+    async with _in_business(request, business_id) as conn:
+        removed = await whatsapp_attach.detach(conn, business_id)
+        if removed is None:
+            raise HTTPException(status_code=404, detail="this business has no WhatsApp number")
+        await backoffice.audit(
+            conn, staff, "whatsapp.detached", "business", business_id,
+            business_id=business_id, detail={"number_id": removed},
+        )
+        return await readiness.run(conn, _by(staff), by_alyr=True)
+
+
+# ── what a client pays ALYR (ALY-212, D-051; payment at go-live: ALY-242, D-053) ──
 
 
 @router.post("/clients/{client_id}/payments")
 async def record_payment(
     client_id: UUID, body: Payment, request: Request, staff: Staff = Depends(platform_admin)
 ) -> dict:
-    """Record a payment the client made to ALYR. Once what is due is covered, the client's
-    products open."""
+    """Record a payment the client made to ALYR. Once what is due is covered, the client can
+    go live."""
     try:
         async with _back_office(request) as conn:
-            opened = await access.record(
+            covered = await access.record(
                 conn, client_id, amount=body.amount, method=body.method,
                 reference=body.reference, received_on=body.received_on, note=body.note,
                 by=_by(staff),
             )
+            # A payment can end a pause at once (ALY-218).
+            await subscription.refresh(conn, client_id)
             await backoffice.audit(
                 conn, staff, "client.payment", "client", client_id, client_id=client_id,
                 detail={"amount": body.amount, "method": body.method,
-                        "received_on": body.received_on.isoformat(), "opened": opened},
+                        "received_on": body.received_on.isoformat(), "covered": covered},
             )
-            return await access.summary(conn, client_id)
+            return await _access(conn, client_id)
     except LookupError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except access.AccessError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
 
 
-@router.post("/clients/{client_id}/open")
-async def open_without_payment(
-    client_id: UUID, body: OpenWithout, request: Request, staff: Staff = Depends(platform_admin)
+@router.put("/clients/{client_id}/card-billing")
+async def change_card_billing(
+    client_id: UUID, body: CardBillingChange, request: Request,
+    staff: Staff = Depends(platform_admin),
 ) -> dict:
-    """Open a client's products without a payment (a pilot, a demo), saying why."""
+    """Offer this client a card payment, or not (ALY-180, D-074). A card provider can only be
+    offered once it is set up for the whole platform; this never starts or stops a payment
+    already made."""
+    async with _back_office(request) as conn:
+        before = await conn.fetchrow(
+            "select card_billing from clients where id = $1 for update", client_id
+        )
+        if before is None:
+            raise HTTPException(status_code=404, detail="no such client")
+        if before["card_billing"] != body.card_billing:
+            await conn.execute(
+                "update clients set card_billing = $2 where id = $1", client_id, body.card_billing
+            )
+            await backoffice.audit(
+                conn, staff, "client.card_billing", "client", client_id, client_id=client_id,
+                detail={"from": before["card_billing"], "to": body.card_billing},
+            )
+        return await _access(conn, client_id)
+
+
+async def _access(conn, client_id: UUID) -> dict:
+    """What the client owes and paid, their latest card checkout, and where their plan
+    stands (ALY-218)."""
+    now = await subscription.current(conn, client_id)
+    note = await conn.fetchrow(
+        "select cancel_note, cancel_requested_at, sending_paused_at from clients where id = $1",
+        client_id,
+    )
+    return await access.summary(conn, client_id) | {
+        "checkout": await card_billing.latest(conn, client_id),
+        "subscription": subscription.view(now) | {
+            "cancel_note": note["cancel_note"] if note else "",
+            "paused_since": note["sending_paused_at"].isoformat()
+            if note and note["sending_paused_at"] else None,
+        },
+    }
+
+
+@router.post("/clients/{client_id}/cancel")
+async def cancel_client(
+    client_id: UUID, body: Cancellation, request: Request, staff: Staff = Depends(platform_admin)
+) -> dict:
+    """The client asked to cancel. It takes effect in seven days (D-034): from that day ALYR
+    sends nothing more for its businesses and its card subscription is cancelled. Nothing is
+    deleted and the workspace stays open (D-033)."""
     try:
         async with _back_office(request) as conn:
-            if await access.open_without_payment(conn, client_id, body.reason):
+            day = await subscription.cancel(conn, client_id, body.note)
+            await backoffice.audit(
+                conn, staff, "client.cancel", "client", client_id, client_id=client_id,
+                detail={"cancels_on": day.isoformat(), "note": body.note.strip()},
+            )
+            return await _access(conn, client_id)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except subscription.CancelError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.delete("/clients/{client_id}/cancel")
+async def undo_cancel(
+    client_id: UUID, request: Request, staff: Staff = Depends(platform_admin)
+) -> dict:
+    """The client stays after all."""
+    try:
+        async with _back_office(request) as conn:
+            if await subscription.undo_cancel(conn, client_id):
                 await backoffice.audit(
-                    conn, staff, "client.opened", "client", client_id, client_id=client_id,
+                    conn, staff, "client.cancel_undone", "client", client_id,
+                    client_id=client_id,
+                )
+            return await _access(conn, client_id)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.post("/clients/{client_id}/waive")
+async def waive_payment(
+    client_id: UUID, body: OpenWithout, request: Request, staff: Staff = Depends(platform_admin)
+) -> dict:
+    """Waive a client's payment (a pilot, a demo), saying why."""
+    try:
+        async with _back_office(request) as conn:
+            if await access.waive(conn, client_id, body.reason):
+                await subscription.refresh(conn, client_id)
+                await backoffice.audit(
+                    conn, staff, "client.payment_waived", "client", client_id, client_id=client_id,
                     detail={"reason": body.reason.strip()},
                 )
-            return await access.summary(conn, client_id)
+            return await _access(conn, client_id)
     except LookupError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except access.AccessError as error:

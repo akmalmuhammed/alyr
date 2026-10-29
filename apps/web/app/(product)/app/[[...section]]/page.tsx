@@ -5,12 +5,19 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Screens, type WorkspaceTab } from "../../_workspace/Screens";
 import { TeamReport } from "../../_workspace/Team";
+import { WhatsappLink } from "../../_workspace/WhatsappLink";
 import { Catalog } from "../../_workspace/Catalog";
+import { NotSent } from "../../_workspace/NotSent";
 import { Documents } from "../../_workspace/Documents";
+import { BillingBanner } from "../../_workspace/BillingBanner";
+import { TermsBanner } from "../../_workspace/TermsBanner";
+import { keepLang, savedLang, type Lang } from "../../_workspace/lang";
 import { ConnectLink, ConnectSettings } from "../../_workspace/ConnectSettings";
+import { usePolling } from "../../_workspace/poll";
 import { AgentDashboard } from "../../../_agent/AgentDashboard";
 import type { AgentView } from "../../../_agent/types";
 import { color } from "../../../_tokens/tokens";
+import { Account } from "../../_workspace/Account";
 import "../../_workspace/shell.css";
 
 type Text = { en: string; ar: string };
@@ -32,17 +39,13 @@ type State = {
   products: Product[];
   connections: Connection[];
   plan: { status: "preparing" | "published" | "accepted"; monthly_total_text?: string } | null;
-  // The products open once the client has paid ALYR (ALY-212, D-051).
-  open: boolean;
 };
 type Card = { key: string; module: string; label: Text; value: number; text: string };
 // The go-live readiness check (ALY-165, D-049): the same answer as /start and the back office.
 type Readiness = { stage: "setting_up" | "ready" | "live"; checks: { key: string; label: Text; status: string }[]; left: string[] };
-type Lang = "en" | "ar";
 type Command = { id: string; group: string; label: string; icon: string; run: () => void };
 
 const WORK_SCREENS: WorkspaceTab[] = ["inbox", "ledger", "orders", "bookings", "team"];
-const LANG_KEY = "alyr-workspace-lang";
 
 const T = {
   en: {
@@ -63,9 +66,6 @@ const T = {
     goLive: { setting_up: "A few steps left to go live", ready: "Ready, waiting for your WhatsApp number" } as Record<string, string>,
     goLiveSub: (left: string) => `Still to do: ${left}.`,
     goLiveOpen: "See what is left",
-    lockedTitle: "Your products open once ALYR has your payment",
-    lockedSub: (amount: string) => (amount ? `Due now: ${amount}, the setup fee and your first month. ALYR opens your products the same working day it sees your payment.` : "Accept your price first. ALYR opens your products the same working day it sees your payment."),
-    lockedPay: "See your price and how to pay",
     productsTitle: "Products", productsEyebrow: "Your plan",
     productsSub: "Switch on what your business needs. Switching off hides the screens and keeps every record.",
     active: "Active", available: "Available", on: "On", off: "Off",
@@ -80,10 +80,11 @@ const T = {
     helpTitle: "ALYR team", helpOnline: "A person from ALYR reads every message.",
     helpHello: "What should we set up or change for you?",
     helpPlaceholder: "Write to ALYR…", send: "Send to ALYR",
-    sentReply: "Sent to the ALYR team. We answer on WhatsApp or by email.",
+    sentReply: "Sent to the ALYR team. We answer by email.",
     suggestions: ["Connect our WhatsApp number", "Add our services and prices", "Add a team member"],
     live: "WhatsApp live", sim: "Simulator", seeAll: "See all",
     go: "Go to", actions: "Actions", noMatch: "Nothing matches that.", navigate: "Move", choose: "Open", close: "Close",
+    notSent: "Messages not sent",
     more: "More", doha: "Doha",
   },
   ar: {
@@ -104,9 +105,6 @@ const T = {
     goLive: { setting_up: "خطوات قليلة للإطلاق", ready: "جاهز، بانتظار رقم واتساب" },
     goLiveSub: (left: string) => `المتبقي: ${left}.`,
     goLiveOpen: "اعرض المتبقي",
-    lockedTitle: "تُفتح منتجاتك عندما يصل دفعك إلى ALYR",
-    lockedSub: (amount: string) => (amount ? `المستحق الآن: ${amount}، رسوم الإعداد وشهرك الأول. تفتح ALYR منتجاتك في يوم العمل نفسه الذي يصلها فيه الدفع.` : "اقبل سعرك أولاً. تفتح ALYR منتجاتك في يوم العمل نفسه الذي يصلها فيه الدفع."),
-    lockedPay: "اعرض سعرك وطريقة الدفع",
     productsTitle: "المنتجات", productsEyebrow: "خطتك",
     productsSub: "فعّل ما يحتاجه عملك. الإيقاف يخفي الشاشات ويحفظ كل السجلات.",
     active: "مفعّل", available: "متاح", on: "مفعّل", off: "متوقف",
@@ -121,10 +119,11 @@ const T = {
     helpTitle: "فريق ALYR", helpOnline: "يقرأ كل رسالة شخص من فريق ALYR.",
     helpHello: "ماذا نُعدّ أو نغيّر لك؟",
     helpPlaceholder: "اكتب إلى ALYR…", send: "أرسل إلى ALYR",
-    sentReply: "أُرسلت إلى فريق ALYR. نرد عبر واتساب أو البريد.",
+    sentReply: "أُرسلت إلى فريق ALYR. نرد عبر البريد الإلكتروني.",
     suggestions: ["اربطوا رقم واتساب", "أضيفوا خدماتنا وأسعارنا", "أضيفوا عضواً للفريق"],
     live: "واتساب يعمل", sim: "المحاكي", seeAll: "عرض الكل",
     go: "انتقل إلى", actions: "إجراءات", noMatch: "لا نتائج.", navigate: "تنقّل", choose: "افتح", close: "إغلاق",
+    notSent: "رسائل لم تُرسل",
     more: "المزيد", doha: "الدوحة",
   },
 };
@@ -153,6 +152,7 @@ const ICON: Record<string, string> = {
   doc: "M7 3h8l4 4v14H7z M15 3v4h4 M10 12h6 M10 16h6",
   plug: "M9 3v5 M15 3v5 M6 8h12v3a6 6 0 0 1-12 0z M12 17v4",
   users: "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z M3 21v-2a6 6 0 0 1 12 0v2 M16 4.5a3.5 3.5 0 0 1 0 6.5 M17 15a5 5 0 0 1 4 4.9V21",
+  user: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z M5 21v-1a7 7 0 0 1 14 0v1",
   plus: "M12 5v14 M5 12h14",
   search: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z M20 20l-4-4",
   chat: "M4 5h16v11H10l-6 4z M8 10h8",
@@ -210,7 +210,6 @@ export default function WorkspaceShell() {
   const [state, setState] = useState<State | null>(null);
   const [cards, setCards] = useState<Card[]>([]);
   const [readiness, setReadiness] = useState<Readiness | null>(null);
-  const [due, setDue] = useState("");
   const [agent, setAgent] = useState<AgentView | null>(null);
   const [agentRise, setAgentRise] = useState(false);
   // ALYR Agent's links open a screen filtered to the rows a rule counted (`?show=`).
@@ -219,24 +218,21 @@ export default function WorkspaceShell() {
   const [offline, setOffline] = useState(false);
   const [lang, setLang] = useState<Lang>("en");
   const [langReady, setLangReady] = useState(false);
-  // The language a person chose is kept on this device. Each screen of the workspace is a new
-  // page component, so without it a card on the home screen (or any link inside ALYR Agent)
-  // would send an Arabic reader back to English.
+  // The language a person chose is kept on this device (_workspace/lang.ts, shared with
+  // sign-in). Each screen of the workspace is a new page component, so without it a card on
+  // the home screen (or any link inside ALYR Agent) would send an Arabic reader back to
+  // English. A browser that refuses storage starts in English every time.
   useEffect(() => {
     const read = setTimeout(() => {
-      try {
-        const saved = localStorage.getItem(LANG_KEY);
-        if (saved === "ar" || saved === "en") setLang(saved);
-      } catch {
-        // A browser that refuses storage starts in English every time.
-      }
+      const saved = savedLang();
+      if (saved) setLang(saved);
       setLangReady(true);
     }, 0);
     return () => clearTimeout(read);
   }, []);
   const chooseLang = useCallback((next: Lang) => {
     setLang(next);
-    try { localStorage.setItem(LANG_KEY, next); } catch { /* not remembered */ }
+    keepLang(next);
   }, []);
   const [help, setHelp] = useState("");
   const [helpSent, setHelpSent] = useState("");
@@ -250,33 +246,36 @@ export default function WorkspaceShell() {
   const pick = useCallback((text: Text) => text[lang], [lang]);
 
   const load = useCallback(async () => {
+    // Signed out (or the session ended): the sign-in page, not "cannot reach ALYR".
+    let signedOut = false;
+    const json = (r: Response) => {
+      if (r.status === 401) signedOut = true;
+      return r.ok ? r.json() : Promise.reject();
+    };
     try {
       const [s, h] = await Promise.all([
-        fetch("/api/workspace", { cache: "no-store" }).then((r) => (r.ok ? r.json() : Promise.reject())),
-        fetch("/api/workspace/home", { cache: "no-store" }).then((r) => (r.ok ? r.json() : Promise.reject())),
+        fetch("/api/workspace", { cache: "no-store" }).then(json),
+        fetch("/api/workspace/home", { cache: "no-store" }).then(json),
       ]);
       setState(s);
       setCards(h.cards);
       setOffline(false);
-      if (s.open === false) {
-        const p = await fetch("/api/onboarding/payment", { cache: "no-store" });
-        if (p.ok) { const paid = await p.json(); setDue(paid.status === "unpaid" ? paid.left_text : ""); }
-      }
       // Only those who can act on it see what is left to go live.
       if (s.can_manage) {
         const r = await fetch("/api/onboarding/readiness", { cache: "no-store" });
         if (r.ok) setReadiness(await r.json());
       }
     } catch {
+      if (signedOut) {
+        router.replace("/login");
+        return;
+      }
       setOffline(true);
     }
-  }, []);
+  }, [router]);
 
-  useEffect(() => {
-    const first = setTimeout(load, 0);
-    const timer = setInterval(load, 15_000);
-    return () => { clearTimeout(first); clearInterval(timer); };
-  }, [load]);
+  // Every 15 s while the workspace is on show, and at once when the person comes back to it.
+  usePolling(load, 15_000);
 
   // ALYR Agent on the home screen. A poll replaces the numbers and never re-animates them;
   // they rise once a session, on the first load.
@@ -304,13 +303,8 @@ export default function WorkspaceShell() {
     }
   }, [lang]);
 
-  useEffect(() => {
-    // Not before the saved language is known, or an Arabic reader would first be sent English.
-    if (section !== "home" || !langReady) return;
-    const first = setTimeout(loadAgent, 0);
-    const timer = setInterval(loadAgent, 15_000);
-    return () => { clearTimeout(first); clearInterval(timer); };
-  }, [loadAgent, section, langReady]);
+  // Not before the saved language is known, or an Arabic reader would first be sent English.
+  usePolling(loadAgent, 15_000, section === "home" && langReady);
 
   useEffect(() => {
     const read = setTimeout(() => setShow(new URLSearchParams(window.location.search).get("show")), 0);
@@ -383,6 +377,8 @@ export default function WorkspaceShell() {
     }));
     list.push(
       { id: "ask", group: t.actions, label: t.ask, icon: "chat", run: () => router.push("/app#ask") },
+      // Not in the navigation: ALYR Agent links to it when a message fails (specs/036).
+      { id: "go-unsent", group: t.go, label: t.notSent, icon: "inbox", run: () => router.push("/app/unsent") },
       { id: "lang", group: t.actions, label: t.langName, icon: "globe", run: () => chooseLang(lang === "en" ? "ar" : "en") },
     );
     if (state?.me.signed_in) list.push({ id: "out", group: t.actions, label: t.signOut, icon: "out", run: signOut });
@@ -527,6 +523,9 @@ export default function WorkspaceShell() {
         </section>
       </>
     );
+  } else if (section === "account") {
+    // Every role: their sign-in email and businesses; owners also download the data (specs/040).
+    body = <Account lang={lang} />;
   } else if (section === "products") {
     body = (
       <>
@@ -612,6 +611,8 @@ export default function WorkspaceShell() {
         )}
       </>
     );
+  } else if (section === "unsent") {
+    body = <NotSent lang={lang} />;
   } else if (section === "connect" && documentsOn) {
     body = <ConnectSettings lang={lang} canManage={state.can_manage} />;
   } else if (section === "catalog" && enabledScreens.has("catalog")) {
@@ -624,22 +625,18 @@ export default function WorkspaceShell() {
       <Screens embedded section={section as WorkspaceTab} lang={lang} show={show}
         onClearShow={() => { setShow(null); router.replace(`/app/${section}`); }}
         intro={section === "team"
-          ? <TeamReport lang={lang} canManage={state.can_manage} signer={state.me.signed_in ? state.me.name : "Ali"} />
+          ? (
+            <>
+              <TeamReport lang={lang} canManage={state.can_manage} signer={state.me.signed_in ? state.me.name : "Ali"} />
+              <WhatsappLink lang={lang} role={state.me.role} modules={state.modules} signedIn={state.me.signed_in} />
+            </>
+          )
           : undefined} />
     );
   } else {
     body = null;
   }
-  // Until the client has paid, every screen is this page instead (D-051).
-  if (state.open === false) {
-    body = (
-      <section className="sh-tile raised sh-locked">
-        <h1>{t.lockedTitle}</h1>
-        <p className="sh-note">{t.lockedSub(due)}</p>
-        {state.can_manage && <Link className="btn primary" href="/start">{t.lockedPay}<Icon name="arrow" className="sh-ico arrow" /></Link>}
-      </section>
-    );
-  } else if (body === null) {
+  if (body === null) {
     body = (
       <div className="sh-empty-inline">
         <p>{t.notOn}</p>
@@ -694,11 +691,14 @@ export default function WorkspaceShell() {
           <Mark />
           <span className="sh-brand-text"><b>{shopName}</b><small>{current ? pick(current.label) : "ALYR"}</small></span>
           <span className={`sh-live ${whatsapp?.connected ? "on" : ""}`}><span className="sh-dot" />{whatsapp?.connected ? t.live : t.sim}</span>
+          <button className="sh-lang sh-mlang" onClick={() => chooseLang(lang === "en" ? "ar" : "en")} aria-label={t.langName}>{t.lang}</button>
           <button className="sh-iconbtn" onClick={() => { setPalette(true); setQuery(""); setCursor(0); }} aria-label={t.search}><Icon name="search" /></button>
         </header>
         <div className="sh-scroll">
           <main className="sh-main sh-enter" key={`${section}-${lang}`}>
             {offline && <div className="error" role="status">{t.offline}</div>}
+            <TermsBanner lang={lang} canAccept={state.me.signed_in && (state.me.role === "owner" || state.me.role === "admin")} />
+            <BillingBanner lang={lang} canSee={state.me.signed_in && (state.me.role === "owner" || state.me.role === "admin")} />
             {body}
           </main>
         </div>

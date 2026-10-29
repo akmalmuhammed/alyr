@@ -1,6 +1,6 @@
 ---
 name: alyr-site-page
-description: Build or change a public ALYR web page or anything on it. Use for the homepage (/ and /ar), the product pages (/chat, /bookings, /agent, /accounts, /shelf, /docs and their /ar pages), adding a new product page, the header, Products menu, theme switch, product bar, footer, closing call, contact states, the offer switch, the "Sample" marks on drawings of product screens, the "works with" rows, the sitemap, metadata and social cards, and anything under apps/web/app/_site, apps/web/app/(site) or apps/web/app/(site-ar), or scripts/build-site.sh. Load alyr-design first.
+description: Build or change a public ALYR web page or anything on it. Use for the homepage (/ and /ar), the product pages (/chat, /bookings, /agent, /accounts, /shelf, /docs and their /ar pages), adding a new product page, the sector pages (/for/...) and owner guides (/guides), the header, Products menu, theme switch, product bar, footer, closing call, contact states, the offer switch, the "Sample" marks on drawings of product screens, the "works with" rows, the sitemap, metadata and social cards, and anything under apps/web/app/_site, apps/web/app/(site) or apps/web/app/(site-ar), or scripts/build-site.sh. Load alyr-design first.
 ---
 
 # A public ALYR page
@@ -39,15 +39,16 @@ words under `home` in `copy.ts`):
    team your business never had.", then one row under it: the lead on the start side, which
    carries the one line of why ("We check how your business runs, set up what it needs and
    keep improving it with you. It is the work a large company has an IT team for."), "Book a
-   check-up" and "See how we work" (to `#how`) with the note on the end side; the facts row
-   ("We come to your shop, in Qatar"); the real ALYR Agent dashboard, marked "Sample" in its
-   window bar, and the live feed on the Carbon plate, which keeps moving: one event every
-   few seconds with the dashboard's numbers moving with it, a pause button, and stops off
-   screen, in a hidden tab and with reduced motion (D-058, `alyr-design/motion.md`, "The one
-   exception"). The dashboard is drawn with
-   `ruleLines={false}` and its cards titled "Suggestions"; the feed's flags say "Needs a look"
-   with the dashboard's own line and no rule line (founder, 25 Oct 2026). The product's own
-   screens keep their rule lines.
+   check-up" and "See how we work" (to `#how`), who replies, and the facts as one quiet line
+   (one under the other beside the film), all on the start side; on the far side **the film**
+   (D-062, the founder, 28 Oct 2026; `HeroFilm.tsx`, `alyr-design/motion.md`, "The hero
+   film"): a Carbon plate cut by the fold, clear of the headline, from under the header to the
+   hero's foot, with one afternoon at Qirfa Bakery in the product's own screens, three lanes
+   at once, ending on the real ALYR Agent home at 16:20 (`ruleLines={false}`), which is also
+   the still. One "Sample" mark in the plate's bar, Pause at its end; it stops off screen, in
+   a hidden tab and with reduced motion. Its stage steps down with the screen (`--fz`); on a
+   tablet it sits under the text, and on a phone under the text, full width, with the plate's
+   cut corner. The hero's live Agent figure (D-058) is now `/agent`'s only.
 3. **How we work** (`#how`, ALY-226, the founder's yes on the Framer prototype, 25 Oct 2026;
    `HowCards.tsx`, `how.css`): four cards, check, set up, see and improve, each a still Carbon
    canvas cut at 45° (mirrored) holding one drawn window of the product for Qirfa Bakery, then
@@ -67,7 +68,7 @@ words under `home` in `copy.ts`):
    line is drawn; without scripts or with reduced motion nothing plays. Then a line button
    and "What we need from you".
 4. **Your business** (`#business`, `BusinessTabs.tsx`): one tab per business type plus
-   "Something else"; each panel has an anchor (`#bakery`, `#wholesale`, `#fashion`,
+   "Something else"; each panel has an anchor (`#bakery`, `#groceries` (added 28 Oct 2026, ALY-232), `#wholesale`, `#fashion`,
    `#restaurant`, `#salon`, `#home-services`, `#other`), the "Today" list (what a check-up
    finds, in the problems' own words: lost orders, the same questions, "Is my order ready?",
    the empty chair, regulars who owe, not knowing how the week compares), "With ALYR" row for
@@ -163,7 +164,7 @@ Every product page uses `_site/ProductKit.tsx` and `kit.css`, in this order:
 | Works with the rest of ALYR | `WorksBlock` | Ruled rows in the suite's order without the page's own product |
 | Questions | `QuestionsBlock` | Titled "Questions" / «أسئلة», as the header link; native `<details>`, an `id` per question; "Can I use it on its own?", "How long does setup take?" |
 | Closing call | `Shell` | The fold at its top, the contact block in its state |
-| Phone's contact bar | `Shell`, `SiteMotion` | As on the homepage (founder, 24 Oct 2026), below 53rem: up once the opening's `data-hero-cta` button has scrolled away, down while the closing call or the footer is on screen; 44 px button, `env(safe-area-inset-bottom)`, no slide with reduced motion, down without scripts. One Volt button on screen: the header's is the outlined twin while the opening's is in view or while the closing call is on screen (`data-at-closing`, set by `SiteMotion`), and hides while the bar is up (`site.css`). A page whose opening has no `data-hero-cta` never shows the bar |
+| Phone's contact bar | `Shell`, `SiteMotion` | As on the homepage (founder, 24 Oct 2026), below 53rem: up once the opening's `data-hero-cta` button has scrolled away, down while the closing call or the footer is on screen; 44 px button, `env(safe-area-inset-bottom)`, no slide with reduced motion, down without scripts. One Volt button on screen: the header's is the outlined twin while the opening's is in view or while the closing call is on screen (`data-at-closing`, set by `SiteMotion`), and hides while the bar is up (`data-bar-up`; `site.css`). `Shell` marks the header `data-hero` from the server on a page with that button, so the twin holds without scripts; never read these states with `:root:has(...)` (`site:check` holds the mark to the page). A page whose opening has no `data-hero-cta` never shows the bar |
 
 Each page has its own English social card (`(site)/<page>/opengraph-image.tsx` through
 `_site/socialCard.tsx`). Arabic pages share the English homepage card until Arabic cards are
@@ -198,9 +199,9 @@ silently not published, or published and not linked:
 4. **Routes in both groups:** `app/(site)/<key>/page.tsx` and
    `app/(site-ar)/ar/<key>/page.tsx`, each with `siteMetadata(locale, "<key>")`.
 5. **Social card:** `app/(site)/<key>/opengraph-image.tsx`.
-6. **`scripts/build-site.sh`:** add the key to `pages=`; that one list copies the HTML in
-   both languages, the social card and the deferred-scripts step. It fails if the card is
-   missing.
+6. **`scripts/build-site.sh`:** nothing to add. It reads its list of pages from `PATHS`
+   (`scripts/site/pages.mjs`, since ALY-232): the HTML in both languages, the social card and
+   the deferred-scripts step. It fails if an English page's card is missing.
 7. **Homepage:** its tile in `SuiteFrame.tsx` (`FRAGMENT`), drawn from the product's real
    screen, with its moment in `suite.css` and its place in the plate's grid at each width.
 8. **Menu, footer and "works with" rows** read `PRODUCTS` and `productPath`, so they turn into
@@ -212,6 +213,36 @@ silently not published, or published and not linked:
 10. **Docs in the same PR:** `docs/brand.md` (the suite on the site), `docs/status.md`, the
     lane brief's "Now", and a decision entry if it changes a recorded decision (check the
     next free D-number on `origin/main` right before committing).
+
+## Sector pages and owner guides
+
+Added 25 Oct 2026 (ALY-232, ALY-233, D-057; reviewed by two critics, `docs/work/ALY-232-sector-pages/`).
+Words in `copySectors.ts` and `copyGuides.ts`; pages `SectorPage.tsx` and `GuidePage.tsx`;
+styles `pages.css`; routes `/for/[sector]` and `/guides/[guide]` with `generateStaticParams`.
+
+- **A sector page answers first.** Breadcrumb, then the owner's main question said as a
+  statement (no question mark) on the start seven columns and its answer (under 80 words) on
+  the end five, then the one Volt "Book a check-up" with that trade's own message and the
+  products as tags. It opens on the canvas, not Carbon: an audience page is read, not demoed.
+- **Then the drawing, at once:** the trade's hour split by the fold (`DaySplit.tsx`, the
+  homepage's rows, or the trade's own `day`), marked "Sample" once, its machine line first.
+  Its lead names the buttons as they read; never "start side" or "end side".
+- **Then** "Your day today" (the opener in the owner's words, as statements), "What we set
+  up" (one row per product, only what is built, a limit as a pending status line), and the
+  Questions with the trade's guide in their start column (`QuestionsBlock`'s `aside`).
+- **A guide** is an article on the grid's start: title, a byline with `<time>` ("Guide · ALYR
+  team · date"), "In short" (100 words or fewer, the whole answer, checked by
+  `pages.test.mjs`), steps that work without ALYR, then "With ALYR" once, last, describing
+  only what is built and never claiming a step of the guide that the product does not do.
+- **Structured data:** WebPage + BreadcrumbList + FAQPage for a sector; Article (author the
+  organisation "ALYR team", dates in Doha time) + BreadcrumbList for a guide; CollectionPage
+  for the index. Never a person, a price or a rating.
+- **A new trade or guide:** add its key to `SECTORS` or `GUIDES` in `site.ts` and its words in
+  both languages; the routes, sitemap, footer row, machine copies, build and checks follow.
+  A clinic never gets a page (health data, D-043).
+- Found by the critics, keep out: a sample that shows a feature the product lacks (a promise
+  to pay on a named day); "every" where ALYR answers only some messages; "free" for an open
+  time; a line repeated from the homepage word for word.
 
 ## Do
 
