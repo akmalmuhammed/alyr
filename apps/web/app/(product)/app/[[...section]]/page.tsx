@@ -9,6 +9,7 @@ import { WhatsappLink } from "../../_workspace/WhatsappLink";
 import { Catalog } from "../../_workspace/Catalog";
 import { Documents } from "../../_workspace/Documents";
 import { TermsBanner } from "../../_workspace/TermsBanner";
+import { keepLang, savedLang, type Lang } from "../../_workspace/lang";
 import { ConnectLink, ConnectSettings } from "../../_workspace/ConnectSettings";
 import { usePolling } from "../../_workspace/poll";
 import { AgentDashboard } from "../../../_agent/AgentDashboard";
@@ -39,11 +40,9 @@ type State = {
 type Card = { key: string; module: string; label: Text; value: number; text: string };
 // The go-live readiness check (ALY-165, D-049): the same answer as /start and the back office.
 type Readiness = { stage: "setting_up" | "ready" | "live"; checks: { key: string; label: Text; status: string }[]; left: string[] };
-type Lang = "en" | "ar";
 type Command = { id: string; group: string; label: string; icon: string; run: () => void };
 
 const WORK_SCREENS: WorkspaceTab[] = ["inbox", "ledger", "orders", "bookings", "team"];
-const LANG_KEY = "alyr-workspace-lang";
 
 const T = {
   en: {
@@ -213,24 +212,21 @@ export default function WorkspaceShell() {
   const [offline, setOffline] = useState(false);
   const [lang, setLang] = useState<Lang>("en");
   const [langReady, setLangReady] = useState(false);
-  // The language a person chose is kept on this device. Each screen of the workspace is a new
-  // page component, so without it a card on the home screen (or any link inside ALYR Agent)
-  // would send an Arabic reader back to English.
+  // The language a person chose is kept on this device (_workspace/lang.ts, shared with
+  // sign-in). Each screen of the workspace is a new page component, so without it a card on
+  // the home screen (or any link inside ALYR Agent) would send an Arabic reader back to
+  // English. A browser that refuses storage starts in English every time.
   useEffect(() => {
     const read = setTimeout(() => {
-      try {
-        const saved = localStorage.getItem(LANG_KEY);
-        if (saved === "ar" || saved === "en") setLang(saved);
-      } catch {
-        // A browser that refuses storage starts in English every time.
-      }
+      const saved = savedLang();
+      if (saved) setLang(saved);
       setLangReady(true);
     }, 0);
     return () => clearTimeout(read);
   }, []);
   const chooseLang = useCallback((next: Lang) => {
     setLang(next);
-    try { localStorage.setItem(LANG_KEY, next); } catch { /* not remembered */ }
+    keepLang(next);
   }, []);
   const [help, setHelp] = useState("");
   const [helpSent, setHelpSent] = useState("");
