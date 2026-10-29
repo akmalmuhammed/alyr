@@ -24,6 +24,7 @@ from alyr.core import (
     access,
     auth,
     backoffice,
+    card_billing,
     pricing,
     readiness,
     terms,
@@ -151,6 +152,11 @@ class Payment(BaseModel):
     reference: str = Field(default="", max_length=120)
     received_on: date
     note: str = Field(default="", max_length=500)
+
+
+class CardBillingChange(BaseModel):
+    # Null: the platform's setting (ALYR_CARD_BILLING). "off": this client pays by transfer.
+    card_billing: Literal["off", "paddle"] | None
 
 
 class OpenWithout(BaseModel):
@@ -472,7 +478,7 @@ async def client(client_id: UUID, request: Request, _: Staff = Depends(platform_
     try:
         async with _back_office(request) as conn:
             return await pricing.client(conn, client_id) | {
-                "access": await access.summary(conn, client_id)
+                "access": await _access(conn, client_id)
             }
     except pricing.PricingError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
@@ -846,11 +852,43 @@ async def record_payment(
                 detail={"amount": body.amount, "method": body.method,
                         "received_on": body.received_on.isoformat(), "covered": covered},
             )
-            return await access.summary(conn, client_id)
+            return await _access(conn, client_id)
     except LookupError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except access.AccessError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.put("/clients/{client_id}/card-billing")
+async def change_card_billing(
+    client_id: UUID, body: CardBillingChange, request: Request,
+    staff: Staff = Depends(platform_admin),
+) -> dict:
+    """Offer this client a card payment, or not (ALY-180, D-074). A card provider can only be
+    offered once it is set up for the whole platform; this never starts or stops a payment
+    already made."""
+    async with _back_office(request) as conn:
+        before = await conn.fetchrow(
+            "select card_billing from clients where id = $1 for update", client_id
+        )
+        if before is None:
+            raise HTTPException(status_code=404, detail="no such client")
+        if before["card_billing"] != body.card_billing:
+            await conn.execute(
+                "update clients set card_billing = $2 where id = $1", client_id, body.card_billing
+            )
+            await backoffice.audit(
+                conn, staff, "client.card_billing", "client", client_id, client_id=client_id,
+                detail={"from": before["card_billing"], "to": body.card_billing},
+            )
+        return await _access(conn, client_id)
+
+
+async def _access(conn, client_id: UUID) -> dict:
+    """What the client owes and paid, and their latest card checkout."""
+    return await access.summary(conn, client_id) | {
+        "checkout": await card_billing.latest(conn, client_id)
+    }
 
 
 @router.post("/clients/{client_id}/waive")
@@ -865,7 +903,7 @@ async def waive_payment(
                     conn, staff, "client.payment_waived", "client", client_id, client_id=client_id,
                     detail={"reason": body.reason.strip()},
                 )
-            return await access.summary(conn, client_id)
+            return await _access(conn, client_id)
     except LookupError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except access.AccessError as error:

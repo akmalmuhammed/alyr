@@ -18,10 +18,12 @@ from zoneinfo import ZoneInfo
 
 import asyncpg
 
-from alyr.config import get_settings
-from alyr.core import pricing
+from alyr.config import Settings, get_settings
+from alyr.core import paddle, pricing
 from alyr.core.normalise import fmt_qar
 
+# What ALYR's staff record by hand. A card payment ("card") is only ever written by the card
+# provider's webhook (core/card_billing.py, ALY-180).
 METHODS = ("bank_transfer", "cash", "cheque", "link")
 
 
@@ -64,11 +66,28 @@ def due(quote: dict | None) -> int:
     return totals["one_time_total"] + totals["period_total"]
 
 
+async def first_payment(conn: asyncpg.Connection, client_id: UUID) -> dict | None:
+    """What the first payment is made of, for a card checkout (ALY-180): the accepted quote,
+    its setup fee and its first period, in dirhams. None without an accepted price."""
+    quote_row = await _accepted(conn, client_id)
+    if quote_row is None:
+        return None
+    totals = (await pricing.quote_view(conn, quote_row))["totals"]
+    return {
+        "quote_id": quote_row["id"], "setup": totals["one_time_total"],
+        "period": totals["period_total"], "months": quote_row["period_months"],
+    }
+
+
 def _payment(row: asyncpg.Record) -> dict:
     return {
         "id": str(row["id"]), "amount": row["amount"], "amount_text": fmt_qar(row["amount"]),
         "method": row["method"], "reference": row["reference"],
         "received_on": row["received_on"].isoformat(), "note": row["note"],
+        "provider": row["provider"],
+        # What a card provider took, in its own currency (US dollars for Paddle).
+        "paid_text": paddle.usd_text(row["paid_amount"])
+        if row["paid_amount"] and row["paid_currency"] == "USD" else "",
     }
 
 
@@ -91,16 +110,17 @@ async def summary(conn: asyncpg.Connection, client_id: UUID | None = None) -> di
     owner (`client_id` None: their own client, by row-level security) or the back office."""
     if client_id is None:
         client = await conn.fetchrow(
-            "select c.id, c.payment_waived_at, c.access_note from tenants t "
+            "select c.id, c.payment_waived_at, c.access_note, c.card_billing from tenants t "
             "join clients c on c.id = t.client_id "
             "where t.id = nullif(current_setting('app.tenant_id', true), '')::uuid"
         )
     else:
         client = await conn.fetchrow(
-            "select id, payment_waived_at, access_note from clients where id = $1", client_id
+            "select id, payment_waived_at, access_note, card_billing from clients where id = $1",
+            client_id,
         )
     if client is None:
-        return {"status": "paid", "due": 0, "paid": 0, "payments": []}
+        return {"status": "paid", "due": 0, "paid": 0, "payments": [], "card": None}
     quote_row = await _accepted(conn, client["id"])
     quote = await pricing.quote_view(conn, quote_row) if quote_row else None
     payments = await conn.fetch(
@@ -117,6 +137,19 @@ async def summary(conn: asyncpg.Connection, client_id: UUID | None = None) -> di
     else:
         status = "unpaid"
     settings = get_settings()
+    provider = card_provider(settings, client["card_billing"])
+    card = None
+    # A card pays the whole first payment at once and starts the plan's renewals, so it is
+    # offered only while nothing has been paid by hand (ALY-180).
+    if provider and status == "unpaid" and paid == 0:
+        card = {
+            "provider": provider,
+            "amount_text": paddle.usd_text(
+                paddle.usd_cents(quote["totals"]["one_time_total"])
+                + paddle.usd_cents(quote["totals"]["period_total"])
+            ),
+            "period_text": paddle.usd_text(paddle.usd_cents(quote["totals"]["period_total"])),
+        }
     return {
         "status": status,
         "waived": client["payment_waived_at"] is not None,
@@ -131,8 +164,20 @@ async def summary(conn: asyncpg.Connection, client_id: UUID | None = None) -> di
         # The reference the client writes on the transfer, so ALYR can match it.
         "reference": f"ALYR-{str(client['id'])[:8].upper()}",
         "bank": settings.bank_transfer_details,
+        "card": card,
+        # What the back office set for this client: null follows the platform's setting.
+        "card_billing": client["card_billing"],
         "payments": [_payment(p) for p in payments],
     }
+
+
+def card_provider(settings: Settings, card_billing: str | None) -> str:
+    """The card provider a client is offered (ALY-180, D-074), or "" for none: the platform's
+    setting, unless the back office switched it off for this client, and only while the
+    provider is fully set up."""
+    if card_billing == "off" or settings.card_billing != "paddle":
+        return ""
+    return "paddle" if paddle.ready(settings) else ""
 
 
 async def record(

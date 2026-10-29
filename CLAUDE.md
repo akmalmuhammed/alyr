@@ -50,6 +50,8 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               sign-in (auth), email (mail), sign-up (onboarding), pricing, back office,
                               team accountability (team, D-028), workspace shell (workspace), templates,
                               signed customer links (links: a customer's order or booking link carries a token made for that page, never a contact ID),
+                              ALYR's own billing by card (paddle.py is Paddle's API and webhook signature,
+                              card_billing.py the checkout, the webhook's job and renewals; D-074),
                               actions (one set of actions behind the workspace and WhatsApp, D-065) and
                               staff_link (links a staff number to a person by a one-time code)
   src/alyr/modules/           What answers customers: ledger, orders, bookings, inbox, agent (the owner's

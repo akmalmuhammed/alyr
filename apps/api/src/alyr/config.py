@@ -154,6 +154,22 @@ class Settings(BaseSettings):
     # until ALYR's company account is open; the owner is then told ALYR sends the details.
     bank_transfer_details: str = ""
 
+    # A client pays ALYR by card through Paddle (ALY-180, D-074). "paddle": every client is
+    # offered a card payment at go-live, unless the back office switches it off for one.
+    # Empty: no client is, whatever the back office says. It is only offered while the three
+    # Paddle values below are set. Paddle charges in US dollars (core/paddle.py).
+    card_billing: str = ""
+    # "sandbox" (sandbox-api.paddle.com, test cards) or "live" (api.paddle.com). Live waits
+    # for Paddle's approval of the website and for the customer agreement (ALY-98).
+    paddle_environment: str = "sandbox"
+    # The server API key, and the secret of the notification destination that signs
+    # webhooks. Both secrets: Secret Manager in production, never in git.
+    paddle_api_key: str = ""
+    paddle_webhook_secret: str = ""
+    # The client-side token Paddle.js opens the checkout with (starts with test_ or live_).
+    # Paddle makes it to be shown in a web page: not a secret.
+    paddle_client_token: str = ""
+
     # Per shop, to start (D-039; our estimate). A cap stops new items or photos with a
     # clear message and never deletes anything.
     catalog_max_items: int = 1000

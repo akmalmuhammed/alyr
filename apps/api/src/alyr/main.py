@@ -8,6 +8,7 @@ from alyr.channels.meta import MetaChannel
 from alyr.channels.simulator import SimulatorChannel
 from alyr.config import get_settings
 from alyr.core import origin, ratelimit
+from alyr.core.card_billing import CardBilling
 from alyr.core.images import PhotoRefused
 from alyr.core.inbound import INBOUND, InboundHandler
 from alyr.core.jobs import JobRunner
@@ -35,6 +36,7 @@ from alyr.routes import admin_media as admin_media_routes
 from alyr.routes import admin_templates as admin_template_routes
 from alyr.routes import agent as agent_routes
 from alyr.routes import auth as auth_routes
+from alyr.routes import billing as billing_routes
 from alyr.routes import bookings as bookings_routes
 from alyr.routes import connect as connect_routes
 from alyr.routes import connect_setup as connect_setup_routes
@@ -117,6 +119,9 @@ def create_app() -> FastAPI:
     app.state.jobs = JobRunner(app.state.db, settings.jobs_backoff_seconds)
     app.state.jobs.register(SEND, app.state.outbound.deliver, app.state.outbound.gave_up)
     app.state.jobs.register(INBOUND, app.state.inbound.process)
+    # ALYR's own billing: a client paying ALYR by card through Paddle (ALY-180).
+    app.state.card_billing = CardBilling(app.state.db, settings)
+    app.state.card_billing.register(app.state.jobs)
     app.state.jobs.register(REMINDER, Reminders(app.state.db, app.state.outbound).send)
     app.state.jobs.register(report.JOB, report.WeeklyReports(app.state.db, app.state.outbound).send)
     app.state.jobs.register(
@@ -265,6 +270,7 @@ def create_app() -> FastAPI:
     app.include_router(agent_routes.router)
     app.include_router(reports_routes.router)
     app.include_router(admin_routes.router)
+    app.include_router(billing_routes.router)
     app.include_router(admin_media_routes.router)
     app.include_router(admin_template_routes.router)
     app.include_router(media_routes.router)
