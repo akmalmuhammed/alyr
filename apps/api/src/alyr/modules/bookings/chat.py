@@ -17,6 +17,10 @@ MINE_WORDS = ("my booking", "my appointment", "cancel booking", "cancel my",
 BOOK_WORDS = ("book", "appointment", "reserve", "reservation", "schedule",
               "حجز", "احجز", "أحجز", "موعد")
 CANCEL_PREFIX = "booking_cancel:"
+# "What are your prices?" gets the price list, as the Prices button does (ALY-273: the sign-up
+# page suggests it on the test line). Only once nothing else took the message, so an item the
+# shop sells, named with its price, still finds the item.
+PRICE_WORDS = ("price", "how much", "cost", "سعر", "اسعار", "أسعار", "بكم")
 
 
 def booking_link(web_url: str, slug: str, contact_id: UUID, tenant_id: UUID) -> str:
@@ -134,8 +138,11 @@ async def _prices(
 async def greeting(
     conn: asyncpg.Connection, tenant_id: UUID, contact: asyncpg.Record, message: InboundMessage
 ) -> list[OutboundMessage]:
-    """The menu a booking business answers with when nothing more specific applies."""
+    """The menu a booking business answers with when nothing more specific applies, or its
+    price list when the message asks for prices."""
     arabic = await _arabic(conn, contact, message)
+    if not message.reply_id and any(word in message.text.lower() for word in PRICE_WORDS):
+        return [await _prices(conn, contact, arabic)]
     shop = await conn.fetchrow("select name, name_ar from tenants where id = $1", tenant_id)
     name = shop["name_ar"] if arabic and shop["name_ar"] else shop["name"]
     if arabic:

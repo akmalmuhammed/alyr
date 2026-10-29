@@ -120,7 +120,7 @@ class PhotoDrafts:
             data, _ = await channel.download_media(
                 payload["media_id"], self._settings.media_max_upload_bytes
             )
-        except ValueError:  # larger than we take; trying again will not help
+        except ValueError:  # larger than we take, or not at Meta: trying again will not help
             await self._say(tenant_id, contact_id, say("photo_failed", lang), lang)
             return
         try:

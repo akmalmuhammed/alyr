@@ -82,7 +82,7 @@ async def thread(conn: asyncpg.Connection, contact_id: UUID) -> dict | None:
         "       c.last_inbound_at + interval '24 hours' as window_closes_at, "
         "       c.assigned_to, u.name as assignee_name, c.price_group_id "
         "from contacts c left join users u on u.id = c.assigned_to "
-        "where c.id = $1 and c.role = 'customer'",
+        "where c.id = $1 and c.role = 'customer' and c.forgotten_at is null",
         contact_id,
     )
     if contact is None:
@@ -142,7 +142,8 @@ async def reply(
     if not text:
         raise InboxError("the reply is empty")
     known = await conn.fetchval(
-        "select true from contacts where id = $1 and role = 'customer'", contact_id
+        "select true from contacts where id = $1 and role = 'customer' "
+        "and forgotten_at is null", contact_id
     )
     if not known:
         raise LookupError("no such customer")
@@ -226,7 +227,8 @@ async def add_note(
     if not text:
         raise InboxError("the note is empty")
     known = await conn.fetchval(
-        "select true from contacts where id = $1 and role = 'customer'", contact_id
+        "select true from contacts where id = $1 and role = 'customer' "
+        "and forgotten_at is null", contact_id
     )
     if not known:
         raise LookupError("no such customer")

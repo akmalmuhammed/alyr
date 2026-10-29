@@ -16,7 +16,7 @@ from zoneinfo import ZoneInfo
 import asyncpg
 
 from alyr import catalog
-from alyr.core import team
+from alyr.core import not_sent, team
 from alyr.core.auth import Staff
 from alyr.modules import report
 from alyr.modules.ledger import service as ledger
@@ -59,6 +59,8 @@ class Facts:
     first_name: str = ""
     money: bool = True
     has_records: bool = True
+    # Messages that did not reach a customer in the last 48 hours (specs/036), any module
+    not_sent: list = field(default_factory=list)
     # The team inbox
     waiting: list = field(default_factory=list)
     wrote: int = 0
@@ -228,6 +230,11 @@ async def gather(conn: asyncpg.Connection, staff: Staff, now: datetime | None = 
         "= 'in' and m.created_at <= $1)",
         now,
     ))
+    f.not_sent = [
+        Row(str(r["id"]), r["name"] or "",
+            {"minutes": int((now - r["created_at"]).total_seconds() // 60)})
+        for r in await not_sent.failed_recently(conn, now)
+    ]
     if "inbox" in modules:
         await _inbox(conn, f, span, last, chart)
         f.team = await team.performance(conn, staff, 7, now)

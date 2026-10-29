@@ -403,6 +403,7 @@
 .ob-pay-total { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 0; }
 .ob-pay-total span { color: var(--ink-2); font-size: var(--ui-body-sm); }
 .ob-pay-total b { font-size: var(--ui-display-sm); letter-spacing: -0.02em; font-weight: 600; }
+.ob-pay-card { display: grid; gap: 6px; justify-items: start; }
 .ob-pay-how { display: grid; gap: 4px; padding: 12px 14px; border-radius: 12px; background: var(--volt-wash); }
 .ob-pay-how b { font-size: var(--ui-body-sm); font-weight: 600; }
 .ob-pay-how pre { margin: 0; white-space: pre-wrap; font: inherit; font-size: var(--ui-body-sm); }

@@ -20,7 +20,7 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { launch, sleep } from "./browser-kit.mjs";
+import { launch, sleep, trackPath } from "./browser-kit.mjs";
 
 const args = Object.fromEntries(
   process.argv.slice(2).reduce((all, a, i, list) => (a.startsWith("--") ? [...all, [a.slice(2), list[i + 1]?.startsWith("--") || list[i + 1] === undefined ? "true" : list[i + 1]]] : all), []),
@@ -658,7 +658,7 @@ try {
     await until("location.pathname.startsWith('/pay/')", "the pay page");
     const order = (await api("/api/orders")).orders[0];
     check(order.table === "7", "staff see the table on the order");
-    await b.go(`${BASE}/t/${sql("select id from tenants where slug = 'al-noor'")}/${order.id}`, 900);
+    await b.go(`${BASE}${trackPath(sql("select id from tenants where slug = 'al-noor'"), "al-noor", order.id)}`, 900);
     await until("!!document.querySelector('.cx-track')", "the tracking page");
     check((await visibleText()).includes(AR ? "طاولة 7" : "Table 7") && (AR ? (await visibleText()).includes("6 ر.ق") : (await visibleText()).includes("QAR 6")), "the tracking page shows the table and prices in the page's language");
     await shot("20-track");

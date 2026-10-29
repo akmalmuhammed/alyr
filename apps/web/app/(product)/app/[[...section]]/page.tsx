@@ -7,9 +7,12 @@ import { Screens, type WorkspaceTab } from "../../_workspace/Screens";
 import { TeamReport } from "../../_workspace/Team";
 import { WhatsappLink } from "../../_workspace/WhatsappLink";
 import { Catalog } from "../../_workspace/Catalog";
+import { NotSent } from "../../_workspace/NotSent";
 import { Documents } from "../../_workspace/Documents";
 import { TermsBanner } from "../../_workspace/TermsBanner";
+import { keepLang, savedLang, type Lang } from "../../_workspace/lang";
 import { ConnectLink, ConnectSettings } from "../../_workspace/ConnectSettings";
+import { usePolling } from "../../_workspace/poll";
 import { AgentDashboard } from "../../../_agent/AgentDashboard";
 import type { AgentView } from "../../../_agent/types";
 import { color } from "../../../_tokens/tokens";
@@ -39,11 +42,9 @@ type State = {
 type Card = { key: string; module: string; label: Text; value: number; text: string };
 // The go-live readiness check (ALY-165, D-049): the same answer as /start and the back office.
 type Readiness = { stage: "setting_up" | "ready" | "live"; checks: { key: string; label: Text; status: string }[]; left: string[] };
-type Lang = "en" | "ar";
 type Command = { id: string; group: string; label: string; icon: string; run: () => void };
 
 const WORK_SCREENS: WorkspaceTab[] = ["inbox", "ledger", "orders", "bookings", "team"];
-const LANG_KEY = "alyr-workspace-lang";
 
 const T = {
   en: {
@@ -78,10 +79,11 @@ const T = {
     helpTitle: "ALYR team", helpOnline: "A person from ALYR reads every message.",
     helpHello: "What should we set up or change for you?",
     helpPlaceholder: "Write to ALYR…", send: "Send to ALYR",
-    sentReply: "Sent to the ALYR team. We answer on WhatsApp or by email.",
+    sentReply: "Sent to the ALYR team. We answer by email.",
     suggestions: ["Connect our WhatsApp number", "Add our services and prices", "Add a team member"],
     live: "WhatsApp live", sim: "Simulator", seeAll: "See all",
     go: "Go to", actions: "Actions", noMatch: "Nothing matches that.", navigate: "Move", choose: "Open", close: "Close",
+    notSent: "Messages not sent",
     more: "More", doha: "Doha",
   },
   ar: {
@@ -116,10 +118,11 @@ const T = {
     helpTitle: "فريق ALYR", helpOnline: "يقرأ كل رسالة شخص من فريق ALYR.",
     helpHello: "ماذا نُعدّ أو نغيّر لك؟",
     helpPlaceholder: "اكتب إلى ALYR…", send: "أرسل إلى ALYR",
-    sentReply: "أُرسلت إلى فريق ALYR. نرد عبر واتساب أو البريد.",
+    sentReply: "أُرسلت إلى فريق ALYR. نرد عبر البريد الإلكتروني.",
     suggestions: ["اربطوا رقم واتساب", "أضيفوا خدماتنا وأسعارنا", "أضيفوا عضواً للفريق"],
     live: "واتساب يعمل", sim: "المحاكي", seeAll: "عرض الكل",
     go: "انتقل إلى", actions: "إجراءات", noMatch: "لا نتائج.", navigate: "تنقّل", choose: "افتح", close: "إغلاق",
+    notSent: "رسائل لم تُرسل",
     more: "المزيد", doha: "الدوحة",
   },
 };
@@ -214,24 +217,21 @@ export default function WorkspaceShell() {
   const [offline, setOffline] = useState(false);
   const [lang, setLang] = useState<Lang>("en");
   const [langReady, setLangReady] = useState(false);
-  // The language a person chose is kept on this device. Each screen of the workspace is a new
-  // page component, so without it a card on the home screen (or any link inside ALYR Agent)
-  // would send an Arabic reader back to English.
+  // The language a person chose is kept on this device (_workspace/lang.ts, shared with
+  // sign-in). Each screen of the workspace is a new page component, so without it a card on
+  // the home screen (or any link inside ALYR Agent) would send an Arabic reader back to
+  // English. A browser that refuses storage starts in English every time.
   useEffect(() => {
     const read = setTimeout(() => {
-      try {
-        const saved = localStorage.getItem(LANG_KEY);
-        if (saved === "ar" || saved === "en") setLang(saved);
-      } catch {
-        // A browser that refuses storage starts in English every time.
-      }
+      const saved = savedLang();
+      if (saved) setLang(saved);
       setLangReady(true);
     }, 0);
     return () => clearTimeout(read);
   }, []);
   const chooseLang = useCallback((next: Lang) => {
     setLang(next);
-    try { localStorage.setItem(LANG_KEY, next); } catch { /* not remembered */ }
+    keepLang(next);
   }, []);
   const [help, setHelp] = useState("");
   const [helpSent, setHelpSent] = useState("");
@@ -273,11 +273,8 @@ export default function WorkspaceShell() {
     }
   }, [router]);
 
-  useEffect(() => {
-    const first = setTimeout(load, 0);
-    const timer = setInterval(load, 15_000);
-    return () => { clearTimeout(first); clearInterval(timer); };
-  }, [load]);
+  // Every 15 s while the workspace is on show, and at once when the person comes back to it.
+  usePolling(load, 15_000);
 
   // ALYR Agent on the home screen. A poll replaces the numbers and never re-animates them;
   // they rise once a session, on the first load.
@@ -305,13 +302,8 @@ export default function WorkspaceShell() {
     }
   }, [lang]);
 
-  useEffect(() => {
-    // Not before the saved language is known, or an Arabic reader would first be sent English.
-    if (section !== "home" || !langReady) return;
-    const first = setTimeout(loadAgent, 0);
-    const timer = setInterval(loadAgent, 15_000);
-    return () => { clearTimeout(first); clearInterval(timer); };
-  }, [loadAgent, section, langReady]);
+  // Not before the saved language is known, or an Arabic reader would first be sent English.
+  usePolling(loadAgent, 15_000, section === "home" && langReady);
 
   useEffect(() => {
     const read = setTimeout(() => setShow(new URLSearchParams(window.location.search).get("show")), 0);
@@ -384,6 +376,8 @@ export default function WorkspaceShell() {
     }));
     list.push(
       { id: "ask", group: t.actions, label: t.ask, icon: "chat", run: () => router.push("/app#ask") },
+      // Not in the navigation: ALYR Agent links to it when a message fails (specs/036).
+      { id: "go-unsent", group: t.go, label: t.notSent, icon: "inbox", run: () => router.push("/app/unsent") },
       { id: "lang", group: t.actions, label: t.langName, icon: "globe", run: () => chooseLang(lang === "en" ? "ar" : "en") },
     );
     if (state?.me.signed_in) list.push({ id: "out", group: t.actions, label: t.signOut, icon: "out", run: signOut });
@@ -616,6 +610,8 @@ export default function WorkspaceShell() {
         )}
       </>
     );
+  } else if (section === "unsent") {
+    body = <NotSent lang={lang} />;
   } else if (section === "connect" && documentsOn) {
     body = <ConnectSettings lang={lang} canManage={state.can_manage} />;
   } else if (section === "catalog" && enabledScreens.has("catalog")) {

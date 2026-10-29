@@ -205,6 +205,8 @@ export type DeliverySettingsBody = Partial<{
 /** A WhatsApp number the owner registered as staff: it may change the Catalog by message. */
 export type StaffNumber = {
   id: string; name: string; phone: string; lang: "en" | "ar"; manager: boolean; weekly_report: boolean;
+  /** Told on WhatsApp about every new order (D-079). */
+  order_alerts: boolean;
 };
 export type Change = {
   id: string; name: string; name_ar: string; before: Record<string, unknown>; after: Record<string, unknown>;

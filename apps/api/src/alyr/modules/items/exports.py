@@ -29,6 +29,10 @@ def safe_text(text: str) -> str:
     return "'" + text if text.startswith(_RISKY) else text
 
 
+def _safe(value: str | None) -> str | None:
+    return safe_text(value) if value else value
+
+
 def _money(dirhams: int | None) -> Decimal | None:
     return None if dirhams is None else Decimal(dirhams) / 100
 
@@ -137,8 +141,10 @@ def _specs(
 
 
 def _headers(keys: tuple[str, ...], lang: str, own: list[dict] | None = None) -> list[object]:
+    """The column names. A shop names its own fields, so a name is written like any other text
+    a spreadsheet might run (ALY-278); the import compares names without the apostrophe."""
     found = _by_key(own)
-    return [found[k].label(lang) for k in keys]
+    return [safe_text(found[k].label(lang)) for k in keys]
 
 
 def export_file(
@@ -204,7 +210,8 @@ def _instructions(
     rows += [[line[n]] for line in INSTRUCTIONS["lines"]]
     rows += [[""], [INSTRUCTIONS["column"][n], INSTRUCTIONS["meaning"][n]]]
     rows += [
-        [_by_key(own)[k].label(lang), _by_key(own)[k].hint.get(lang)] for k in keys
+        [safe_text(_by_key(own)[k].label(lang)), _safe(_by_key(own)[k].hint.get(lang))]
+        for k in keys
     ]
     return xlsx.SheetSpec(
         "كيف تملأ" if lang == "ar" else "How to fill", rows,

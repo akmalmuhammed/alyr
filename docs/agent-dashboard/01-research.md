@@ -66,8 +66,9 @@ Rules over data ALYR stores today (migrations 0001–0014, `modules/*/report.py`
 | 22 | Slow first answers | All | `team.performance()` `median_reply_seconds` | 7-day median over 30 min and slower than the 7 days before | **Exists:** `/app/team` |
 | 23 | Chats lost, by reason | All | `activity` (`closed`, `outcome = lost`, `reason`) | One reason 3 or more times in 30 days (for example `not_available`) | Information only |
 | 24 | Answered after hours | All | `messages` (`direction`, `sent_by`); `business_hours` | Messages outside opening hours, and how many got an automatic reply | Information only; feeds A8 |
+| 25 | Messages not sent (task, added 29 Oct, specs/036) | All | `messages` (`direction = out`, `status = failed`) | A message that failed to reach the customer in the last 48 hours; refusals by rule (no consent, outside the window) are on the screen but not here | **Exists:** `/app/unsent` |
 
-**Order:** tasks (1, 2, 11), then money (18, 19, 4, 20), then knowledge. Of two equal insights, keep the one whose action exists. Near a threshold, say less, as Ramp's agent falls back to "Review".
+**Order:** tasks (1, 2, 25, 11), then money (18, 19, 4, 20), then knowledge. Of two equal insights, keep the one whose action exists. Near a threshold, say less, as Ramp's agent falls back to "Review".
 
 ---
 

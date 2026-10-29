@@ -13,7 +13,7 @@ from uuid import UUID, uuid4
 
 import asyncpg
 
-from alyr.core import identity, jobs, team, templates
+from alyr.core import identity, jobs, payments, team, templates
 from alyr.core.normalise import fmt_qar, fmt_qar_ar
 from alyr.core.outbound import Outbound
 from alyr.core.team import Actor
@@ -42,19 +42,13 @@ from alyr.modules.items.clock import ShopClock
 from alyr.modules.items.service import MAX_QUANTITY
 from alyr.modules.items.service import load as load_items
 from alyr.modules.ledger import service as ledger
-from alyr.modules.orders import pay_ways, totals
+from alyr.modules.orders import pay_ways, staff_alert, totals, track_link
 
 STATUSES = ("new", "confirmed", "ready", "done", "cancelled")
 # The job that gives back the stock of an order nobody paid for.
 EXPIRE_JOB = "stock_hold_expiry"
 # How many unpaid pay-link orders may hold stock for one customer at a time.
 MAX_UNPAID_HOLDS = 3
-
-
-def track_url(web_url: str, tenant_id: UUID, order_id: UUID) -> str:
-    """The customer's own page for one order. Like a payment link, it carries the shop's
-    ID because the customer is not signed in, and the order's ID, which cannot be guessed."""
-    return f"{web_url}/t/{tenant_id}/{order_id}"
 
 
 def _track_line(url: str, arabic: bool) -> str:
@@ -537,6 +531,8 @@ async def create_order(
         {"number": number, "total": fmt_qar(total), "payment": payment,
          "table": table[:20] or None},
     )
+    # The staff numbers marked for new orders are told on WhatsApp (D-079).
+    await staff_alert.queue(conn, order_id, contact["wa_user_id"])
     # A pay-link order holds its stock until it is paid or the hold runs out.
     minutes = await clock.hold_minutes(conn)
     held_until = (
@@ -631,12 +627,9 @@ async def create_order(
         else:
             closing = f"Pay by {how} " + ("on delivery." if delivering else "when you collect.")
     else:
-        pay_url = await conn.fetchval(
-            "insert into payment_requests (contact_id, amount, order_id) values ($1, $2, $3) "
-            "returning id",
-            contact_id, total, order_id,
-        )
-        pay_url = f"{web_url}/pay/{tenant_id}/{pay_url}"
+        # On the shop's own payment account when it has connected one (ALY-17).
+        payment_id = await payments.request(conn, contact_id, total, order_id)
+        pay_url = f"{web_url}/pay/{tenant_id}/{payment_id}"
         closing = f"للدفع: {pay_url}" if arabic else f"Pay here: {pay_url}"
         if held_until is not None:
             closing += (
@@ -646,7 +639,8 @@ async def create_order(
 
     head = f"تم استلام الطلب رقم {number}." if arabic else f"Order #{number} received."
     total_line = f"الإجمالي: {fmt_qar(total)}" if arabic else f"Total: {fmt_qar(total)}"
-    track = _track_line(track_url(web_url, tenant_id, order_id), arabic)
+    tracked = await track_link.url(conn, web_url, order_id)
+    track = _track_line(tracked, arabic)
     skipped = ""
     if left_out:
         names = "، ".join(left_out) if arabic else ", ".join(left_out)
@@ -668,7 +662,7 @@ async def create_order(
         "order_id": str(order_id), "number": number, "total": total,
         "total_text": fmt_qar(total), "payment": payment, "pay_url": pay_url,
         "pay_ways": ways["ways"] if payment == "later" else [],
-        "track_url": track_url(web_url, tenant_id, order_id),
+        "track_url": tracked,
         "fulfil_on": max(dates).isoformat() if dates else None,
         "hold_expires_at": held_until.isoformat() if held_until else None,
         # The group whose prices the order was charged.
@@ -894,10 +888,7 @@ async def set_status(
     english, arabic = _STATUS_TEXT[status]
     body = (arabic if lang == "ar" else english).format(n=row["number"])
     if web_url:
-        tenant_id = await conn.fetchval(
-            "select nullif(current_setting('app.tenant_id', true), '')::uuid"
-        )
-        body += "\n" + _track_line(track_url(web_url, tenant_id, order_id), lang == "ar")
+        body += "\n" + _track_line(await track_link.url(conn, web_url, order_id), lang == "ar")
     await outbound.send(conn, templates.notice(
         row["contact_id"], f"order_{status}", lang, body, row["number"],
     ))

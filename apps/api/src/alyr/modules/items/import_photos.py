@@ -24,7 +24,7 @@ from alyr.core.team import Actor
 from alyr.db import Database
 from alyr.modules.items import photos, values
 from alyr.modules.items.import_plan import PHOTO_EXTENSIONS, ZipView
-from alyr.modules.items.xlsx import SheetError
+from alyr.modules.items.xlsx import MAX_DIRECTORY_BYTES, SheetError, zip_directory_bytes
 
 log = logging.getLogger("alyr.import")
 
@@ -44,6 +44,13 @@ NOT_A_ZIP = (
 )
 
 
+TOO_LARGE = (
+    "zip_too_large",
+    "This zip is too large once opened, so it was not read. Split the photos into smaller zips.",
+    "ملف zip هذا كبير جداً بعد فتحه، لذلك لم يُقرأ. قسّم الصور إلى ملفات أصغر.",
+)
+
+
 def _bad(code: str, en: str, ar: str, status: int = 422) -> SheetError:
     return SheetError(code, en, ar, status)
 
@@ -52,11 +59,24 @@ def _norm(name: str) -> str:
     return name.replace("\\", "/").strip("/")
 
 
+def _too_many() -> SheetError:
+    return _bad(
+        "zip_too_many",
+        f"This zip holds more than {MAX_ENTRIES} files. Split the photos into smaller zips.",
+        f"يحتوي ملف zip هذا على أكثر من {MAX_ENTRIES} ملفاً. قسّم الصور إلى ملفات zip أصغر.",
+    )
+
+
 def index(data: bytes, max_entry_bytes: int) -> ZipView:
     """Which picture files a zip holds. Raises `SheetError` for a file that is not a zip, is
-    protected, or is built to unpack to far more than it says."""
+    protected, or is built to unpack to far more than it says. Folders and the files a Mac
+    adds are not photos, but they count towards the unpacked size and towards a cap of three
+    entries for each photo allowed: left out of every count, they were a way to list a million
+    entries (ALY-278). The zip's own list is measured before it is read."""
     if data[:4] != ZIP_MAGIC:
         raise _bad(*NOT_A_ZIP)
+    if (zip_directory_bytes(data) or 0) > MAX_DIRECTORY_BYTES:
+        raise _too_many()
     try:
         archive = zipfile.ZipFile(io.BytesIO(data))
     except zipfile.BadZipFile as error:
@@ -67,37 +87,31 @@ def index(data: bytes, max_entry_bytes: int) -> ZipView:
     total = 0
     count = 0
     with archive:
-        for info in archive.infolist():
+        infos = archive.infolist()
+        if len(infos) > 3 * MAX_ENTRIES:
+            raise _too_many()
+        for info in infos:
             name = _norm(info.filename)
             base = name.rsplit("/", 1)[-1]
+            total += info.file_size
             if info.is_dir() or name.startswith("__MACOSX/") or base.startswith("."):
+                if total > MAX_TOTAL_UNPACKED:
+                    raise _bad(*TOO_LARGE)
                 continue
             count += 1
             if count > MAX_ENTRIES:
-                raise _bad(
-                    "zip_too_many",
-                    f"This zip holds more than {MAX_ENTRIES} files. Split the photos into "
-                    "smaller zips.",
-                    f"يحتوي ملف zip هذا على أكثر من {MAX_ENTRIES} ملفاً. قسّم الصور إلى ملفات "
-                    "zip أصغر.",
-                )
+                raise _too_many()
             if info.flag_bits & 0x1:
                 raise _bad(
                     "zip_protected",
                     "This zip is protected with a password. Remove the password and try again.",
                     "ملف zip هذا محمي بكلمة مرور. أزلها وحاول مرة أخرى.",
                 )
-            total += info.file_size
             bomb = info.file_size > RATIO_FREE and info.file_size > MAX_RATIO * max(
                 info.compress_size, 1
             )
             if total > MAX_TOTAL_UNPACKED or bomb:
-                raise _bad(
-                    "zip_too_large",
-                    "This zip is too large once opened, so it was not read. Split the photos "
-                    "into smaller zips.",
-                    "ملف zip هذا كبير جداً بعد فتحه، لذلك لم يُقرأ. قسّم الصور إلى ملفات أصغر.",
-                )
+                raise _bad(*TOO_LARGE)
             lowered = base.lower()
             if not lowered.endswith(PHOTO_EXTENSIONS) or info.file_size > max_entry_bytes:
                 unusable.append(name)

@@ -66,17 +66,22 @@ class Database:
             await conn.close()
 
     @asynccontextmanager
-    async def tenant(self, tenant_id: UUID | str) -> AsyncIterator[asyncpg.Connection]:
+    async def tenant(
+        self, tenant_id: UUID | str, readonly: bool = False
+    ) -> AsyncIterator[asyncpg.Connection]:
         """One transaction scoped to one tenant. RLS hides every other tenant's rows.
 
         The tenant is set with a transaction-local setting, so it cannot leak to the
-        next user of a pooled connection.
+        next user of a pooled connection. `readonly` makes PostgreSQL refuse any write: what
+        a customer's page reads must never write (ALY-275), and a write that crept in fails
+        its tests instead of slowing every page.
         """
-        async with self._connection() as conn, conn.transaction():
+        async with self._connection() as conn, conn.transaction(readonly=readonly):
             await conn.execute("select set_config('app.tenant_id', $1, true)", str(tenant_id))
             yield conn
-        # Only reached when the transaction committed; an exception skips it.
-        if self.after_commit is not None:
+        # Only reached when the transaction committed; an exception skips it. A read-only one
+        # queued nothing.
+        if self.after_commit is not None and not readonly:
             await self.after_commit()
 
     @asynccontextmanager
