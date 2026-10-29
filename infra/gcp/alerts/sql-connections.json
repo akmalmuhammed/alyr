@@ -1,0 +1,16 @@
+{
+  "displayName": "Database connections nearly used up",
+  "combiner": "OR",
+  "documentation": {
+    "mimeType": "text/markdown",
+    "content": "More than 40 of the database's 50 connections are in use (db-g1-small default). New connections will be refused at 50 and the API will answer errors. First step: check whether a rollout is running (old and new API revisions overlap) and look at Cloud Run's instance count. Lower the pool size or raise max_connections only after reading docs/runbooks/incident-response.md."
+  },
+  "conditions": [{
+    "displayName": "Over 40 connections for 5 minutes",
+    "conditionThreshold": {
+      "filter": "metric.type=\"cloudsql.googleapis.com/database/postgresql/num_backends\" AND resource.type=\"cloudsql_database\" AND resource.label.database_id=\"__DB__\"",
+      "aggregations": [{"alignmentPeriod": "60s", "perSeriesAligner": "ALIGN_MAX", "crossSeriesReducer": "REDUCE_SUM"}],
+      "comparison": "COMPARISON_GT", "thresholdValue": 40, "duration": "300s", "trigger": {"count": 1}
+    }
+  }]
+}

@@ -12,7 +12,7 @@ customers use ALYR. From the 17 Oct 2026 audit (`docs/audit/2026-10-17.md`).
 ## Hosting and data
 - [ ] Production hosting decided and running in Qatar (D-036 / PR #51, #52, ALY-63, ALY-10)
 - [ ] `ALYR_ENV=production` set explicitly; the stand-in payment route, simulator and API docs answer 404
-- [ ] Encrypted daily backups, and a restore rehearsed in the last 30 days, written up
+- [ ] Encrypted daily backups, and a restore rehearsed in the last 30 days, written up (rehearsed 30 Oct 2026, `docs/audit/restore-2026-10-30.md`; repeat if go-live is after 29 Nov)
 - [ ] Secrets in the key vault, not in a file on a laptop
 - [ ] `ALYR_LINK_SECRET` set (32 or more random characters; the API will not start without it outside `ALYR_ENV=local`). On the founder's laptop, set it in `apps/api/.env` before the tunnel serves customers: the built-in development value is public (ALY-112)
 - [ ] Postgres not reachable from the internet; only the web app and webhook are public
@@ -27,9 +27,9 @@ customers use ALYR. From the 17 Oct 2026 audit (`docs/audit/2026-10-17.md`).
 - [ ] Data retention and "forget this customer" procedure (audit issue)
 
 ## Running it
-- [ ] Error tracking and uptime alerts reach the founder's phone (rows in stack.md and data-residency.md)
+- [ ] Error tracking and uptime alerts reach the founder's phone (rows in stack.md and data-residency.md). Built 30 Oct (ALY-277): every alert goes to every channel; the founder adds the phone (`infra/gcp/README.md`, 8b) and confirms `infra/gcp/monitoring.sh test-fire` reached it
 - [ ] `/health` checks the database and the job queue's age
-- [ ] `docs/runbooks/incident-response.md` read; someone named is on call
+- [ ] `docs/runbooks/incident-response.md` read; someone named is on call (the runbook is rewritten for Google Cloud; the on-call name, phone and hours are a blank for the founder to fill in at its top)
 - [ ] Production served by `next build && next start`, not the dev server
 - [ ] Release tagged and CHANGELOG written
 

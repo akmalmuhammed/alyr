@@ -1,0 +1,16 @@
+{
+  "displayName": "Database busy: CPU above 80% for 10 minutes",
+  "combiner": "OR",
+  "documentation": {
+    "mimeType": "text/markdown",
+    "content": "The database is working hard. First step: open Cloud SQL > alyr-db > Query insights for the slow query, and check whether a deploy or an import started just before. If sign-in or WhatsApp replies are slow, follow docs/runbooks/incident-response.md."
+  },
+  "conditions": [{
+    "displayName": "CPU above 80% for 10 minutes",
+    "conditionThreshold": {
+      "filter": "metric.type=\"cloudsql.googleapis.com/database/cpu/utilization\" AND resource.type=\"cloudsql_database\" AND resource.label.database_id=\"__DB__\"",
+      "aggregations": [{"alignmentPeriod": "60s", "perSeriesAligner": "ALIGN_MEAN"}],
+      "comparison": "COMPARISON_GT", "thresholdValue": 0.8, "duration": "600s", "trigger": {"count": 1}
+    }
+  }]
+}

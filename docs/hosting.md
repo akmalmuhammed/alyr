@@ -42,7 +42,7 @@ Everything stays in Doha: the founder chose on 28 Oct 2026 to keep no copy outsi
 | Nightly export | Cloud Run job `alyr-db-export`, started at 02:00 Doha time by Cloud Scheduler | Writes `gs://alyr-prod-db-exports/alyr-<time>.sql.gz` |
 | Secrets | Secret Manager, stored in Doha only | |
 | Images | Artifact Registry `me-central1-docker.pkg.dev/alyr-prod/alyr` | |
-| Spending | A budget "ALYR monthly" (USD 150) with alerts at 50%, 90% and a forecast of 100% | |
+| Spending | Two budgets of USD 150: "ALYR monthly" (credits count, so it alerts only once credits are gone) and "ALYR gross cost" (credits excluded, so it alerts while credits pay), each at 50%, 90%, 100% and a forecast of 100%, sent to the same alert channels as everything else | |
 
 The apps reach the database over a private network (`alyr-net`, Cloud Run's direct VPC
 egress); the database has no public address. Each app runs as its own service account:
@@ -159,9 +159,12 @@ security policies and the app role's grants; the API runs on the restored copy.
 
 ## Backups on Google
 
-- **Cloud SQL's own:** a full backup every night at 02:00 Doha, 14 kept, and point-in-time
-  recovery for the last 7 days. Restoring makes a new instance (`gcloud sql instances clone
-  alyr-db alyr-db-restored --point-in-time <time>`), so the broken one stays for comparison.
+- **Cloud SQL's own:** a full backup every night from 02:00 Doha (inside a four-hour window), 14
+  kept, and point-in-time recovery for the last 7 days. Restoring makes a new instance with a
+  **new private address** (`infra/gcp/restore.sh clone alyr-db-restored <time>`), so the broken one
+  stays for comparison and both database secrets are rewritten
+  (`infra/gcp/restore.sh repoint`). Steps, targets and the rehearsal of 30 Oct 2026:
+  `docs/runbooks/restore-rehearsal.md`, `docs/audit/restore-2026-10-30.md`.
 - **The nightly export:** an SQL file per night in `gs://alyr-prod-db-exports`, in Doha, kept
   35 days. A copy outside the instance, readable without Cloud SQL. `infra/gcp/setup.sh
   lock-backups` makes the 35 days unbreakable, even by the project's owner; run it only
@@ -171,7 +174,9 @@ security policies and the app role's grants; the API runs on the restored copy.
   `gcloud sql import sql alyr-db gs://alyr-prod-db-exports/<file> --database alyr_restored`.
   Compare row counts with the live database, then delete `alyr_restored`.
 
-Restore once before the first paying customer, and after any change to the backups.
+Restore once before the first paying customer, and after any change to the backups
+(`infra/gcp/restore.sh rehearse`; done 30 Oct 2026). What watches the database, the backups and the
+nightly export: `infra/gcp/monitoring.sh` (ALY-277).
 
 ## Backups on a single server
 

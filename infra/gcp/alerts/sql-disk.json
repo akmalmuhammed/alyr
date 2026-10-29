@@ -1,0 +1,16 @@
+{
+  "displayName": "Database disk filling: over 80% used",
+  "combiner": "OR",
+  "documentation": {
+    "mimeType": "text/markdown",
+    "content": "The database disk is more than 80% full. The disk grows by itself (storage auto-increase is on), but a fast climb means something is writing far more than usual. First step: Cloud SQL > alyr-db > Overview > Storage, then find the table that grew. A full disk stops every write."
+  },
+  "conditions": [{
+    "displayName": "Disk over 80% for 10 minutes",
+    "conditionThreshold": {
+      "filter": "metric.type=\"cloudsql.googleapis.com/database/disk/utilization\" AND resource.type=\"cloudsql_database\" AND resource.label.database_id=\"__DB__\"",
+      "aggregations": [{"alignmentPeriod": "300s", "perSeriesAligner": "ALIGN_MEAN"}],
+      "comparison": "COMPARISON_GT", "thresholdValue": 0.8, "duration": "600s", "trigger": {"count": 1}
+    }
+  }]
+}

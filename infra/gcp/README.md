@@ -75,6 +75,21 @@ read logs kept in Doha, so this replaces it. Google emails a confirmation first.
 ALYR_ALERT_EMAIL=akmal@alyr.qa infra/gcp/setup.sh monitoring
 ```
 
+**8b. Alerts for the database, backups, the nightly export and cost** (ALY-277), and the phone.
+`infra/gcp/monitoring.sh apply` makes the alert policies in `infra/gcp/alerts/` (database CPU, disk and
+connections; a failed or missing backup; the nightly export not starting or not writing a file in
+26 hours), a budget on gross cost (credits excluded, USD 150, `ALYR_GROSS_BUDGET` to change it), and
+sends every alert and both budgets to every notification channel that can deliver. Run it again after
+`setup.sh monitoring` makes a new policy, and after adding the phone. `status` shows what exists;
+`test-fire` opens a throwaway alert to prove delivery. The two "missing for N hours" alerts wait until
+their metric has reported once (the first night after `apply`); run `apply` again the next day.
+
+The phone is added by hand, once, by the founder: install the **Google Cloud** app on the phone,
+sign in as akmal@alyr.qa and open the project `alyr-prod`; a channel appears after a few minutes
+under Monitoring > Alerting > Edit notification channels > Mobile devices (or add an SMS number
+there and type the code Google sends). Then run `infra/gcp/monitoring.sh apply`, and
+`infra/gcp/monitoring.sh test-fire` to see it arrive.
+
 **9. After a tested restore from an export** (`docs/hosting.md`, "Backups on Google"):
 `infra/gcp/setup.sh lock-backups`. It cannot be undone.
 

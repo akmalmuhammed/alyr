@@ -63,6 +63,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-070 | Product analytics with PostHog (EU), at two levels the visitor chooses: cookieless counting by default, cookies and masked recordings with consent; never customer pages, the inbox or names | Accepted |
 | D-071 | The homepage plays like a video: the film starts at load and moves at once; its Pause controls are not on show (only on hover, keyboard focus or while paused); a click on the film pauses it | Accepted |
 | D-065 | Owners and staff manage the shop from WhatsApp as well as the portal, through one shared action layer; phases 0 and 1 (link a number, read-only commands) are built first | Accepted (written as D-040 on 18 Oct; renumbered 28 Oct, D-040 is the look) |
+| D-091 | Recovery targets (data lost under 10 minutes, back in about 15) and the rule that an alert counts only when it reaches a phone; a restore is always a point-in-time clone to a new instance | Proposed |
 
 ---
 
@@ -1561,3 +1562,19 @@ Without it, analytics is off everywhere.
 
 **Revisit when.** Owners ask for commands the rules cannot understand (then phase 4 with a model), or a shop needs more than one number per person, or Meta's pricing makes nudges outside the 24-hour window too costly (ALY-64).
 
+## D-091 · Recovery targets, and an alert counts only when it reaches a phone
+**Date** 30 Oct 2026 · **Status** Proposed (written by Claude in ALY-277 for the founder to accept or change) · Linear ALY-277 · Builds on D-060
+
+**The decision.**
+- **Targets.** Data lost in a disaster: under 10 minutes (RPO). Time to be back from the decision to restore: about 15 minutes, planned as 30 (RTO). Measured on 30 Oct 2026 with the data as small as it is today (`docs/audit/restore-2026-10-30.md`); repeated at ten customers and after any change to the database tier.
+- **A restore is always a point-in-time clone to a new instance**, never in place. The clone has a new private address and a new name, so both database secrets are rewritten and the API and worker restarted (`infra/gcp/restore.sh`, `docs/runbooks/restore-rehearsal.md`). No standby database until a paying client needs a firmer RTO.
+- **An alert reaches a phone or it does not count.** Every alert policy and both budgets go to every notification channel that can deliver; email alone is a log. The phone is the Google Cloud app, added by the founder (`infra/gcp/README.md`, 8b); `infra/gcp/monitoring.sh test-fire` proves it.
+- **What is watched, beyond the uptime checks:** the database's CPU (80% for 10 minutes), disk (80%) and connections (over 40 of 50), a failed automatic backup, no backup in 30 hours, the nightly export failing to start, no export file in 26 hours, and cost with credits excluded (USD 150 a month) beside the existing budget that counts them.
+
+**Why.** The go-live audit of 29 Oct found alerts sent only to an email alias and never test-fired, nothing watching the database or the backups, a budget that cannot alert while credits pay, and a restore nobody had tried (OPS-5, OPS-8, CLD-5, CLD-8, CLD-9). The first rehearsal also found things nobody had written down: a clone gets a new address, inherits deletion protection, and takes its own first backup before it can be deleted.
+
+**Costs.** Alert policies, log-based metrics and budgets are free. The rehearsal costs cents. A database with a standby in a second zone is roughly double the database's cost (about USD 34 a month today).
+
+**Chosen over** SMS as the phone channel (Google does not publish which countries it reaches, so Qatar is unconfirmed), ntfy for the infrastructure alerts (PR #120 uses it for the app's own alerts, where it fits; an outside service is not needed for Google's), and a standby database now (no client has paid for a response time).
+
+**Revisit when** a paying client is promised a response time, the data reaches a gigabyte or ten clients, the tier changes, or the credits run out (then the "ALYR monthly" budget starts to count).

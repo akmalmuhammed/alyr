@@ -1,0 +1,17 @@
+{
+  "displayName": "Nightly export could not start",
+  "combiner": "OR",
+  "alertStrategy": {"autoClose": "86400s"},
+  "documentation": {
+    "mimeType": "text/markdown",
+    "content": "Cloud Scheduler tried to start the nightly database export (alyr-db-export-nightly, 02:00 Doha) and was refused or got an error. First step: Cloud Scheduler > alyr-db-export-nightly > Logs; the usual causes are the alyr-export account losing roles/run.invoker on the job, or the job being deleted. A failed run of the export itself is caught by the errors alert. Run the job by hand with `gcloud run jobs execute alyr-db-export --region me-central1`."
+  },
+  "conditions": [{
+    "displayName": "Scheduler attempt failed",
+    "conditionThreshold": {
+      "filter": "metric.type=\"logging.googleapis.com/user/alyr-scheduler-failed\" AND resource.type=\"cloud_scheduler_job\"",
+      "aggregations": [{"alignmentPeriod": "300s", "perSeriesAligner": "ALIGN_SUM", "crossSeriesReducer": "REDUCE_SUM"}],
+      "comparison": "COMPARISON_GT", "thresholdValue": 0, "duration": "0s", "trigger": {"count": 1}
+    }
+  }]
+}

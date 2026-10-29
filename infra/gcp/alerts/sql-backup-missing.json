@@ -1,0 +1,17 @@
+{
+  "_needs_metric": "alyr-backup-succeeded",
+  "displayName": "Database backup missing for 30 hours",
+  "combiner": "OR",
+  "documentation": {
+    "mimeType": "text/markdown",
+    "content": "No automatic Cloud SQL backup has succeeded in 30 hours (it runs once a night inside a four-hour window from 02:00 Doha time, so 24 to 28 hours apart is normal). First step: `gcloud sql backups list --instance alyr-db` and `gcloud sql operations list --instance alyr-db --limit 5`; check the instance's backup setting was not switched off. Take a backup by hand with `gcloud sql backups create --instance alyr-db`."
+  },
+  "conditions": [{
+    "displayName": "No successful automatic backup in 30 hours",
+    "conditionPrometheusQueryLanguage": {
+      "query": "absent_over_time(logging_googleapis_com:user_alyr_backup_succeeded{monitored_resource=\"cloudsql_database\"}[25h])",
+      "duration": "18000s",
+      "evaluationInterval": "300s"
+    }
+  }]
+}
