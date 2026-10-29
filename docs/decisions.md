@@ -56,13 +56,16 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-060 | ALYR runs on Google Cloud in Doha (Cloud Run, Cloud SQL, Secret Manager); replaces Azure (D-036) and the interim Cloudflare and Neon host (D-052); backups stay in Doha | Accepted |
 | D-061 | Company mail moves to Zoho Mail (free plan): hello@ with akmal@ and security@ as aliases, and a mailbox for Beevi Jinan, the registered owner; Resend still sends the product's email | Accepted |
 | D-063 | Order businesses get a self-serve onboarding path (a third way, `orders`) made of thin screens over the Catalog's own APIs; one flow for both doors, automatic first, money later | Accepted |
+| D-077 | The worker runs several jobs at once (5 per process), one customer's jobs one after another in the order they were queued; one HTTP connection to Meta is kept open; on SIGTERM the worker finishes what started and puts the rest back | Accepted |
 | D-064 | The owner's test order is marked in the database (a trigger sets `orders.is_test`), counted nowhere (a guard test reads every query), and cancelled with its stock returned when the test ends | Accepted |
 | D-067 | Terms and the privacy notice are versions ALYR publishes; an owner accepts them at sign-up and again when a new one is published, in an append-only record | Accepted |
+| D-080 | The order tracking page opens by a signed link that runs out (`/t/<shop>?t=<token>`, purpose `track`, `ALYR_LINK_DAYS`); the order's ID alone opens nothing. The pay page follows after the payment adapters | Accepted |
 | D-068 | An owner who stops partway through setup gets two emails to come back, then none, and can stop them from the link; the funnel counts them | Accepted |
 | D-062 | The homepage hero is the explainer film (one afternoon at Qirfa Bakery in the product's own screens, three lanes at once, ending on the ALYR Agent home): "the product is the illustration" in motion; the hero's live ALYR Agent figure leaves the hero | Accepted |
 | D-070 | Product analytics with PostHog (EU), at two levels the visitor chooses: cookieless counting by default, cookies and masked recordings with consent; never customer pages, the inbox or names | Accepted |
 | D-071 | The homepage plays like a video: the film starts at load and moves at once; its Pause controls are not on show (only on hover, keyboard focus or while paused); a click on the film pauses it | Accepted |
 | D-065 | Owners and staff manage the shop from WhatsApp as well as the portal, through one shared action layer; phases 0 and 1 (link a number, read-only commands) are built first | Accepted (written as D-040 on 18 Oct; renumbered 28 Oct, D-040 is the look) |
+| D-072 | Shops get paid online through three doors, each ending in an account in the shop's own name: connect your own account (built first), ALYR-assisted sign-up with a partner (Noqoody, then SADAD), and opening by API only once a provider proves it; apply to Noqoody, SADAD and Tap. Updates D-044 | Accepted |
 
 ---
 
@@ -1372,6 +1375,23 @@ Nothing claims more than the page, as before.
 
 ---
 
+## D-077 · The worker runs several jobs at once, one customer's in order
+**Date** 29 Oct 2026 · **Status** Accepted (go-live checklist item 34 is Claude's, and the founder's instruction of 29 Oct was to finish the items in Claude's scope; the number is one setting) · Linear ALY-276 (PERF-4, PERF-11) · Changes how D-010's queue is run, not what it stores
+
+**Where we were.** The worker ran one job at a time and opened a new HTTP connection to Meta for every send. A send mostly waits for Meta (about 300 ms), so the whole platform sent about 3 to 4 messages a second; the go-live audit measured a reply's p95 at 81 s at 5 messages a second. A deploy stopped the worker in the middle of a batch, and the jobs it had claimed waited five minutes to count as abandoned.
+
+**The decision.**
+- **Several jobs at once:** `ALYR_JOBS_CONCURRENCY`, 5 by default. A running job can hold two database connections at a moment, and a process has a pool of 10, so the number stays at most half the pool.
+- **A customer's jobs stay in order.** A job about one customer names them in its payload (a send names the contact, a received message its sender); jobs with the same customer in one shop run one after another in the order they were queued, and the next batch is claimed only when this one is done. A job's time in the queue is the clock's, not its transaction's start, so two messages queued in one transaction keep their order too (before, they had the same time and could go either way). Jobs about no one in particular run on their own.
+- **One HTTP client for Meta,** kept open between sends, with the same ten-second limit on a send.
+- **On SIGTERM** the worker finishes the jobs it started, puts the ones it claimed but had not started back in the queue with their attempt unspent, and stops.
+
+**Measured** with a stand-in for Meta at 300 ms a send: 40 sends to 40 customers took 12.2 s one at a time and 2.5 s five at a time.
+
+**Chosen over** one worker process per job (more connections, which the database tier cannot spare: ALY-276 PERF-9), running a whole batch at once without lanes (two messages to one customer could arrive the wrong way round), and a lane column in the queue (the payload already says who a job is about).
+
+**Revisit when** one worker is not enough at peak (then a second instance: lanes keep order within a process, not across two), or the database tier grows (then more at once).
+
 ## D-064 · The owner's test order is marked in the database, counted nowhere, and cancelled when the test ends
 **Date** 28 Oct 2026 · **Status** Accepted (built under the founder's go-ahead for the order path, 28 Oct: "Start part 3"; the rules are the issue's own: test orders never count in reports, the Agent or the money-back result) · Linear ALY-168, epic ALY-163 · Spec `specs/028-order-test/spec.md` · Builds on D-031 (the private test line) and D-063 (the order path)
 
@@ -1450,6 +1470,8 @@ Nothing claims more than the page, as before.
 **Not confirmed.** Whether Tap's platform API opens Qatar accounts, its Qatar prices and NAPS routing, payout times, whether providers accept a home business licence instead of a CR, and whether a platform fee is possible: the 12 questions in ALY-5. Whether model B needs any licence for ALYR: ALY-32.
 
 **Revisit when.** ALY-5's answers come back (SADAD or MyFatoorah may lead instead of Tap); the lawyer answers on ALY-32; ALYR enters another GCC country.
+
+Updated by D-072 (28 Oct 2026): Tap is no longer the automatic first partner, and opening an account by API waits until a provider proves it opens the shop's own account.
 
 ## D-062 · The homepage hero is the explainer film
 **Date** 28 Oct 2026 · **Status** Accepted (the founder, 28 Oct 2026, after reviewing four Framer prototypes of the hero, in his words, relayed in the work's brief: "go with D and publish to home page") · Branch `aly-hero-film` · Prototype: `docs/doodle-study/04-d-log.md` in the doodle worktree (`D:/alyr-doodle`) (05D, "Explainer") · Log: `docs/framer-review/09-hero-film-log.md`
@@ -1538,6 +1560,29 @@ Without it, analytics is off everywhere.
 
 ---
 
+## D-080 · The order tracking page opens by a signed link that runs out; the order's ID alone opens nothing
+**Date** 29 Oct 2026 · **Status** Accepted (go-live audit finding SEC-8, in ALY-271; Claude's scope under the founder's instruction of 29 Oct to finish the go-live items) · Changes spec 005's "The IDs that stay" for the tracking page · Builds on D-039 (a customer's signed links)
+
+**Where we were.** The tracking page opened at `/t/<shop's ID>/<order's ID>`: two IDs and no token. ALY-133 kept that because the order's ID is random (122 bits) and cannot be guessed. But it does not have to be guessed. The order's ID is also in the workspace's addresses and in every request log that records them, and it can be forwarded with the link. A link made of it never ran out and could not be ended, so whoever held it saw the order's items, delivery address and staff member for good.
+
+**The decision.**
+- **A fifth purpose for signed links, `track`** (`core/links.py`).
+  - The token names the order and the shop, and is signed over both.
+  - It opens the tracking page only. An order, booking or document link opens nothing there, and a tracking link opens nothing on those pages.
+  - It runs out after `ALYR_LINK_DAYS` (60 days). Each message about the order carries a fresh one.
+- **The address is `/t/<shop's address name>?t=<token>`**, the shape of the other customer pages.
+  - The page sends the token in the `X-Order-Link` header, so no request log of ours holds it. The API answers at `/api/track/<shop>`.
+  - The old route by two IDs is gone.
+- **A link that has run out, was edited, or belongs to another shop or page** opens a calm page that says what to do in both languages. Nothing in it names an order.
+- **Nothing is kept for anyone else:** answers are `private, no-store` and `noindex`, and the page sends no referrer.
+- **The pay page keeps its two IDs** until SEC-8's second part, after the payment adapters (ALY-17, PR #169) merge. Its link then gets the same treatment, and it gets its "Track this order" button back with a signed link. Until then the pay page shows no tracking button; the customer's chat holds the link.
+
+**Chosen over:**
+- *Keeping the old address beside the new one for links already sent.* Production has sent none (no WhatsApp traffic yet), and keeping it would keep the hole.
+- *A token in the path* (`/t/<shop>/<token>`). The query keeps the shape, the header and the checks of the other customer pages.
+
+**Revisit when** a shop prepares orders further ahead than 60 days and its customers find the link has run out, or the pay page is signed (SEC-8's second part).
+
 ## D-065 · Owners and staff manage the shop from WhatsApp as well as the portal, through one shared action layer
 **Date** 18 Oct 2026 (numbered D-040 until 28 Oct, when it was renumbered: D-040 is ALYR's look) · **Status** Accepted (founder, 18 Oct, in chat: "implement this", after the plan was drawn in Figma https://www.figma.com/design/FymEODsZGzeQTXciYIvYWI) · Linear ALY-130 · Spec `specs/029-owner-actions/spec.md`
 
@@ -1586,3 +1631,37 @@ Without it, analytics is off everywhere.
 - *Letting staff record card payments by hand.* Only the webhook writes the `card` method, so a card payment in the list always has Paddle's own record behind it.
 
 **Revisit when** a Qatari card provider is added for clients in Qatar, the founder gives the setup fee a dollar price, or Paddle adds the riyal.
+
+## D-073 · Alert rules live in the worker; health checks and uptime stay with the Google Cloud setup
+**Date** 28 Oct 2026 (renumbered 29 Oct from D-062) · **Status** Accepted for review (the founder, 24 Oct 2026: "i wanna start free then pay once we scale"; ntfy parked, alert email later at ops@alyr.qa, he is on call) · Linear ALY-121 · Spec `specs/034-alert-rules/spec.md` · Runbook `docs/runbooks/monitoring.md` · Builds on D-060
+
+**The decision.** The four alert rules (late queue, parked job, failing sends, quiet webhook) run inside the worker once a minute and keep their state in one platform table, `alert_state`. Alerts are log lines first, then a push through a free ntfy topic and an email through Resend once those are set. The health routes, the worker heartbeat and the uptime checks are D-060's (`/health/ready`, `/health/worker`, `worker_heartbeats`, Cloud Monitoring); this adds none of its own.
+
+**Why.**
+- An uptime check sees whether ALYR answers, not whether messages are going out; these rules see that, from our own tables.
+- Hard rule 2: an alert carries counts and ages only, so ntfy and Resend receive no personal data. A test fails if a customer's phone number or message appears in one.
+- One heartbeat and one set of health routes: the first version of this work (PR #120, 24 Oct) had its own, aimed at the Cloudflare host D-060 retired.
+
+**Costs and risks, said plainly.** Free. ntfy has no delivery guarantee, so email is the second route and the log line the third. A dead worker cannot alert about itself; the uptime check on `/health/worker` covers that. Not yet sent to a real phone.
+
+**Chosen over** an outside error tracker now (customer data abroad), and a second heartbeat table (two answers to one question).
+
+**Revisit when** a client SLA exists (a paid pager), or a second worker instance runs (one evaluator, or a lock).
+
+---
+
+## D-072 · Three doors to the shop's own payment account
+**Date** 28 Oct 2026 · **Status** Accepted (the founder chose "Three doors, apply to all three" on 28 Oct 2026, in the payment layer thread) · Linear ALY-5, ALY-17, ALY-156, ALY-157 · Research: the Claude Doc "Qatar payment partners: who to work with and how" (https://claude.ai/artifact/1aAdUxVz4ru8Z7X6vkHr56) · Updates D-044 · Spec `specs/033-payment-adapters/spec.md`
+
+**What changed since D-044.** A second look at every Qatar provider found none that publicly shows an API that opens a shop's own merchant account, paid to its own IBAN. Tap's Platforms product might (its samples show the UAE and Saudi Arabia, not Qatar); Tap's Marketplace and MyFatoorah's suppliers both put the shop under the platform's account, which is model C. Noqoody publishes the lowest prices in Qatar (NAPS 1.45% + QAR 1, cards 2% + QAR 1) and has a partner programme with a technology tier; SADAD has the most complete public API and, with Dibsy, direct QA-RTGS settlement since September 2026.
+
+**The decision.** Every door ends in an account in the shop's own name; hard rule 3 is unchanged.
+1. **Connect your own account** (model A). Built first, because it needs no partner deal: the shop pastes its keys. ALY-17 builds the adapter interface, sealed keys, signed webhooks and a simulator provider; ALY-157 the screen.
+2. **ALYR-assisted sign-up.** The shop fills one form in ALYR and ALYR submits it to a partner under a referral deal: Noqoody first, SADAD second. The account that comes back is connected through door 1.
+3. **Opened by API** (D-044's model B). Only once a provider proves the shop gets its own merchant account and its own payouts.
+- **ALYR's own billing** is a separate account, chosen by a live test between SADAD and Noqoody (save a card, charge it again, refund it, pay QAR 1 by NAPS); Tap when the first GCC shop arrives.
+- **Apply now** to Noqoody, SADAD and Tap, naming ALYR (the CR is issued), with the same six questions; drafts in the project files, `payments/partner-applications-2026-10-28.md`.
+
+**Rejected.** *Tap first for model B* (D-044): unproven for Qatar, and its Marketplace product is model C. *Waiting for a model B partner before building anything*: door 1 needs no deal and every other door ends in it.
+
+**Revisit when** Tap says a Platforms lead in Qatar is the shop's own merchant (Tap becomes door 3); Noqoody's partner portal can submit applications (Noqoody becomes door 3); a provider stores data outside Qatar (it waits for a row in `docs/data-residency.md`).

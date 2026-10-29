@@ -15,8 +15,12 @@ from alyr.core.jobs import JobRunner
 from alyr.core.links import check_secret as check_link_secret
 from alyr.core.media import MediaService
 from alyr.core.outbound import SEND, Outbound
+from alyr.core.payments import Payments
 from alyr.core.storage import check_store, make_store
+from alyr.core.welcome import JOB as ACCOUNT_EMAIL
+from alyr.core.welcome import AccountMail
 from alyr.db import Database
+from alyr.gateways import registry as payment_gateways
 from alyr.modules import report
 from alyr.modules.bookings.service import REMINDER, Reminders
 from alyr.modules.connect import webhooks as connect_webhooks
@@ -62,6 +66,7 @@ from alyr.routes import jobs as jobs_routes
 from alyr.routes import media as media_routes
 from alyr.routes import onboarding as onboarding_routes
 from alyr.routes import owner as owner_routes
+from alyr.routes import payments as payment_routes
 from alyr.routes import price_groups as price_group_routes
 from alyr.routes import reports as reports_routes
 from alyr.routes import staff_numbers as staff_numbers_routes
@@ -72,6 +77,14 @@ from alyr.routes import workspace as workspace_routes
 from alyr.routes.deps import require_any_module, require_module, require_module_for_slug
 
 log = logging.getLogger("alyr.main")
+
+
+async def close_channels(app: FastAPI) -> None:
+    """Close the connections a channel keeps open between sends (Meta's, ALY-276)."""
+    for channel in app.state.outbound.channels.values():
+        close = getattr(channel, "close", None)
+        if close is not None:
+            await close()
 
 
 def create_app() -> FastAPI:
@@ -85,6 +98,7 @@ def create_app() -> FastAPI:
         check_store(settings, app.state.media.store)
         await app.state.db.connect()
         yield
+        await close_channels(app)
         await app.state.db.close()
 
     # Interactive API docs only on a developer machine; elsewhere they map our surface
@@ -116,8 +130,16 @@ def create_app() -> FastAPI:
         app.state.db, app.state.outbound, settings.public_web_url, app.state.media
     )
 
-    app.state.jobs = JobRunner(app.state.db, settings.jobs_backoff_seconds)
+    app.state.jobs = JobRunner(
+        app.state.db, settings.jobs_backoff_seconds, settings.jobs_concurrency
+    )
     app.state.jobs.register(SEND, app.state.outbound.deliver, app.state.outbound.gave_up)
+    # The shop's own payment account (ALY-17): keys checked, payment pages made and providers
+    # asked what happened, each by a job.
+    app.state.payments = Payments(
+        app.state.db, app.state.outbound, payment_gateways(settings), settings.public_web_url
+    )
+    app.state.payments.register(app.state.jobs)
     app.state.jobs.register(INBOUND, app.state.inbound.process)
     # ALYR's own billing: a client paying ALYR by card through Paddle (ALY-180).
     app.state.card_billing = CardBilling(app.state.db, settings)
@@ -131,6 +153,8 @@ def create_app() -> FastAPI:
     # the PDF attached. A delivery that fails every try shows the owner "not delivered".
     document_sender = DocumentSender(app.state.db, app.state.outbound)
     app.state.jobs.register(DELIVERY_JOB, document_sender.run, document_sender.gave_up)
+    # The welcome after sign-up and the invite to a team (specs/037).
+    app.state.jobs.register(ACCOUNT_EMAIL, AccountMail(app.state.db).run)
     # Events out to the shop's other system (ALY-142): signed, retried, guarded.
     app.state.webhooks = connect_webhooks.WebhookSender(app.state.db)
     app.state.jobs.register(connect_webhooks.JOB, app.state.webhooks.run)
@@ -208,6 +232,7 @@ def create_app() -> FastAPI:
     # Each module's routes answer only for shops that have switched that module on.
     app.include_router(ledger.router, dependencies=[Depends(require_module("ledger"))])
     app.include_router(pay.router)
+    app.include_router(payment_routes.router)
     app.include_router(track_routes.router)
     app.include_router(orders.router, dependencies=[Depends(require_module("orders"))])
     # The Catalog's own API (D-039). It adds nothing to the Products screen. It answers
