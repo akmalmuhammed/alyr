@@ -1,0 +1,14 @@
+/* The "Not sent" screen (specs/036): one tile per message, newest first. */
+.ns-list { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 10px; }
+.ns-row { display: grid; gap: 6px; padding: 14px 16px; }
+.ns-row.failed { box-shadow: 0 0 0 1px var(--hair) inset, inset 3px 0 0 var(--bad); }
+.sh[dir="rtl"] .ns-row.failed { box-shadow: 0 0 0 1px var(--hair) inset, inset -3px 0 0 var(--bad); }
+.ns-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; min-width: 0; }
+.ns-top b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ns-top time { flex: none; color: var(--ink-2); font-size: var(--ui-small); }
+.ns-body { margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.ns-why { margin: 0; font-size: var(--ui-body-sm); }
+.ns-said { margin: 0; font-size: var(--ui-small); color: var(--ink-2); overflow-wrap: anywhere; }
+.ns-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ns-foot .btn.small { margin-inline-start: 0; }
+.ns-empty { margin-top: 16px; }

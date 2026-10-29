@@ -138,6 +138,7 @@ const T = {
     st: { new: "New", confirmed: "Confirmed", ready: "Ready", done: "Done", cancelled: "Cancelled" } as Record<string, string>,
     next: { new: "Confirm", confirmed: "Mark ready", ready: "Mark done" } as Record<string, string>,
     followsUp: "Follows up", total: "Total",
+    notDelivered: "Not delivered",
     howEnded: "How did it end?", cancelClose: "Keep open", why: "Why was it lost?",
     outcomes: { sold: "Sold", booked: "Booked", answered: "Answered", lost: "Lost" } as Record<string, string>,
     reasons: {
@@ -164,6 +165,7 @@ const T = {
         case "moved": return `${who} moved booking${n}`;
         case "price_group": return `${who} changed the price group from ${a.detail.from} to ${a.detail.to}`;
         case "asked_person": return `${who} needs a person to reply (the chat could not read or help with the message)`;
+        case "message_retried": return `${who} sent a message again that had not reached the customer`;
         default: return `${who}: ${thing} ${a.action}`;
       }
     },
@@ -209,6 +211,7 @@ const T = {
     st: { new: "جديد", confirmed: "مؤكد", ready: "جاهز", done: "منجز", cancelled: "ملغي" } as Record<string, string>,
     next: { new: "تأكيد", confirmed: "جاهز للاستلام", ready: "تم الإنجاز" } as Record<string, string>,
     followsUp: "المتابع", total: "المجموع",
+    notDelivered: "لم تصل",
     howEnded: "كيف انتهت؟", cancelClose: "أبقِها مفتوحة", why: "لماذا خسرناه؟",
     outcomes: { sold: "تم البيع", booked: "تم الحجز", answered: "تمت الإجابة", lost: "خسرناه" } as Record<string, string>,
     reasons: {
@@ -235,6 +238,7 @@ const T = {
         case "moved": return `${who} غيّر موعد الحجز${n}`;
         case "price_group": return `${who} غيّر مجموعة الأسعار من ${a.detail.from} إلى ${a.detail.to}`;
         case "asked_person": return `${who} يحتاج رداً من موظف (لم تستطع المحادثة قراءة الرسالة أو مساعدته)`;
+        case "message_retried": return `${who} أعاد إرسال رسالة لم تصل إلى العميل`;
         default: return `${who}: ${thing} ${a.action}`;
       }
     },
@@ -721,7 +725,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                     ))}
                   </div>
                 )}
-                {m.status === "failed" && <span className="tag bad" dir="ltr">Not delivered</span>}
+                {m.status === "failed" && <span className="tag bad">{t.notDelivered}</span>}
                 {m.status === "blocked" && (
                   <span className="tag bad" dir="ltr">Not sent: {BLOCK_REASON[m.error ?? ""] ?? "blocked"}</span>
                 )}
@@ -927,7 +931,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                           {m.payload.choices && (
                             <span className="tag" dir="ltr">Buttons: {m.payload.choices.map((c) => c.title).join(" · ")}</span>
                           )}
-                          {m.status === "failed" && <span className="tag bad" dir="ltr">Not delivered</span>}
+                          {m.status === "failed" && <span className="tag bad">{t.notDelivered}</span>}
                           {m.status === "blocked" && (
                             <span className="tag bad" dir="ltr">Not sent: {BLOCK_REASON[m.error ?? ""] ?? "blocked"}</span>
                           )}
