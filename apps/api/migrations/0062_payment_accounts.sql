@@ -42,6 +42,9 @@ create table payment_events (
     received_at timestamptz not null default now(),
     unique (account_id, event_id)
 );
+-- A shop's events, newest first, read inside its own scope (every shop's table has an index
+-- that starts with tenant_id).
+create index payment_events_shop on payment_events (tenant_id, received_at);
 
 alter table payment_requests
     add column account_id uuid references payment_accounts(id),
