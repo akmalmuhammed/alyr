@@ -5,8 +5,10 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Screens, type WorkspaceTab } from "../../_workspace/Screens";
 import { TeamReport } from "../../_workspace/Team";
+import { WhatsappLink } from "../../_workspace/WhatsappLink";
 import { Catalog } from "../../_workspace/Catalog";
 import { Documents } from "../../_workspace/Documents";
+import { TermsBanner } from "../../_workspace/TermsBanner";
 import { ConnectLink, ConnectSettings } from "../../_workspace/ConnectSettings";
 import { AgentDashboard } from "../../../_agent/AgentDashboard";
 import type { AgentView } from "../../../_agent/types";
@@ -32,8 +34,6 @@ type State = {
   products: Product[];
   connections: Connection[];
   plan: { status: "preparing" | "published" | "accepted"; monthly_total_text?: string } | null;
-  // The products open once the client has paid ALYR (ALY-212, D-051).
-  open: boolean;
 };
 type Card = { key: string; module: string; label: Text; value: number; text: string };
 // The go-live readiness check (ALY-165, D-049): the same answer as /start and the back office.
@@ -63,9 +63,6 @@ const T = {
     goLive: { setting_up: "A few steps left to go live", ready: "Ready, waiting for your WhatsApp number" } as Record<string, string>,
     goLiveSub: (left: string) => `Still to do: ${left}.`,
     goLiveOpen: "See what is left",
-    lockedTitle: "Your products open once ALYR has your payment",
-    lockedSub: (amount: string) => (amount ? `Due now: ${amount}, the setup fee and your first month. ALYR opens your products the same working day it sees your payment.` : "Accept your price first. ALYR opens your products the same working day it sees your payment."),
-    lockedPay: "See your price and how to pay",
     productsTitle: "Products", productsEyebrow: "Your plan",
     productsSub: "Switch on what your business needs. Switching off hides the screens and keeps every record.",
     active: "Active", available: "Available", on: "On", off: "Off",
@@ -104,9 +101,6 @@ const T = {
     goLive: { setting_up: "خطوات قليلة للإطلاق", ready: "جاهز، بانتظار رقم واتساب" },
     goLiveSub: (left: string) => `المتبقي: ${left}.`,
     goLiveOpen: "اعرض المتبقي",
-    lockedTitle: "تُفتح منتجاتك عندما يصل دفعك إلى ALYR",
-    lockedSub: (amount: string) => (amount ? `المستحق الآن: ${amount}، رسوم الإعداد وشهرك الأول. تفتح ALYR منتجاتك في يوم العمل نفسه الذي يصلها فيه الدفع.` : "اقبل سعرك أولاً. تفتح ALYR منتجاتك في يوم العمل نفسه الذي يصلها فيه الدفع."),
-    lockedPay: "اعرض سعرك وطريقة الدفع",
     productsTitle: "المنتجات", productsEyebrow: "خطتك",
     productsSub: "فعّل ما يحتاجه عملك. الإيقاف يخفي الشاشات ويحفظ كل السجلات.",
     active: "مفعّل", available: "متاح", on: "مفعّل", off: "متوقف",
@@ -210,7 +204,6 @@ export default function WorkspaceShell() {
   const [state, setState] = useState<State | null>(null);
   const [cards, setCards] = useState<Card[]>([]);
   const [readiness, setReadiness] = useState<Readiness | null>(null);
-  const [due, setDue] = useState("");
   const [agent, setAgent] = useState<AgentView | null>(null);
   const [agentRise, setAgentRise] = useState(false);
   // ALYR Agent's links open a screen filtered to the rows a rule counted (`?show=`).
@@ -250,27 +243,33 @@ export default function WorkspaceShell() {
   const pick = useCallback((text: Text) => text[lang], [lang]);
 
   const load = useCallback(async () => {
+    // Signed out (or the session ended): the sign-in page, not "cannot reach ALYR".
+    let signedOut = false;
+    const json = (r: Response) => {
+      if (r.status === 401) signedOut = true;
+      return r.ok ? r.json() : Promise.reject();
+    };
     try {
       const [s, h] = await Promise.all([
-        fetch("/api/workspace", { cache: "no-store" }).then((r) => (r.ok ? r.json() : Promise.reject())),
-        fetch("/api/workspace/home", { cache: "no-store" }).then((r) => (r.ok ? r.json() : Promise.reject())),
+        fetch("/api/workspace", { cache: "no-store" }).then(json),
+        fetch("/api/workspace/home", { cache: "no-store" }).then(json),
       ]);
       setState(s);
       setCards(h.cards);
       setOffline(false);
-      if (s.open === false) {
-        const p = await fetch("/api/onboarding/payment", { cache: "no-store" });
-        if (p.ok) { const paid = await p.json(); setDue(paid.status === "unpaid" ? paid.left_text : ""); }
-      }
       // Only those who can act on it see what is left to go live.
       if (s.can_manage) {
         const r = await fetch("/api/onboarding/readiness", { cache: "no-store" });
         if (r.ok) setReadiness(await r.json());
       }
     } catch {
+      if (signedOut) {
+        router.replace("/login");
+        return;
+      }
       setOffline(true);
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     const first = setTimeout(load, 0);
@@ -624,22 +623,18 @@ export default function WorkspaceShell() {
       <Screens embedded section={section as WorkspaceTab} lang={lang} show={show}
         onClearShow={() => { setShow(null); router.replace(`/app/${section}`); }}
         intro={section === "team"
-          ? <TeamReport lang={lang} canManage={state.can_manage} signer={state.me.signed_in ? state.me.name : "Ali"} />
+          ? (
+            <>
+              <TeamReport lang={lang} canManage={state.can_manage} signer={state.me.signed_in ? state.me.name : "Ali"} />
+              <WhatsappLink lang={lang} role={state.me.role} modules={state.modules} signedIn={state.me.signed_in} />
+            </>
+          )
           : undefined} />
     );
   } else {
     body = null;
   }
-  // Until the client has paid, every screen is this page instead (D-051).
-  if (state.open === false) {
-    body = (
-      <section className="sh-tile raised sh-locked">
-        <h1>{t.lockedTitle}</h1>
-        <p className="sh-note">{t.lockedSub(due)}</p>
-        {state.can_manage && <Link className="btn primary" href="/start">{t.lockedPay}<Icon name="arrow" className="sh-ico arrow" /></Link>}
-      </section>
-    );
-  } else if (body === null) {
+  if (body === null) {
     body = (
       <div className="sh-empty-inline">
         <p>{t.notOn}</p>
@@ -694,11 +689,13 @@ export default function WorkspaceShell() {
           <Mark />
           <span className="sh-brand-text"><b>{shopName}</b><small>{current ? pick(current.label) : "ALYR"}</small></span>
           <span className={`sh-live ${whatsapp?.connected ? "on" : ""}`}><span className="sh-dot" />{whatsapp?.connected ? t.live : t.sim}</span>
+          <button className="sh-lang sh-mlang" onClick={() => chooseLang(lang === "en" ? "ar" : "en")} aria-label={t.langName}>{t.lang}</button>
           <button className="sh-iconbtn" onClick={() => { setPalette(true); setQuery(""); setCursor(0); }} aria-label={t.search}><Icon name="search" /></button>
         </header>
         <div className="sh-scroll">
           <main className="sh-main sh-enter" key={`${section}-${lang}`}>
             {offline && <div className="error" role="status">{t.offline}</div>}
+            <TermsBanner lang={lang} canAccept={state.me.signed_in && (state.me.role === "owner" || state.me.role === "admin")} />
             {body}
           </main>
         </div>

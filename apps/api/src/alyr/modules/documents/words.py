@@ -330,6 +330,10 @@ ERRORS: dict[str, Text] = {
     "already_paid": Text(
         "This order is already paid.", "هذا الطلب مدفوع بالفعل."
     ),
+    "order_is_test": Text(
+        "This is a test order. No money moves and it has no documents.",
+        "هذا طلب تجريبي. لا تتحرك فيه أموال ولا توجد له مستندات.",
+    ),
     "order_cancelled": Text(
         "This order was cancelled, so it cannot be paid.",
         "أُلغي هذا الطلب، لذلك لا يمكن دفعه.",

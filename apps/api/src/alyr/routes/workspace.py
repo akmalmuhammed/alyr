@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from alyr.core import access, workspace
+from alyr.core import workspace
 from alyr.core.auth import Staff
 from alyr.routes.deps import current_staff
 
@@ -29,7 +29,7 @@ async def shell(request: Request, staff: Staff = Depends(current_staff)) -> dict
     async with request.app.state.db.tenant(staff.tenant_id) as conn:
         # Whether the products are open yet (ALY-212): the workspace shows a locked page
         # with what to pay until they are.
-        return await workspace.state(conn, staff) | {"open": await access.is_open(conn)}
+        return await workspace.state(conn, staff)
 
 
 @router.get("/home")

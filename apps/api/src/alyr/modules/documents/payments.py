@@ -71,10 +71,13 @@ async def _receipt_for(conn: asyncpg.Connection, staff: Staff, row: asyncpg.Reco
 
 async def _order(conn, staff, subject_id: UUID, amount: int | None, method: str, cfg: dict):
     order = await conn.fetchrow(
-        "select id, number, status, payment, total, contact_id from orders "
+        "select id, number, status, payment, total, contact_id, is_test from orders "
         "where id = $1 for update", subject_id)
     if order is None:
         raise DocumentError("source_not_found", 404)
+    if order["is_test"]:
+        # A test order moves no money, so there is nothing to record (ALY-168).
+        raise DocumentError("order_is_test", 409)
     if order["status"] == "cancelled":
         raise DocumentError("order_cancelled", 409)
     if order["payment"] == "paid":

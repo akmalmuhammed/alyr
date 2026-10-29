@@ -1,4 +1,4 @@
--- Alert rules (ALY-121, spec 022, D-062). A platform table that holds no customer data: which
+-- Alert rules (ALY-121, spec 034, D-073). A platform table that holds no customer data: which
 -- alerts are firing, so one problem sends one message, not one every minute. Whether the worker
 -- is alive is `worker_heartbeats` (ALY-63) and the uptime checks on /health/worker, not this.
 

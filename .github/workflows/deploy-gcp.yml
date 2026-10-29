@@ -1,0 +1,86 @@
+name: deploy-gcp
+
+# Builds ALYR's two images, pushes them to Artifact Registry in Doha, and (when asked)
+# deploys them: migrations first, then the API, worker and web app (D-060, ALY-10).
+#
+# Started by hand only (Actions > deploy-gcp > Run workflow), from main. Signs in to Google
+# Cloud with GitHub's short-lived token (Workload Identity Federation): no key is stored in
+# GitHub. Needs the repository variables printed by `infra/gcp/setup.sh github`.
+on:
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: "Deploy after building (false: build and push only)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-gcp
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main' && vars.GCP_WORKLOAD_IDENTITY_PROVIDER != ''
+    runs-on: ubuntu-latest
+    env:
+      PROJECT: ${{ vars.GCP_PROJECT }}
+      REGION: ${{ vars.GCP_REGION }}
+      TAG: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Find the registry and the apps' addresses
+        run: |
+          gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+          num="$(gcloud projects describe "$PROJECT" --format='value(projectNumber)')"
+          echo "IMAGES=$REGION-docker.pkg.dev/$PROJECT/alyr" >> "$GITHUB_ENV"
+          echo "API_URL=https://alyr-api-$num.$REGION.run.app" >> "$GITHUB_ENV"
+          # The web app's public address, for its staff link; a custom domain if one is set.
+          web_url="${{ vars.ALYR_WEB_URL }}"
+          echo "WEB_URL=${web_url:-https://app.alyr.qa}" >> "$GITHUB_ENV"
+
+      - name: Build and push the images
+        run: |
+          docker build -t "$IMAGES/alyr-api:$TAG" apps/api
+          # Next.js fixes its /api forwarding at build time: the API's Cloud Run address.
+          docker build -t "$IMAGES/alyr-web:$TAG" \
+            --build-arg ALYR_API_URL="$API_URL" \
+            --build-arg NEXT_PUBLIC_ALYR_WORKSPACE_URL="$WEB_URL" \
+            --build-arg NEXT_PUBLIC_POSTHOG_KEY="${{ vars.POSTHOG_PROJECT_KEY }}" \
+            apps/web
+          docker push "$IMAGES/alyr-api:$TAG"
+          docker push "$IMAGES/alyr-web:$TAG"
+          echo "Pushed images tagged $TAG"
+
+      - name: Migrate, then roll out
+        if: inputs.deploy
+        run: |
+          gcloud run jobs update alyr-migrate --region "$REGION" --image "$IMAGES/alyr-api:$TAG" --quiet
+          if ! gcloud run jobs execute alyr-migrate --region "$REGION" --wait --quiet; then
+            echo "Migrations failed; nothing was rolled out." >&2
+            exit 1
+          fi
+          gcloud run services update alyr-api --region "$REGION" --image "$IMAGES/alyr-api:$TAG" --quiet
+          gcloud run worker-pools update alyr-worker --region "$REGION" --image "$IMAGES/alyr-api:$TAG" --quiet
+          gcloud run services update alyr-web --region "$REGION" --image "$IMAGES/alyr-web:$TAG" --quiet
+
+      - name: Check it is healthy
+        if: inputs.deploy
+        run: |
+          for _ in $(seq 1 30); do curl -fs "$API_URL/health/ready" && break; sleep 10; done
+          curl -fs "$API_URL/health/ready"
+          for _ in $(seq 1 18); do curl -fs "$API_URL/health/worker" && break; sleep 10; done
+          curl -fs "$API_URL/health/worker"
+          curl -fs -o "$RUNNER_TEMP/login.html" "$WEB_URL/login"
+          echo "Deployed $TAG"

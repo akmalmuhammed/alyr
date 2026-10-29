@@ -10,6 +10,10 @@ from conftest import APP_DSN, OWNER_DSN
 # users, login_codes and sessions belong to a person, not a tenant (D-022).
 GLOBAL_TABLES = {
     "tenants", "channel_numbers", "schema_migrations", "users", "login_codes", "sessions",
+    # Counts of requests to open doors, keyed by a hash of the address (ALY-116).
+    "rate_hits",
+    # The background worker's check-ins; ALYR's own, not a shop's (ALY-63).
+    "worker_heartbeats",
     # ALYR's own staff list; belongs to ALYR, not to a shop (D-027).
     "platform_admins",
     # A verified email before its business exists (D-031).
@@ -26,8 +30,11 @@ GLOBAL_TABLES = {
     # What a client paid ALYR, before their products open (ALY-212, D-051): the owner reads
     # their own client's, only the back office writes. Forced row-level security.
     "client_payments",
-    # Which alerts are firing (ALY-121, D-062): a platform record with no customer data.
+    # Which alerts are firing (ALY-121, D-073): a platform record with no customer data.
     "alert_state",
+    # What owners are asked to accept: every shop may read it, only the back office adds to it
+    # (ALY-167). Forced row-level security.
+    "terms_versions",
 }
 
 

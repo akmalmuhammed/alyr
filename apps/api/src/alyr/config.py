@@ -16,12 +16,18 @@ class Settings(BaseSettings):
     # Migrations and demo-tenant setup connect as the owner.
     migration_url: str = "postgresql://alyr:alyr_local@localhost:5432/alyr"
     redis_url: str = "redis://localhost:6379/0"
+    # The read-only role the nightly backup signs in as (scripts/backup). Only migrations
+    # use this setting, to create the role; the app never connects with it. Empty: no
+    # backup role is created.
+    backup_url: str = ""
 
     # Run queued jobs inside the API process after each request. Convenient locally
     # and in tests. In production set this to false and run `python -m alyr.worker`.
     jobs_inline: bool = True
     # First retry delay; it doubles on each further attempt.
     jobs_backoff_seconds: float = 5.0
+    # /health/worker answers 503 when the worker has not checked in for this long.
+    worker_stale_seconds: int = 120
 
     # Local only: let the workspace be used without signing in, as the demo shop.
     # Ignored everywhere except env "local".
@@ -30,6 +36,15 @@ class Settings(BaseSettings):
     # Self-serve sign-up at /start (D-031). Unset: open on a local machine, closed
     # everywhere else until the founder decides to open it.
     signup_open: bool | None = None
+
+    # Where the visitor's address is read from, for the rate limits (ALY-116). Empty: the address
+    # the connection came from. Behind Cloudflare set "cf-connecting-ip"; behind the web app's
+    # proxy set "x-forwarded-for". A header the visitor can write must never be trusted by
+    # accident, so nothing is read from one until this names it.
+    client_ip_header: str = ""
+    # How many proxies of ours add to a list header such as x-forwarded-for: the address is read
+    # that many places from the right, where a visitor cannot have written it.
+    client_ip_proxies: int = 1
     # Prices and the promise are set in the back office, not here (D-032).
 
     # Local only: read the ALYR Agent as if it were this moment (ISO 8601, with an offset),
@@ -38,6 +53,15 @@ class Settings(BaseSettings):
 
     # Where payment links point. The web app serves /pay/...
     public_web_url: str = "http://localhost:3100"
+    # Where the signed-in workspace is served, for the links at the end of an owner's
+    # answers in WhatsApp (D-065). Empty until it is hosted: today's public web address is
+    # the laptop tunnel, which serves customer pages only, so a workspace link would 404.
+    workspace_url: str = ""
+
+    # Other web addresses a signed-in browser may post from, comma separated (ALY-118). The
+    # address in `public_web_url` is always allowed; add the console's (ops.alyr.qa) or a
+    # workers.dev address of the portal while that is where people sign in.
+    allowed_origins: str = ""
 
     # Signs the order links sent to one customer (HMAC-SHA256, core/links.py, ALY-112). Only
     # a local machine may leave it empty (a built-in development value is used); anywhere
@@ -88,7 +112,7 @@ class Settings(BaseSettings):
     email_from: str = "ALYR <no-reply@alyr.qa>"
     email_reply_to: str = "hello@alyr.qa"
 
-    # Alerts to a person's phone and inbox (ALY-121, spec 022, D-062). Both empty: alerts are only
+    # Alerts to a person's phone and inbox (ALY-121, spec 034, D-073). Both empty: alerts are only
     # logged. The ntfy topic is a secret: anyone who knows it can read and send alerts. An alert
     # holds counts and ages only, never a name, a number or a message.
     alert_ntfy_topic: str = ""
@@ -105,6 +129,11 @@ class Settings(BaseSettings):
     r2_bucket: str = "alyr-media"
     media_base_url: str = "https://media.alyr.qa"
     media_local_dir: str = ".media"
+    # Outside a developer machine, photos on local disk are refused at start-up
+    # (`storage.check_store`): a cloud container's disk is wiped on every restart and is not
+    # shared between copies. Only a single server whose `media_local_dir` is a kept volume
+    # may switch this on (the rehearsal in docker-compose.prod.yml does).
+    media_allow_local: bool = False
 
     # What one upload may be. The web page shrinks a photo before sending it, so these
     # only stop a damaged or hostile file. A 12-megapixel phone photo is about 4 MB.

@@ -1,4 +1,4 @@
-"""Alert rules (ALY-121, spec 022, D-062): one message per problem, counts only."""
+"""Alert rules (ALY-121, spec 034, D-073): one message per problem, counts only."""
 
 import asyncio
 from datetime import UTC, datetime, timedelta

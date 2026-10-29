@@ -1,6 +1,6 @@
 # 022 · Alert rules
 
-Linear ALY-121 · Decision D-062 · Runbook `docs/runbooks/monitoring.md` · Builds on D-060 (Google Cloud in Doha)
+Linear ALY-121 · Decision D-073 · Runbook `docs/runbooks/monitoring.md` · Builds on D-060 (Google Cloud in Doha)
 
 ## What it is for
 
@@ -30,11 +30,11 @@ itself, so that stays the uptime checks' job.
 | `webhook_quiet` | a shop has a Meta number, it is 09:00 to 21:00 in Doha, and no customer message was queued for 15 minutes | check the webhook subscription in Meta |
 
 `webhook_quiet` reads the newest `inbound_message` job of a shop on a Meta number: the webhook
-only queues a message, so that is when Meta last reached us with one. Migration 0054 adds an
+only queues a message, so that is when Meta last reached us with one. Migration 0062 adds an
 index on `jobs (kind, created_at)` so this stays cheap as jobs pile up.
 
 A rule fires once when it starts, reminds every 2 hours while it lasts, and sends one message
-when it clears. State is in `alert_state` (migration 0054, a platform table with no customer
+when it clears. State is in `alert_state` (migration 0062, a platform table with no customer
 data), so a restart does not repeat an alert. The worker pool runs one instance, so one
 evaluator; a second instance could send a duplicate, never miss one.
 

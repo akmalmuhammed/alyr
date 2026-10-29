@@ -6,6 +6,7 @@ import { fmtQtyUnit, lineUnit } from "../_customer/qty";
 import { formatPrice } from "../_customer/price";
 import { OrderMargin, useOrderMargins } from "./Margin";
 import { OrderSum } from "./OrderSum";
+import { MarkPaid, PayWays } from "./OrderPay";
 import { FulfilDetails, FulfilFilters, FulfilPill, matchesFilter, type FulfilFilter } from "./OrderFulfil";
 import type { Fulfilment } from "../_customer/fulfil";
 import { DELIVERY } from "./deliveryCopy";
@@ -59,6 +60,8 @@ type OrderRow = {
   assigned: Person | null;
   // The table the order is for, from a QR code on a table ("" for none).
   table?: string;
+  // The owner's own test order from the test line (ALY-168): marked, never counted, cannot be paid.
+  test?: boolean;
   // The price group the order was charged under, as named then (null for orders before groups).
   price_group?: { name: string; name_ar: string; is_default: boolean } | null;
   // The receipt or invoice the order made, for a shop with Documents on (ALY-146).
@@ -128,6 +131,7 @@ const T = {
     bk: { booked: "Booked", completed: "Came", cancelled: "Cancelled", no_show: "No-show" } as Record<string, string>,
     tabLedger: "Credit ledger", tabOrders: "Orders", ordersSub: "Placed through the order link",
     noOrders: "No orders yet. In the chat, tap \"Place an order\" as a customer.", table: (label: string) => `Table ${label}`,
+    testOrder: "Test order",
     docLink: (kind: string, number: string, status: string) => `${({ receipt: "Receipt", invoice: "Invoice", deposit_receipt: "Deposit receipt" } as Record<string, string>)[kind] ?? "Document"} ${number}${status === "void" ? " (cancelled)" : ""}`,
     orderNo: "Order", items: "Items", payment: "Payment", status: "Status",
     pay: { unpaid: "Not paid", paid: "Paid", on_account: "On account" } as Record<string, string>,
@@ -198,6 +202,7 @@ const T = {
     bk: { booked: "محجوز", completed: "حضر", cancelled: "ملغي", no_show: "لم يحضر" } as Record<string, string>,
     tabLedger: "دفتر الديون", tabOrders: "الطلبات", ordersSub: "الطلبات الواردة من رابط الطلب",
     noOrders: "لا توجد طلبات بعد. في المحادثة اضغط \"اطلب الآن\" كعميل.", table: (label: string) => `طاولة ${label}`,
+    testOrder: "طلب تجريبي",
     docLink: (kind: string, number: string, status: string) => `${({ receipt: "إيصال", invoice: "فاتورة", deposit_receipt: "إيصال عربون" } as Record<string, string>)[kind] ?? "مستند"} ${number}${status === "void" ? " (ملغى)" : ""}`,
     orderNo: "الطلب", items: "الأصناف", payment: "الدفع", status: "الحالة",
     pay: { unpaid: "غير مدفوع", paid: "مدفوع", on_account: "على الحساب" } as Record<string, string>,
@@ -941,7 +946,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                       {composeMode === "reply" && savedReplies.map((r) => (
                         <span key={r.id} className="quickchip">
                           <button dir="auto" title={r.body} onClick={() => setReplyDraft(r.body)}>{r.title}</button>
-                          <button aria-label={`${t.remove}: ${r.title}`} onClick={() => deleteQuickReply(r.id)}>×</button>
+                          {canManage && <button aria-label={`${t.remove}: ${r.title}`} onClick={() => deleteQuickReply(r.id)}>×</button>}
                         </span>
                       ))}
                     </div>
@@ -1066,6 +1071,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
             )
           )}
 
+          {tab === "orders" && canManage && <PayWays lang={lang} />}
           {tab === "orders" && filterLine}
           {tab === "orders" && <FulfilFilters value={fulfilFilter} onChange={setFulfilFilter} lang={lang} show={orders.some((o) => o.fulfilment)} />}
           {tab === "orders" && (
@@ -1093,6 +1099,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                             <><br /><span className="pill none">{lang === "ar" ? o.price_group.name_ar || o.price_group.name : o.price_group.name}</span></>
                           )}
                           {o.table && <><br /><span className="pill p1">{t.table(o.table)}</span></>}
+                          {o.test && <><br /><span className="pill p1">{t.testOrder}</span></>}
                           {o.document && embedded && canManage && (
                             <><br /><a className="doc-link" href={`/app/documents?d=${o.document.id}`}>{t.docLink(o.document.kind, o.document.number, o.document.status)}</a></>
                           )}
@@ -1106,7 +1113,12 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                           {o.discount_total || o.fulfilment?.mode === "delivery" ? <OrderSum order={o} lang={lang} /> : null}
                           {orderMargins && <OrderMargin lang={lang} margin={orderMargins[o.id]} />}</td>
                         <td className="r num" dir="ltr">{o.total_text}</td>
-                        <td><span className={`pill ${o.payment === "unpaid" ? "p1" : "p0"}`}>{t.pay[o.payment]}</span></td>
+                        <td>
+                          <span className={`pill ${o.payment === "unpaid" ? "p1" : "p0"}`}>{t.pay[o.payment]}</span>
+                          {o.payment === "unpaid" && o.status !== "cancelled" && canManage && !o.test && (
+                            <MarkPaid orderId={o.id} lang={lang} onDone={refresh} />
+                          )}
+                        </td>
                         <td>
                           <AssignSelect value={o.assigned} members={members} label={t.assignedTo} nobody={t.nobody}
                             onChange={(id) => giveTo(`/api/orders/${o.id}/assign`, id)} />
@@ -1155,8 +1167,12 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
               </div>
 
               <div className="actions">
-                <button className="btn primary" onClick={remind} disabled={busy}>{t.remind}</button>
-                <span style={{ color: "var(--muted)", fontSize: 13.5 }}>{t.remindHint}</span>
+                {canManage && (
+                  <>
+                    <button className="btn primary" onClick={remind} disabled={busy}>{t.remind}</button>
+                    <span style={{ color: "var(--muted)", fontSize: 13.5 }}>{t.remindHint}</span>
+                  </>
+                )}
                 {note && <span className="note">{note}</span>}
               </div>
 

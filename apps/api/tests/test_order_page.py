@@ -85,7 +85,7 @@ def test_the_page_says_whether_the_shop_has_the_catalog_and_where_to_message_it(
     assert first["shop"]["catalog"] is False and first["shop"]["whatsapp"] == ""
     assert first["settings"] == {
         "sold_out_display": "grey", "wholesale_layout": False, "whatsapp_number": "",
-        "whatsapp_mode": "chat",
+        "whatsapp_mode": "chat", "pay": {"online": True, "ways": []},
     }
     owner_sql("insert into tenant_modules (tenant_id, module_key) values ($1, 'catalog')",
               DEMO_TENANT_ID)

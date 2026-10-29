@@ -1,4 +1,4 @@
-# Runbook · Monitoring and alerts (ALY-121, D-062, spec 022)
+# Runbook · Monitoring and alerts (ALY-121, D-073, spec 034)
 
 Who gets woken, by what, and what to do first. Production is Google Cloud in Doha (D-060,
 `docs/hosting.md`); its uptime checks watch `/health/ready` and `/health/worker`. The alert
@@ -12,8 +12,8 @@ rules below run inside the worker and watch what an uptime check cannot see.
 2. **Email alerts.** Set `ALYR_ALERT_EMAIL` on the worker (planned: ops@alyr.qa, once it
    exists). The worker also needs the Resend key, `ALYR_EMAIL_API_KEY`.
 3. Until both are set, alerts are only log lines (`ALERT ...` from `alyr.alerts`) in Cloud
-   Logging. A log-based alert on that line in Cloud Monitoring can email the founder without
-   either.
+   Logging. The error alert of PR #151 (metric `alyr-app-errors`) does not count them; adding
+   `ALERT ` to its filter in `infra/gcp/setup.sh monitoring` would email them without either.
 4. On call: the founder (24 Oct). Write it in `docs/access.md` when a second person exists.
 
 ## What an alert means and the first step

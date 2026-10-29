@@ -16,7 +16,8 @@ async def numbers(conn: asyncpg.Connection, start: datetime, end: datetime, tz: 
         "wrote": await conn.fetchval(
             "select count(distinct m.contact_id) from messages m "
             "join contacts c on c.id = m.contact_id "
-            "where c.role = 'customer' and m.direction = 'in' "
+            "where c.role = 'customer' and c.wa_user_id not like 'TEST.%' "
+            "and m.direction = 'in' "
             "and m.created_at >= $1 and m.created_at < $2",
             start, end,
         )
@@ -25,6 +26,7 @@ async def numbers(conn: asyncpg.Connection, start: datetime, end: datetime, tz: 
         return out
     out["new"] = await conn.fetchval(
         "select count(*) from contacts where role = 'customer' "
+        "and wa_user_id not like 'TEST.%' "
         "and created_at >= $1 and created_at < $2",
         start, end,
     )
@@ -32,7 +34,8 @@ async def numbers(conn: asyncpg.Connection, start: datetime, end: datetime, tz: 
         "select count(*) filter (where m.sent_by <> '') as by_team, "
         "count(*) filter (where m.sent_by = '') as automatic "
         "from messages m join contacts c on c.id = m.contact_id "
-        "where c.role = 'customer' and m.direction = 'out' "
+        "where c.role = 'customer' and c.wa_user_id not like 'TEST.%' "
+        "and m.direction = 'out' "
         "and m.status in ('sent', 'delivered', 'read') "
         "and m.created_at >= $1 and m.created_at < $2",
         start, end,

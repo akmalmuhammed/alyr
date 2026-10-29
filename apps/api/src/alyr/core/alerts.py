@@ -1,4 +1,4 @@
-"""Alert rules and how a person is told (ALY-121, spec 022, D-062).
+"""Alert rules and how a person is told (ALY-121, spec 034, D-073).
 
 The job runner evaluates the rules every minute. They watch what an uptime check cannot see:
 messages waiting, jobs giving up, sends failing, customers' messages no longer arriving. A dead

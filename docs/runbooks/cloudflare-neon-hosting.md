@@ -64,7 +64,7 @@ touched.
 
 ## Check after the first deploy
 
-- `curl https://alyr-api.<account>.workers.dev/health` answers `{"status":"ok","env":"production"}`.
+- `curl https://alyr-api.<account>.workers.dev/health` answers `{"status":"ok"}`.
   **Check 1:** if it answers 5xx, `pnpm exec wrangler tail` shows whether the container could
   not reach Neon (outbound TCP to port 5432).
 - `/docs` and `/sim/...` answer 404 from outside.
@@ -75,8 +75,17 @@ touched.
 - **Check 4:** the portal's `/api/auth/me` answers (the portal reaches the API Worker). If
   Cloudflare refuses a Worker-to-Worker call on workers.dev, give the API a custom domain
   (`api.alyr.qa`) and rebuild the portal with `ALYR_API_URL` set to it.
+- **Check 6, before anyone signs in on the workers.dev address:** the API refuses a signed-in change
+  whose `Origin` is not `ALYR_PUBLIC_WEB_URL` or one of `ALYR_ALLOWED_ORIGINS` (comma separated),
+  with 403 "this request came from another website". Put the portal's workers.dev address in
+  `ALYR_ALLOWED_ORIGINS` until `app.alyr.qa` is its address, or every save after sign-in fails.
 - **Check 5:** sign in twice with a wrong code from two networks; the rate limit should count
-  them separately.
+  them separately. The API Worker sets `ALYR_CLIENT_IP_HEADER` to `x-alyr-client-ip`, which it
+  writes from `CF-Connecting-IP` after deleting any `X-Forwarded-For`, `X-Real-IP` and
+  `x-alyr-client-ip` the caller sent. If the portal Worker's own calls arrive with the portal's
+  address instead of the visitor's, every visitor shares one count: then have the portal pass
+  the visitor's address in `CF-Connecting-IP` or give the API a custom domain, before opening
+  sign-up.
 - A job runs: place a demo order and see its confirmation in the simulator inbox (the job
   runner is in the same container).
 

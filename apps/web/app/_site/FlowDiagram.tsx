@@ -174,7 +174,7 @@ export function FlowDiagram({ flow, sample, note }: Props) {
           ))}
         </div>
         {!still && (
-          <button type="button" className="demo-toggle" onClick={() => setAuto(!auto)}>
+          <button type="button" className="demo-toggle" data-paused={auto ? undefined : ""} onClick={() => setAuto(!auto)}>
             <span className={auto ? "demo-pause" : "demo-play"} aria-hidden="true" />
             {auto ? flow.pause : flow.play}
           </button>
