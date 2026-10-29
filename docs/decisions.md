@@ -61,6 +61,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-068 | An owner who stops partway through setup gets two emails to come back, then none, and can stop them from the link; the funnel counts them | Accepted |
 | D-062 | The homepage hero is the explainer film (one afternoon at Qirfa Bakery in the product's own screens, three lanes at once, ending on the ALYR Agent home): "the product is the illustration" in motion; the hero's live ALYR Agent figure leaves the hero | Accepted |
 | D-070 | Product analytics with PostHog (EU), at two levels the visitor chooses: cookieless counting by default, cookies and masked recordings with consent; never customer pages, the inbox or names | Accepted |
+| D-075 | A customer's data: an owner or admin gives a customer a copy or forgets them from the conversation; the sales records stay without the person, issued documents unchanged; working copies (finished jobs, handled message IDs) are purged after 30 days, failed jobs after 90 | Accepted |
 | D-071 | The homepage plays like a video: the film starts at load and moves at once; its Pause controls are not on show (only on hover, keyboard focus or while paused); a click on the film pauses it | Accepted |
 | D-065 | Owners and staff manage the shop from WhatsApp as well as the portal, through one shared action layer; phases 0 and 1 (link a number, read-only commands) are built first | Accepted (written as D-040 on 18 Oct; renumbered 28 Oct, D-040 is the look) |
 
@@ -1523,6 +1524,21 @@ Without it, analytics is off everywhere.
 - server-side events from the API (booking made, order paid, the money-back promise);
 - experiments (the homepage headline first);
 - the first surveys.
+
+## D-075 · A customer's data: a copy or forgetting, from the conversation; working copies kept 30 days
+**Date** 29 Oct 2026 · **Status** Accepted (go-live checklist item 19 is Claude's, and the founder's instruction of 29 Oct was to finish the items in Claude's scope; the periods are constants in one file and change with one line) · Linear ALY-119 (with ALY-120) · Spec `specs/038-customer-data/spec.md` · Keeps D-042 (issued documents are immutable) and D-028 (the activity record)
+
+**Where we were.** The published privacy notice promises that a business's customers can ask to see their data or to be deleted, with the business's agreement. Neither could be done: orders, bookings and credit accounts point at the customer, several tables are append-only, and nothing was ever deleted on a timer (an inbound job keeps the customer's message and number for good).
+
+**The decision.**
+- **The business decides, from the customer's conversation.** Owners and admins only: "Download their data" (a JSON file to check and send them) and "Forget this customer" (a check of what goes and what stays, then delete). Both are on the customer's activity record with who did it: that is the log of requests. A request that comes to ALYR is passed to the business.
+- **Forgetting deletes the person and keeps the business's sales.** Their number, IDs, name, email, messages, notes, consent record, cart, watches, drafts and any job or sent event naming them go. Orders, bookings, the credit account and payment requests stay as "Forgotten customer · عميل محذوف", without addresses and notes. Issued receipts and invoices are not touched (the law requires the business to keep them; D-042). An open order or a booking to come must be finished first. Writing again makes a new customer.
+- **One database function does it,** as the table owner and for the business in scope only, so the append-only tables stay append-only for the app role. A test reads every foreign key to `contacts` and fails if a table has not been decided.
+- **Working copies are purged; records are not.** The worker deletes, once a day, jobs finished more than 30 days ago, jobs that failed for good more than 90 days ago, and handled WhatsApp message IDs older than 30 days (Meta resends for up to 7). A business's messages and records are kept while it uses ALYR, as the notice says.
+
+**Chosen over** deleting the customer's sales with them (the business's books would stop adding up, and an invoice must be kept), blanking every field but leaving the messages (the messages are most of what a person would want gone), a back-office procedure run by ALYR staff (the notice says the business decides, and ALYR staff should not read a business's customers to find one), a timer on messages too (the notice promises none and the records are the business's), and keeping jobs for good (an inbound job is a second copy of every message, with the number).
+
+**Revisit when** the lawyer answers ALY-51 (retention periods, what an invoice must keep), a business can stop using ALYR (item 39: its data goes 60 days later), or a customer can ask from WhatsApp directly.
 
 ## D-071 · The homepage plays like a video
 **Date** 29 Oct 2026 · **Status** Accepted (the founder, 29 Oct 2026: "all animations should start right away. In the homepage also remove the pause button, it should feel like a video. Now it's taking a few seconds to start the motion"; asked how far, the founder chose "hide until hover or Tab") · Branch `aly-motion-now`
