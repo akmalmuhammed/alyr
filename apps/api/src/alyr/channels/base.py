@@ -79,6 +79,9 @@ class OutboundMessage:
     # image. `filename` is what the customer's phone shows, with its extension.
     document: bytes = b""
     filename: str = ""
+    # Someone typed this in the inbox; it is not an automatic reply. It still goes while
+    # ALYR has paused a client's sending for billing (ALY-218).
+    typed: bool = False
 
     def __post_init__(self) -> None:
         if self.kind == "buttons" and not 1 <= len(self.choices) <= MAX_BUTTONS:

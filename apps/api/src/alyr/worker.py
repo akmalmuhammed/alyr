@@ -13,7 +13,7 @@ import os
 import socket
 
 from alyr.config import get_settings
-from alyr.core import resume
+from alyr.core import resume, subscription
 from alyr.core.links import check_secret as check_link_secret
 from alyr.core.storage import check_store
 from alyr.main import create_app
@@ -86,6 +86,20 @@ async def keep_owners_reminded(db) -> None:
         await asyncio.sleep(3600)
 
 
+async def keep_billing_checked(db) -> None:
+    """Where each client's plan stands (ALY-218, D-080): pause or resume what ALYR sends for
+    an overdue client, cancel at Paddle a plan whose cancellation took effect, and email the
+    owners what is due. Every hour; each email is recorded before it is sent."""
+    while True:
+        try:
+            sent = await subscription.sweep(db)
+            if sent:
+                log.info("emailed %s clients about their plan", sent)
+        except Exception:  # never let billing stop the worker
+            log.exception("could not check the clients' plans")
+        await asyncio.sleep(3600)
+
+
 async def keep_meters_fresh(media) -> None:
     """Every shop has this month's photo and item meters, even in a month it uploaded
     nothing (ALY-103)."""
@@ -110,6 +124,7 @@ async def main() -> None:
     sweeper = asyncio.create_task(keep_holds_swept(app.state.db, app.state.outbound))
     meters = asyncio.create_task(keep_meters_fresh(app.state.media))
     reminders = asyncio.create_task(keep_owners_reminded(app.state.db))
+    billing = asyncio.create_task(keep_billing_checked(app.state.db))
     try:
         await app.state.jobs.run_forever(heartbeat=heartbeat(app.state.db))
     finally:
@@ -117,6 +132,7 @@ async def main() -> None:
         sweeper.cancel()
         meters.cancel()
         reminders.cancel()
+        billing.cancel()
         await app.state.db.close()
 
 

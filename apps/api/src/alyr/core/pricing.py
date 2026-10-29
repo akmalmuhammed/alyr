@@ -409,6 +409,9 @@ def _client(row) -> dict:
         "contact_email": row["contact_email"], "contact_phone": row["contact_phone"],
         "note": row["note"], "price_mode": row["price_mode"],
         "created_at": row["created_at"].isoformat(),
+        # Where the plan stood at the last hourly check (ALY-218): '' before the first.
+        "billing_state": row["billing_state"],
+        "cancels_on": row["cancels_on"].isoformat() if row["cancels_on"] else None,
     }
 
 

@@ -10,6 +10,7 @@ a short timeout and the person can ask for a new code.
 
 import base64
 import logging
+from datetime import date
 from html import escape
 
 import httpx
@@ -145,6 +146,134 @@ def resume_message(
 <tr><td style="padding:20px 0 6px"><a href="{escape(link)}" style="display:inline-block;background:{e["text"]};color:{e["panel"]};text-decoration:none;font-weight:600;font-size:15px;padding:13px 22px;min-height:20px">{escape(w["button"])}</a></td></tr>
 <tr><td style="padding-top:14px;font-size:13px;color:{e["muted"]}">{escape(w["reply"])}</td></tr>
 <tr><td style="padding-top:18px;border-top:1px solid {e["rule"]};font-size:12px;color:{e["muted"]}"><a href="{escape(stop_link)}" style="color:{e["muted"]}">{escape(w["stop"])}</a></td></tr>
+</table></td></tr></table></body></html>"""
+    return subject, text, html
+
+
+_MONTHS = {
+    "en": ("January", "February", "March", "April", "May", "June", "July", "August",
+           "September", "October", "November", "December"),
+    "ar": ("يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر",
+           "أكتوبر", "نوفمبر", "ديسمبر"),
+}
+
+
+def _day(value: str | None, lang: str) -> str:
+    """"12 November 2026" from "2026-11-12", in the owner's language."""
+    if not value:
+        return ""
+    d = date.fromisoformat(value)
+    return f"{d.day} {_MONTHS[lang][d.month - 1]} {d.year}"
+
+
+# What ALYR writes to a client about their plan (ALY-218, D-080), by kind. `c` is the client's
+# name, `p` the plan's state as `subscription.view` gives it, with its dates already written out.
+_BILLING = {
+    "en": {
+        "due": (
+            lambda c, p: "Your ALYR payment is due",
+            lambda c, p: (
+                f"The next period of {c}'s ALYR plan was due on {p['paid_through']}. "
+                "Everything keeps working. "
+                + (f"To keep it that way, pay {p['owed_text']} by {p['pause_on']}."
+                   if p["pause_on"] else f"Please pay {p['owed_text']}.")
+            ),
+        ),
+        "pause_soon": (
+            lambda c, p: f"ALYR pauses your WhatsApp replies on {p['pause_on']}",
+            lambda c, p: (
+                f"{p['owed_text']} for {c} is still unpaid. On {p['pause_on']}, ALYR pauses "
+                "its automatic WhatsApp replies and messages to your customers until it is "
+                "paid. Your workspace and your data stay as they are."
+            ),
+        ),
+        "paused": (
+            lambda c, p: "Your automatic WhatsApp replies are paused",
+            lambda c, p: (
+                f"{p['owed_text']} for {c} has been due since {p['paid_through']}, so ALYR has "
+                "paused its automatic WhatsApp replies and messages to your customers. Your "
+                "workspace and your data are all there, and replies you type in the inbox "
+                "still go. As soon as your payment is recorded, everything starts again."
+            ),
+        ),
+        "cancel_scheduled": (
+            lambda c, p: f"Your ALYR plan ends on {p['cancels_on']}",
+            lambda c, p: (
+                f"As you asked, {c}'s ALYR plan ends on {p['cancels_on']}. Until then "
+                "everything works. From that day ALYR sends nothing more for you on WhatsApp "
+                "and charges you nothing more. Your data stays. If you change your mind, "
+                "reply to this email."
+            ),
+        ),
+        "hello": lambda name: f"Hello {name}," if name else "Hello,",
+        "button": "Open your workspace",
+        "reply": "Reply to this email if you have a question.",
+    },
+    "ar": {
+        "due": (
+            lambda c, p: "حان موعد دفعتك لـ ALYR",
+            lambda c, p: (
+                f"استحقت الفترة التالية من خطة {c} في ALYR يوم {p['paid_through']}. "
+                "كل شيء يعمل كالمعتاد. "
+                + (f"ليبقى كذلك، ادفع {p['owed_text']} قبل {p['pause_on']}."
+                   if p["pause_on"] else f"يُرجى دفع {p['owed_text']}.")
+            ),
+        ),
+        "pause_soon": (
+            lambda c, p: f"توقف ALYR ردودك على واتساب يوم {p['pause_on']}",
+            lambda c, p: (
+                f"لم يُدفع بعد مبلغ {p['owed_text']} عن {c}. يوم {p['pause_on']} توقف ALYR "
+                "ردودها التلقائية ورسائلها لعملائك على واتساب حتى يُدفع. تبقى مساحة عملك "
+                "وبياناتك كما هي."
+            ),
+        ),
+        "paused": (
+            lambda c, p: "ردودك التلقائية على واتساب متوقفة",
+            lambda c, p: (
+                f"مبلغ {p['owed_text']} عن {c} مستحق منذ {p['paid_through']}، لذلك أوقفت ALYR "
+                "ردودها التلقائية ورسائلها لعملائك على واتساب. مساحة عملك وبياناتك كلها "
+                "موجودة، والردود التي تكتبها في صندوق الرسائل تُرسل. حالما تُسجَّل دفعتك يعود "
+                "كل شيء للعمل."
+            ),
+        ),
+        "cancel_scheduled": (
+            lambda c, p: f"تنتهي خطتك في ALYR يوم {p['cancels_on']}",
+            lambda c, p: (
+                f"كما طلبت، تنتهي خطة {c} في ALYR يوم {p['cancels_on']}. حتى ذلك اليوم يعمل كل "
+                "شيء. ومنه لا ترسل ALYR شيئاً باسمك على واتساب ولا تحاسبك على شيء. تبقى "
+                "بياناتك. إن غيّرت رأيك، ردّ على هذه الرسالة."
+            ),
+        ),
+        "hello": lambda name: f"مرحباً {name}،" if name else "مرحباً،",
+        "button": "افتح مساحة عملك",
+        "reply": "ردّ على هذه الرسالة إن كان لديك سؤال.",
+    },
+}
+
+
+def billing_message(
+    lang: str, kind: str, owner: str, client: str, plan: dict, link: str,
+) -> tuple[str, str, str]:
+    """Subject, plain text and HTML of an email about the client's plan (ALY-218): its payment
+    is due, sending pauses soon, sending is paused, or the plan ends on a day. `plan` is
+    `subscription.view`."""
+    lang = "ar" if lang == "ar" else "en"
+    w = _BILLING[lang]
+    p = plan | {k: _day(plan.get(k), lang) for k in ("paid_through", "pause_on", "cancels_on")}
+    first = owner.split()[0] if owner.strip() else ""
+    subject, body = w[kind][0](client, p), w[kind][1](client, p)
+    text = f"{w['hello'](first)}\n\n{body}\n\n{w['button']}: {link}\n\n{w['reply']}"
+    e, f = brand.EMAIL, brand.CSS_FONT["email"]
+    direction = ' dir="rtl"' if lang == "ar" else ""
+    align = "right" if lang == "ar" else "left"
+    html = f"""<!doctype html><html><body style="margin:0;background:{e["bg"]};font-family:{f};color:{e["text"]}">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px"><tr><td align="center">
+<table role="presentation" width="100%"{direction} style="max-width:480px;background:{e["panel"]};border-radius:16px;padding:28px;text-align:{align}">
+<tr><td style="font-weight:700;font-size:15px;letter-spacing:.06em">ALYR</td></tr>
+<tr><td style="padding-top:18px;font-size:15px">{escape(w["hello"](first))}</td></tr>
+<tr><td style="padding-top:10px;font-size:15px;line-height:1.55">{escape(body)}</td></tr>
+<tr><td style="padding:20px 0 6px"><a href="{escape(link)}" style="display:inline-block;background:{e["text"]};color:{e["panel"]};text-decoration:none;font-weight:600;font-size:15px;padding:13px 22px;min-height:20px">{escape(w["button"])}</a></td></tr>
+<tr><td style="padding-top:14px;font-size:13px;color:{e["muted"]}">{escape(w["reply"])}</td></tr>
 </table></td></tr></table></body></html>"""
     return subject, text, html
 

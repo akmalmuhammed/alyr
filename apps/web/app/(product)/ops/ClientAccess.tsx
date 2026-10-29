@@ -7,7 +7,9 @@
 // also waive the payment, saying why. Both are on the audit log. A client can also pay by card
 // through Paddle (ALY-180, D-074): those payments arrive by themselves from Paddle's webhook and
 // show here beside the others, with what Paddle took in US dollars. Staff choose per client
-// whether the card is offered.
+// whether the card is offered. After go-live (ALY-218, D-080) it shows where the plan stands:
+// paid through a day, past due, paused (ALYR's automatic messages wait until a payment is
+// recorded), or cancelled; staff record a client's cancellation here, with seven days' notice.
 
 import { useState } from "react";
 import { api, toDirhams } from "./api";
@@ -20,7 +22,21 @@ export type Access = {
   // Null: the platform's setting (ALYR_CARD_BILLING). Offered: what the owner sees now.
   card_billing?: "off" | "paddle" | null;
   card?: { provider: string; amount_text: string } | null;
+  subscription?: Plan | null;
   checkout?: { status: string; problem: string; amount_text: string; covers_text: string; subscription_status: string; created_at: string } | null;
+};
+
+export type Plan = {
+  state: "no_price" | "awaiting_payment" | "active" | "past_due" | "suspended" | "cancelled";
+  paid_through: string | null; overdue_days: number; owed: number; owed_text: string;
+  pause_on: string | null; cancels_on: string | null; paused: "" | "overdue" | "cancelled";
+  cancel_note?: string; paused_since?: string | null;
+};
+
+const PLAN: Record<Plan["state"], [string, string]> = {
+  no_price: ["No plan yet", "wait"], awaiting_payment: ["Not live or not paid yet", "wait"],
+  active: ["Plan paid up", "active"], past_due: ["Past due", "wait"],
+  suspended: ["Paused: overdue", "danger"], cancelled: ["Cancelled", "danger"],
 };
 
 const CHECKOUT: Record<string, string> = {
@@ -36,6 +52,7 @@ export function ClientAccess({ clientId, access, onDone }: { clientId: string; a
   const today = new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({ amount: "", method: "bank_transfer", reference: "", received_on: today, note: "" });
   const [reason, setReason] = useState("");
+  const [cancelNote, setCancelNote] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const amount = toDirhams(form.amount);
@@ -47,6 +64,7 @@ export function ClientAccess({ clientId, access, onDone }: { clientId: string; a
       if (!answer.ok) return setError(answer.error);
       setForm({ ...form, amount: "", reference: "", note: "" });
       setReason("");
+      setCancelNote("");
       onDone();
     } finally {
       setBusy(false);
@@ -117,7 +135,42 @@ export function ClientAccess({ clientId, access, onDone }: { clientId: string; a
           </small>
         </p>
       )}
+      {access.subscription && <PlanState clientId={clientId} plan={access.subscription} busy={busy}
+        note={cancelNote} setNote={setCancelNote} send={send} />}
       {error && <p className="ops-error" role="alert">{error}</p>}
+    </div>
+  );
+}
+
+function PlanState({ clientId, plan, busy, note, setNote, send }: {
+  clientId: string; plan: Plan; busy: boolean; note: string; setNote: (v: string) => void;
+  send: (url: string, body: unknown, method?: string) => void;
+}) {
+  const [label, tone] = PLAN[plan.state];
+  const url = `/api/admin/clients/${clientId}/cancel`;
+  return (
+    <div className="ops-plan">
+      <p>
+        <span className={`sh-pill ${tone}`}>{label}</span>{" "}
+        {plan.paid_through && <>Paid through <b className="num">{plan.paid_through}</b>{" "}</>}
+        {plan.owed > 0 && <>· owes <b className="num">{plan.owed_text}</b>{" "}</>}
+        {plan.state === "past_due" && plan.pause_on && <>· sending pauses on {plan.pause_on}</>}
+        {plan.paused && plan.paused_since && <small>Automatic messages paused since {plan.paused_since.slice(0, 10)}. Recording the payment starts them again.</small>}
+      </p>
+      {plan.cancels_on ? (
+        <div className="ops-step">
+          <small>
+            {plan.state === "cancelled" ? "Cancelled on" : "Cancels on"} {plan.cancels_on}
+            {plan.cancel_note && ` · ${plan.cancel_note}`}
+          </small>
+          <button className="btn small ghost" type="button" disabled={busy} onClick={() => send(url, undefined, "DELETE")}>Undo the cancellation</button>
+        </div>
+      ) : (
+        <div className="ops-step">
+          <input aria-label="How the client asked to cancel" placeholder="Cancel: how the client asked (an email, a call)" maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} />
+          <button className="btn small ghost" type="button" disabled={busy || !note.trim()} onClick={() => send(url, { note })}>Cancel in 7 days</button>
+        </div>
+      )}
     </div>
   );
 }

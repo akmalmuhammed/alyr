@@ -18,6 +18,7 @@ from alyr.core import (
     pricing,
     ratelimit,
     readiness,
+    subscription,
     terms,
     whatsapp_setup,
 )
@@ -327,7 +328,13 @@ async def payment(request: Request, staff: Staff = Depends(current_staff)) -> di
     """What opens the workspace (ALY-212, D-051): the amount due, what was paid, how to pay,
     and whether the products are open."""
     async with request.app.state.db.tenant(staff.tenant_id) as conn:
-        return await access.summary(conn)
+        summary = await access.summary(conn)
+        client_id = await conn.fetchval("select own_client()")
+        # Where the plan stands after go-live (ALY-218): the workspace's banner reads it.
+        return summary | {
+            "subscription": subscription.view(await subscription.current(conn, client_id))
+            if client_id else None
+        }
 
 
 @router.post("/payment/card")

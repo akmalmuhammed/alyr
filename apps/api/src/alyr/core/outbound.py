@@ -4,7 +4,7 @@ from uuid import UUID
 import asyncpg
 
 from alyr.channels.base import Address, Channel, Choice, OutboundMessage
-from alyr.core import consent, jobs, templates
+from alyr.core import consent, jobs, subscription, templates
 from alyr.db import Database
 
 SEND = "send_message"
@@ -13,7 +13,8 @@ SEND = "send_message"
 @dataclass(frozen=True)
 class SendResult:
     """What the outbound layer did with a message. `blocked` is the reason it was
-    refused (window_closed, no_consent, opted_out, no_marketing_consent), or None."""
+    refused (window_closed, no_consent, opted_out, no_marketing_consent, billing_paused),
+    or None."""
 
     message_id: UUID
     blocked: str | None = None
@@ -55,6 +56,11 @@ class Outbound:
         if contact is None:
             raise LookupError("no such contact for this tenant")
         blocked = consent.refusal(contact, message)
+        # ALYR has paused what it sends for this client, who is overdue or cancelled (ALY-218,
+        # D-080): automatic replies and templates wait. A reply someone typed in the inbox
+        # still goes, inside the customer's window, so a shop can still answer by hand.
+        if blocked is None and not message.typed and await subscription.paused(conn):
+            blocked = "billing_paused"
         kind, body, image, document = message.kind, message.body, message.image, message.document
         payload: dict = {}
         if message.choices:
