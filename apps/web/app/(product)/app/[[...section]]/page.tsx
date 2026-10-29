@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Screens, type WorkspaceTab } from "../../_workspace/Screens";
 import { TeamReport } from "../../_workspace/Team";
+import { WhatsappLink } from "../../_workspace/WhatsappLink";
 import { Catalog } from "../../_workspace/Catalog";
 import { Documents } from "../../_workspace/Documents";
 import { TermsBanner } from "../../_workspace/TermsBanner";
@@ -622,7 +623,12 @@ export default function WorkspaceShell() {
       <Screens embedded section={section as WorkspaceTab} lang={lang} show={show}
         onClearShow={() => { setShow(null); router.replace(`/app/${section}`); }}
         intro={section === "team"
-          ? <TeamReport lang={lang} canManage={state.can_manage} signer={state.me.signed_in ? state.me.name : "Ali"} />
+          ? (
+            <>
+              <TeamReport lang={lang} canManage={state.can_manage} signer={state.me.signed_in ? state.me.name : "Ali"} />
+              <WhatsappLink lang={lang} role={state.me.role} modules={state.modules} signedIn={state.me.signed_in} />
+            </>
+          )
           : undefined} />
     );
   } else {
