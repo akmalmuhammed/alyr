@@ -404,13 +404,29 @@ def test_row_numbers_no_sheet_could_have_do_not_make_it_longer():
     assert sheet.first_row == 1 and [r[0] for r in sheet.rows] == [Decimal(n) for n in range(1, 6)]
 
 
+def fastest(call, times: int = 3) -> float:
+    took = []
+    for _ in range(times):
+        started = time.perf_counter()
+        call()
+        took.append(time.perf_counter() - started)
+    return min(took)
+
+
 def test_rows_without_numbers_are_read_in_one_pass():
-    # Each row with no number looked through every row before it.
-    rows = "<row><c><v>1</v></c></row>" * xlsx.MAX_ROWS
-    data = minimal(f"<worksheet {NS}><sheetData>{rows}</sheetData></worksheet>")
-    assert len(data) < 10_000
-    sheet = quickly(lambda: xlsx.read(data))
+    # Each row with no number looked through every row before it: 20,000 such rows took about
+    # 22 times as long as the same rows with their numbers. Timed against those, not the clock,
+    # so a slow or busy machine slows both alike; now the two take about as long.
+    bare = "<row><c><v>1</v></c></row>" * xlsx.MAX_ROWS
+    numbered = "".join(f'<row r="{n}"><c><v>1</v></c></row>' for n in range(1, xlsx.MAX_ROWS + 1))
+    without, with_numbers = (
+        minimal(f"<worksheet {NS}><sheetData>{rows}</sheetData></worksheet>")
+        for rows in (bare, numbered)
+    )
+    assert len(without) < 10_000
+    sheet = xlsx.read(without)
     assert len(sheet.rows) == xlsx.MAX_ROWS and not sheet.truncated
+    assert fastest(lambda: xlsx.read(without)) < 5 * fastest(lambda: xlsx.read(with_numbers))
 
 
 ENTITIES = '<!DOCTYPE s [<!ENTITY a "aaaaaaaaaa">]>'
