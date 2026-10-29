@@ -280,3 +280,60 @@ def test_when_the_shops_photo_limit_is_reached_the_items_still_come_in(
     assert (finished["total"], finished["done"], len(finished["failed"])) == (4, 2, 2)
     assert {f["code"] for f in finished["failed"]} == {"photo_limit_reached"}
     assert len(client.get("/api/items", params={"limit": 50}).json()["items"]) == 4
+
+
+# ── read once (ALY-278) ──────────────────────────────────
+
+def where_it_ran(calls: list, real):
+    """`real`, noting each time whether it ran on the event loop or in a worker thread."""
+    import asyncio
+
+    def noted(*args):
+        try:
+            asyncio.get_running_loop()
+            calls.append("event loop")
+        except RuntimeError:
+            calls.append("worker thread")
+        return real(*args)
+
+    return noted
+
+
+def test_the_sheet_and_the_zip_are_read_once_in_a_worker_thread_and_never_again(
+    client, monkeypatch,
+):
+    # A large sheet takes seconds to read. It is read when it arrives, in a worker thread and
+    # before a transaction is open; the preview, its options and the apply work from what was
+    # kept, and the zip's list of files likewise.
+    from alyr.modules.items import import_photos, sheets
+
+    new_shop(client)
+    read, listed = [], []
+    monkeypatch.setattr(sheets, "read_table", where_it_ran(read, sheets.read_table))
+    monkeypatch.setattr(import_photos, "index", where_it_ran(listed, import_photos.index))
+    shown = preview_of(client, xlsx_of(table(PHOTO_KEYS, ["Tea", "شاي", "Drinks", "3", "tea.jpg"])))
+    zipped = add_zip(client, shown, zip_photos({"tea.jpg": photo()}))
+    assert zipped.status_code == 200, zipped.text
+    assert read == ["worker thread"] and listed == ["worker thread"]
+    again = the_import(client, shown["id"])
+    assert again["hash"] == zipped.json()["hash"] and again["summary"]["zip"]["entries"] == 1
+    assert again["summary"]["zip"]["bytes"] == len(zip_photos({"tea.jpg": photo()}))
+    changed = client.post(f"/api/items/import/{shown['id']}/options", json={"on_duplicate": "skip"})
+    assert changed.status_code == 200, changed.text
+    done = apply_import(client, changed.json())
+    assert done.status_code == 200, done.text
+    assert read == ["worker thread"] and listed == ["worker thread"]
+    kept = owner_sql("select file, sheet, zip_index from item_imports where id = $1", shown["id"])
+    assert dict(kept[0]) == {"file": None, "sheet": None, "zip_index": None}
+
+
+def test_a_preview_kept_before_files_were_read_once_is_gone_not_read_again(client):
+    new_shop(client)
+    shown = preview_of(client, xlsx_of(table(BASIC, ["Tea", "شاي", "Drinks", "3"])))
+    owner_sql("update item_imports set sheet = null where id = $1", shown["id"])
+    for answer in (
+        client.get(f"/api/items/import/{shown['id']}"),
+        apply_import(client, shown),
+    ):
+        assert answer.status_code == 404, answer.text
+        assert answer.json()["detail"]["code"] == "import_not_found"

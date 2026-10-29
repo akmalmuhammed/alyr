@@ -17,6 +17,7 @@ from uuid import UUID
 import asyncpg
 
 from alyr import catalog, presets
+from alyr.core import paddle
 from alyr.core.normalise import fmt_qar
 
 AVAILABILITY = ("self_serve", "with_alyr", "hidden")
@@ -126,6 +127,8 @@ def _item(row) -> dict:
     return {
         "key": row["key"], "name": row["name"], "name_ar": row["name_ar"],
         "kind": row["kind"], "price": row["price"], "price_text": fmt_qar(row["price"]),
+        # In US cents, for a card payment through Paddle (D-074). None: the peg.
+        "price_usd": row["price_usd"],
         "applies": row["applies"], "active": row["active"], "sort": row["sort"],
         "updated_at": row["updated_at"].isoformat(), "updated_by": row["updated_by"],
     }
@@ -150,10 +153,12 @@ def _check_applies(applies: str) -> None:
 
 async def save_item(
     conn: asyncpg.Connection, key: str, name: str, name_ar: str, kind: str, price: int,
-    applies: str, active: bool, sort: int, by: str,
+    applies: str, active: bool, sort: int, by: str, price_usd: int | None = None,
+    set_usd: bool = False,
 ) -> dict:
     """Add an item to the price list or change one. Quotes already made keep their
-    own copy of the price, so this never changes what a client was offered."""
+    own copy of the price, so this never changes what a client was offered. The dollar
+    price (`price_usd`, US cents, None for the peg) changes only when `set_usd`."""
     if not ITEM_KEY.match(key):
         raise PricingError("the key may use a-z, 0-9 and underscores")
     if kind not in KINDS:
@@ -162,14 +167,19 @@ async def save_item(
         raise PricingError("a price cannot be negative; use a discount line on the quote")
     if not name.strip():
         raise PricingError("give the item a name")
+    if price_usd is not None and price_usd < 0:
+        raise PricingError("a dollar price cannot be negative")
     _check_applies(applies)
     row = await conn.fetchrow(
         "insert into price_items (key, name, name_ar, kind, price, applies, active, sort, "
-        "updated_at, updated_by) values ($1, $2, $3, $4, $5, $6, $7, $8, now(), $9) "
+        "updated_at, updated_by, price_usd) "
+        "values ($1, $2, $3, $4, $5, $6, $7, $8, now(), $9, case when $10 then $11::integer end) "
         "on conflict (key) do update set name = $2, name_ar = $3, kind = $4, price = $5, "
-        "applies = $6, active = $7, sort = $8, updated_at = now(), updated_by = $9 "
+        "applies = $6, active = $7, sort = $8, updated_at = now(), updated_by = $9, "
+        "price_usd = case when $10 then $11::integer else price_items.price_usd end "
         "returning *",
         key, name.strip(), name_ar.strip(), kind, price, applies, active, sort, by,
+        set_usd, price_usd,
     )
     return _item(row)
 
@@ -257,6 +267,34 @@ def totals(lines: list[dict], period_months: int, discount_pct: int) -> dict:
         "period_total": monthly_total * period_months, "one_time_total": max(once, 0),
     }
     return out | {f"{k}_text": fmt_qar(v) for k, v in out.items()}
+
+
+def usd_totals(
+    lines: list[dict], price_list: list[dict], period_months: int, discount_pct: int
+) -> dict:
+    """What a quote costs by card through Paddle, in US cents (D-074): the setup once
+    (`one_time`) and each period (`period`), worked as `totals` works the riyals. A line at its
+    item's list price takes the item's dollar price; a product added at the "each extra
+    product" price takes that item's; any other line (priced by hand, or an item without a
+    dollar price) its riyal price at the peg, rounded up to the cent."""
+    by_key = {i["key"]: i for i in price_list}
+    extra = next((i for i in price_list if i["applies"] == EXTRA_PRODUCT), None)
+
+    def unit(line: dict) -> int:
+        item = by_key.get(line["item_key"] or "")
+        if item and item["price_usd"] is not None and line["unit_price"] == item["price"]:
+            return item["price_usd"]
+        if (
+            item and extra and extra["price_usd"] is not None and _paid_product(item)
+            and line["unit_price"] == extra["price"]
+        ):
+            return extra["price_usd"]
+        return paddle.usd_cents(line["unit_price"])
+
+    monthly = max(sum(x["quantity"] * unit(x) for x in lines if x["kind"] == "monthly"), 0)
+    once = max(sum(x["quantity"] * unit(x) for x in lines if x["kind"] == "one_time"), 0)
+    monthly_total = monthly - round(monthly * discount_pct / 100)
+    return {"one_time": once, "period": monthly_total * period_months}
 
 
 # ── reading a quote ───────────────────────────────────────

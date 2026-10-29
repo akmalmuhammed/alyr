@@ -1,0 +1,23 @@
+/* Forgetting a customer (specs/038): a quiet button under the conversation, and a check that
+   says what goes and what stays before anything happens. Red only on the one button that
+   deletes. */
+.forget-open { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 12px; border-top: 1px solid var(--line); }
+.forget-open .btn { color: var(--ink-2); }
+.forget-open .err, .forget-bar .err { color: var(--bad); font-size: var(--ui-small); }
+.forget { padding: 14px 12px 12px; border-top: 1px solid var(--line); background: var(--raise); font-size: var(--ui-small); }
+.forget h3 { margin: 0 0 4px; font-size: var(--ui-body); overflow-wrap: anywhere; }
+.forget p { margin: 0 0 10px; color: var(--ink-2); }
+.forget h4 { margin: 0 0 4px; font-size: var(--ui-small); font-weight: 600; }
+.forget ul { margin: 0; padding: 0; list-style: none; }
+.forget li { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-bottom: 1px solid var(--line); }
+.forget li b { flex: none; font-weight: 500; }
+.forget-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 12px 20px; margin-bottom: 10px; }
+.forget .forget-warn { margin: 0 0 10px; padding: 8px 10px; border-radius: 8px; background: var(--warn-soft); color: var(--warn); }
+.forget .forget-warn p { margin: 0 0 4px; color: inherit; }
+.forget .forget-warn li { border-bottom-color: color-mix(in srgb, var(--warn) 25%, transparent); }
+.forget .forget-note { margin-bottom: 12px; }
+/* Last in the conversation's sheet: follow its rounded corners. */
+.forget:last-child { border-end-start-radius: inherit; border-end-end-radius: inherit; }
+.forget-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sh .forget-bar .btn.danger { background: var(--bad); color: var(--white); box-shadow: none; }
+.sh .forget-bar .btn:disabled { opacity: 0.5; cursor: default; }

@@ -75,10 +75,13 @@ def test_a_channel_that_never_works_parks_the_job_and_marks_the_message(
     assert parked[0]["kind"] == "send_message"
     assert "ConnectionError" in parked[0]["last_error"]
 
-    # The channel comes back; a person sends the job round again.
+    # The channel comes back; a person sends the job round again, and the message goes.
     channel.failures = 0
     assert client.post(f"/api/jobs/{parked[0]['id']}/retry").status_code == 200
     assert client.get("/api/jobs/failed").json()["jobs"] == []
+    assert len(channel.sent) == 1
+    reply = [m for m in meta_conversation(client) if m["direction"] == "out"][-1]
+    assert reply["status"] == "sent"
 
 
 def test_webhook_only_queues_and_a_later_worker_does_the_work(client_factory, monkeypatch):

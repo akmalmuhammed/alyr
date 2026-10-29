@@ -109,7 +109,10 @@ class Outbound:
                 document or image,
             )
         if not blocked:
-            await jobs.enqueue(conn, SEND, {"message_id": str(message_id)})
+            # The contact puts the send in the customer's lane: their messages go in order.
+            await jobs.enqueue(
+                conn, SEND, {"message_id": str(message_id), "contact_id": str(message.to)}
+            )
         return SendResult(message_id, blocked)
 
     async def deliver(self, tenant_id: UUID, payload: dict) -> None:

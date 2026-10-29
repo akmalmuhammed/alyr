@@ -23,7 +23,7 @@ from pydantic import BaseModel, Field
 
 from alyr.config import get_settings
 from alyr.core import links, ratelimit
-from alyr.core.normalise import fmt_qar, fmt_qar_ar
+from alyr.core.normalise import fmt_qar, fmt_qar_ar, shown_name
 from alyr.core.workspace import module_enabled
 from alyr.modules.items import clock, delivery, demand, discounts, features, template, text
 from alyr.modules.items import groups as price_groups
@@ -189,7 +189,9 @@ async def _identify(conn, link: links.Link | None) -> dict | None:
     if row is None:
         return None
     return {
-        "name": row["name"], "first_name": row["name"].split(" ")[0], "lang": row["lang"],
+        # A name that is only the phone number is not printed (ALY-271, CJ-17).
+        "name": shown_name(row["name"]), "first_name": shown_name(row["name"]).split(" ")[0],
+        "lang": row["lang"],
         "can_use_account": bool(row["credit_limit"] and row["credit_limit"] > 0),
         "has_last_order": bool(await conn.fetchval(
             "select true from orders where contact_id = $1 and status <> 'cancelled' limit 1",
