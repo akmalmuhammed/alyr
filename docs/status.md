@@ -128,7 +128,7 @@ Tests: 1,136 API tests pass and 2 are skipped (the opt-in live R2 check) on the 
 - Arabic wording has not been reviewed by a native speaker.
 - **A customer's order link and booking link are signed tokens** (`ALYR_LINK_SECRET`, 60 days, one purpose each; ALY-112 and ALY-133, the booking one in a pull request): no customer page takes a contact ID. One customer's link cannot be ended on its own (changing the secret ends every link). The pay and tracking pages open by a random ID in the address with no expiry, and show a payer's first name and no phone number (`routes/pay.py`, `routes/track.py` say why that is safe).
 - Failed jobs have an API route but no screen.
-- The demo page polls every 1.5 seconds.
+- The workspace looks again for changes every 10 seconds (the shell and ALYR Agent every 15), only for the screen on show and never while its browser tab is hidden (ALY-275 PERF-1, PR #179). A customer's new message reaches an open screen within 10 seconds; it is not live. The orders and conversation lists still come whole rather than page by page, and are asked for whole each time: the rest of PERF-1.
 
 ## Live testing from the laptop
 
