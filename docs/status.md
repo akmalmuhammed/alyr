@@ -12,13 +12,13 @@ Last updated: 29 Oct 2026 (self-serve onboarding for order businesses, the terms
 
 | Area | State | Where |
 |---|---|---|
-| Tenancy with forced row-level security. **Every table that holds a shop's rows has an index that starts with the shop** (a test fails otherwise), a shop is made with its default price group, and the customer's order page reads in a read-only transaction (D-076, ALY-275, migration 0069, not yet deployed) | Built | `migrations/0001_core.sql`, `0069_shop_first_indexes.sql`, `db.py` |
+| Tenancy with forced row-level security. **Every table that holds a shop's rows has an index that starts with the shop** (a test fails otherwise), a shop is made with its default price group, the customer's order page reads in a read-only transaction, and the worker looks for abandoned jobs once a minute, among the running ones only (D-076, ALY-275, migration 0069, not yet deployed) | Built | `migrations/0001_core.sql`, `0069_shop_first_indexes.sql`, `db.py` |
 | Simulator and Meta channels behind one interface | Built; Meta untested live | `channels/` |
 | Contact identity by WhatsApp user ID, phone optional | Built | `core/identity.py` |
 | Credit ledger in chat, ageing, reminders, pay link | Built | `modules/ledger/` |
 | Order link: products, order page, pay or on account | Built | `modules/orders/`, `apps/web/app/s/` |
 | **Catalog engine (D-039, ALY-102, spec 001):** items with English and Arabic names, price with sale price and history, variants with their own stock, options, availability rules (always, switch, count, daily limit, schedule with lead time, cut-off and date overrides), an append-only stock log, stock taken in one step at checkout so the last item sells once, 30-minute holds for unpaid pay-link orders, restock on cancel, a copy of the variant and options on each order line, and `/api/items`. Products became items (migration 0022) | Merged (PR #67, ALY-102). The screens on top of it are the next row | `modules/items/`, `modules/orders/`, `routes/items.py`, `specs/001-catalog-engine/spec.md` |
-| Job queue with retries and dead letters; jobs left running by a process that died are looked for once a minute, among the running ones only (D-076) | Built | `core/jobs.py` |
+| Job queue with retries and dead letters | Built | `core/jobs.py` |
 | Consent, stop and start words, 24-hour window | Built **Merging two records of one customer (phone and WhatsApp user ID) keeps every consent record and the stricter state, and no longer fails on a booking (ALY-115, D-045, migration 0045): in a pull request, not merged.** | `core/consent.py`, `core/outbound.py` |
 | Shared inbox: human takeover, assignment, staff notes, saved replies | Built; no live updates or typing warning | `modules/inbox/`, D-021 |
 | Sign-in by one-time code, sessions, team and roles | Built; codes are emailed through Resend once `ALYR_EMAIL_API_KEY` is set (D-029). Until then codes only work locally | `core/auth.py`, D-022 |
