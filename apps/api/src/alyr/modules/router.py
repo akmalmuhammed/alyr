@@ -79,6 +79,14 @@ async def handle(
         return await ledger_chat.handle(conn, tenant_id, contact, message, web_url)
     if "bookings" in modules and contact["role"] != "staff":
         return await bookings_chat.greeting(conn, tenant_id, contact, message)
+    if "orders" in modules or "catalog" in modules:
+        # An order shop greets with its order link and menu, not "we will reply" (ALY-272).
+        replies = await orders_chat.greeting(
+            conn, tenant_id, contact, message, web_url,
+            "orders" in modules, "catalog" in modules and media is not None,
+        )
+        if replies is not None:
+            return replies
     return _acknowledge(contact, message)
 
 
