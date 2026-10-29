@@ -19,7 +19,7 @@ import asyncpg
 from alyr import catalog, presets, shop_templates
 from alyr.channels.base import InboundMessage
 from alyr.config import get_settings
-from alyr.core import auth, identity, pricing, team, terms
+from alyr.core import auth, identity, pricing, team, terms, welcome
 from alyr.core.auth import Staff
 from alyr.core.normalise import fmt_qar
 from alyr.db import Database
@@ -149,10 +149,12 @@ async def create_business(
     async with db.tenant(tenant_id) as conn:
         # The language the owner reads, so a reminder to finish setup is written in it (ALY-171).
         await conn.execute("select update_own_resume($1, null)", "ar" if lang == "ar" else "en")
+        owner = await conn.fetchval(
+            "select user_id from memberships where role = 'owner' order by created_at limit 1"
+        )
+        # How to get back in, in the language they signed up in (specs/037).
+        await welcome.queue(conn, welcome.WELCOME, owner)
         if required:
-            owner = await conn.fetchval(
-                "select user_id from memberships where role = 'owner' order by created_at limit 1"
-            )
             await terms.accept(
                 conn, [UUID(t) for t in sorted(required)], owner, owner_name, ip, user_agent
             )

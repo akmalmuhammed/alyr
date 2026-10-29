@@ -13,6 +13,7 @@ import { call } from "./api";
 import { identifyFromSession } from "../../_analytics/ProductAnalytics";
 import { track } from "../../_analytics/posthog";
 import { Chat, initialsOf, type ChatMessage, type Choice } from "./Chat";
+import { codeDigits } from "../login/code";
 import { COPY, type Lang } from "./copy";
 import { HandoverView, ProductsView, moneyText, useHandover, useProducts } from "./OrderSteps";
 import "./start.css";
@@ -612,7 +613,7 @@ export default function Start() {
         <form id="ob-form" className="ob-fields" onSubmit={(e) => { e.preventDefault(); verify(); }}>
           <label className="ob-field">
             <span>{t.account.code}</span>
-            <input className="ob-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} required autoFocus value={code} dir="ltr" onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} />
+            <input className="ob-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} required autoFocus value={code} dir="ltr" onChange={(e) => setCode(codeDigits(e.target.value))} />
           </label>
         </form>
         <button className="ob-link" type="button" onClick={() => { setStep("account"); setCode(""); setDevCode(null); }}>{t.account.other}</button>
