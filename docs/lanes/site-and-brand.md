@@ -56,7 +56,7 @@ Last updated 29 Oct 2026, with the bakery sales demo (ALY-263, branch `aly-demo-
 - **Merged, not published (ALY-97):** accessibility fixes on `/chat` and `/ar/chat`, with no change to layout or motion. The only visible change: the statement's unlit words are darker (3.35:1 on the canvas; large text needs 3:1), the three facts under the page title are `h2` instead of `h3`, and on phones the how-it-works step buttons keep their titles as names for screen readers. axe-core finds nothing on either page at 1440 and 390 px.
 - The live site has two pages in each language: a company homepage (`/`) and the ALYR Chat product page (`/chat`), decision D-026. With ALY-99 it has five (D-037). The R in the wordmark was redrawn on 12 Oct; the design system's master files still carry the old one.
 - The look is decided: Carbon and Volt (D-040, 17 Oct). New branded material follows `design/tokens.json` and the design skills.
-- No contact method on the live page (ALY-60). Arabic unreviewed (ALY-66). No privacy or terms pages (ALY-72, Company lane).
+- No contact method on the live page (ALY-60). Arabic unreviewed (ALY-66). No terms page (ALY-68, Company lane).
 
 ## Next, in order
 
