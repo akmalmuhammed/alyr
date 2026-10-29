@@ -1,19 +1,30 @@
 # Site deploy, previews and rollback (alyr.qa)
 
-Written 24 Oct 2026 (site tooling, branch `aly-site-tooling`). The public site is plain
-files served by the Cloudflare Worker `alyr-site` (`apps/web/wrangler.jsonc`,
-`apps/web/site-worker.js`), built by `scripts/build-site.sh`.
+Written 24 Oct 2026 (site tooling, branch `aly-site-tooling`); corrected 30 Oct 2026
+(ALY-269). The public site is plain files served by the Cloudflare Worker `alyr-site`
+(`apps/web/wrangler.jsonc`, `apps/web/site-worker.js`), built by `scripts/build-site.sh`.
 
-**Not yet run for real.** GitHub Actions is blocked by billing and the Cloudflare secrets
-below do not exist yet, so nothing in this page has run on GitHub or against Cloudflare.
-The workflow was checked with actionlint and `wrangler --dry-run` only.
+**What really happened until 30 Oct.** The workflow has run on GitHub since 28 Oct. The
+`production` job names the GitHub environment `production`, but that environment had no
+required reviewer, so nothing waited for approval: every push to `main` that touched the web
+app published alyr.qa within a minute (eight times between 22:49 and 22:52 UTC on 28 Oct),
+with no check that `ci` had passed. This page used to say the founder approved each one. He
+did not, because nothing asked him.
+
+**What happens now.** A push to `main` publishes **nothing**. alyr.qa changes only when
+someone runs the workflow by hand with a release version; the commit's `ci` run must be green,
+and then it waits for the founder's approval in `production`. The path is the one in
+[release.md](release.md). The approval prompt exists only once the founder has applied the
+settings in release.md ("One-time setup"); until then the run goes straight through after the
+CI check.
 
 ## How it works
 
 | When | What happens | Who says yes |
 |---|---|---|
-| A pull request is opened or pushed | `.github/workflows/site-deploy.yml` builds the site and uploads it as a new **version** of `alyr-site` that takes no traffic (`wrangler versions upload`). Cloudflare gives it a preview address; the job posts it on the pull request | Nobody: alyr.qa does not change |
-| A push to `main`, or "Run workflow" on any pushed branch | The `production` job waits for approval, then builds, runs `pnpm site:check`, runs `wrangler deploy` and reads `https://alyr.qa/version.txt` back | The founder, in GitHub (environment `production`) |
+| A pull request is opened or pushed | `.github/workflows/site-deploy.yml` builds the site and uploads it as a new **version** of `alyr-site` that takes no traffic (`wrangler versions upload`), in the environment `preview`. Cloudflare gives it a preview address; the job posts it on the pull request. Without the `preview` secrets it only builds | Nobody: alyr.qa does not change |
+| A push to `main` | Nothing | |
+| "Run workflow" on `main`, with a version (`v0.x.y`) | The `gate` job checks the commit's `ci` run and that the version is cut in `CHANGELOG.md`. The `production` job then waits for approval, builds, runs `pnpm site:check`, runs `wrangler deploy` and reads `https://alyr.qa/version.txt` back. The `tag` job tags the commit | The founder, in GitHub (environment `production`) |
 | The founder's laptop, as a fallback | `pnpm site:deploy` from `apps/web` | The founder, typing `yes` |
 
 Every build names its commit: `out-site/version.txt` (commit, branch, build time, offer
@@ -46,61 +57,89 @@ the Worker add `X-Robots-Tag: noindex, nofollow`.
 so a draft line can be seen before the founder approves it. To require a sign-in, put
 Cloudflare Access on the preview URLs (step 4). Access is free for up to 50 users.
 
-**The approval gates the workflow, not the key.** Previews and production use the same
-Cloudflare token, because a token cannot be limited to "upload, never deploy". Anyone who
-can push a branch to this repository could therefore write a workflow that deploys. Today
-that is only the founder and his agents. Pull requests from forks never get the secrets.
+**What the approval protects.** The Cloudflare token and account ID are *environment*
+secrets. The `production` job reads them from `production`, and a job that names that
+environment waits for the founder's approval before it can read anything, and only runs from
+`main`. A workflow on any other branch cannot reach them. Before 30 Oct they were repository
+secrets, readable by a workflow on any branch of this repository.
+
+**What it does not protect.** Previews run unattended, so the `preview` environment holds a
+token that any pull request branch of this repository can use. It is a separate token with
+fewer permissions, but Cloudflare cannot limit a token to one Worker: "Workers Scripts: Edit"
+covers every Worker in the account, not only `alyr-site`. Two ways to close that, both for the
+founder to decide: switch previews off (delete the two `preview` secrets), or keep the Workers
+that carry production traffic in a Cloudflare account the site token cannot reach (CLD-4).
+Pull requests from forks never get the secrets.
 
 ## One-time setup (Needs Akmal)
 
-### Step 1: a Cloudflare API token and the account ID, as GitHub secrets
+The GitHub environments, the reviewer and the branch rule are in
+[release.md](release.md) ("One-time setup"), with the commands. This page covers the Cloudflare
+side.
 
-1. Cloudflare dashboard → **My Profile → API Tokens → Create Token**.
-2. Use the template **Edit Cloudflare Workers** (Cloudflare's recommendation for GitHub
-   Actions). It grants:
+### Step 1: two Cloudflare API tokens and the account ID, as environment secrets
+
+The **production** token (the one that exists today, rolled; see release.md, item 5):
+
+1. Cloudflare dashboard → **My Profile → API Tokens**. Roll the existing token, or create one:
+   **Create Token**, template **Edit Cloudflare Workers** (Cloudflare's recommendation for
+   GitHub Actions). It grants:
    - Account: Workers Scripts Edit, Workers KV Storage Edit, Workers R2 Storage Edit,
      Account Settings Read, Workers Tail Read;
    - Zone: Workers Routes Edit;
    - User: User Details Read, Memberships Read.
-3. Narrow its resources:
+2. Narrow its resources:
    - **Account Resources:** Include → ALYR's account only.
    - **Zone Resources:** Include → Specific zone → `alyr.qa`, and add `alyr.online`. The
      Worker's routes and custom domains are on these two zones.
    - Leave **Client IP Address Filtering** empty, because GitHub's runners have no fixed
      address.
    - Optional: a **TTL**. Then put the renewal date in `docs/access.md`.
-4. Create it, and copy the token once. Do not paste it anywhere but GitHub.
-5. The **account ID**: dashboard → **Workers & Pages**, in the right-hand column under
-   "Account details". (`pnpm exec wrangler whoami` on the laptop also shows it.)
-6. GitHub → `akmalmuhammed/alyr` → **Settings → Secrets and variables → Actions → New
-   repository secret**, twice:
+3. Copy the token once. Do not paste it anywhere but the prompt in item 6.
 
-| Name | Value |
-|---|---|
-| `CLOUDFLARE_API_TOKEN` | the token from item 4 |
-| `CLOUDFLARE_ACCOUNT_ID` | the account ID from item 5 |
+The **preview** token, a second one named for what it does (for example `alyr github
+preview`): **Create Custom Token** with **Account → Workers Scripts → Edit** and nothing else,
+for ALYR's account only. No zone, no R2, no KV. Uploading a version (`wrangler versions
+upload`) does not need more. This has not been run: if the first preview fails with a
+permissions error, the error names the missing permission; add that one and no more.
+
+4. The **account ID**: dashboard → **Workers & Pages**, in the right-hand column under
+   "Account details". (`pnpm exec wrangler whoami` on the laptop also shows it.)
+5. Create the environments `production` and `preview` first (release.md, items 1 and 2).
+6. Store the four values. Each command asks for the value and hides what you type:
+
+| Environment | Name | Value |
+|---|---|---|
+| `production` | `CLOUDFLARE_API_TOKEN` | the production token |
+| `production` | `CLOUDFLARE_ACCOUNT_ID` | the account ID |
+| `preview` | `CLOUDFLARE_API_TOKEN` | the preview token |
+| `preview` | `CLOUDFLARE_ACCOUNT_ID` | the account ID |
+
+   ```bash
+   gh secret set CLOUDFLARE_API_TOKEN  --env production --repo akmalmuhammed/alyr
+   gh secret set CLOUDFLARE_ACCOUNT_ID --env production --repo akmalmuhammed/alyr
+   gh secret set CLOUDFLARE_API_TOKEN  --env preview    --repo akmalmuhammed/alyr
+   gh secret set CLOUDFLARE_ACCOUNT_ID --env preview    --repo akmalmuhammed/alyr
+   ```
+
+7. Delete the repository-level pair (release.md, item 5). Until you do, they still exist and
+   the environment copies change nothing.
 
 If the first production deploy fails on the custom domains (`alyr.qa`, `www.alyr.qa`,
-`www.alyr.online`) with a permissions error, edit the token. Add **Zone → DNS → Edit** for
-the same two zones. This is not tested: the domains are already attached, so the deploy
-should leave them as they are.
+`www.alyr.online`) with a permissions error, edit the production token. Add **Zone → DNS →
+Edit** for the same two zones. This is not tested: the domains are already attached, so the
+deploy should leave them as they are.
 
-Then add a row for the token to `docs/access.md` and to `docs/runbooks/secret-rotation.md`:
-who holds it, where it is stored, and how to replace it.
+The rows for both tokens are in `docs/access.md` and `docs/runbooks/secret-rotation.md`. Put the
+TTL or renewal date there if you set one.
 
 ### Step 2: the `production` environment with the founder as reviewer
 
-GitHub → **Settings → Environments → New environment** → name it `production`:
-
-- **Required reviewers:** `akmalmuhammed`.
-- Leave **Prevent self-review** unticked. He is the only reviewer and usually starts the
-  run himself.
-- **Deployment branches and tags:**
-  - "No restriction" while the live site comes from the stacked branch
-    (`aly-210-tech-team-homepage`);
-  - "Selected branches: `main`" once the stack is merged.
-
-The repository is public, so required reviewers work on the free plan.
+Done with the commands in [release.md](release.md), item 1: **Required reviewers**
+`akmalmuhammed`, **Prevent self-review** off (he is the only reviewer and starts the run
+himself), **Deployment branches**: only `main`, administrators not allowed to bypass.
+Check it under **Settings → Environments → production**. The repository is public, so
+required reviewers work on the free plan.
 
 ### Step 3: turn version URLs on for `alyr-site`
 
@@ -127,13 +166,24 @@ Cloudflare Access.** Add the founder's email.
 
 1. Open the pull request's preview address and check it. Its `/version.txt` names the
    commit.
-2. Merge (on green CI), or, while the stack is unmerged, go to **Actions → site deploy →
-   Run workflow** and choose the branch.
-3. GitHub asks the founder to **Review deployments** → `production` → **Approve and
-   deploy**.
-4. The job fails if `https://alyr.qa/version.txt` does not name the commit within a minute.
-5. Write the commit and Cloudflare version ID in `docs/status.md`. The job's log prints the
-   version ID; `pnpm exec wrangler deployments status --config wrangler.jsonc` shows it too.
+2. Merge (on green CI). **Merging publishes nothing.**
+3. Cut the release and run the workflow: [release.md](release.md), "Cutting a release". In
+   short: `scripts/release.sh cut v0.x.y` in a release PR, wait for `ci` on the merge commit,
+   then `gh workflow run site-deploy.yml --ref main -f version=v0.x.y` (or Actions → site
+   deploy → Run workflow, branch `main`). Only `main` is accepted: a branch is not published
+   any more, so look at its preview instead.
+4. The `gate` job checks `ci` and the version. GitHub then asks the founder to **Review
+   deployments** → `production` → **Approve and deploy**.
+5. The job fails if `https://alyr.qa/version.txt` does not name the commit within a minute.
+   After that the commit is tagged `v0.x.y`.
+6. Write the version, the commit and the Cloudflare version ID in `docs/status.md`. The job's
+   log prints the version ID; `pnpm exec wrangler deployments status --config wrangler.jsonc`
+   shows it too.
+
+To publish automatically again after each merge, add a `push` trigger back to
+`site-deploy.yml`; with the reviewer in place every push then waits for the founder's
+approval. It was taken out on 30 Oct because that is a queue of approvals for unreleased,
+untagged commits.
 
 **Manual fallback, on the laptop:**
 
@@ -196,11 +246,12 @@ dots beside the good version → **Rollback**.
 - A rollback changes only the Worker and its files. Each version carries its own static
   files, so the old pages come back with it. This has not been tried on `alyr-site` yet.
 
-If the good version is too old, or a rollback is refused, rebuild it from git:
-- check out the good commit;
-- push it as a branch;
-- run **site deploy** on that branch and approve it, or run `pnpm site:deploy` on the
-  laptop.
+If the good version is too old, or a rollback is refused, rebuild it from git. The workflow
+only publishes `main`, so either:
+- revert the bad change on `main` in a pull request and release that
+  ([release.md](release.md)); or
+- check out the good commit on the laptop and run `pnpm site:deploy` (the commit must be
+  pushed), then tag it by hand: `scripts/release.sh tag v0.x.y <sha>` with a new version.
 
 Production builds are also kept as the workflow artifact `out-site-production-<sha>` for 90
 days. To publish one as it is:

@@ -115,17 +115,23 @@ worker that hangs turns red as well as one that dies.
 
 ## Deploying
 
-Manual only, from `main`: GitHub Actions > `deploy-gcp` > Run workflow. It signs in to
-Google with a short-lived GitHub token (no stored key), builds and pushes both images
-tagged with the commit, runs migrations as a job, rolls out the API, worker and web app
-only if migrations succeeded, and checks `/health/ready`, `/health/worker` and `/login`.
+Manual only, from `main`, with a release version: GitHub Actions > `deploy-gcp` > Run workflow
+(`docs/runbooks/release.md`). Three jobs. The gate checks that the commit's `ci` run is green
+and that the version `v0.x.y` is cut in `CHANGELOG.md`. The deploy job then waits for the
+founder's approval (environment `production`), signs in to Google with a short-lived GitHub
+token (no stored key), builds and pushes both images tagged with the commit, runs migrations as
+a job, rolls out the API, worker and web app only if migrations succeeded, sends their traffic
+to the new revisions, and checks `/health/ready`, `/health/worker` and `/login`. Last, the
+commit is tagged with the version.
 
-Without GitHub Actions (the first deploy, or while Actions is blocked):
-`infra/gcp/push-images.sh` on the laptop, then `infra/gcp/setup.sh apps <tag>`.
+Without GitHub Actions (while Actions is blocked, or the first deploy): `infra/gcp/push-images.sh`
+on the laptop, then `infra/gcp/setup.sh apps <tag>`. Tag the commit by hand afterwards
+(`scripts/release.sh tag v0.x.y <sha>`).
 
-To roll back: `gcloud run services update alyr-api --region me-central1 --image <registry>/alyr-api:<older tag>`,
-the same for `alyr-web`, and `gcloud run worker-pools update alyr-worker ...` for the
-worker. A migration is never rolled back by this; write a new one.
+To roll back: split traffic back to an earlier revision, which brings back its settings as well
+as its image, in seconds and with no rebuild: `infra/gcp/rollback.sh`, steps and rehearsal in
+`docs/runbooks/rollback.md`. A migration is never rolled back by this: read that page before
+going back past one, and write a new migration to undo one.
 
 ## Rehearsal on the laptop
 
