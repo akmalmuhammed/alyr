@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Request, Response
 
 from alyr.config import get_settings
-from alyr.core.normalise import fmt_qar
+from alyr.core.normalise import fmt_qar, shown_name
 from alyr.modules.ledger import service
 from alyr.routes import customer_link
 
@@ -29,7 +29,7 @@ async def details(
     customer_link.keep_private(response, by_link=False)
     async with request.app.state.db.tenant(tenant_id) as conn:
         row = await conn.fetchrow(
-            "select p.amount, p.status, p.provider, split_part(c.name, ' ', 1) as customer, "
+            "select p.amount, p.status, p.provider, c.name as customer, "
             "c.lang, t.name as shop, "
             "t.name_ar as shop_ar, t.slug, "
             "o.number as order_number, p.order_id, p.account_id, p.checkout_url, "
@@ -52,7 +52,8 @@ async def details(
         account_id is not None and account_status == "disconnected"
     )
     return {
-        **found, "amount_text": fmt_qar(row["amount"]),
+        **found, "customer": shown_name(row["customer"]).split(" ")[0],
+        "amount_text": fmt_qar(row["amount"]),
         "order_id": str(row["order_id"]) if row["order_id"] else None,
         "stand_in": account_id is None,
         "preparing": account_id is not None and not row["checkout_url"] and not stuck,

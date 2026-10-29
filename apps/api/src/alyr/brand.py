@@ -128,6 +128,14 @@ COLOR = {
         "field-dark": "#1f2c34",
         "green-dark": "#21c063",
     },
+    "shop": {
+        "cocoa": "#6f4329",
+        "terracotta": "#a5432a",
+        "rose": "#a53860",
+        "saffron": "#8a5a00",
+        "teal": "#1d6a6a",
+        "plum": "#613a7d",
+    },
 }
 
 # The semantic colours in the light theme.
@@ -285,6 +293,12 @@ SIZE = {
         "heading-lg": "28px",
         "display-sm": "36px",
         "display": "56px",
+    },
+    "stage": {
+        "hero": "clamp(3.25rem, 0.5rem + 6.6vw, 8rem)",
+        "title": "clamp(2.25rem, 0.6rem + 3.6vw, 4.5rem)",
+        "figure": "clamp(2.75rem, 0.5rem + 5vw, 6.5rem)",
+        "lead": "clamp(1.125rem, 0.75rem + 0.9vw, 1.75rem)",
     },
     "card": {
         "min": "31px",

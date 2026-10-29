@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     jobs_inline: bool = True
     # First retry delay; it doubles on each further attempt.
     jobs_backoff_seconds: float = 5.0
+    # How many jobs one process runs at once (a customer's own jobs still one at a time, in
+    # order; ALY-276). Each running job may hold two database connections at a moment, so
+    # keep it at most half the pool (10 per process).
+    jobs_concurrency: int = 5
     # /health/worker answers 503 when the worker has not checked in for this long.
     worker_stale_seconds: int = 120
 
@@ -53,6 +57,10 @@ class Settings(BaseSettings):
 
     # Where payment links point. The web app serves /pay/...
     public_web_url: str = "http://localhost:3100"
+    # The stand-in payment page, which moves no money, plays a shop's payment provider on a
+    # developer machine only (env "local", ALY-114). False switches it off there too, to see
+    # what a shop with no payment account of its own gets (ALY-271). It can never switch it on.
+    stand_in_payments: bool = True
     # Where the signed-in workspace is served, for the links at the end of an owner's
     # answers in WhatsApp (D-065). Empty until it is hosted: today's public web address is
     # the laptop tunnel, which serves customer pages only, so a workspace link would 404.

@@ -125,7 +125,10 @@ function Pay() {
   const shop = lang === "ar" && data.shop_ar ? data.shop_ar : data.shop;
   const money = formatPrice(data.amount, lang);
   const toggle = () => setLang(lang === "en" ? "ar" : "en");
-  const trackLink = data.order_id ? `/t/${tenant}/${data.order_id}` : null;
+  // The tracking page opens only by its own signed link now (SEC-8, D-080), which this page will
+  // be given with its own signed link (after the payment adapters, ALY-17). Until then it shows
+  // no way there; the customer's chat holds the link.
+  const trackLink = (data as { track_path?: string | null }).track_path ?? null;
 
   if (data.status === "paid") {
     return (
@@ -179,7 +182,7 @@ function Pay() {
           <h1>{t.pay(shop)}</h1>
           <b className="num" dir={lang === "ar" ? undefined : "ltr"}>{amountOf(data.amount)}<small>{currency(lang)}</small></b>
         </div>
-        <div className="cx-kv"><span>{t.customer}</span><b>{data.customer}</b></div>
+        {data.customer && <div className="cx-kv"><span>{t.customer}</span><b>{data.customer}</b></div>}
         <div className="cx-kv"><span>{t.for}</span><b>{data.order_number ? t.order(data.order_number) : t.account}</b></div>
         {data.stand_in && (
           <div className="cx-kv"><span>{t.method}</span><b className="cx-card-brand"><i aria-hidden="true" />{t.card}</b></div>

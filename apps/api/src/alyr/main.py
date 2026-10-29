@@ -16,6 +16,8 @@ from alyr.core.media import MediaService
 from alyr.core.outbound import SEND, Outbound
 from alyr.core.payments import Payments
 from alyr.core.storage import check_store, make_store
+from alyr.core.welcome import JOB as ACCOUNT_EMAIL
+from alyr.core.welcome import AccountMail
 from alyr.db import Database
 from alyr.gateways import registry as payment_gateways
 from alyr.modules import report
@@ -75,6 +77,14 @@ from alyr.routes.deps import require_any_module, require_module, require_module_
 log = logging.getLogger("alyr.main")
 
 
+async def close_channels(app: FastAPI) -> None:
+    """Close the connections a channel keeps open between sends (Meta's, ALY-276)."""
+    for channel in app.state.outbound.channels.values():
+        close = getattr(channel, "close", None)
+        if close is not None:
+            await close()
+
+
 def create_app() -> FastAPI:
     settings = get_settings()
 
@@ -86,6 +96,7 @@ def create_app() -> FastAPI:
         check_store(settings, app.state.media.store)
         await app.state.db.connect()
         yield
+        await close_channels(app)
         await app.state.db.close()
 
     # Interactive API docs only on a developer machine; elsewhere they map our surface
@@ -117,7 +128,9 @@ def create_app() -> FastAPI:
         app.state.db, app.state.outbound, settings.public_web_url, app.state.media
     )
 
-    app.state.jobs = JobRunner(app.state.db, settings.jobs_backoff_seconds)
+    app.state.jobs = JobRunner(
+        app.state.db, settings.jobs_backoff_seconds, settings.jobs_concurrency
+    )
     app.state.jobs.register(SEND, app.state.outbound.deliver, app.state.outbound.gave_up)
     # The shop's own payment account (ALY-17): keys checked, payment pages made and providers
     # asked what happened, each by a job.
@@ -135,6 +148,8 @@ def create_app() -> FastAPI:
     # the PDF attached. A delivery that fails every try shows the owner "not delivered".
     document_sender = DocumentSender(app.state.db, app.state.outbound)
     app.state.jobs.register(DELIVERY_JOB, document_sender.run, document_sender.gave_up)
+    # The welcome after sign-up and the invite to a team (specs/037).
+    app.state.jobs.register(ACCOUNT_EMAIL, AccountMail(app.state.db).run)
     # Events out to the shop's other system (ALY-142): signed, retried, guarded.
     app.state.webhooks = connect_webhooks.WebhookSender(app.state.db)
     app.state.jobs.register(connect_webhooks.JOB, app.state.webhooks.run)

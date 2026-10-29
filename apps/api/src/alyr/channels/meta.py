@@ -4,6 +4,7 @@ Field names follow Meta's documentation for business-scoped user IDs, checked 7 
 https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids/
 """
 
+import asyncio
 import hashlib
 import hmac
 from dataclasses import dataclass
@@ -219,36 +220,61 @@ def to_graph_payload(message: OutboundMessage, address: Address) -> dict:
 class MetaChannel:
     name = "meta"
 
-    def __init__(self, access_token: str, graph_version: str) -> None:
+    def __init__(
+        self, access_token: str, graph_version: str,
+        transport: httpx.AsyncBaseTransport | None = None,
+    ) -> None:
         self._token = access_token
         self._base = f"https://graph.facebook.com/{graph_version}"
+        self._transport = transport
+        self._client: httpx.AsyncClient | None = None
+        self._loop: asyncio.AbstractEventLoop | None = None
+
+    def _http(self) -> httpx.AsyncClient:
+        """One client for every call, so the connection to Meta stays open from one send to
+        the next: a client per send paid a new TLS handshake every time (ALY-276). A client
+        belongs to the event loop it was made in; a test that runs another loop gets its own."""
+        loop = asyncio.get_running_loop()
+        if self._client is None or self._loop is not loop:
+            more = {"transport": self._transport} if self._transport is not None else {}
+            self._client = httpx.AsyncClient(
+                timeout=30,
+                limits=httpx.Limits(max_connections=20, max_keepalive_connections=10), **more,
+            )
+            self._loop = loop
+        return self._client
+
+    async def close(self) -> None:
+        if self._client is not None and self._loop is asyncio.get_running_loop():
+            await self._client.aclose()
+        self._client = None
 
     async def send(
         self, from_number_id: str, message: OutboundMessage, address: Address
     ) -> str | None:
-        async with httpx.AsyncClient(timeout=10) as client:
-            response = await client.post(
-                f"{self._base}/{from_number_id}/messages",
-                headers={"Authorization": f"Bearer {self._token}"},
-                json=to_graph_payload(message, address),
-            )
-            response.raise_for_status()
-            sent = response.json().get("messages") or [{}]
-            return sent[0].get("id")
+        response = await self._http().post(
+            f"{self._base}/{from_number_id}/messages",
+            headers={"Authorization": f"Bearer {self._token}"},
+            json=to_graph_payload(message, address),
+            timeout=10,
+        )
+        response.raise_for_status()
+        sent = response.json().get("messages") or [{}]
+        return sent[0].get("id")
 
     async def number_info(self, number_id: str) -> dict:
         """What Meta says about one of our WhatsApp numbers, for attaching it to a business
         (ALY-166). Checked against Meta's phone number page, 25 Oct 2026:
         GET /{phone-number-id}?fields=... answers with the number as customers see it, the
         name Meta verified, and `status` (CONNECTED once the number is registered)."""
-        async with httpx.AsyncClient(timeout=10) as client:
-            response = await client.get(
-                f"{self._base}/{number_id}",
-                headers={"Authorization": f"Bearer {self._token}"},
-                params={"fields": "display_phone_number,verified_name,status,quality_rating"},
-            )
-            response.raise_for_status()
-            return response.json()
+        response = await self._http().get(
+            f"{self._base}/{number_id}",
+            headers={"Authorization": f"Bearer {self._token}"},
+            params={"fields": "display_phone_number,verified_name,status,quality_rating"},
+            timeout=10,
+        )
+        response.raise_for_status()
+        return response.json()
 
     async def download_media(self, media_id: str, max_bytes: int) -> tuple[bytes, str]:
         """Fetch a file that was sent to us. Two requests, checked against Meta's media
@@ -277,15 +303,14 @@ class MetaChannel:
         then refers to. Meta keeps it for 30 days. Checked against Meta's media page,
         17 Oct 2026: POST /{phone-number-id}/media with `messaging_product`, `type`
         and `file` as multipart form data."""
-        async with httpx.AsyncClient(timeout=30) as client:
-            response = await client.post(
-                f"{self._base}/{from_number_id}/media",
-                headers={"Authorization": f"Bearer {self._token}"},
-                data={"messaging_product": "whatsapp", "type": content_type},
-                files={"file": (
-                    {"image/png": "card.png", "application/pdf": "document.pdf"}.get(
-                        content_type, "card.jpg"),
-                    data, content_type)},
-            )
-            response.raise_for_status()
-            return response.json()["id"]
+        response = await self._http().post(
+            f"{self._base}/{from_number_id}/media",
+            headers={"Authorization": f"Bearer {self._token}"},
+            data={"messaging_product": "whatsapp", "type": content_type},
+            files={"file": (
+                {"image/png": "card.png", "application/pdf": "document.pdf"}.get(
+                    content_type, "card.jpg"),
+                data, content_type)},
+        )
+        response.raise_for_status()
+        return response.json()["id"]

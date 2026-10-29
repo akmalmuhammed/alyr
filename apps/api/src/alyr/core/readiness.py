@@ -173,6 +173,13 @@ async def _price(conn: asyncpg.Connection, modules: set[str]) -> bool:
     return await _exists(conn, "select 1 from quotes where status = 'accepted'")
 
 
+async def _choices(conn: asyncpg.Connection, check: Check) -> list[str]:
+    """The choices a step offers now. Online payment only once it can take money (ALY-271)."""
+    if check.key == "payments" and not await pay_ways.online_possible(conn):
+        return [c for c in check.choices if c != "online"]
+    return list(check.choices)
+
+
 async def _connected(conn: asyncpg.Connection, key: str) -> bool:
     connection = catalog.CONNECTION_BY_KEY[key]
     if not connection.connected:
@@ -288,7 +295,7 @@ async def run(conn: asyncpg.Connection, actor: str = "", by_alyr: bool = False) 
             "asked": row["owner"] == "alyr" or check.key in asked,
             "blocker": row["blocker"],
             "choice": row["choice"],
-            "choices": list(check.choices),
+            "choices": await _choices(conn, check),
             "done_at": _iso(done_at),
         })
         if check.key == "whatsapp":
@@ -354,8 +361,9 @@ async def set_choice(
     check = CHECK_BY_KEY.get(key)
     if check is None:
         raise LookupError("no such step")
-    if choice not in check.choices:
-        raise ReadinessError(f"choose one of: {', '.join(check.choices)}")
+    offered = await _choices(conn, check)
+    if choice not in offered:
+        raise ReadinessError(f"choose one of: {', '.join(offered)}")
     row = await _step(conn, key)
     if row["choice"] == choice:
         return False

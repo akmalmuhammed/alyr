@@ -12,6 +12,7 @@ from alyr.modules.documents import sales as documents_sales
 from alyr.modules.items import alerts
 from alyr.modules.items import holds as stock_holds
 from alyr.modules.ledger.ageing import Aged, age
+from alyr.modules.orders import pay_ways
 
 # Every function takes a tenant-scoped connection (Database.tenant). RLS does the filtering.
 
@@ -193,9 +194,20 @@ def reminder_tier(oldest_days: int) -> str:
     return "gentle"
 
 
+def pay_the_shop(ways: list[str], lang: str) -> str:
+    """How a credit customer pays while the shop takes no money online (ALY-271)."""
+    how = pay_ways.say(ways, lang)
+    if lang == "ar":
+        return f"يمكنك الدفع لنا {how}، وسنسجّل الدفعة في حسابك."
+    return f"You can pay us by {how}, and we will record it on your account."
+
+
 def reminder_text(
-    lang: str, shop: str, shop_ar: str, amount: int, days: int, link: str, tier: str
+    lang: str, shop: str, shop_ar: str, amount: int, days: int, link: str, tier: str,
+    how: str = "",
 ) -> str:
+    """The reminder's own wording. `how` replaces the payment link when the shop takes no
+    money online (ALY-271)."""
     money = fmt_qar(amount)
     if lang == "ar":
         name = shop_ar or shop
@@ -205,14 +217,16 @@ def reminder_text(
             "final": f"إشعار أخير من {name}: مبلغ {money} متأخر منذ أكثر من ٩٠ يوماً. "
                      "نرجو السداد أو التواصل معنا اليوم.",
         }[tier]
-        return f"{opening} أقدم فاتورة غير مدفوعة منذ {days} يوماً. للدفع: {link}"
+        closing = how or f"للدفع: {link}"
+        return f"{opening} أقدم فاتورة غير مدفوعة منذ {days} يوماً. {closing}"
     opening = {
         "gentle": f"A friendly reminder from {shop}: {money} is due.",
         "firm": f"Reminder from {shop}: {money} is now overdue.",
         "final": f"Final notice from {shop}: {money} has been overdue for more than 90 days. "
                  "Please pay or contact us today.",
     }[tier]
-    return f"{opening} Your oldest unpaid purchase was {days} days ago. Pay here: {link}"
+    closing = how or f"Pay here: {link}"
+    return f"{opening} Your oldest unpaid purchase was {days} days ago. {closing}"
 
 
 async def send_reminders(
@@ -225,6 +239,10 @@ async def send_reminders(
     last few days, so one press of the button can never spam a customer.
     """
     shop = await conn.fetchrow("select name, name_ar from tenants where id = $1", tenant_id)
+    # A shop that takes no money online yet reminds without a link and says how it is paid,
+    # with the templates made for that (ALY-271): a link would open a page that cannot pay.
+    online = await pay_ways.online_possible(conn)
+    ways = [] if online else (await pay_ways.get(conn))["ways"]
     now = datetime.now(UTC)
     result = {"sent": 0, "skipped_promised": 0, "skipped_recent": 0, "skipped_opted_out": 0}
     for customer in (await summary(conn))["customers"]:
@@ -241,11 +259,20 @@ async def send_reminders(
             result["skipped_recent"] += 1
             continue
         contact_id = UUID(customer["id"])
-        link = await create_payment_request(
-            conn, tenant_id, contact_id, customer["balance"], web_url
-        )
         arabic = customer["lang"] == "ar"
+        link = how = ""
+        if online:
+            link = await create_payment_request(
+                conn, tenant_id, contact_id, customer["balance"], web_url
+            )
+        else:
+            how = pay_the_shop(ways, "ar" if arabic else "en")
         tier = reminder_tier(customer["oldest_days"])
+        promise = Choice("promise", "سأدفع خلال أسبوع" if arabic else "I'll pay within a week")
+        template = {
+            "gentle": "payment_reminder", "firm": "payment_reminder_overdue",
+            "final": "payment_reminder_final",
+        }[tier] + ("" if online else "_offline")
         await outbound.send(
             conn,
             OutboundMessage(
@@ -253,20 +280,17 @@ async def send_reminders(
                 kind="template",
                 body=reminder_text(
                     customer["lang"], shop["name"], shop["name_ar"], customer["balance"],
-                    customer["oldest_days"], link, tier,
+                    customer["oldest_days"], link, tier, how,
                 ),
                 choices=(
-                    Choice("pay", "ادفع الآن" if arabic else "Pay now"),
-                    Choice("promise", "سأدفع خلال أسبوع" if arabic else "I'll pay within a week"),
+                    (Choice("pay", "ادفع الآن" if arabic else "Pay now"), promise) if online
+                    else (promise,)
                 ),
-                template_name={
-                    "gentle": "payment_reminder", "firm": "payment_reminder_overdue",
-                    "final": "payment_reminder_final",
-                }[tier],
+                template_name=template,
                 template_category="utility",
                 template_params=(
                     shop["name_ar"] if arabic and shop["name_ar"] else shop["name"],
-                    fmt_qar(customer["balance"]), str(customer["oldest_days"]), link,
+                    fmt_qar(customer["balance"]), str(customer["oldest_days"]), link or how,
                 ),
                 lang="ar" if arabic else "en",
             ),
