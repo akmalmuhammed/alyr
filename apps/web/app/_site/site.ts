@@ -46,9 +46,30 @@ export const OFFER_LIVE = process.env.NEXT_PUBLIC_ALYR_OFFER === "on";
  * the workspace is not hosted there, so the footer shows no link to it. */
 export const WORKSPACE_URL = process.env.NEXT_PUBLIC_ALYR_WORKSPACE_URL ?? "";
 
+/** The kinds of business with a page of their own (ALY-232, D-057): an audience, not a
+ * product, so they live under `/for/`. In the order of the homepage's business tabs, with
+ * groceries after bakeries. Clinics are not here and must not be (health data, D-043). */
+export const SECTORS = ["bakeries", "salons", "groceries", "restaurants", "home-services", "fashion"] as const;
+export type SectorKey = (typeof SECTORS)[number];
+
+/** The owner guides (ALY-233), newest last. Each is useful with or without ALYR. */
+export const GUIDES = ["stop-losing-whatsapp-orders", "cut-no-shows-with-reminders", "keep-track-of-who-owes-you"] as const;
+export type GuideKey = (typeof GUIDES)[number];
+
+type Pair = { readonly en: string; readonly ar: string };
+const sectorPaths = Object.fromEntries(
+  SECTORS.map((key) => [`for-${key}`, { en: `/for/${key}`, ar: `/ar/for/${key}` }]),
+) as Record<`for-${SectorKey}`, Pair>;
+const guidePaths = Object.fromEntries(
+  GUIDES.map((key) => [`guide-${key}`, { en: `/guides/${key}`, ar: `/ar/guides/${key}` }]),
+) as Record<`guide-${GuideKey}`, Pair>;
+
 /** Every public page, and its address in each language. The product pages are in the
  * suite's fixed order: Chat, Bookings, Agent, Accounts, Shelf, Docs. A product that is not
- * built has no page and is not listed (D-039; Payroll left the site on 20 Oct 2026). */
+ * built has no page and is not listed (D-039; Payroll left the site on 20 Oct 2026). Then
+ * the sector pages, the guides' index and the guides (ALY-232, ALY-233). The list feeds the
+ * canonical links, hreflang, the language link, the sitemap, the machine copies and the
+ * site's checks. */
 export const PATHS = {
   home: { en: "/", ar: "/ar" },
   chat: { en: "/chat", ar: "/ar/chat" },
@@ -59,11 +80,30 @@ export const PATHS = {
   docs: { en: "/docs", ar: "/ar/docs" },
   // Not a product: the company's registration details (the footer links to it).
   company: { en: "/company", ar: "/ar/company" },
-  // Not a product: the privacy policy (ALY-72); Meta's app settings point here.
+  // Not a product: the privacy policy (ALY-68); Meta's app settings point here.
   privacy: { en: "/privacy", ar: "/ar/privacy" },
+  ...sectorPaths,
+  guides: { en: "/guides", ar: "/ar/guides" },
+  ...guidePaths,
 } as const;
 
 export type PageKey = keyof typeof PATHS;
+
+/** A sector's page key, and a guide's. */
+export const sectorPage = (key: SectorKey) => `for-${key}` as const;
+export const guidePage = (key: GuideKey) => `guide-${key}` as const;
+
+/** What kind of page a key is, for the structured data and the machine copies. */
+export function pageKind(page: PageKey):
+  | { kind: "home" } | { kind: "product"; key: ProductKey } | { kind: "sector"; key: SectorKey }
+  | { kind: "guides" } | { kind: "guide"; key: GuideKey } | { kind: "plain"; key: "company" | "privacy" } {
+  if (page === "home") return { kind: "home" };
+  if (page === "company" || page === "privacy") return { kind: "plain", key: page };
+  if (page === "guides") return { kind: "guides" };
+  if (page.startsWith("for-")) return { kind: "sector", key: page.slice(4) as SectorKey };
+  if (page.startsWith("guide-")) return { kind: "guide", key: page.slice(6) as GuideKey };
+  return { kind: "product", key: page as ProductKey };
+}
 
 /** The suite, in its fixed order: the four products, then ALYR Shelf and ALYR Docs in
  * `catalog.py`'s module order (catalog before documents). Every product listed has a page. */

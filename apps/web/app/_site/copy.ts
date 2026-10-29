@@ -15,6 +15,8 @@
 import type { ContactState, PageKey, ProductKey } from "./site";
 import { docsAr, docsEn, type DocLinkPage, type DocsPage } from "./copyDocs";
 import { shelfAr, shelfEn, type ShelfPage } from "./copyShelf";
+import { guideMeta, guidesAr, guidesEn, type GuidesCopy } from "./copyGuides";
+import { sectorMeta, sectorsAr, sectorsEn, type SectorsCopy } from "./copySectors";
 import { privacyAr, privacyEn, type PrivacyPage } from "./copyPrivacy";
 import { filmAr, filmEn, type HeroFilmWords } from "./copyFilm";
 
@@ -593,6 +595,9 @@ export type Copy = {
     cta: { title: string; body: string };
   };
   pages: { bookings: BookingsPage; agent: AgentPage; accounts: AccountsPage; shelf: ShelfPage; docs: DocsPage };
+  /** The sector pages (/for/...) and the owner guides (/guides), ALY-232 and ALY-233. */
+  sectors: SectorsCopy;
+  guides: GuidesCopy;
 };
 
 const en: Copy = {
@@ -642,6 +647,8 @@ const en: Copy = {
       description:
         "ALYR Docs makes numbered receipts from your sales and the payments you record, in Arabic and English. A shop without a commercial registration gets receipts; invoices need a CR number. Set up for you, in Qatar.",
     },
+    ...sectorMeta(sectorsEn),
+    ...guideMeta(guidesEn),
   },
   skip: "Skip to content",
   privacy: privacyEn,
@@ -1086,7 +1093,7 @@ const en: Copy = {
       with: "With ALYR",
       uses: "What we would set up",
       split: {
-        label: "The same afternoon, today and with ALYR",
+        label: "The same hour, today and with ALYR",
         today: "Today",
         with: "With ALYR",
         slider: "Move the fold between today and with ALYR",
@@ -1128,6 +1135,39 @@ const en: Copy = {
           ask: "Show me for my bakery",
           prefill: "Hello ALYR, I run a bakery and I’d like to see how ALYR takes our orders.",
           subject: "How ALYR works for my bakery",
+        },
+        {
+          id: "groceries",
+          tab: "Groceries",
+          name: "Groceries and baqalas",
+          day: [
+            "Neighbours buy on credit, and the book behind the counter is the only record.",
+            "Flats and villas order by voice note and photo.",
+            "“How much do I owe?”, and someone has to add up the pages.",
+          ],
+          with: [
+            "Each credit sale goes on the customer’s account with one line from the staff phone, and the customer gets the new balance.",
+            "Regulars order from your list in the chat, and an order can go on their account.",
+            "Neighbours 30 days or more behind get a reminder when you press Send reminders.",
+          ],
+          products: ["chat", "accounts", "agent", "shelf"],
+          chats: [
+            { who: "Flat 12", kind: "voice", text: "0:31", at: "7:42 pm", n: 11 },
+            { who: "Ahmed", kind: "text", text: "Put it on my account, I’ll pay Thursday", at: "7:30 pm", n: 9 },
+            { who: "Fatma", kind: "text", text: "How much do I owe?", at: "7:12 pm", n: 8 },
+            { who: "Villa 7", kind: "photo", text: "This rice, 2 bags", at: "6:55 pm", n: 6 },
+            { who: "Saleh", kind: "text", text: "Do you have fresh milk?", at: "6:40 pm", n: 4 },
+          ],
+          orders: [
+            { ref: "#1188", who: "Flat 12", what: "Bread, eggs, 2 kg tomatoes", by: "Rafi", status: "On account", tone: "ok" },
+            { ref: "Credit", who: "Ahmed", what: "Credit sale, new balance sent", by: "Rafi", status: "Recorded", tone: "ok" },
+            { ref: "Credit", who: "Fatma", what: "Asked for her balance", by: "Rafi", status: "Balance sent", tone: "ok" },
+            { ref: "#1187", who: "Villa 7", what: "Basmati rice 5 kg × 2", by: "Joseph", status: "Ready, customer told", tone: "now" },
+            { ref: "Chat", who: "Saleh", what: "Asked about fresh milk", by: "Joseph", status: "Joseph is answering", tone: "wait" },
+          ],
+          ask: "Show me for my grocery",
+          prefill: "Hello ALYR, I run a grocery and I’d like to see the credit accounts and orders.",
+          subject: "How ALYR works for my grocery",
         },
         {
           id: "wholesale",
@@ -2910,6 +2950,8 @@ const en: Copy = {
     // ------------------------------------------------------------------- /docs
     docs: docsEn,
   },
+  sectors: sectorsEn,
+  guides: guidesEn,
 };
 
 const ar: Copy = {
@@ -2959,6 +3001,8 @@ const ar: Copy = {
       description:
         "يُصدر ALYR Docs إيصالات مرقّمة من مبيعاتك ومن الدفعات التي تسجّلها، بالعربية والإنجليزية. المحل الذي ليس له سجل تجاري تصدر له إيصالات، والفواتير تحتاج إلى رقم السجل التجاري. نجهّزه لك في قطر.",
     },
+    ...sectorMeta(sectorsAr),
+    ...guideMeta(guidesAr),
   },
   skip: "انتقل إلى المحتوى",
   privacy: privacyAr,
@@ -3403,7 +3447,7 @@ const ar: Copy = {
       with: "مع ALYR",
       uses: "ما سنجهّزه لك",
       split: {
-        label: "العصر نفسه، اليوم ومع ALYR",
+        label: "الساعة نفسها، اليوم ومع ALYR",
         today: "اليوم",
         with: "مع ALYR",
         slider: "حرّك الطيّة بين اليوم ومع ALYR",
@@ -3445,6 +3489,39 @@ const ar: Copy = {
           ask: "أرني كيف تعمل لمخبزي",
           prefill: "مرحبا ALYR، عندي مخبز وأبي أشوف كيف تستقبلون طلباتنا.",
           subject: "كيف تعمل ALYR لمخبزي",
+        },
+        {
+          id: "groceries",
+          tab: "البقالات",
+          name: "البقالات والمحلات الغذائية",
+          day: [
+            "الجيران يشترون بالآجل، ولا سجل لذلك إلا دفتر الديون.",
+            "تطلب الشقق والفلل برسائل صوتية وصور.",
+            "«كم علي؟»، وعلى أحدهم أن يجمع الصفحات.",
+          ],
+          with: [
+            "كل بيع آجل يُسجَّل على حساب العميل بسطر واحد من هاتف الموظف، ويصل إلى العميل رصيده الجديد.",
+            "يطلب الزبائن الدائمون من قائمتك في المحادثة، ويمكن أن يُسجَّل الطلب على حسابهم.",
+            "يصل تذكير إلى كل جار تأخر 30 يوماً أو أكثر حين تضغط «إرسال التذكيرات».",
+          ],
+          products: ["chat", "accounts", "agent", "shelf"],
+          chats: [
+            { who: "شقة 12", kind: "voice", text: "0:31", at: "7:42 م", n: 11 },
+            { who: "أحمد", kind: "text", text: "سجّلها على حسابي، أدفع الخميس", at: "7:30 م", n: 9 },
+            { who: "فاطمة", kind: "text", text: "كم علي؟", at: "7:12 م", n: 8 },
+            { who: "فيلا 7", kind: "photo", text: "هذا الرز، كيسين", at: "6:55 م", n: 6 },
+            { who: "صالح", kind: "text", text: "عندكم حليب طازج؟", at: "6:40 م", n: 4 },
+          ],
+          orders: [
+            { ref: "#1188", who: "شقة 12", what: "خبز، بيض، 2 كغ طماطم", by: "رفيع", status: "على الحساب", tone: "ok" },
+            { ref: "آجل", who: "أحمد", what: "بيع آجل، أُرسل الرصيد الجديد", by: "رفيع", status: "سُجّل", tone: "ok" },
+            { ref: "آجل", who: "فاطمة", what: "سألت عن رصيدها", by: "رفيع", status: "أُرسل الرصيد", tone: "ok" },
+            { ref: "#1187", who: "فيلا 7", what: "رز بسمتي 5 كغ × 2", by: "جوزيف", status: "جاهز، وأُبلغ العميل", tone: "now" },
+            { ref: "محادثة", who: "صالح", what: "سأل عن الحليب الطازج", by: "جوزيف", status: "جوزيف يردّ", tone: "wait" },
+          ],
+          ask: "أرني كيف تعمل لبقالتي",
+          prefill: "مرحبا ALYR، عندي بقالة وأبي أشوف الحسابات الآجلة والطلبات.",
+          subject: "كيف تعمل ALYR لبقالتي",
         },
         {
           id: "wholesale",
@@ -5225,6 +5302,8 @@ const ar: Copy = {
     shelf: shelfAr,
     docs: docsAr,
   },
+  sectors: sectorsAr,
+  guides: guidesAr,
 };
 
 export const copy: Record<Locale, Copy> = { en, ar };

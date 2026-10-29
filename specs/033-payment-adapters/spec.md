@@ -58,7 +58,7 @@ The webhook body is never trusted for the amount or the state: only the provider
 
 An agent is refused (403); a request without a session is refused (401). The screen for these calls is ALY-157's.
 
-## Tables (migration 0061)
+## Tables (migration 0062)
 
 - `payment_accounts`: tenant-owned with Row-Level Security like every other. One account that is `checking` or `connected` per shop at a time (a partial unique index).
 - `payment_events`: every webhook accepted, once (unique `account_id, event_id`). Kept as the record of what the provider said.
