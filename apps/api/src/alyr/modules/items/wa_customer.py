@@ -118,6 +118,10 @@ async def maybe_handle(
     # "Tell me when it is back" is a feature (ALY-148): a shop that has it off offers no button
     # and does not take the request.
     back = (await features.load(conn)).on("back_in_stock")
+    if reply == "menu":
+        # The welcome's button (`orders/chat.py`). Nothing on sale: None, and the order
+        # link answers instead.
+        return await _menu(conn, tenant_id, contact, lang, web_url, orders_on)
     if reply:
         kind, _, rest = reply.partition(":")
         if kind not in ("item", "notify", "notify_yes", "notify_no") or not rest:

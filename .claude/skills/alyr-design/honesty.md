@@ -43,7 +43,9 @@ Until a model is in the product (D-012, D-035), nothing says or implies AI, not 
   company) is the agent; ALYR Agent is its screen and report. ALYR Chat and ALYR Bookings send
   the replies and reminders; ALYR Agent counts them.
 - The API tests enforce part of this (`apps/api/tests/test_agent.py`,
-  `test_report_card.py`, `test_agent_samples.py`). Nothing checks `copy.ts` yet; you do.
+  `test_report_card.py`, `test_agent_samples.py`). The sign-up copy (`start/copy.ts`) and the
+  inbox's words are checked by `apps/web/app/(product)/start/honesty.test.mjs` (ALY-273), the site
+  by `scripts/site/banned-words.mjs`. The rest of the workspace's copy is not checked; you do.
 
 ## 2. Must not claim (as of 17 Oct 2026)
 
@@ -136,6 +138,8 @@ father's name (Aisha Hamad, «عائشة حمد»), never a prominent family nam
 | Al Noor Electricals | Templates' sample values | not recorded | Open |
 | Aisha Hamad, Mariam Saleh, Khalid Nasser, Omar Ali; staff Yusuf | Sample customers and staff | first and father's name rule | n/a |
 | Palm Court Offices, Bluefin Events, Ward Events, Tamr Café, Garden Gate Nursery, Marina Desk Co-working, Bayview School, Crescent Tower Offices, Dana Home Services | Sample customers in the AC and other samples | **Not checked** | Open |
+| Mahbash Café / مقهى المهباش; Ghaf House Offices / مكاتب بيت الغاف | The sales demo's café on account and its office client (`/demo/bakery`, ALY-263) | 29 Oct 2026, none found in the Gulf | Open |
+| Tamr Café; Crescent Tower Offices | Close to Tammra Café (a Gulf chain) and Tamra Cafe, Al Ain; Crescent Tower is an office tower in Abu Dhabi (copy critic, 29 Oct 2026) | **Collide: do not use in new work** | n/a |
 
 **Retired after collisions, never reuse:** Sadaf Salon (a Gulf salon chain), Nasma Cooling
 (Nisma AC brand, «نسمة» AC firms), Ruwaa Dental, Zaitoon Grill, Al-Kuwari, Al-Emadi,

@@ -116,7 +116,7 @@ export default function LegacyOrder({ slug, token, initial, lang: first }: Props
       <section className="cx-hero" style={{ "--i": 0 } as React.CSSProperties}>
         <span className="cx-eyebrow">{t.eyebrow}</span>
         <h1>{t.title}</h1>
-        {store.customer ? <Who label={t.hello(store.customer.name)} /> : <p className="cx-warn">{t.noCustomer}</p>}
+        {store.customer ? (store.customer.name && <Who label={t.hello(store.customer.name)} />) : <p className="cx-warn">{t.noCustomer}</p>}
       </section>
 
       {categories.length > 1 && (

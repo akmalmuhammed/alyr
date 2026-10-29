@@ -490,7 +490,7 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
         <span className="cx-eyebrow">{section || (canOrder ? t.eyebrow : t.eyebrowMenu)}</span>
         <h1>{t.title}</h1>
         <div className="ox-who">
-          {customer && <Who label={t.hello(customer.first_name)} />}
+          {customer?.first_name && <Who label={t.hello(customer.first_name)} />}
           {store.table && <span className="ox-table"><Glyph name="table" />{t.table(store.table)}</span>}
         </div>
       </section>
