@@ -309,7 +309,7 @@ def test_a_download_that_keeps_failing_tells_the_staff_member_to_send_it_again(c
         client.portal.call(handler.run, DEMO_TENANT_ID, payload)
     client.portal.call(handler.gave_up, DEMO_TENANT_ID, payload)  # after the last try
     last = sent(client, STAFF_PHONE)[-1]
-    assert "could not get that photo" in last["body"]
+    assert "That photo did not come through" in last["body"]
     client.portal.call(handler.gave_up, DEMO_TENANT_ID, {**payload, "lang": "ar"})
     assert ARABIC.search(sent(client, STAFF_PHONE)[-1]["body"])
 

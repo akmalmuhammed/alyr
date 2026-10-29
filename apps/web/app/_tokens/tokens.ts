@@ -125,6 +125,14 @@ export const color = {
     "avatar-dark": "#6a7175",
     "field-dark": "#1f2c34",
     "green-dark": "#21c063"
+  },
+  "shop": {
+    "cocoa": "#6f4329",
+    "terracotta": "#a5432a",
+    "rose": "#a53860",
+    "saffron": "#8a5a00",
+    "teal": "#1d6a6a",
+    "plum": "#613a7d"
   }
 } as const;
 
@@ -278,6 +286,15 @@ export const component = {
     "ink2": "#a7adb5",
     "sep": "#5f666d",
     "volt": "#b7f34a"
+  },
+  "shop": {
+    "cocoa": "#6f4329",
+    "terracotta": "#a5432a",
+    "rose": "#a53860",
+    "saffron": "#8a5a00",
+    "teal": "#1d6a6a",
+    "plum": "#613a7d",
+    "ink": "#ffffff"
   }
 } as const;
 
@@ -385,6 +402,12 @@ export const font = {
       "display-sm": "36px",
       "display": "56px"
     },
+    "stage": {
+      "hero": "clamp(3.25rem, 0.5rem + 6.6vw, 8rem)",
+      "title": "clamp(2.25rem, 0.6rem + 3.6vw, 4.5rem)",
+      "figure": "clamp(2.75rem, 0.5rem + 5vw, 6.5rem)",
+      "lead": "clamp(1.125rem, 0.75rem + 0.9vw, 1.75rem)"
+    },
     "card": {
       "min": "31px"
     }
@@ -480,6 +503,7 @@ export const motion = {
   },
   "ease": {
     "ease": "cubic-bezier(0.16, 1, 0.3, 1)",
+    "ease-fold": "cubic-bezier(0.7, 0, 0.2, 1)",
     "spring": "linear(0, .1 2.4%, .38 6.2%, .7 11%, .9 15.6%, 1.03 20.6%, 1.07 25%, 1.06 30%, 1.02 37.5%, .995 47%, .99 55%, 1 70%, 1)",
     "ease-product": "cubic-bezier(0.2, 0.8, 0.2, 1)",
     "spring-product": "cubic-bezier(0.34, 1.4, 0.64, 1)"

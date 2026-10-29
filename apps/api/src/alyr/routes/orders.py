@@ -136,7 +136,7 @@ async def mark_paid(
 @router.get("/orders-payment-ways")
 async def get_pay_ways(request: Request, staff: Staff = Depends(current_staff)) -> dict:
     async with request.app.state.db.tenant(staff.tenant_id) as conn:
-        return await pay_ways.get(conn)
+        return {**await pay_ways.get(conn), "online_possible": await pay_ways.online_possible(conn)}
 
 
 @router.put("/orders-payment-ways")
@@ -148,7 +148,8 @@ async def put_pay_ways(
         raise HTTPException(status_code=403, detail="only owners and admins change this")
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
-            return await pay_ways.save(conn, body.online, body.ways)
+            saved = await pay_ways.save(conn, body.online, body.ways)
+            return {**saved, "online_possible": await pay_ways.online_possible(conn)}
     except pay_ways.PayWaysError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
 

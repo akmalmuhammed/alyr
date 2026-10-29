@@ -112,7 +112,8 @@ def customer_paths(shop):
     return [
         STORE, f"{STORE}/items/{plain}", f"{STORE}/items/{sized}", f"{STORE}/share",
         f"{STORE}/share?item={plain}", f"{STORE}?q=cake",
-        f"/api/track/{DEMO_TENANT_ID}/{first['order_id']}", f"{STORE}?t={token(mine['id'])}",
+        f"/api/track/{DEMO_SLUG}?t={first['track_url'].split('?t=')[1]}",
+        f"{STORE}?t={token(mine['id'])}",
     ]
 
 

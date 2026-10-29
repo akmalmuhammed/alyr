@@ -28,7 +28,7 @@
 // fails quietly with long paths. Node 22.18 or newer (it reads the words from the .ts copy files).
 
 import { mkdirSync, writeFileSync } from "node:fs";
-import { launch } from "./browser-kit.mjs";
+import { launch, trackPath } from "./browser-kit.mjs";
 import { COPY } from "../apps/web/app/(product)/_workspace/catalogCopy.ts";
 import { PRICING } from "../apps/web/app/(product)/_workspace/pricingCopy.ts";
 import { T as ORDER } from "../apps/web/app/(product)/_customer/order/copy.ts";
@@ -475,7 +475,7 @@ async function customer() {
   check(last?.discounts?.[0]?.code === "RAMADAN10", "…with the code on it");
 
   // the tracking page
-  await b.go(`${BASE}/t/${tenant}/${last.id}`, 1500);
+  await b.go(`${BASE}${trackPath(tenant, "al-noor", last.id)}`, 1500);
   await b.until("!!document.querySelector('.cx-card')", "the tracking page", 20000);
   await ensureLang();
   const trackText = await body();
@@ -487,7 +487,7 @@ async function customer() {
   await axe("t-discount");
   // an order with no discount reads as before
   const plain = orders.find((x) => !x.discount_total);
-  await b.go(`${BASE}/t/${tenant}/${plain.id}`, 1500);
+  await b.go(`${BASE}${trackPath(tenant, "al-noor", plain.id)}`, 1500);
   await b.until("!!document.querySelector('.cx-card')", "the plain tracking page", 20000);
   check((await count(".cx-row")) >= 2 && !(await body()).includes("RAMADAN10"), "tracking: an order without a discount has no discount rows");
   await tall(1500, async () => { await b.sleep(250); await shot("t-plain"); });
