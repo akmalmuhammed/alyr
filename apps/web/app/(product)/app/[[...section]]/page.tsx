@@ -10,6 +10,7 @@ import { Catalog } from "../../_workspace/Catalog";
 import { Documents } from "../../_workspace/Documents";
 import { TermsBanner } from "../../_workspace/TermsBanner";
 import { ConnectLink, ConnectSettings } from "../../_workspace/ConnectSettings";
+import { usePolling } from "../../_workspace/poll";
 import { AgentDashboard } from "../../../_agent/AgentDashboard";
 import type { AgentView } from "../../../_agent/types";
 import { color } from "../../../_tokens/tokens";
@@ -271,11 +272,8 @@ export default function WorkspaceShell() {
     }
   }, [router]);
 
-  useEffect(() => {
-    const first = setTimeout(load, 0);
-    const timer = setInterval(load, 15_000);
-    return () => { clearTimeout(first); clearInterval(timer); };
-  }, [load]);
+  // Every 15 s while the workspace is on show, and at once when the person comes back to it.
+  usePolling(load, 15_000);
 
   // ALYR Agent on the home screen. A poll replaces the numbers and never re-animates them;
   // they rise once a session, on the first load.
@@ -303,13 +301,8 @@ export default function WorkspaceShell() {
     }
   }, [lang]);
 
-  useEffect(() => {
-    // Not before the saved language is known, or an Arabic reader would first be sent English.
-    if (section !== "home" || !langReady) return;
-    const first = setTimeout(loadAgent, 0);
-    const timer = setInterval(loadAgent, 15_000);
-    return () => { clearTimeout(first); clearInterval(timer); };
-  }, [loadAgent, section, langReady]);
+  // Not before the saved language is known, or an Arabic reader would first be sent English.
+  usePolling(loadAgent, 15_000, section === "home" && langReady);
 
   useEffect(() => {
     const read = setTimeout(() => setShow(new URLSearchParams(window.location.search).get("show")), 0);
