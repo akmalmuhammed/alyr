@@ -23,7 +23,17 @@ Anything else belongs to another lane. If a task needs it, keep the change small
 
 ## Now (update this section in the same pull request as the work)
 
-Last updated 24 Oct 2026 (site tooling, branch `aly-site-tooling`, `docs/site-audit/05-tooling-log.md`).
+Last updated 29 Oct 2026 (the visitor's address for the rate limits, ALY-265, branch `aly-ratelimit-trusted-client-ip`), on top of 24 Oct 2026 (site tooling, branch `aly-site-tooling`, `docs/site-audit/05-tooling-log.md`).
+
+- **Per-address rate limits in production (ALY-265, D-083), in a pull request, nothing applied
+  to production.** The edge Worker (`infra/cloudflare/edge`) writes the visitor's address from
+  `CF-Connecting-IP` and signs it; the web app passes it on; the API counts only a signed
+  address and counts every other request in one shared bucket. `infra/gcp/setup.sh` gains
+  `client-ip-key`, `edge-key`, `client-ip-on` and `client-ip-off`, and `apps` keeps the settings;
+  `scripts/check-client-address.sh` checks the whole path from outside. **Waiting on the
+  founder (Needs Akmal):** approve the five steps in `docs/runbooks/client-address.md`, in order.
+  Not done: a CI job for the edge Worker's tests (`pnpm test` in `infra/cloudflare/edge`; CI cannot
+  be edited while PR #164 is open), IPv6 `/64` counting, Cloudflare rate-limit rules.
 
 - **Site tooling, in a pull request, not merged or run on GitHub** (Actions is blocked by
   billing).

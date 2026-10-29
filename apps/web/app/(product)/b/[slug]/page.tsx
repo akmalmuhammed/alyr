@@ -12,7 +12,7 @@ import { formatPrice } from "../../_customer/price";
 // services and the free times and cannot book. The old `?c=<contact id>` identifies nobody:
 // it is treated as a link that is not valid.
 //
-// D-072: the customer chooses "Anyone" or one of the people or chairs that do the service, and
+// D-084: the customer chooses "Anyone" or one of the people or chairs that do the service, and
 // a service may ask a deposit. The deposit and the shop's rule for it are shown before the
 // customer confirms; the deposit is paid by link, which opens a test page until the shop's
 // payment provider is connected (the page says so).

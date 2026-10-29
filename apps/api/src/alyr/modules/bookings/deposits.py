@@ -1,4 +1,4 @@
-"""Deposits on bookings (ALY-27, D-072, spec 033).
+"""Deposits on bookings (ALY-27, D-084, spec 033).
 
 A service may ask a deposit: a fixed amount or a share of its price. The booking is made at
 once and holds its time for the shop's pay-link hold (`shop_settings.hold_minutes`, 30

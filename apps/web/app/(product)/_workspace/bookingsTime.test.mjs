@@ -1,4 +1,4 @@
-// Tests for the Bookings day view's times and the deposit rule's words (ALY-27, D-072): a time
+// Tests for the Bookings day view's times and the deposit rule's words (ALY-27, D-084): a time
 // typed on the shop's clock becomes the right instant whatever the browser's own zone, days move
 // across month ends, and the rule reads as the shop set it. Run with `node --test` from apps/web.
 

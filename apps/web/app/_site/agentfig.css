@@ -148,9 +148,15 @@ main .ag { font-weight: 400; }
 .afig-spot .af-more > summary:hover { background: var(--surface-subtle); }
 .afig-spot .af-more > summary:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: var(--focus-offset); }
 .afig-spot .af-more[open] .qa-mark::after { rotate: 0deg; }
-.afig-spot:has(.af-more:not([open])) .ag :is(.ag-head, .ag-done, .ag-kpis-block, .ag-week, .ag-hours, .ag-top, .ag-owed, .ag-team, .ag-stock) { display: none; }
-.afig-spot:has(.af-more:not([open])) .ag .ag-grid > :is(.ag-needs, .ag-cards) { grid-column: 1 / -1; }
-.afig-spot:has(.af-more:not([open])) .callouts li:nth-child(n + 3) { display: none; }
+/* "Has a disclosure and none open", not ":has(.af-more:not([open]))": with a :not() inside
+   :has(), Chromium cannot tell from an inserted element that it does not match, so every DOM
+   insertion anywhere re-styled every element these rules could reach, page-wide (measured
+   28 Oct 2026: 180 ms per insertion on `/` with the CPU slowed 4×; 0.5 ms written this way).
+   A figure has at most one disclosure, so the two read the same, and `:where()` keeps the old
+   specificity. site:check refuses :not() inside :has() (scripts/site/has-check.mjs). */
+.afig-spot:where(:has(.af-more)):not(:has(.af-more[open])) .ag :is(.ag-head, .ag-done, .ag-kpis-block, .ag-week, .ag-hours, .ag-top, .ag-owed, .ag-team, .ag-stock) { display: none; }
+.afig-spot:where(:has(.af-more)):not(:has(.af-more[open])) .ag .ag-grid > :is(.ag-needs, .ag-cards) { grid-column: 1 / -1; }
+.afig-spot:where(:has(.af-more)):not(:has(.af-more[open])) .callouts li:nth-child(n + 3) { display: none; }
 @media (max-width: 81.99rem) {
   .afig-spot .af-stage { grid-template-columns: minmax(0, 1fr); }
   .afig-spot .af-aside { position: static; grid-column: 1; grid-row: auto; }
@@ -208,5 +214,6 @@ main .ag { font-weight: 400; }
   .afig-agent .af-more > summary::-webkit-details-marker { display: none; }
   .afig-agent .af-more > summary:focus-visible { outline: var(--focus-width) solid var(--focus-on-band); outline-offset: var(--focus-offset); }
   .afig-agent .af-more[open] .qa-mark::after { rotate: 0deg; }
-  .afig-agent:has(.af-more:not([open])) .ag-grid > .ag-kpis-block ~ * { display: none; }
+  /* written without :not() inside :has(): see the spotlight's rules above */
+  .afig-agent:where(:has(.af-more)):not(:has(.af-more[open])) .ag-grid > .ag-kpis-block ~ * { display: none; }
 }

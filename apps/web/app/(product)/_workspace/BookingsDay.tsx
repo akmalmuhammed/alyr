@@ -1,6 +1,6 @@
 "use client";
 
-// The Bookings day view (ALY-27, D-072, spec 033): one column per person or chair (one list
+// The Bookings day view (ALY-27, D-084, spec 033): one column per person or chair (one list
 // for a shop with none), each booking a card with what staff do next: came, didn't come,
 // move, cancel, and a deposit to mark refunded. A walk-in or a booking taken by phone is
 // added from the same screen. Everything goes through the API, which writes the activity

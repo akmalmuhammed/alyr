@@ -125,7 +125,7 @@ class Sample:
     accounts: tuple = ()
     # How visits that are over turned out: came, no-show, cancelled (weights).
     outcomes: tuple = (86, 9, 5)
-    # Who does the work (D-072): (name, Arabic name, day off in PostgreSQL's numbering, 0 is
+    # Who does the work (D-084): (name, Arabic name, day off in PostgreSQL's numbering, 0 is
     # Sunday). Each works the shop's hours except her day off. None: one customer at a time.
     resources: tuple = ()
     # Deposits: (service name, "fixed" or "percent", dirhams or percent).
@@ -653,7 +653,7 @@ async def ensure_sample_tenant(owner_dsn: str, sample: Sample, now: datetime, da
             "values ($1, $2, 'simulator') on conflict (number_id) do nothing",
             f"sim-{sample.slug}", sample.tenant_id,
         )
-        # A deposit paid in a rehearsal of the salon demo issues a receipt (D-072). Documents can
+        # A deposit paid in a rehearsal of the salon demo issues a receipt (D-084). Documents can
         # never be deleted, and their delivery rows hold on to the messages the reset removes,
         # so the delivery rows of this fictional shop go first (the owner role: the app may not
         # delete them). The receipts stay, as issued documents always do.

@@ -1,6 +1,6 @@
 "use client";
 
-// Setting up bookings, for an owner or admin (ALY-27, D-072, spec 033): the people and chairs
+// Setting up bookings, for an owner or admin (ALY-27, D-084, spec 033): the people and chairs
 // and their own working hours, a deposit per service, the shop's deposit rule (with the
 // sentence the customer will read), and the review request. Agents never see this panel, and
 // the API refuses them anyway. Words in `bookingsCopy.ts`.

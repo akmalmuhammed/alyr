@@ -13,7 +13,7 @@ from alyr.core import consent, team
 
 log = logging.getLogger("alyr.identity")
 
-_FIELDS = "id, name, role, lang, phone, wa_user_id, username, credit_limit"
+_FIELDS = "id, name, role, lang, phone, wa_user_id, username, credit_limit, user_id"
 
 # The owner's own test customer on their business's private test line is `TEST.<user>` (core/
 # onboarding.py). A real customer's ID is a phone number or a WhatsApp ID, never this. The
@@ -40,7 +40,7 @@ COPY = (
     ("consents", {}),
     ("inbox_notes", {}),
     ("sold_out_asks", {}),
-    # Review requests sent (D-072): the 30-day rule follows the person to the record that stays.
+    # Review requests sent (D-084): the 30-day rule follows the person to the record that stays.
     ("review_requests", {}),
     # An entry about a conversation or a credit account names the contact as its subject too.
     ("activity", {
@@ -261,7 +261,13 @@ async def _merge_ledger_account(conn: asyncpg.Connection, keep_id: UUID, drop_id
 async def _merge_contact_fields(conn: asyncpg.Connection, keep_id: UUID, drop_id: UUID) -> None:
     """What the duplicate knew that the survivor does not. The survivor's own value wins
     wherever both have one; a conversation stays open, and the assistant stays paused, if
-    either was."""
+    either was. A staff phone's link to a login (D-065) moves to the survivor if it has none;
+    it is taken off the duplicate first, because a login has one number per shop."""
+    link = await conn.fetchrow(
+        "update contacts set user_id = null, verified_at = null "
+        "where id = $1 and user_id is not null returning user_id, verified_at",
+        drop_id,
+    )
     await conn.execute(
         "update contacts k set "
         "  last_inbound_at = greatest(k.last_inbound_at, d.last_inbound_at), "
@@ -282,6 +288,12 @@ async def _merge_contact_fields(conn: asyncpg.Connection, keep_id: UUID, drop_id
         "from contacts d where k.id = $1 and d.id = $2",
         keep_id, drop_id,
     )
+    if link is not None:
+        await conn.execute(
+            "update contacts set user_id = $2, verified_at = $3 "
+            "where id = $1 and user_id is null",
+            keep_id, link["user_id"], link["verified_at"],
+        )
 
 
 async def _remember(

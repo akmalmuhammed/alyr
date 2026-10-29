@@ -69,6 +69,42 @@ CATALOGUE: dict[str, Template] = {
         "مدفوعة مضى عليها {{3}} يوماً. نرجو السداد من هنا أو التواصل معنا اليوم: {{4}} . شكراً لك.",
         ("Al Noor Electricals", "QAR 2,500", "118", "https://app.alyr.online/pay/a/b"),
     ),
+    # The same three for a shop that takes no money online yet (ALY-271): no link, and the
+    # last blank says how the shop is paid ("You can pay us by cash or bank transfer, ...").
+    "payment_reminder_offline": Template(
+        "utility",
+        "A friendly reminder from {{1}}: your account has {{2}} due, and the oldest unpaid "
+        "purchase was {{3}} days ago. {{4}} Thank you.",
+        "تذكير ودي من {{1}}: على حسابك مبلغ {{2}}، وأقدم فاتورة غير مدفوعة مضى عليها {{3}} يوماً. "
+        "{{4}} شكراً لك.",
+        ("Al Noor Electricals", "QAR 1,850", "41",
+         "You can pay us by cash or bank transfer, and we will record it on your account."),
+        samples_ar=("النور للكهربائيات", "QAR 1,850", "41",
+                    "يمكنك الدفع لنا نقداً أو تحويل بنكي، وسنسجّل الدفعة في حسابك."),
+    ),
+    "payment_reminder_overdue_offline": Template(
+        "utility",
+        "Reminder from {{1}}: {{2}} on your account is now overdue. The oldest unpaid "
+        "purchase was {{3}} days ago. {{4}} Thank you.",
+        "تذكير من {{1}}: مبلغ {{2}} على حسابك متأخر السداد، وأقدم فاتورة غير مدفوعة مضى عليها "
+        "{{3}} يوماً. {{4}} شكراً لك.",
+        ("Al Noor Electricals", "QAR 1,850", "72",
+         "You can pay us by cash or bank transfer, and we will record it on your account."),
+        samples_ar=("النور للكهربائيات", "QAR 1,850", "72",
+                    "يمكنك الدفع لنا نقداً أو تحويل بنكي، وسنسجّل الدفعة في حسابك."),
+    ),
+    "payment_reminder_final_offline": Template(
+        "utility",
+        "Final notice from {{1}}: {{2}} on your account has been overdue for more than 90 "
+        "days, and the oldest unpaid purchase was {{3}} days ago. Please pay or contact us "
+        "today. {{4}} Thank you.",
+        "إشعار أخير من {{1}}: مبلغ {{2}} على حسابك متأخر منذ أكثر من 90 يوماً، وأقدم فاتورة غير "
+        "مدفوعة مضى عليها {{3}} يوماً. نرجو السداد أو التواصل معنا اليوم. {{4}} شكراً لك.",
+        ("Al Noor Electricals", "QAR 2,500", "118",
+         "You can pay us by cash or bank transfer, and we will record it on your account."),
+        samples_ar=("النور للكهربائيات", "QAR 2,500", "118",
+                    "يمكنك الدفع لنا نقداً أو تحويل بنكي، وسنسجّل الدفعة في حسابك."),
+    ),
     "entry_recorded": Template(
         "utility",
         "Update from {{1}}: we recorded {{2}} of {{3}} on your account. "
@@ -152,7 +188,7 @@ CATALOGUE: dict[str, Template] = {
         "تم تغيير موعد الحجز رقم {{1}} إلى {{2}}. بانتظارك.",
         ("101", "Wed 14 Oct, 4:00 PM"),
     ),
-    # Deposits and the review request (ALY-27, D-072, spec 033). Written, NOT submitted to
+    # Deposits and the review request (ALY-27, D-084, spec 033). Written, NOT submitted to
     # Meta: that is the founder's go, and `templates_sync --create` is not to be run for these
     # until he says so. The person or chair a booking is with rides inside the blank that
     # holds the service or the time, so the approved booking templates above do not change.
@@ -195,7 +231,7 @@ CATALOGUE: dict[str, Template] = {
     # Asked after one named visit or order, with no offer in it: Meta's guidelines (checked 29
     # Oct 2026) approve a feedback request as utility only when it names the order or
     # interaction and has nothing promotional. Every customer gets the same words: there is
-    # no "were you happy?" first (no review gating, D-072).
+    # no "were you happy?" first (no review gating, D-084).
     "review_request": Template(
         "utility",
         "Thank you for {{1}} at {{2}}. If you have a minute, you can leave a review here: "
@@ -292,6 +328,17 @@ CATALOGUE: dict[str, Template] = {
         "وإلغاء الطلب. يرجى ردها من حسابك للدفع.",
         ("Al Noor Electricals", "QAR 179", "1001"),
     ),
+    # A new order, to the staff numbers the owner marked for it (D-079). {{4}} is what the
+    # order holds and how it goes: "2 x Croissant, 1 x Latte. Pickup · Not paid yet".
+    "order_new_staff": Template(
+        "utility",
+        "New order at {{1}}: order {{2}} for {{3}}. {{4}}. Open ALYR to confirm it.",
+        "طلب جديد في {{1}}: الطلب رقم {{2}} بمبلغ {{3}}. {{4}}. افتح ALYR لتأكيده.",
+        ("Al Noor Electricals", "1001", "QAR 179",
+         "2 x Breaker 16 A, 1 x Cable 1.5 mm. Pickup · Not paid yet"),
+        samples_ar=("النور للكهربائيات", "1001", "179 ر.ق",
+                    "2 x قاطع 16 أمبير، 1 x كابل 1.5 مم. استلام من المتجر · لم يُدفع بعد"),
+    ),
     "draft_added": Template(
         "utility",
         "New item draft at {{1}}: {{2}} sent a photo for {{3}}. Open the Catalog to check "
@@ -380,7 +427,7 @@ def render(name: str, lang: str, params: list[str] | tuple[str, ...]) -> str | N
 
 def notice(
     to: UUID, name: str, lang: str, body: str, *params: object, image: bytes = b"",
-    document: bytes = b"", filename: str = "",
+    document: bytes = b"", filename: str = "", document_id: UUID | None = None,
 ) -> OutboundMessage:
     """A notice to a customer who may have last written more than 24 hours ago.
 
@@ -389,7 +436,8 @@ def notice(
     window is that image with `body` under it; outside it, the image fills the
     template's image header, and is left out if the template has none. A `document` (a PDF
     with its `filename`) goes the same way: a document message with `body` as its caption
-    inside the window, the template's document header outside it."""
+    inside the window, the template's document header outside it. `document_id` names the
+    issued document the PDF is, so it is not stored a second time."""
     template = CATALOGUE[name]
     if len(params) != len(template.samples):
         raise ValueError(f"{name} takes {len(template.samples)} values, got {len(params)}")
@@ -398,4 +446,5 @@ def notice(
         template_category=template.category,  # type: ignore[arg-type]
         template_params=tuple(clean(value) for value in params),
         lang="ar" if lang == "ar" else "en", image=image, document=document, filename=filename,
+        document_id=document_id,
     )

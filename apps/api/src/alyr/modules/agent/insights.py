@@ -31,6 +31,7 @@ from alyr.core.words import (
     DAYS,
     ITEMS,
     JOBS,
+    MESSAGES,
     ORDERS,
     PATIENTS,
     TIMES,
@@ -201,6 +202,28 @@ def _say_unmarked(x: Finding, f: Facts, lang: str):
     return rich(f"{noun} not marked"), rich(f"Until {which} marked, the no-show figures are short.")
 
 
+def _find_not_sent(f: Facts) -> Finding | None:
+    if not f.not_sent:
+        return None
+    return Finding(f.not_sent, MESSAGES, {"latest": min(r.detail["minutes"] for r in f.not_sent)})
+
+
+def _say_not_sent(x: Finding, f: Facts, lang: str):
+    noun = noun_after(x.n, MESSAGES, lang)
+    name = _first(x.rows).label
+    ago = B(minutes(x.numbers["latest"] * 60, lang))
+    if lang == "ar":
+        words = rich(f"{noun} " + agree(x.n, "لم تصل إلى العميل", "لم تصلا إلى العملاء",
+                                         "لم تصل إلى العملاء"))
+        detail = (rich("آخرها إلى {name}، منذ {t}.", name=B(name), t=ago) if name
+                  else rich("آخرها منذ {t}.", t=ago))
+        return words, detail
+    words = rich(f"{noun} did not reach " + ("the customer" if x.n == 1 else "customers"))
+    detail = (rich("The latest was to {name}, {t} ago.", name=B(name), t=ago) if name
+              else rich("The latest, {t} ago.", t=ago))
+    return words, detail
+
+
 # ── money ─────────────────────────────────────────────────
 
 
@@ -343,7 +366,7 @@ def _say_repeat_no_show(x: Finding, f: Facts, lang: str):
     name = B(first.label)
     when = when_text(first.detail["next"].astimezone(f.zone), f.local, lang)
     who = count(x.n, x.noun, lang)
-    # Who the visit is with, in a shop with chairs or staff (D-072): "with Reem".
+    # Who the visit is with, in a shop with chairs or staff (D-084): "with Reem".
     person = first.detail.get("with")
     if lang == "ar":
         verb = agree(x.n, "تغيّب مرتين ولديه حجز جديد", "تغيّبا مرتين ولديهما حجز جديد",
@@ -610,6 +633,13 @@ INSIGHTS: tuple[Insight, ...] = (
         "unconfirmed", 2, "task", "orders",
         Text("new for over 15 minutes", "جديد منذ أكثر من 15 دقيقة"),
         _find_unconfirmed, _say_unconfirmed, Action(SHOW_ORDERS, "/app/orders?show=unconfirmed"),
+    ),
+    Insight(
+        "not_sent", 25, "task", "inbox|orders|bookings|ledger",
+        Text("a message failed to reach the customer in the last 48 hours",
+             "رسالة لم تصل إلى العميل خلال آخر 48 ساعة"),
+        _find_not_sent, _say_not_sent, Action(Text("See what was not sent", "اعرض ما لم يُرسل"),
+                                              "/app/unsent"),
     ),
     Insight(
         "unmarked", 11, "task", "bookings",

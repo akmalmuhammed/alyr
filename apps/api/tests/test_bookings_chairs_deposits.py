@@ -1,5 +1,5 @@
 """Chairs and people with their own hours, the day from the screen, deposits, and the review
-request (ALY-27, D-072, spec 033).
+request (ALY-27, D-084, spec 033).
 
 Through the real routes, the engine and PostgreSQL. The concurrency tests prove the two
 requests met in the database (tests/concurrency.py): one with the shop's lock in place, and

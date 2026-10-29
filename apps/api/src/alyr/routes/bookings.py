@@ -298,7 +298,7 @@ async def bookings_day(
 async def add_booking(
     body: StaffBooking, request: Request, staff: Staff = Depends(current_staff)
 ) -> dict:
-    """Staff write a booking down: a walk-in, or one taken by phone (D-072)."""
+    """Staff write a booking down: a walk-in, or one taken by phone (D-084)."""
     if (body.contact_id is None) == (body.customer is None):
         raise HTTPException(status_code=422, detail={
             "code": "customer_needed", "message": "Choose a customer or type a name."})

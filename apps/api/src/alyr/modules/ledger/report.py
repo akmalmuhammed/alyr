@@ -10,7 +10,11 @@ from alyr.core.words import CUSTOMERS, counted
 from alyr.modules.ledger import service
 
 TITLE = {"en": "Credit accounts", "ar": "الحسابات الآجلة"}
-REMINDERS = ("payment_reminder", "payment_reminder_overdue", "payment_reminder_final")
+REMINDERS = (
+    "payment_reminder", "payment_reminder_overdue", "payment_reminder_final",
+    "payment_reminder_offline", "payment_reminder_overdue_offline",
+    "payment_reminder_final_offline",
+)
 LATE_BUCKETS = ("d61_90", "d90_plus")
 
 

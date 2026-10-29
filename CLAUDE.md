@@ -46,10 +46,22 @@ These are not style preferences. Do not write code that breaks them, and stop an
 apps/api/                     FastAPI service (Python 3.13, managed with uv)
   migrations/                 Plain SQL, applied in order by `python -m alyr.migrate`. Never edit an applied one
   src/alyr/channels/          Message channels: Meta Cloud API and the local simulator, same interface
+  src/alyr/gateways/          Payment providers: one adapter each, same interface, and the local simulator
+                              (specs/033); core/payments.py makes links on the shop's own account, and
+                              core/payment_keys.py seals its keys
   src/alyr/core/              Inbound path, contact identity, outbound layer (consent, 24-hour window), jobs,
-                              sign-in (auth), email (mail), sign-up (onboarding), pricing, back office,
+                              sign-in (auth), email (mail), the welcome and invite emails (welcome, specs/037),
+                              sign-up (onboarding), pricing, back office,
                               team accountability (team, D-028), workspace shell (workspace), templates,
-                              signed customer links (links: a customer's order or booking link carries a token made for that page, never a contact ID)
+                              signed customer links (links: a customer's order or booking link carries a token made for that page, never a contact ID),
+                              ALYR's own billing by card (paddle.py is Paddle's API and webhook signature,
+                              card_billing.py the checkout, the webhook's job and renewals; D-074;
+                              subscription.py a client's plan after go-live: past due, paused, cancelled, D-082),
+                              actions (one set of actions behind the workspace and WhatsApp, D-065),
+                              staff_link (links a staff number to a person by a one-time code),
+                              not_sent (the messages that did not reach a customer, and sending one
+                              again through the same consent checks; specs/036) and
+                              drawing (PDFs and report cards drawn in a process of their own, D-078)
   src/alyr/modules/           What answers customers: ledger, orders, bookings, inbox, agent (the owner's
                               weekly view), report.py (weekly report card); router.py picks the module.
                               items/ is the Catalog's engine (what a shop sells: variants, availability,
@@ -71,6 +83,8 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               (specs/014; cost lives in tables of its own and only owners and admins
                               ever see it: read costs.py before touching an item's or an order's reader);
                               orders/page.py is what the customer's order page reads (specs/005);
+                              orders/staff_alert.py tells the staff numbers marked for it about each
+                              new order (specs/039, D-079);
                               documents/ is the documents engine (receipts, invoices, credit notes:
                               gapless numbers, immutable once issued, a PDF drawn in Arabic and
                               English; specs/011, D-042), switched on per shop through the
@@ -84,8 +98,12 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               with API keys, CSV import), authority says who numbers each kind of
                               document, webhooks send events out (specs/016, ALY-142, docs/connect-api.md)
                               items/codes.py reads a customer's message for item codes, links and
-                              SKUs and items/wa_order.py orders by them in the chat (specs/010)
+                              SKUs and items/wa_order.py orders by them in the chat (specs/010);
+                              owner/ is what an owner or staff member can ask from WhatsApp, and
+                              LINK proves a staff phone (specs/029-owner-actions, D-065)
   src/alyr/routes/            HTTP routes. deps.py: who is calling, which shop, which modules are on
+                              account.py: your account (switch business, change the sign-in email, all of a
+                              business's data as one ZIP; core/account.py, core/export.py, specs/040, D-081)
   src/alyr/catalog.py         What ALYR sells: modules and products (D-027)
   src/alyr/db.py              `Database.tenant(id)`: one transaction scoped to one tenant
   src/alyr/seed*.py           The fictional demo shops
@@ -143,13 +161,16 @@ scripts/api-in-docker.sh uv run pytest -q # where Windows blocks the compiled da
 
 - Query tenant data only inside `async with db.tenant(tenant_id) as conn`. Outside it, RLS returns no rows.
 - New tenant-owned tables copy the pattern in `migrations/0001_core.sql`: `tenant_id` with the `current_setting` default, RLS enabled and forced, the `tenant_isolation` policy, grants to `alyr_app`. `tests/test_tenant_isolation.py` fails if any of that is missing.
+- A new table that points at a customer (`contacts`) says in `core/forget.py`'s `TABLES` what forgetting the customer does to it; `tests/test_forget.py` reads the foreign keys and fails otherwise. A customer's data is copied for them or forgotten only through `core/forget.py` (specs/038); working copies such as finished jobs are purged by `core/retention.py` (D-075).
 - The app role cannot write `tenants` or `channel_numbers`. Creating a tenant is an owner-role action.
 - Workspace routes take the tenant from `Depends(current_tenant)` or `Depends(current_staff)` in `routes/deps.py`, which read the session. Never take a tenant ID from the request.
+- A new tenant-owned table gets an index whose first column is `tenant_id` (`tests/test_tenant_isolation.py` fails otherwise; D-076). A query on `jobs` names the shop with `jobs.THIS_SHOP`, because the worker's clause in its policy keeps the index from being used. What a customer's page only reads runs in `db.tenant(id, readonly=True)`.
 
 ## Conventions
 
 - Modules receive `InboundMessage` and return `OutboundMessage` objects. They do not know which channel is in use, so everything works against the simulator first.
-- Every outgoing message goes through `core/outbound.py`, which records it and queues a job; `core/jobs.py` delivers it with retries. Never call a channel or a slow outside service directly from a request: enqueue a job.
+- Every outgoing message goes through `core/outbound.py`, which records it and queues a job; `core/jobs.py` delivers it with retries. Never call a channel or a slow outside service directly from a request: enqueue a job. Jobs run several at a time; a job about one customer names them in its payload (`contact_id`, or the sender's number) so it runs after that customer's earlier jobs, in order (D-077). Work no customer waits for (a weekly report, photos, events out) is registered `background=True` and runs after theirs (D-078).
+- Drawing (a PDF, a report card, anything CPU-heavy) goes through `core/drawing.py`, a process of its own: in the API's or the worker's own process, even in a thread, it holds up every request while it draws (D-078).
 - Compliance outputs (SIF files, UBL invoices), when they exist, are tested against golden files in `fixtures/` (to be created with them), byte for byte.
 - User-facing text exists in Arabic and English. No hard-coded strings in UI code.
 - Amounts are integers in dirhams (1 QAR = 100 dirhams). Never floats.

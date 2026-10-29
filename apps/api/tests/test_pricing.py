@@ -27,9 +27,9 @@ def pricing_restored():
     for r in items:
         owner_sql(
             "insert into price_items (key, name, name_ar, kind, price, applies, active, sort, "
-            "updated_by) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+            "updated_by, price_usd) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
             r["key"], r["name"], r["name_ar"], r["kind"], r["price"], r["applies"],
-            r["active"], r["sort"], r["updated_by"],
+            r["active"], r["sort"], r["updated_by"], r["price_usd"],
         )
     owner_sql("delete from business_type_settings")
     for r in types:

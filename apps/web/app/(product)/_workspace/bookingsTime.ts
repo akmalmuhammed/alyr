@@ -1,4 +1,4 @@
-// Times for the Bookings day view (ALY-27, D-072): a time typed on the shop's clock as an
+// Times for the Bookings day view (ALY-27, D-084): a time typed on the shop's clock as an
 // instant, the shop's own today and now, and the day before or after. Plain TypeScript with no
 // React, so `bookingsTime.test.mjs` runs it under Node.
 

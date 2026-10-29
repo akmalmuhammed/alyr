@@ -1,4 +1,4 @@
-// A shop's rule for a booking's deposit, in the customer's words (ALY-27, D-072, spec 033).
+// A shop's rule for a booking's deposit, in the customer's words (ALY-27, D-084, spec 033).
 // The booking page shows it beside the confirm button, the payment page again before paying,
 // and the workspace's setup shows the owner the same sentence. It mirrors
 // `terms_sentence` in the API (`modules/bookings/words.py`), which the chat message uses.

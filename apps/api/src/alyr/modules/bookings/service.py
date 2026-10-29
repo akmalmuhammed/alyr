@@ -9,7 +9,7 @@ held to one customer at a time, as before. Which resource a booking takes is dec
 the shop's lock, so two customers cannot be given the same last one, and the database
 refuses it anyway (`bookings_no_overlap`).
 
-D-072 adds: a resource's own working hours (none set: the shop's), the customer's choice of
+D-084 adds: a resource's own working hours (none set: the shop's), the customer's choice of
 "anyone" or one resource, bookings made by staff at any minute (a walk-in), and deposits
 (`deposits.py`): a service may ask one, the booking holds the time until it is paid.
 

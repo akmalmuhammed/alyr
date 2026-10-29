@@ -402,7 +402,7 @@ async def from_order(conn: asyncpg.Connection, staff: Staff, order_id: UUID, kin
 async def booking_payments(conn: asyncpg.Connection, booking_id: UUID,
                            upto: datetime | None = None) -> list[dict]:
     """What a booking has been paid so far: payments staff recorded by hand, and a deposit
-    paid by link (D-072), which counts against the final bill."""
+    paid by link (D-084), which counts against the final bill."""
     rows = await conn.fetch(
         "select method, reference, amount_minor from ("
         "  select method, reference, amount_minor, recorded_at as at, id from manual_payments "
@@ -442,7 +442,7 @@ def booking_body(cfg: dict, booking: asyncpg.Record, kind: str, payments: list[d
 
 
 async def booking_deposit_paid(conn: asyncpg.Connection, booking_id: UUID) -> Issued | None:
-    """A booking's deposit was paid by link (D-072): a deposit receipt saying how much was
+    """A booking's deposit was paid by link (D-084): a deposit receipt saying how much was
     received and what is left of the price (or a receipt, when the deposit is the whole price
     or the service has none). Once, in the payment's transaction, for a shop with Documents on
     and its deposit receipts on."""

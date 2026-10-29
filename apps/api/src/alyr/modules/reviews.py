@@ -1,4 +1,4 @@
-"""The review request (ALY-27, D-072, spec 033).
+"""The review request (ALY-27, D-084, spec 033).
 
 When a booking is marked "came" or an order is marked done (collected or delivered), the
 customer gets one WhatsApp message in their language: thanks for that visit or order, and the

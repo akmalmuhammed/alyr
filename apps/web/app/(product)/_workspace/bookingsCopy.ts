@@ -1,4 +1,4 @@
-// Every word of the Bookings day view and its setup, in English and Arabic (ALY-27, D-072,
+// Every word of the Bookings day view and its setup, in English and Arabic (ALY-27, D-084,
 // spec 033). The components hold no text. Both languages share one shape, so a missing
 // Arabic line is a type error. The Arabic is a draft until a native speaker reviews it
 // (ALY-66). Money is written by `_customer/price.ts`; times are the shop's 24-hour clock.

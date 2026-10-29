@@ -1,4 +1,4 @@
-"""What the bookings module says, in English and Arabic (D-072).
+"""What the bookings module says, in English and Arabic (D-084).
 
 Whole sentences per language, never joined from fragments of the other. The Arabic is a
 draft until a native speaker reviews it (ALY-66). Money is written by `fmt_qar` in English and

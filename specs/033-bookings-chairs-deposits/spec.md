@@ -1,6 +1,6 @@
 # Spec 033: Chairs and staff with their own hours, the day from the screen, deposits, and the review request
 
-Status: built on branch `aly-27-chairs-deposits` (Linear ALY-27), one pull request, not merged. Decision: D-072. Builds on spec 026 (the bookable-resources engine, ALY-258, D-069), whose branch is merged into this one, so this pull request carries both.
+Status: built on branch `aly-27-chairs-deposits` (Linear ALY-27), one pull request, not merged. Decision: D-084. Builds on spec 026 (the bookable-resources engine, ALY-258, D-069), whose branch is merged into this one, so this pull request carries both.
 
 The founder decided on 29 Oct to build this before the salon sales demo (ALY-264, `docs/sales/demo-salon.md` on `aly-demo-salon`).
 
@@ -54,7 +54,7 @@ The confirmation, the reminder, the move and the "my booking" answer name the re
 - **No review gating.** Every customer is asked the same way. ALYR never asks first whether they were happy and sends only the happy ones to Google: Google's policy forbids selectively asking for positive reviews. Anyone can reply in the chat, and the owner reads the reply in the inbox.
 - On the activity record (`review_requested`), and counted in the Agent's "done for you".
 
-## Tables (migration 0061)
+## Tables (migration 0076)
 
 `booking_resources.kind`; `resource_hours` (tenant, resource, weekday, opens, closes); `services.deposit_kind`, `deposit_value`; `bookings.deposit`, `deposit_state`, `deposit_terms`, `hold_until`, `walk_in`; `payment_requests.booking_id` (one pending link per booking); `shop_settings.deposit_no_show`, `deposit_late_cancel`, `deposit_cancel_hours`, `review_requests`, `review_link`; `review_requests` (append-only). Every new table carries the tenant column with forced row-level security and the standard policy; the append-only one is granted select and insert only. The contact merge copies `review_requests` forward.
 

@@ -1,4 +1,4 @@
--- ALY-27, decision D-072, spec 033: chairs and people with their own hours, deposits by the
+-- ALY-27, decision D-084, spec 033: chairs and people with their own hours, deposits by the
 -- shop's own rule, staff bookings, and the review request. Builds on 0055 (D-069).
 
 -- ── Resources: a person or a place, with its own working hours ──────────────────────────

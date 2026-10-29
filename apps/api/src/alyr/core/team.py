@@ -64,10 +64,13 @@ async def record(
     actor: Actor,
     contact_id: UUID | None = None,
     detail: dict | None = None,
+    channel: str = "portal",
 ) -> None:
+    """Put one thing on the record. `channel` says which door it came through: the
+    workspace ("portal"), a message ("whatsapp"), or ALYR itself ("system") (D-065)."""
     await conn.execute(
         "insert into activity (subject, subject_id, contact_id, action, detail, actor_id, "
-        "actor_name) values ($1, $2, $3, $4, $5, $6, $7)",
+        "actor_name, channel) values ($1, $2, $3, $4, $5, $6, $7, $8)",
         subject,
         subject_id,
         contact_id,
@@ -76,6 +79,7 @@ async def record(
          if v is not None},
         actor.id,
         actor.name,
+        channel,
     )
 
 

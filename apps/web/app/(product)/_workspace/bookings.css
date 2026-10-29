@@ -1,4 +1,4 @@
-/* The Bookings day view and its setup (ALY-27, D-072, spec 033). Every colour, size, space and
+/* The Bookings day view and its setup (ALY-27, D-084, spec 033). Every colour, size, space and
    radius is a generated token (design/tokens.json), so light, dark and right-to-left come from
    the tokens. Rules before boxes: a column is a hairline and a heading, a booking a quiet card.
    Volt only on the one main action (Add a walk-in, `.btn.volt`). Status is a word first, its

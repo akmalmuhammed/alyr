@@ -1,5 +1,7 @@
+from urllib.parse import urlsplit
 from uuid import UUID, uuid4
 
+import httpx
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
@@ -175,3 +177,22 @@ async def reset(request: Request) -> dict:
     )
     await reset_demo_data(request.app.state.db)
     return {"status": "reset"}
+
+
+class SimulatedPayment(BaseModel):
+    # Another amount than the one asked for, to see a payment that is not believed.
+    amount: int | None = None
+
+
+@router.post("/gateway/{ref}/pay")
+async def gateway_pay(ref: str, request: Request, body: SimulatedPayment | None = None) -> dict:
+    """The customer pays on the test provider's page (ALY-17). The test provider then sends its
+    signed webhook to ALYR over HTTP, as a real one would, and answers with ALYR's reply."""
+    gateway = request.app.state.payments.gateways.get("simulator")
+    if gateway is None or ref not in gateway.checkouts:
+        raise HTTPException(status_code=404, detail="no such payment at the test provider")
+    url, payload, headers = gateway.pay(ref, body.amount if body else None)
+    transport = httpx.ASGITransport(app=request.app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://api.test") as client:
+        answer = await client.post(urlsplit(url).path, content=payload, headers=headers)
+    return {"webhook_status": answer.status_code, "webhook": answer.json()}

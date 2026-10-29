@@ -1,4 +1,4 @@
-// Runs the Bookings day view (ALY-27, D-072, spec 033) and the customer's booking and deposit
+// Runs the Bookings day view (ALY-27, D-084, spec 033) and the customer's booking and deposit
 // pages in a real browser, in English or Arabic, and checks what an owner and a customer meet:
 // the day by stylist, a walk-in added and a booking moved from the screen, the setup panel,
 // then "Anyone" or a person, the deposit and the shop's rule before paying, the held booking,
