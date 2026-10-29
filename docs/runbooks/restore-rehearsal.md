@@ -22,7 +22,7 @@ the database cost) is the next step if a paying client needs a firmer RTO.
 | Situation | Way | Keeps the address? |
 |---|---|---|
 | Data wrong from a known moment (bad migration, bad import, deleted rows) | **Point-in-time clone** of `alyr-db` to a new instance (below) | No: new address, new name |
-| The instance is lost or its disk is corrupt, any time in the last 14 nights | Restore a nightly backup into a new instance: `gcloud sql backups restore <id> --restore-instance=<new>` after creating it | No |
+| The instance is lost or its disk is corrupt, any time in the last 14 nights | Restore a nightly backup into a new instance of the same version and at least the same size (create it first, then `gcloud sql backups restore <id> --backup-instance=alyr-db --restore-instance=<new>`); the backup list: `gcloud sql backups list --instance alyr-db` | No |
 | Only a few tables or rows are needed | Clone, read the rows from the clone, put them back with a normal change, delete the clone | The apps never move |
 | Everything inside Cloud SQL is gone or untrusted | Import the newest export: `gcloud sql import sql <instance> gs://alyr-prod-db-exports/<file> --database alyr` into an empty database (`docs/hosting.md`, "Backups on Google") | No |
 
