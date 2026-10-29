@@ -30,7 +30,7 @@
 // copy files).
 
 import { mkdirSync, writeFileSync } from "node:fs";
-import { launch } from "./browser-kit.mjs";
+import { launch, trackPath } from "./browser-kit.mjs";
 import { COPY } from "../apps/web/app/(product)/_workspace/catalogCopy.ts";
 import { DELIVERY } from "../apps/web/app/(product)/_workspace/deliveryCopy.ts";
 import { clock12, daysLine } from "../apps/web/app/(product)/_workspace/deliveryForm.ts";
@@ -592,7 +592,7 @@ async function ordersAndTracking() {
 
   // the tracking page: a delivery, a pickup, an order with no choice
   const delivery = fulfilled.filter((x) => x.fulfilment.mode === "delivery").sort((a, z) => a.number - z.number)[0];
-  await b.go(`${BASE}/t/${tenant}/${delivery.id}`, 1500);
+  await b.go(`${BASE}${trackPath(tenant, "al-noor", delivery.id)}`, 1500);
   await b.until("!!document.querySelector('.cx-card')", "the tracking page", 20000);
   await ensureLang();
   let page = await body();
@@ -606,14 +606,14 @@ async function ordersAndTracking() {
   await tall(1700, async () => { await b.sleep(250); await shot("t-delivery"); });
   await axe("t-delivery");
   const pickup = fulfilled.find((x) => x.fulfilment.mode === "pickup");
-  await b.go(`${BASE}/t/${tenant}/${pickup.id}`, 1500);
+  await b.go(`${BASE}${trackPath(tenant, "al-noor", pickup.id)}`, 1500);
   await b.until("!!document.querySelector('.cx-card')", "the pickup tracking page", 20000);
   await ensureLang();
   page = await body();
   check(page.includes(pick("Pickup", "الاستلام من المتجر")) && !page.includes(pick("Delivery day", "يوم التوصيل")) && !page.includes(pick("Delivery to", "التوصيل إلى")), "tracking: a pickup says Pickup and has no delivery lines");
   await tall(1500, async () => { await b.sleep(250); await shot("t-pickup"); });
   const old = plain[0];
-  await b.go(`${BASE}/t/${tenant}/${old.id}`, 1500);
+  await b.go(`${BASE}${trackPath(tenant, "al-noor", old.id)}`, 1500);
   await b.until("!!document.querySelector('.cx-card')", "the old tracking page", 20000);
   await ensureLang();
   page = await body();

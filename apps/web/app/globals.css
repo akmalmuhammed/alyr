@@ -176,6 +176,8 @@ tbody tr.norow:hover { background: transparent; }
 /* sign-in and team */
 .who-am-i { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: var(--ui-body-sm); margin-inline-end: 8px; }
 .login { max-width: 380px; margin: 12vh auto 0; padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
+.login[hidden] { display: none; }
+.login-top { display: flex; align-items: center; justify-content: space-between; }
 .login h1 { margin: 0; color: var(--accent); }
 .login .lead { margin: 0 0 8px; color: var(--muted); }
 .login form { display: flex; flex-direction: column; gap: 8px; }

@@ -82,7 +82,7 @@ async def thread(conn: asyncpg.Connection, contact_id: UUID) -> dict | None:
         "       c.last_inbound_at + interval '24 hours' as window_closes_at, "
         "       c.assigned_to, u.name as assignee_name, c.price_group_id "
         "from contacts c left join users u on u.id = c.assigned_to "
-        "where c.id = $1 and c.role = 'customer'",
+        "where c.id = $1 and c.role = 'customer' and c.forgotten_at is null",
         contact_id,
     )
     if contact is None:
@@ -142,13 +142,14 @@ async def reply(
     if not text:
         raise InboxError("the reply is empty")
     known = await conn.fetchval(
-        "select true from contacts where id = $1 and role = 'customer'", contact_id
+        "select true from contacts where id = $1 and role = 'customer' "
+        "and forgotten_at is null", contact_id
     )
     if not known:
         raise LookupError("no such customer")
     if await team.sign_replies(conn):
         text = team.signed(text, sent_by)
-    result = await outbound.send(conn, OutboundMessage(to=contact_id, body=text))
+    result = await outbound.send(conn, OutboundMessage(to=contact_id, body=text, typed=True))
     await conn.execute(
         "update messages set sent_by = $2, sent_by_user = $3 where id = $1",
         result.message_id, sent_by, sender_id,
@@ -226,7 +227,8 @@ async def add_note(
     if not text:
         raise InboxError("the note is empty")
     known = await conn.fetchval(
-        "select true from contacts where id = $1 and role = 'customer'", contact_id
+        "select true from contacts where id = $1 and role = 'customer' "
+        "and forgotten_at is null", contact_id
     )
     if not known:
         raise LookupError("no such customer")

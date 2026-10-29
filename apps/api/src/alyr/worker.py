@@ -10,13 +10,15 @@ switched off, as it should be in production.
 import asyncio
 import logging
 import os
+import signal
 import socket
 
 from alyr.config import get_settings
-from alyr.core import resume
+from alyr.core import alerts, resume, subscription
 from alyr.core.links import check_secret as check_link_secret
+from alyr.core.retention import purge as purge_old_copies
 from alyr.core.storage import check_store
-from alyr.main import create_app
+from alyr.main import close_channels, create_app
 from alyr.modules import report
 from alyr.modules.orders import holds as order_holds
 
@@ -86,6 +88,20 @@ async def keep_owners_reminded(db) -> None:
         await asyncio.sleep(3600)
 
 
+async def keep_billing_checked(db) -> None:
+    """Where each client's plan stands (ALY-218, D-082): pause or resume what ALYR sends for
+    an overdue client, cancel at Paddle a plan whose cancellation took effect, and email the
+    owners what is due. Every hour; each email is recorded before it is sent."""
+    while True:
+        try:
+            sent = await subscription.sweep(db)
+            if sent:
+                log.info("emailed %s clients about their plan", sent)
+        except Exception:  # never let billing stop the worker
+            log.exception("could not check the clients' plans")
+        await asyncio.sleep(3600)
+
+
 async def keep_meters_fresh(media) -> None:
     """Every shop has this month's photo and item meters, even in a month it uploaded
     nothing (ALY-103)."""
@@ -97,6 +113,21 @@ async def keep_meters_fresh(media) -> None:
         await asyncio.sleep(3600)
 
 
+async def keep_old_copies_purged(db) -> None:
+    """Delete the working copies past their time: finished jobs, whose payloads repeat the
+    customer's messages, and the IDs of messages already handled (ALY-119, D-075). Once a
+    day; the first pass when the worker starts."""
+    while True:
+        try:
+            gone = await purge_old_copies(db)
+            if any(gone.values()):
+                log.info("purged %s old jobs and %s handled message IDs",
+                         gone["jobs"], gone["seen"])
+        except Exception:  # never let the purge stop the worker
+            log.exception("could not purge the old working copies")
+        await asyncio.sleep(86400)
+
+
 async def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     # The worker answers customers too ("order" in the chat makes a signed link), so it
@@ -106,18 +137,31 @@ async def main() -> None:
     # The worker imports photos from spreadsheets, so the same rule as the API (ALY-63).
     check_store(get_settings(), app.state.media.store)
     await app.state.db.connect()
+    # A deploy or a scale-down sends SIGTERM and allows a few seconds: finish the jobs already
+    # started, put the rest of the batch back in the queue, and stop (ALY-276).
+    loop = asyncio.get_running_loop()
+    for stop_signal in (signal.SIGTERM, signal.SIGINT):
+        loop.add_signal_handler(stop_signal, app.state.jobs.stop)
     scheduler = asyncio.create_task(keep_reports_scheduled(app.state.db))
     sweeper = asyncio.create_task(keep_holds_swept(app.state.db, app.state.outbound))
     meters = asyncio.create_task(keep_meters_fresh(app.state.media))
+    watching = asyncio.create_task(alerts.keep_watching(app.state.db))
     reminders = asyncio.create_task(keep_owners_reminded(app.state.db))
+    billing = asyncio.create_task(keep_billing_checked(app.state.db))
+    purger = asyncio.create_task(keep_old_copies_purged(app.state.db))
     try:
         await app.state.jobs.run_forever(heartbeat=heartbeat(app.state.db))
+        log.info("stopped: the jobs that had started finished, the rest went back in the queue")
     finally:
         scheduler.cancel()
         sweeper.cancel()
         meters.cancel()
+        watching.cancel()
         reminders.cancel()
+        billing.cancel()
+        purger.cancel()
         await app.state.db.close()
+        await close_channels(app)
 
 
 if __name__ == "__main__":
