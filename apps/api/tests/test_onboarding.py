@@ -226,6 +226,16 @@ def test_the_test_line_answers_like_a_customer_would_see_it(client):
     assert f"/b/{slug}?t=" in link["body"] and "?c=" not in link["body"]
 
 
+def test_the_test_lines_suggested_price_question_gets_the_price_list(client):
+    # /start suggests "What are your prices?" and «كم الأسعار؟» (ALY-273: the preview showed an
+    # answer the real chat did not give).
+    new_business(client)
+    english = client.post(f"{BASE}/test-chat", json={"text": "What are your prices?"})
+    assert "Haircut: QAR 60 (45 min)" in english.json()["messages"][-1]["body"]
+    arabic = client.post(f"{BASE}/test-chat", json={"text": "كم الأسعار؟"})
+    assert arabic.json()["messages"][-1]["body"].startswith("خدماتنا:")
+
+
 def test_a_test_booking_goes_through_the_real_booking_page(client):
     tenant, slug, name = new_business(client)
     assert book_from_test_line(client, slug).status_code == 200

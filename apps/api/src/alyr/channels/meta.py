@@ -9,6 +9,7 @@ import hashlib
 import hmac
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -217,6 +218,22 @@ def to_graph_payload(message: OutboundMessage, address: Address) -> dict:
     return base | {"type": "template", "template": template}
 
 
+# Where Meta serves a file that was sent to us: the media page gives the address as a
+# placeholder, and the addresses it answers with are on lookaside.fbsbx.com. The access token
+# goes with the download, so it goes only to Meta's own domains, over https (ALY-278).
+MEDIA_HOSTS = ("fbsbx.com", "facebook.com", "whatsapp.net")
+
+
+def is_meta_media_url(url: object) -> bool:
+    if not isinstance(url, str):
+        return False
+    parts = urlsplit(url)
+    host = (parts.hostname or "").lower()
+    return parts.scheme == "https" and any(
+        host == domain or host.endswith("." + domain) for domain in MEDIA_HOSTS
+    )
+
+
 class MetaChannel:
     name = "meta"
 
@@ -281,7 +298,7 @@ class MetaChannel:
         page on 18 Oct 2026: GET /{media-id} answers with a `url` (good for five minutes)
         and the type; GET that url, with the access token, answers with the file. The
         file is read in pieces and dropped as soon as it passes `max_bytes`. Meta's own
-        limit for an image is 5 MB."""
+        limit for an image is 5 MB. The second request goes only to Meta (`MEDIA_HOSTS`)."""
         headers = {"Authorization": f"Bearer {self._token}"}
         async with httpx.AsyncClient(timeout=30, headers=headers) as client:
             found = await client.get(f"{self._base}/{media_id}")
@@ -289,6 +306,8 @@ class MetaChannel:
             info = found.json()
             if int(info.get("file_size") or 0) > max_bytes:
                 raise ValueError("the file is larger than we accept")
+            if not is_meta_media_url(info.get("url")):
+                raise ValueError("the file's address is not one of Meta's")
             body = bytearray()
             async with client.stream("GET", info["url"]) as response:
                 response.raise_for_status()

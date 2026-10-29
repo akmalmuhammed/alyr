@@ -40,6 +40,8 @@ export type ClientDetail = Omit<ClientSummary, "quote"> & {
 
 export type Item = {
   key: string; name: string; name_ar: string; kind: Kind; price: number; price_text: string;
+  // US cents for a card payment through Paddle (D-074); null: the riyal price at the peg.
+  price_usd: number | null;
   applies: string; active: boolean; sort: number; updated_at: string; updated_by: string;
 };
 export type TypeRow = {

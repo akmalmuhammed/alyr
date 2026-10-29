@@ -14,8 +14,9 @@ import signal
 import socket
 
 from alyr.config import get_settings
-from alyr.core import resume
+from alyr.core import alerts, resume
 from alyr.core.links import check_secret as check_link_secret
+from alyr.core.retention import purge as purge_old_copies
 from alyr.core.storage import check_store
 from alyr.main import close_channels, create_app
 from alyr.modules import report
@@ -98,6 +99,21 @@ async def keep_meters_fresh(media) -> None:
         await asyncio.sleep(3600)
 
 
+async def keep_old_copies_purged(db) -> None:
+    """Delete the working copies past their time: finished jobs, whose payloads repeat the
+    customer's messages, and the IDs of messages already handled (ALY-119, D-075). Once a
+    day; the first pass when the worker starts."""
+    while True:
+        try:
+            gone = await purge_old_copies(db)
+            if any(gone.values()):
+                log.info("purged %s old jobs and %s handled message IDs",
+                         gone["jobs"], gone["seen"])
+        except Exception:  # never let the purge stop the worker
+            log.exception("could not purge the old working copies")
+        await asyncio.sleep(86400)
+
+
 async def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     # The worker answers customers too ("order" in the chat makes a signed link), so it
@@ -115,7 +131,9 @@ async def main() -> None:
     scheduler = asyncio.create_task(keep_reports_scheduled(app.state.db))
     sweeper = asyncio.create_task(keep_holds_swept(app.state.db, app.state.outbound))
     meters = asyncio.create_task(keep_meters_fresh(app.state.media))
+    watching = asyncio.create_task(alerts.keep_watching(app.state.db))
     reminders = asyncio.create_task(keep_owners_reminded(app.state.db))
+    purger = asyncio.create_task(keep_old_copies_purged(app.state.db))
     try:
         await app.state.jobs.run_forever(heartbeat=heartbeat(app.state.db))
         log.info("stopped: the jobs that had started finished, the rest went back in the queue")
@@ -123,7 +141,9 @@ async def main() -> None:
         scheduler.cancel()
         sweeper.cancel()
         meters.cancel()
+        watching.cancel()
         reminders.cancel()
+        purger.cancel()
         await app.state.db.close()
         await close_channels(app)
 

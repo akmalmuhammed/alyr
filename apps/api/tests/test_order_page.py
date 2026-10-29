@@ -26,6 +26,7 @@ from test_items import EVERY_DAY, STORE, counted, detail, line, mk, order, peopl
 from test_media import upload
 from test_orders import customer
 from test_price_groups import make_group, put_in, set_price
+from test_track import tracked as track_of
 
 QATAR = ZoneInfo("Asia/Qatar")
 LIVE = f"{STORE}/live"
@@ -560,7 +561,7 @@ def test_an_order_from_a_tables_link_carries_the_table_to_staff(client):
     listed = next(o for o in client.get("/api/orders").json()["orders"]
                   if o["number"] == placed["number"])
     assert listed["table"] == "7"
-    tracked = client.get(f"/api/track/{DEMO_TENANT_ID}/{placed['order_id']}").json()["order"]
+    tracked = track_of(client, placed)
     assert tracked["table"] == "7" and tracked["total"] == 300
     # A link without a table says none; the table in a public link is only a label.
     plain = client.post(f"{STORE}/orders", json={

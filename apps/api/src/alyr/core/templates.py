@@ -69,6 +69,42 @@ CATALOGUE: dict[str, Template] = {
         "مدفوعة مضى عليها {{3}} يوماً. نرجو السداد من هنا أو التواصل معنا اليوم: {{4}} . شكراً لك.",
         ("Al Noor Electricals", "QAR 2,500", "118", "https://app.alyr.online/pay/a/b"),
     ),
+    # The same three for a shop that takes no money online yet (ALY-271): no link, and the
+    # last blank says how the shop is paid ("You can pay us by cash or bank transfer, ...").
+    "payment_reminder_offline": Template(
+        "utility",
+        "A friendly reminder from {{1}}: your account has {{2}} due, and the oldest unpaid "
+        "purchase was {{3}} days ago. {{4}} Thank you.",
+        "تذكير ودي من {{1}}: على حسابك مبلغ {{2}}، وأقدم فاتورة غير مدفوعة مضى عليها {{3}} يوماً. "
+        "{{4}} شكراً لك.",
+        ("Al Noor Electricals", "QAR 1,850", "41",
+         "You can pay us by cash or bank transfer, and we will record it on your account."),
+        samples_ar=("النور للكهربائيات", "QAR 1,850", "41",
+                    "يمكنك الدفع لنا نقداً أو تحويل بنكي، وسنسجّل الدفعة في حسابك."),
+    ),
+    "payment_reminder_overdue_offline": Template(
+        "utility",
+        "Reminder from {{1}}: {{2}} on your account is now overdue. The oldest unpaid "
+        "purchase was {{3}} days ago. {{4}} Thank you.",
+        "تذكير من {{1}}: مبلغ {{2}} على حسابك متأخر السداد، وأقدم فاتورة غير مدفوعة مضى عليها "
+        "{{3}} يوماً. {{4}} شكراً لك.",
+        ("Al Noor Electricals", "QAR 1,850", "72",
+         "You can pay us by cash or bank transfer, and we will record it on your account."),
+        samples_ar=("النور للكهربائيات", "QAR 1,850", "72",
+                    "يمكنك الدفع لنا نقداً أو تحويل بنكي، وسنسجّل الدفعة في حسابك."),
+    ),
+    "payment_reminder_final_offline": Template(
+        "utility",
+        "Final notice from {{1}}: {{2}} on your account has been overdue for more than 90 "
+        "days, and the oldest unpaid purchase was {{3}} days ago. Please pay or contact us "
+        "today. {{4}} Thank you.",
+        "إشعار أخير من {{1}}: مبلغ {{2}} على حسابك متأخر منذ أكثر من 90 يوماً، وأقدم فاتورة غير "
+        "مدفوعة مضى عليها {{3}} يوماً. نرجو السداد أو التواصل معنا اليوم. {{4}} شكراً لك.",
+        ("Al Noor Electricals", "QAR 2,500", "118",
+         "You can pay us by cash or bank transfer, and we will record it on your account."),
+        samples_ar=("النور للكهربائيات", "QAR 2,500", "118",
+                    "يمكنك الدفع لنا نقداً أو تحويل بنكي، وسنسجّل الدفعة في حسابك."),
+    ),
     "entry_recorded": Template(
         "utility",
         "Update from {{1}}: we recorded {{2}} of {{3}} on your account. "

@@ -23,6 +23,7 @@ from test_consent import owner_sql
 from test_items import STORE, detail, fresh, line, mk, order, pay, people, vid
 from test_orders import customer
 from test_sign_in import other_shop_with_owner, sign_in
+from test_track import tracked as track_of
 
 # ---------------------------------------------------------------------------- helpers
 
@@ -390,7 +391,7 @@ def test_an_order_keeps_the_price_and_the_group_it_was_charged_whatever_changes_
     assert row["price_group"] == {"name": "Wholesale", "name_ar": "الجملة", "is_default": False}
     assert (row["total"], row["items"][0]["price"], row["items"][0]["sku"]) == (2400, 800, "CBL-1")
     assert amount_to_pay(client, placed) == 2400
-    tracked = client.get(f"/api/track/{DEMO_TENANT_ID}/{placed['order_id']}").json()["order"]
+    tracked = track_of(client, placed)
     assert tracked["total_text"] == "QAR 24"
     # A new order is charged by the new facts.
     assert order(client, buyer, [line(cable)]).json()["total"] == 1500

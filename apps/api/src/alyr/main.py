@@ -8,14 +8,19 @@ from alyr.channels.meta import MetaChannel
 from alyr.channels.simulator import SimulatorChannel
 from alyr.config import get_settings
 from alyr.core import origin, ratelimit
+from alyr.core.card_billing import CardBilling
 from alyr.core.images import PhotoRefused
 from alyr.core.inbound import INBOUND, InboundHandler
 from alyr.core.jobs import JobRunner
 from alyr.core.links import check_secret as check_link_secret
 from alyr.core.media import MediaService
 from alyr.core.outbound import SEND, Outbound
+from alyr.core.payments import Payments
 from alyr.core.storage import check_store, make_store
+from alyr.core.welcome import JOB as ACCOUNT_EMAIL
+from alyr.core.welcome import AccountMail
 from alyr.db import Database
+from alyr.gateways import registry as payment_gateways
 from alyr.modules import report
 from alyr.modules.bookings.service import REMINDER, Reminders
 from alyr.modules.connect import webhooks as connect_webhooks
@@ -35,6 +40,7 @@ from alyr.routes import admin_media as admin_media_routes
 from alyr.routes import admin_templates as admin_template_routes
 from alyr.routes import agent as agent_routes
 from alyr.routes import auth as auth_routes
+from alyr.routes import billing as billing_routes
 from alyr.routes import bookings as bookings_routes
 from alyr.routes import connect as connect_routes
 from alyr.routes import connect_setup as connect_setup_routes
@@ -60,6 +66,7 @@ from alyr.routes import jobs as jobs_routes
 from alyr.routes import media as media_routes
 from alyr.routes import onboarding as onboarding_routes
 from alyr.routes import owner as owner_routes
+from alyr.routes import payments as payment_routes
 from alyr.routes import price_groups as price_group_routes
 from alyr.routes import reports as reports_routes
 from alyr.routes import staff_numbers as staff_numbers_routes
@@ -127,7 +134,16 @@ def create_app() -> FastAPI:
         app.state.db, settings.jobs_backoff_seconds, settings.jobs_concurrency
     )
     app.state.jobs.register(SEND, app.state.outbound.deliver, app.state.outbound.gave_up)
+    # The shop's own payment account (ALY-17): keys checked, payment pages made and providers
+    # asked what happened, each by a job.
+    app.state.payments = Payments(
+        app.state.db, app.state.outbound, payment_gateways(settings), settings.public_web_url
+    )
+    app.state.payments.register(app.state.jobs)
     app.state.jobs.register(INBOUND, app.state.inbound.process)
+    # ALYR's own billing: a client paying ALYR by card through Paddle (ALY-180).
+    app.state.card_billing = CardBilling(app.state.db, settings)
+    app.state.card_billing.register(app.state.jobs)
     app.state.jobs.register(REMINDER, Reminders(app.state.db, app.state.outbound).send)
     # Work no customer is waiting for is `background`: it runs after theirs (ALY-276).
     app.state.jobs.register(
@@ -140,6 +156,8 @@ def create_app() -> FastAPI:
     # the PDF attached. A delivery that fails every try shows the owner "not delivered".
     document_sender = DocumentSender(app.state.db, app.state.outbound)
     app.state.jobs.register(DELIVERY_JOB, document_sender.run, document_sender.gave_up)
+    # The welcome after sign-up and the invite to a team (specs/037).
+    app.state.jobs.register(ACCOUNT_EMAIL, AccountMail(app.state.db).run)
     # Events out to the shop's other system (ALY-142): signed, retried, guarded.
     app.state.webhooks = connect_webhooks.WebhookSender(app.state.db)
     app.state.jobs.register(connect_webhooks.JOB, app.state.webhooks.run, background=True)
@@ -217,6 +235,7 @@ def create_app() -> FastAPI:
     # Each module's routes answer only for shops that have switched that module on.
     app.include_router(ledger.router, dependencies=[Depends(require_module("ledger"))])
     app.include_router(pay.router)
+    app.include_router(payment_routes.router)
     app.include_router(track_routes.router)
     app.include_router(orders.router, dependencies=[Depends(require_module("orders"))])
     # The Catalog's own API (D-039). It adds nothing to the Products screen. It answers
@@ -265,6 +284,7 @@ def create_app() -> FastAPI:
     )
     app.include_router(store.router, dependencies=[Depends(require_module_for_slug("orders"))])
     app.include_router(jobs_routes.router)
+    app.include_router(jobs_routes.messages)
     app.include_router(inbox.router, dependencies=[Depends(require_module("inbox"))])
     app.include_router(team_routes.router)
     app.include_router(owner_routes.router)
@@ -279,6 +299,7 @@ def create_app() -> FastAPI:
     app.include_router(agent_routes.router)
     app.include_router(reports_routes.router)
     app.include_router(admin_routes.router)
+    app.include_router(billing_routes.router)
     app.include_router(admin_media_routes.router)
     app.include_router(admin_template_routes.router)
     app.include_router(media_routes.router)

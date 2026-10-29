@@ -13,6 +13,22 @@ from alyr.config import get_settings
 
 router = APIRouter(prefix="/webhooks/whatsapp", tags=["whatsapp"])
 
+# Meta's own limit, from its webhooks page (checked 29 Oct 2026): "Webhook payloads can be up
+# to 3 MB." Anything longer is not Meta's, and is not read into memory to find that out (ALY-278).
+MAX_BODY = 3 * 1024 * 1024
+
+
+async def _body(request: Request) -> bytes:
+    declared = request.headers.get("content-length", "")
+    if declared.isdigit() and int(declared) > MAX_BODY:
+        raise HTTPException(status_code=413, detail="too large")
+    body = bytearray()
+    async for chunk in request.stream():
+        body.extend(chunk)
+        if len(body) > MAX_BODY:
+            raise HTTPException(status_code=413, detail="too large")
+    return bytes(body)
+
 
 @router.get("")
 async def verify(
@@ -28,7 +44,7 @@ async def verify(
 
 @router.post("")
 async def receive(request: Request) -> dict:
-    raw = await request.body()
+    raw = await _body(request)
     signature = request.headers.get("x-hub-signature-256")
     if not verify_signature(get_settings().meta_app_secret, raw, signature):
         raise HTTPException(status_code=401, detail="bad signature")
