@@ -32,3 +32,18 @@ customers use ALYR. From the 17 Oct 2026 audit (`docs/audit/2026-10-17.md`).
 - [ ] `docs/runbooks/incident-response.md` read; someone named is on call
 - [ ] Production served by `next build && next start`, not the dev server
 - [ ] Release tagged and CHANGELOG written
+
+## Opening self-serve sign-up (the order to do it in)
+
+Self-serve sign-up is built for appointment businesses and, since 29 Oct 2026, for order businesses (restaurant, bakery, grocery, shop, fashion). It is closed: `ALYR_SIGNUP_OPEN` is off outside a local machine, and every business type is set up with ALYR until you switch it. Do these in order; the last one is the door.
+
+- [ ] **Mail works in production.** The mail provider is set up (`ALYR_EMAIL_API_KEY`, ALY-74). Read one sign-in code email and one reminder email in a real inbox, in English and in Arabic: the reminder (ALY-171) has only been checked against a recording transport.
+- [ ] **The worker is running** (`python -m alyr.worker`, with `ALYR_JOBS_INLINE=false`). It sends the reminder emails (every hour), the weekly reports and gives back the stock of unpaid orders.
+- [ ] **The visitor's address is read from the right place.** `ALYR_CLIENT_IP_HEADER` (and `ALYR_CLIENT_IP_PROXIES` if more than one proxy is in front) names the header the real address arrives in. Until it does, only the per-email limits on codes and sign-ups are on (ALY-116), and the address stored with each terms acceptance is the proxy's.
+- [ ] **Terms.** The privacy notice (version `2026-10-28`) is the only version published, so owners accept that today. When the lawyer's customer agreement is final (ALY-98, ALY-51), put it on a page and publish it from `/ops` → Terms: it asks every owner once. Decide whether an owner who will not accept is blocked (today they are asked, not blocked).
+- [ ] **Money.** Nothing is paid first (D-053). The setup fee for a self-serve client and when the first charge is taken wait for the bank and payment side: decide before opening to the public, because the plan and go-live lines say what will be charged.
+- [ ] **WhatsApp.** A self-serve owner chooses how to connect (ALY-217) and ALYR attaches the number from `/ops` (ALY-166) until Embedded Signup (ALY-39) and Meta Tech Provider approval (ALY-52). Say in your first message to an owner what happens to their number and how long it takes.
+- [ ] **Arabic read by a native speaker** (ALY-66): the owner screens, the terms banner and the reminder email.
+- [ ] **Switch one type.** `/ops` → Sign-up: set one business type to self-serve (the bakery is the recommended first, ALY-164); the others stay with ALYR. Add the rest one at a time.
+- [ ] **Do it once yourself.** Sign up with a real email, finish the test (an order, or a booking), read the Orders list (the test order is marked Test), open the workspace, and use the link at the foot of a reminder to switch reminders off. Check `/ops` → Onboarding shows you in the funnel.
+- [ ] **Open the door.** Set `ALYR_SIGNUP_OPEN=true` last. Watch `/ops` → Onboarding for the first week: where people stop, and how many reminder emails brought someone back.

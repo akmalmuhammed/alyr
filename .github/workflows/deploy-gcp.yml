@@ -48,7 +48,7 @@ jobs:
           echo "API_URL=https://alyr-api-$num.$REGION.run.app" >> "$GITHUB_ENV"
           # The web app's public address, for its staff link; a custom domain if one is set.
           web_url="${{ vars.ALYR_WEB_URL }}"
-          echo "WEB_URL=${web_url:-https://alyr-web-$num.$REGION.run.app}" >> "$GITHUB_ENV"
+          echo "WEB_URL=${web_url:-https://app.alyr.qa}" >> "$GITHUB_ENV"
 
       - name: Build and push the images
         run: |
@@ -57,6 +57,7 @@ jobs:
           docker build -t "$IMAGES/alyr-web:$TAG" \
             --build-arg ALYR_API_URL="$API_URL" \
             --build-arg NEXT_PUBLIC_ALYR_WORKSPACE_URL="$WEB_URL" \
+            --build-arg NEXT_PUBLIC_POSTHOG_KEY="${{ vars.POSTHOG_PROJECT_KEY }}" \
             apps/web
           docker push "$IMAGES/alyr-api:$TAG"
           docker push "$IMAGES/alyr-web:$TAG"

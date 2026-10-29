@@ -192,7 +192,9 @@ async function signUp(kind) {
   const code = (await post("/api/onboarding/code", { email })).data.dev_code;
   const verified = await post("/api/onboarding/verify", { email, code });
   const name = `${kind[0].toUpperCase()}${kind.slice(1)} ${Date.now().toString(36).slice(-4)}`;
+  const accepted_terms = (await (await fetch(`${BASE}/api/onboarding/terms/current`)).json()).current.map((t) => t.id);
   const made = await post("/api/onboarding/business", {
+    accepted_terms,
     signup_token: verified.data.signup_token, owner_name: "Hamad", name, name_ar: "الدوحة", type: kind, area: "Al Sadd",
   });
   if (made.status !== 200) throw new Error(`could not create a ${kind}: ${made.status} ${JSON.stringify(made.data)}`);

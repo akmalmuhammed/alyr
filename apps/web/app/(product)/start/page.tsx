@@ -9,12 +9,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Logo } from "../../_site/brand";
+import { call } from "./api";
+import { identifyFromSession } from "../../_analytics/ProductAnalytics";
+import { track } from "../../_analytics/posthog";
 import { Chat, initialsOf, type ChatMessage, type Choice } from "./Chat";
 import { COPY, type Lang } from "./copy";
+import { HandoverView, ProductsView, moneyText, useHandover, useProducts } from "./OrderSteps";
 import "./start.css";
 
 type Text = { en: string; ar: string };
-type BusinessType = { key: string; name: Text; hint: Text; icon: string; way: "appointments" | "assisted" };
+type BusinessType = { key: string; name: Text; hint: Text; icon: string; way: "appointments" | "orders" | "assisted" };
 type Service = { id: string; name: string; name_ar: string; duration_minutes: number; price: number; price_text: string; active?: boolean };
 type Period = { weekday: number; opens: string; closes: string };
 // What the shop's type of business gives its Catalog, in plain words (null where it has none).
@@ -25,10 +29,12 @@ type CatalogReview = {
 type State = {
   business: { name: string; name_ar: string; slug: string; type: string; area: string; reminders: boolean };
   owner: { name: string; email: string };
-  way: "appointments" | "assisted";
+  way: "appointments" | "orders" | "assisted";
   steps: string[];
   step: string;
   finished: boolean;
+  // The language ALYR writes to the owner in (a reminder to finish setting up).
+  lang?: string;
   services: Service[];
   hours: Period[];
   quote: Quote;
@@ -66,7 +72,14 @@ type Payment = {
   reference: string; bank: string;
 };
 type Booking = { customer: string; service: string; when_text: string; status: string };
-type Step = "loading" | "account" | "code" | "type" | "basics" | "services" | "hours" | "assisted" | "try" | "plan" | "golive" | "finished";
+// A version of the customer agreement or the privacy notice (ALY-167).
+type TermsVersion = {
+  id: string; kind: "agreement" | "privacy"; version: string; title: string; title_ar: string;
+  url: string; url_ar: string; changes: string; changes_ar: string; accepted_at: string | null;
+};
+// The owner's test order, as the Orders list answers it (ALY-168).
+type TestOrder = { id: string; number: number; total: number; status: string; test?: boolean };
+type Step = "loading" | "account" | "code" | "type" | "basics" | "services" | "hours" | "products" | "handover" | "assisted" | "try" | "plan" | "golive" | "finished";
 
 const ORDER = [6, 0, 1, 2, 3, 4, 5]; // Saturday first, as the week runs in Qatar
 const MINUTES = [15, 20, 30, 45, 60, 75, 90, 120, 150, 180];
@@ -97,15 +110,6 @@ function Ico({ name, size = 20 }: { name: string; size?: number }) {
       {(ICON[name] ?? []).map((d) => <path key={d} d={d} />)}
     </svg>
   );
-}
-
-async function call<T>(url: string, method = "GET", body?: unknown): Promise<{ ok: boolean; status: number; data: T }> {
-  const response = await fetch(url, {
-    method, cache: "no-store",
-    headers: body === undefined ? undefined : { "content-type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  return { ok: response.ok, status: response.status, data: (await response.json().catch(() => ({}))) as T };
 }
 
 const qar = (dirhams: number) => (dirhams / 100).toString();
@@ -156,6 +160,12 @@ export default function Start() {
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [tested, setTested] = useState<Booking | null>(null);
+  // What the new owner must tick before the business is made, and what an existing one has still
+  // to accept on the go-live list.
+  const [termsList, setTermsList] = useState<TermsVersion[]>([]);
+  const [ticked, setTicked] = useState<string[]>([]);
+  const [termsOpen, setTermsOpen] = useState<TermsVersion[]>([]);
+  const [testedOrder, setTestedOrder] = useState<TestOrder | null>(null);
   const [ready, setReady] = useState<Readiness | null>(null);
   // The WhatsApp number and name as the owner types them, until saved.
   const [waDraft, setWaDraft] = useState<{ phone?: string; display_name?: string }>({});
@@ -166,12 +176,17 @@ export default function Start() {
   const quoteSeen = useRef("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // The order path's two steps (ALY-164): what you sell, and pickup, delivery and payment.
+  const products = useProducts(step === "products", t);
+  const handover = useHandover(step === "handover", t);
 
   const chosen = types.find((x) => x.key === (state?.business.type || kind));
   const way = state?.way ?? chosen?.way ?? "appointments";
   const rail = way === "assisted"
     ? (["account", "business", "assisted", "plan", "golive"] as const)
-    : (["account", "business", "services", "hours", "try", "plan", "golive"] as const);
+    : way === "orders"
+      ? (["account", "business", "products", "handover", "try", "plan", "golive"] as const)
+      : (["account", "business", "services", "hours", "try", "plan", "golive"] as const);
   const railKey = step === "code" ? "account" : step === "type" || step === "basics" ? "business" : step;
   const current = step === "finished" ? rail.length : Math.max(0, rail.indexOf(railKey as never));
   const shopName = state?.business.name || form.name;
@@ -230,6 +245,18 @@ export default function Start() {
     else if (step !== "loading") writeDraft(null);
   }, [step, email, token, kind, form]);
 
+  // ALYR writes to the owner in the language it has on record (a reminder to finish setup), so
+  // the record follows the language they are reading this in.
+  useEffect(() => {
+    if (!state || !state.lang || state.lang === lang) return;
+    let alive = true;
+    const first = setTimeout(async () => {
+      const answer = await call<State>("/api/onboarding/state", "PATCH", { lang }).catch(() => null);
+      if (alive && answer?.ok) setState(answer.data);
+    }, 0);
+    return () => { alive = false; clearTimeout(first); };
+  }, [state, lang]);
+
   function switchLang() {
     const next = lang === "en" ? "ar" : "en";
     setLang(next);
@@ -238,7 +265,7 @@ export default function Start() {
 
   async function go(next: Step) {
     setError("");
-    if (state && ["services", "hours", "assisted", "try", "plan", "golive"].includes(next)) {
+    if (state && ["services", "hours", "products", "handover", "assisted", "try", "plan", "golive"].includes(next)) {
       await call("/api/onboarding/state", "PATCH", { step: next });
     }
     setStep(next);
@@ -257,6 +284,7 @@ export default function Start() {
     if (answer.status === 429) return setError(t.account.tooMany);
     if (!answer.ok) return setError(t.account.cannotSend);
     setDevCode(answer.data.dev_code ?? null);
+    track("onboarding_code_sent");
     setStep("code");
   });
   const verify = () => guard(async () => {
@@ -264,11 +292,14 @@ export default function Start() {
     if (answer.status === 403) return setError(t.account.closedNew);
     if (!answer.ok) return setError(t.account.wrong);
     if (answer.data.status === "signed_in") {
+      await identifyFromSession();
+      track("onboarding_signed_in");
       const loaded = await loadState();
       if (loaded && !loaded.finished) return setStep((loaded.step || loaded.steps[0]) as Step);
       return router.push("/app");
     }
     setToken(answer.data.signup_token ?? "");
+    track("onboarding_email_verified");
     setStep("type");
   });
 
@@ -276,12 +307,35 @@ export default function Start() {
   const createBusiness = () => guard(async () => {
     const answer = await call("/api/onboarding/business", "POST", {
       signup_token: token, owner_name: form.owner, name: form.name, name_ar: form.nameAr, type: kind, area: form.area,
+      accepted_terms: termsList.map((v) => v.id), lang,
     });
     if (answer.status === 401) { setStep("account"); return setError(t.basics.expired); }
+    if (answer.status === 422) {
+      // The terms may have changed while the owner filled this in: show the new ones, untick.
+      setTicked([]);
+      const fresh = await call<{ current: TermsVersion[] }>("/api/onboarding/terms/current");
+      if (fresh.ok) setTermsList(fresh.data.current);
+      return setError(t.terms.changed);
+    }
     if (!answer.ok) return setError(t.offline);
+    await identifyFromSession();
+    track("onboarding_business_created", { business_type: kind, area: form.area });
     const loaded = await loadState();
     if (loaded) setStep((loaded.step || loaded.steps[0]) as Step);
   });
+
+  // The terms a new owner is asked to accept, read once the basics step opens.
+  useEffect(() => {
+    if (step !== "basics" || termsList.length > 0) return;
+    let alive = true;
+    const first = setTimeout(async () => {
+      const answer = await call<{ current: TermsVersion[] }>("/api/onboarding/terms/current").catch(() => null);
+      if (alive && answer?.ok) setTermsList(answer.data.current);
+    }, 0);
+    return () => { alive = false; clearTimeout(first); };
+  }, [step, termsList.length]);
+  const termsTitle = (v: TermsVersion) => (lang === "ar" ? v.title_ar : v.title);
+  const termsUrl = (v: TermsVersion) => (lang === "ar" ? v.url_ar : v.url);
 
   // ── services ─────────────────────────────────────────
   async function saveService(id: string, change: Partial<Service>) {
@@ -329,18 +383,20 @@ export default function Start() {
   });
 
   // ── try it ───────────────────────────────────────────
-  const refreshTry = useCallback(async () => {
-    const [conversation, bookings] = await Promise.all([
+  const refreshTry = useCallback(async (kind: string) => {
+    const [conversation, bookings, placed] = await Promise.all([
       call<{ messages: ChatMessage[] }>("/api/onboarding/test-chat"),
-      call<{ bookings: Booking[] }>("/api/bookings"),
+      kind === "appointments" ? call<{ bookings: Booking[] }>("/api/bookings") : null,
+      kind === "orders" ? call<{ orders: TestOrder[] }>("/api/orders") : null,
     ]);
     if (conversation.ok) setChat(conversation.data.messages);
-    if (bookings.ok) setTested(bookings.data.bookings.find((b) => b.customer.endsWith("(test)") && b.status === "booked") ?? null);
+    if (bookings?.ok) setTested(bookings.data.bookings.find((b) => b.customer.endsWith("(test)") && b.status === "booked") ?? null);
+    if (placed?.ok) setTestedOrder(placed.data.orders.find((o) => o.test && o.status !== "cancelled") ?? null);
   }, []);
   useEffect(() => {
-    if (way !== "appointments" || (step !== "try" && step !== "golive")) return;
+    if ((way !== "appointments" && way !== "orders") || (step !== "try" && step !== "golive")) return;
     let alive = true;
-    const tick = async () => { if (alive) await refreshTry().catch(() => undefined); };
+    const tick = async () => { if (alive) await refreshTry(way).catch(() => undefined); };
     const first = setTimeout(tick, 0);
     const timer = setInterval(tick, 2500);
     return () => { alive = false; clearTimeout(first); clearInterval(timer); };
@@ -350,6 +406,14 @@ export default function Start() {
     setDraft("");
     const answer = await call<{ messages: ChatMessage[] }>("/api/onboarding/test-chat", "POST", { text: choice ? choice.title : text, reply_id: choice?.id ?? "" });
     if (answer.ok) setChat(answer.data.messages);
+  });
+
+  // The owner marks their test order ready, as staff would, and the message the customer gets
+  // shows in the test chat on the next look.
+  const markReady = () => guard(async () => {
+    if (!testedOrder) return;
+    await call(`/api/orders/${testedOrder.id}/status`, "POST", { status: "ready" });
+    await refreshTry("orders");
   });
 
   // ── the price ALYR prepared (D-032) ───────────────────
@@ -389,6 +453,7 @@ export default function Start() {
     if (!answer.ok) return setError(t.offline);
     quoteSeen.current = JSON.stringify(answer.data);
     setQuote(answer.data);
+    track("onboarding_quote_accepted", { period_months: answer.data.period_months ?? 1 });
     then();
   });
 
@@ -396,6 +461,9 @@ export default function Start() {
   const loadReadiness = useCallback(async () => {
     const answer = await call<Readiness>("/api/onboarding/readiness");
     if (answer.ok) setReady(answer.data);
+    // What is still to accept, for the terms line (an owner from before, or a new version).
+    const waiting = await call<{ pending: TermsVersion[] }>("/api/onboarding/terms");
+    if (waiting.ok) setTermsOpen(waiting.data.pending);
   }, []);
   useEffect(() => {
     if (step !== "golive") return;
@@ -419,10 +487,28 @@ export default function Start() {
     setWaDraft({});
     setReady(answer.data);
   });
+  const acceptTerms = () => guard(async () => {
+    const answer = await call("/api/onboarding/terms/accept", "POST", { version_ids: termsOpen.map((v) => v.id) });
+    if (!answer.ok) return setError(t.offline);
+    await loadReadiness();
+  });
   const finish = () => guard(async () => {
     await call("/api/onboarding/finish", "POST");
+    track("onboarding_finished");
     router.push("/app");
   });
+
+  // Count each step an owner reaches, and the first test booking (D-070). The step name,
+  // the type of business and the way are all that is sent.
+  useEffect(() => {
+    if (step !== "loading") track("onboarding_step", { step, business_type: state?.business.type || kind, way, quote: step === "plan" ? quote?.status ?? "" : undefined });
+    // only when the step changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+  const testedOnce = useRef(false);
+  useEffect(() => {
+    if (tested && !testedOnce.current) { testedOnce.current = true; track("onboarding_test_booked"); }
+  }, [tested]);
 
   // ── the live preview on the right ─────────────────────
   const preview = useMemo((): ChatMessage[] => {
@@ -447,6 +533,26 @@ export default function Start() {
         payload: { choices: [{ id: "m", title: ar ? "حجزي" : "My booking" }] },
       }];
     }
+    if (step === "products") {
+      const lines = products.rows
+        .filter((r) => (r.sample ? r.keep : r.status === "live"))
+        .slice(0, 4)
+        .map((r) => `${ar && r.name_ar ? r.name_ar : r.name}${r.priceText ? `: QAR ${r.priceText}` : ""}`);
+      return [
+        { direction: "in", body: ar ? "شو عندكم اليوم؟" : "What do you have today?" },
+        { direction: "out", body: [ar ? "قائمتنا:" : "Our menu:", ...lines].join("\n"), payload: { choices: [{ id: "o", title: ar ? "اطلب الآن" : "Order now" }] } },
+      ];
+    }
+    if (step === "handover") {
+      const choices = [
+        ...(handover.pickup ? [{ id: "p", title: ar ? "استلام من المحل" : "Pickup" }] : []),
+        ...(handover.delivery ? [{ id: "d", title: ar ? "توصيل" : "Delivery" }] : []),
+      ];
+      return [{
+        direction: "out", body: ar ? "كيف تحب تستلم طلبك؟" : "How would you like to get your order?",
+        payload: { choices },
+      }];
+    }
     if (step === "account" || step === "code") {
       return [
         { direction: "in", body: ar ? "مرحبا، أبي أحجز حلاقة بكرة المسا" : "Hi, can I book a haircut tomorrow evening?" },
@@ -456,7 +562,7 @@ export default function Start() {
       ];
     }
     return [greeting];
-  }, [step, rows, shopShown, lang, t]);
+  }, [step, rows, shopShown, lang, t, products.rows, handover.pickup, handover.delivery]);
 
   // ── screens ──────────────────────────────────────────
   const total = rail.length;
@@ -549,6 +655,22 @@ export default function Start() {
               ))}
             </div>
           </fieldset>
+          {termsList.length > 0 && (
+            <fieldset className="ob-terms">
+              <legend>{t.terms.legend}</legend>
+              {termsList.map((v) => (
+                <div className="ob-term" key={v.id}>
+                  <label>
+                    <input type="checkbox" checked={ticked.includes(v.id)}
+                      onChange={(e) => setTicked(e.target.checked ? [...ticked, v.id] : ticked.filter((x) => x !== v.id))} />
+                    <span>{t.terms[v.kind](termsTitle(v))}</span>
+                  </label>
+                  <a className="ob-link" href={termsUrl(v)} target="_blank" rel="noopener">{t.terms.read}</a>
+                </div>
+              ))}
+              {ticked.length < termsList.length && <p className="ob-note" role="status">{t.terms.needed}</p>}
+            </fieldset>
+          )}
         </form>
         <div className="ob-inline-preview"><p className="ob-kicker">{t.previewLabel}</p><Chat name={shopShown} initials={initialsOf(shopName)} messages={preview} /></div>
       </>
@@ -556,7 +678,7 @@ export default function Start() {
     actions = (
       <>
         <button className="ob-btn ghost" type="button" onClick={() => setStep("type")}>{t.back}</button>
-        <button className="ob-btn primary" form="ob-form" type="submit" disabled={busy || !form.owner.trim() || !form.name.trim()}>{t.basics.create}<Ico name="arrow" /></button>
+        <button className="ob-btn primary" form="ob-form" type="submit" disabled={busy || !form.owner.trim() || !form.name.trim() || termsList.length === 0 || ticked.length < termsList.length}>{t.basics.create}<Ico name="arrow" /></button>
       </>
     );
   } else if (step === "services") {
@@ -632,6 +754,30 @@ export default function Start() {
         <button className="ob-btn primary" type="button" disabled={busy} onClick={saveHours}>{t.continue}<Ico name="arrow" /></button>
       </>
     );
+  } else if (step === "products") {
+    main = (
+      <>
+        {head(t.products.title, t.products.sub)}
+        <ProductsView p={products} lang={lang} t={t} section={state?.catalog?.section[lang === "ar" ? "name_ar" : "name"] ?? t.steps.products} />
+      </>
+    );
+    actions = (
+      <button className="ob-btn primary" type="button" disabled={busy || products.busy || !products.canContinue}
+        onClick={async () => { if (await products.save()) await go("handover"); }}>
+        {t.continue}<Ico name="arrow" />
+      </button>
+    );
+  } else if (step === "handover") {
+    main = <>{head(t.handover.title, t.handover.sub)}<HandoverView h={handover} t={t} /></>;
+    actions = (
+      <>
+        <button className="ob-btn ghost" type="button" onClick={() => go("products")}>{t.back}</button>
+        <button className="ob-btn primary" type="button" disabled={busy || handover.busy || !handover.canContinue}
+          onClick={async () => { if (await handover.save()) await go("try"); }}>
+          {t.handover.save}<Ico name="arrow" />
+        </button>
+      </>
+    );
   } else if (step === "assisted") {
     const what = lang === "ar" ? (chosen?.name.ar ?? "") : (chosen?.name.en.toLowerCase() ?? "");
     const review = state?.catalog ?? null;
@@ -649,25 +795,36 @@ export default function Start() {
     );
     actions = <button className="ob-btn primary" type="button" onClick={() => go("plan")}>{t.continue}<Ico name="arrow" /></button>;
   } else if (step === "try") {
+    const orders = way === "orders";
+    const c = orders ? t.tryOrder : t.try;
+    const worked = orders
+      ? (testedOrder ? t.tryOrder.worked(testedOrder.number, moneyText(testedOrder.total, lang)) : null)
+      : (tested ? t.try.worked(`${tested.service}, ${tested.when_text}`) : null);
     main = (
       <>
         <p className="ob-kicker volt">{t.try.test}</p>
-        <h1>{t.try.title}</h1>
-        <p className="ob-sub">{t.try.sub}</p>
-        <div className="ob-suggest">{t.try.suggestions.map((s) => <button key={s} type="button" className="ob-chip" onClick={() => say(s)} dir="auto">{s}</button>)}</div>
-        {tested ? (
-          <div className="ob-success" role="status"><span className="ob-signal"><Ico name="check" size={22} /></span><div><b>{t.try.worked(`${tested.service}, ${tested.when_text}`)}</b><small>{t.try.workedSub}</small></div></div>
+        <h1>{c.title}</h1>
+        <p className="ob-sub">{c.sub}</p>
+        <div className="ob-suggest">{c.suggestions.map((s) => <button key={s} type="button" className="ob-chip" onClick={() => say(s)} dir="auto">{s}</button>)}</div>
+        {worked ? (
+          <>
+            <div className="ob-success" role="status"><span className="ob-signal"><Ico name="check" size={22} /></span><div><b>{worked}</b><small>{c.workedSub}</small></div></div>
+            {orders && testedOrder && (testedOrder.status === "ready"
+              ? <p className="ob-note" role="status"><Ico name="check" size={18} />{t.tryOrder.readyDone}</p>
+              : <button className="ob-btn small ob-ready" type="button" disabled={busy} onClick={markReady}>{t.tryOrder.ready}</button>)}
+          </>
         ) : (
-          <p className="ob-waiting" role="status"><span className="ob-pulse" />{t.try.waiting}</p>
+          <p className="ob-waiting" role="status"><span className="ob-pulse" />{c.waiting}</p>
         )}
         <div className="ob-inline-chat">{testChat}</div>
       </>
     );
+    const done = orders ? testedOrder !== null : tested !== null;
     actions = (
       <>
-        <button className="ob-btn ghost" type="button" onClick={() => go("hours")}>{t.back}</button>
-        {!tested && <button className="ob-link" type="button" onClick={() => go("plan")}>{t.try.skip}</button>}
-        <button className="ob-btn primary" type="button" disabled={!tested} onClick={() => go("plan")}>{t.continue}<Ico name="arrow" /></button>
+        <button className="ob-btn ghost" type="button" onClick={() => go(orders ? "handover" : "hours")}>{t.back}</button>
+        {!done && <button className="ob-link" type="button" onClick={() => go("plan")}>{t.try.skip}</button>}
+        <button className="ob-btn primary" type="button" disabled={!done} onClick={() => go("plan")}>{t.continue}<Ico name="arrow" /></button>
       </>
     );
   } else if (step === "plan") {
@@ -749,7 +906,7 @@ export default function Start() {
     const stage = g.stage[ready?.stage ?? "setting_up"];
     // Where the owner does each step: back in this flow, or in the workspace.
     const fixes: Record<string, (() => void) | string> = {
-      content: way === "appointments" ? () => go("services") : "/app/catalog",
+      content: way === "appointments" ? () => go("services") : way === "orders" ? () => go("products") : "/app/catalog",
       hours: () => go("hours"),
       test: () => go("try"),
       price: () => go("plan"),
@@ -823,7 +980,7 @@ export default function Start() {
     const row = (c: Check) => {
       const done = c.status === "done";
       // A step with choices shows them below, with its own "ask ALYR" link.
-      const choosing = !done && c.owner === "client" && (c.key === "whatsapp" || c.key === "payments");
+      const choosing = !done && c.owner === "client" && (c.key === "whatsapp" || c.key === "payments" || c.key === "terms");
       const action = done
         ? <em>{g.done}</em>
         : c.owner === "alyr"
@@ -848,6 +1005,20 @@ export default function Start() {
               {c.choice && c.setup && waNeeds(c.setup)}
               <small className="ob-fine">{g.whatsappNote}</small>
               <button type="button" className="ob-link" onClick={() => changeStep(c.key, { owner: "alyr" })} disabled={busy}>{g.ask}</button>
+            </div>
+          )}
+          {c.key === "terms" && !done && termsOpen.length > 0 && (
+            <div className="ob-check-more ob-terms">
+              {termsOpen.map((v) => (
+                <div className="ob-term" key={v.id}>
+                  <span>
+                    {t.terms[v.kind](termsTitle(v))}
+                    {(lang === "ar" ? v.changes_ar : v.changes) && <small>{t.terms.updated(lang === "ar" ? v.changes_ar : v.changes)}</small>}
+                  </span>
+                  <a className="ob-link" href={termsUrl(v)} target="_blank" rel="noopener">{t.terms.read}</a>
+                </div>
+              ))}
+              <button type="button" className="ob-btn small ob-tall" disabled={busy} onClick={acceptTerms}>{t.terms.accept}</button>
             </div>
           )}
           {c.key === "paid" && !done && pay?.status === "unpaid" && (

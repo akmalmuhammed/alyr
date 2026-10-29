@@ -295,7 +295,8 @@ async def performance(
         "select assigned_to, count(*)::int as orders, coalesce(sum(total), 0)::bigint as sales, "
         "  coalesce(sum(total) filter (where payment in ('paid', 'on_account')), 0)::bigint "
         "    as settled "
-        "from orders where created_at >= $1 and created_at <= $2 and status <> 'cancelled' "
+        "from orders where not is_test and created_at >= $1 and created_at <= $2 and status <> "
+        "'cancelled' "
         "group by assigned_to",
         since, now,
     ):

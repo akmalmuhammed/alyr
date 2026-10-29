@@ -205,7 +205,7 @@ MODULES: tuple[Module, ...] = (
             Card(
                 "orders_today",
                 Text("Orders today", "طلبات اليوم"),
-                "(select count(*) from orders where (created_at at time zone (select timezone from tenants "
+                "(select count(*) from orders where not is_test and (created_at at time zone (select timezone from tenants "
                 "where id = nullif(current_setting('app.tenant_id', true), '')::uuid))::date = "
                 + _TODAY
                 + ")",

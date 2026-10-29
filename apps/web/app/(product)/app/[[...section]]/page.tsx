@@ -8,6 +8,7 @@ import { TeamReport } from "../../_workspace/Team";
 import { WhatsappLink } from "../../_workspace/WhatsappLink";
 import { Catalog } from "../../_workspace/Catalog";
 import { Documents } from "../../_workspace/Documents";
+import { TermsBanner } from "../../_workspace/TermsBanner";
 import { ConnectLink, ConnectSettings } from "../../_workspace/ConnectSettings";
 import { AgentDashboard } from "../../../_agent/AgentDashboard";
 import type { AgentView } from "../../../_agent/types";
@@ -694,6 +695,7 @@ export default function WorkspaceShell() {
         <div className="sh-scroll">
           <main className="sh-main sh-enter" key={`${section}-${lang}`}>
             {offline && <div className="error" role="status">{t.offline}</div>}
+            <TermsBanner lang={lang} canAccept={state.me.signed_in && (state.me.role === "owner" || state.me.role === "admin")} />
             {body}
           </main>
         </div>

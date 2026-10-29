@@ -94,6 +94,61 @@ async def send(
         raise MailError(f"HTTP {answer.status_code}")
 
 
+_RESUME = {
+    "en": {
+        "subject": lambda step: f"Your ALYR setup is waiting: next, {step}",
+        "hello": lambda name: f"Hello {name}," if name else "Hello,",
+        "body": lambda shop, step: (
+            f"You started setting up {shop} on ALYR and stopped partway. "
+            f"Your next step is to {step}."
+        ),
+        "button": "Continue your setup",
+        "reply": "Reply to this email if you want a person to help.",
+        "stop": "Stop these reminder emails",
+    },
+    "ar": {
+        "subject": lambda step: f"إعداد ALYR بانتظارك: الخطوة التالية، {step}",
+        "hello": lambda name: f"مرحباً {name}،" if name else "مرحباً،",
+        "body": lambda shop, step: (
+            f"بدأت إعداد {shop} على ALYR وتوقفت في منتصف الطريق. "
+            f"خطوتك التالية هي أن {step}."
+        ),
+        "button": "أكمل إعدادك",
+        "reply": "ردّ على هذه الرسالة إن أردت أن يساعدك شخص.",
+        "stop": "أوقف رسائل التذكير هذه",
+    },
+}
+
+
+def resume_message(
+    lang: str, owner: str, shop: str, step: str, link: str, stop_link: str,
+) -> tuple[str, str, str]:
+    """Subject, plain text and HTML of the reminder to finish setting up (ALY-171), in the
+    language the owner reads. `step` is a phrase that completes "your next step is to ..."."""
+    w = _RESUME["ar" if lang == "ar" else "en"]
+    rtl = lang == "ar"
+    first = owner.split()[0] if owner.strip() else ""
+    subject = w["subject"](step)
+    text = (
+        f"{w['hello'](first)}\n\n{w['body'](shop, step)}\n\n{w['button']}: {link}\n\n"
+        f"{w['reply']}\n\n{w['stop']}: {stop_link}"
+    )
+    e, f = brand.EMAIL, brand.CSS_FONT["email"]
+    direction = ' dir="rtl"' if rtl else ""
+    align = "right" if rtl else "left"
+    html = f"""<!doctype html><html><body style="margin:0;background:{e["bg"]};font-family:{f};color:{e["text"]}">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px"><tr><td align="center">
+<table role="presentation" width="100%"{direction} style="max-width:480px;background:{e["panel"]};border-radius:16px;padding:28px;text-align:{align}">
+<tr><td style="font-weight:700;font-size:15px;letter-spacing:.06em">ALYR</td></tr>
+<tr><td style="padding-top:18px;font-size:15px">{escape(w["hello"](first))}</td></tr>
+<tr><td style="padding-top:10px;font-size:15px;line-height:1.55">{escape(w["body"](shop, step))}</td></tr>
+<tr><td style="padding:20px 0 6px"><a href="{escape(link)}" style="display:inline-block;background:{e["text"]};color:{e["panel"]};text-decoration:none;font-weight:600;font-size:15px;padding:13px 22px;min-height:20px">{escape(w["button"])}</a></td></tr>
+<tr><td style="padding-top:14px;font-size:13px;color:{e["muted"]}">{escape(w["reply"])}</td></tr>
+<tr><td style="padding-top:18px;border-top:1px solid {e["rule"]};font-size:12px;color:{e["muted"]}"><a href="{escape(stop_link)}" style="color:{e["muted"]}">{escape(w["stop"])}</a></td></tr>
+</table></td></tr></table></body></html>"""
+    return subject, text, html
+
+
 def sign_in_message(code: str, minutes: int) -> tuple[str, str, str]:
     """Subject, plain text and HTML for a sign-in code, in English and Arabic together:
     the code is requested before we know which language the person reads."""

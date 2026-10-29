@@ -15,6 +15,15 @@ log = logging.getLogger("alyr.identity")
 
 _FIELDS = "id, name, role, lang, phone, wa_user_id, username, credit_limit, user_id"
 
+# The owner's own test customer on their business's private test line is `TEST.<user>` (core/
+# onboarding.py). A real customer's ID is a phone number or a WhatsApp ID, never this. The
+# database marks the orders of such a contact `is_test` when they are made (migration 0056).
+TEST_PREFIX = "TEST."
+
+
+def is_test_user(wa_user_id: str | None) -> bool:
+    return bool(wa_user_id) and wa_user_id.startswith(TEST_PREFIX)
+
 # What happens to every table that points at a contact when two records turn out to be the
 # same person (ALY-115). `tests/test_contact_merge.py` reads the database's own foreign keys
 # and fails if a table is missing here, so a new table cannot be added without deciding.
