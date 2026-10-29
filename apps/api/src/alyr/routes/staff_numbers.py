@@ -24,12 +24,15 @@ class NewNumber(BaseModel):
     phone: str = Field(min_length=1, max_length=30, description="International form")
     lang: Literal["en", "ar"] = "en"
     manager: bool = False
+    # Told on WhatsApp about every new order (D-079).
+    order_alerts: bool = False
 
 
 class NumberChanges(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=80)
     lang: Literal["en", "ar"] | None = None
     manager: bool | None = None
+    order_alerts: bool | None = None
 
 
 def _fail(error: staff.StaffError) -> HTTPException:
@@ -54,7 +57,9 @@ async def register(
     try:
         async with request.app.state.db.tenant(member.tenant_id) as conn:
             before = await staff.find(conn, body.phone)
-            person = await staff.register(conn, body.name, body.phone, body.lang, body.manager)
+            person = await staff.register(
+                conn, body.name, body.phone, body.lang, body.manager, body.order_alerts
+            )
             await changes.staff_changed(
                 conn, team.actor_of(member), "staff_added" if before is None else "staff_changed",
                 person, before,
@@ -73,7 +78,9 @@ async def change(
     try:
         async with request.app.state.db.tenant(member.tenant_id) as conn:
             before = await staff.get(conn, contact_id)
-            found = await staff.update(conn, contact_id, body.name, body.lang, body.manager)
+            found = await staff.update(
+                conn, contact_id, body.name, body.lang, body.manager, body.order_alerts
+            )
             if found is not None and before is not None:
                 await changes.staff_changed(
                     conn, team.actor_of(member), "staff_changed", found, before

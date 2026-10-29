@@ -1,4 +1,4 @@
-"""A client's plan after go-live: paid up, past due, paused or cancelled (ALY-218, D-080,
+"""A client's plan after go-live: paid up, past due, paused or cancelled (ALY-218, D-082,
 spec 040).
 
 The rules are a pure function, checked first by itself. Then the real path: a business that

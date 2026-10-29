@@ -7,7 +7,7 @@
 // also waive the payment, saying why. Both are on the audit log. A client can also pay by card
 // through Paddle (ALY-180, D-074): those payments arrive by themselves from Paddle's webhook and
 // show here beside the others, with what Paddle took in US dollars. Staff choose per client
-// whether the card is offered. After go-live (ALY-218, D-080) it shows where the plan stands:
+// whether the card is offered. After go-live (ALY-218, D-082) it shows where the plan stands:
 // paid through a day, past due, paused (ALYR's automatic messages wait until a payment is
 // recorded), or cancelled; staff record a client's cancellation here, with seven days' notice.
 

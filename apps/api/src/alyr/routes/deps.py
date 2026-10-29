@@ -76,16 +76,18 @@ def require_any_module(*modules: str):
 
 def require_module_for_slug(module: str):
     """The same check for the public customer pages, where the shop comes from the
-    address. An unknown shop is left to the route, which answers 404."""
+    address. An unknown shop is left to the route, which answers 404. The shop found is kept
+    on `request.state.shop`, so the route need not look it up again (ALY-276)."""
 
     async def check(request: Request, slug: str) -> None:
         from alyr.core.workspace import module_enabled
 
         async with request.app.state.db.unscoped() as conn:
-            tenant_id = await conn.fetchval("select id from tenants where slug = $1", slug)
-        if tenant_id is not None and not await module_enabled(
-            request.app.state.db, tenant_id, module
-        ):
+            shop = await conn.fetchrow(
+                "select id, name, name_ar, slug, timezone from tenants where slug = $1", slug
+            )
+        request.state.shop = shop
+        if shop is not None and not await module_enabled(request.app.state.db, shop["id"], module):
             raise HTTPException(status_code=404, detail="this page is not available")
 
     return check

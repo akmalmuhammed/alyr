@@ -31,8 +31,9 @@ async def enabled_modules(conn: asyncpg.Connection) -> set[str]:
 
 
 async def module_enabled(db: Database, tenant_id: UUID, module: str) -> bool:
-    """For code outside a request's own transaction: is this module on for this shop?"""
-    async with db.tenant(tenant_id) as conn:
+    """For code outside a request's own transaction: is this module on for this shop? Only
+    reads, so it does not start the inline job drain either (ALY-276)."""
+    async with db.tenant(tenant_id, readonly=True) as conn:
         return bool(
             await conn.fetchval("select enabled from tenant_modules where module_key = $1", module)
         )

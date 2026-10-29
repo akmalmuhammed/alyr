@@ -1,4 +1,4 @@
-// The words of the plan banner in the workspace (ALY-218, D-080): shown to the owner while a
+// The words of the plan banner in the workspace (ALY-218, D-082): shown to the owner while a
 // payment is overdue, while ALYR's automatic messages are paused, and when the plan is ending or
 // has ended. In both languages. Dates arrive written out in the owner's language.
 

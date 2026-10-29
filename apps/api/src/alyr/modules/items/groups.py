@@ -24,7 +24,8 @@ from alyr.core.team import Actor
 from alyr.modules.items import changes
 from alyr.modules.items.service import ItemError
 
-# The group every shop starts with, and the only one that cannot be removed.
+# The group every shop starts with, and the only one that cannot be removed. Migration 0069
+# makes it, with these names, when the shop is made.
 DEFAULT_NAME = ("Retail", "التجزئة")
 MAX_GROUPS = 20
 MAX_PRICE = 100_000_000
@@ -53,21 +54,23 @@ def _view(row: asyncpg.Record, customers: int | None = None) -> dict:
 # ------------------------------------------------------------------------ groups
 
 async def default_group(conn: asyncpg.Connection) -> dict:
-    """The shop's default group. A shop that does not have one yet (one made after the
-    migration that gave every shop its own) gets it here, so there is always one."""
+    """The shop's default group. The database makes it with the shop (migration 0069), so
+    reading it never writes: the order page only reads (ALY-275)."""
     row = await conn.fetchrow("select * from price_groups where is_default")
     if row is None:
-        row = await conn.fetchrow(
-            "insert into price_groups (name, name_ar, is_default) values ($1, $2, true) "
-            # No target: two requests that make it together also collide on the name's
-            # index, which a target of `is_default` alone turns into an error (seen once in
-            # `test_saving_an_item_while_a_customer_orders_it_does_not_deadlock`).
-            "on conflict do nothing returning *",
-            *DEFAULT_NAME,
-        )
-    if row is None:  # another request made it between our two statements
-        row = await conn.fetchrow("select * from price_groups where is_default")
+        raise LookupError("the shop has no default price group")
     return dict(row)
+
+
+async def remake_default(conn: asyncpg.Connection) -> dict:
+    """Give the shop its default group again after a reset emptied it (the demo shops). A
+    shop being used never needs this: the database made its group with it."""
+    await conn.execute(
+        "insert into price_groups (name, name_ar, is_default) values ($1, $2, true) "
+        "on conflict do nothing",
+        *DEFAULT_NAME,
+    )
+    return await default_group(conn)
 
 
 async def effective(conn: asyncpg.Connection, group_id: UUID | None) -> dict:

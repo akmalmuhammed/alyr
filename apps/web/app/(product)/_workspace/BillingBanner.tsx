@@ -1,7 +1,7 @@
 "use client";
 
 // Shown at the top of the workspace to the owner (and an admin) when their ALYR plan needs them
-// (ALY-218, spec 040, D-080): a payment is overdue, ALYR's automatic messages are paused until
+// (ALY-218, spec 040, D-082): a payment is overdue, ALYR's automatic messages are paused until
 // it is paid, or the plan is ending or has ended. It says what is owed and how to pay. Nothing
 // else in the workspace changes: everything stays open and nothing is deleted (D-033, D-053).
 

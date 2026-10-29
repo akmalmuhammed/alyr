@@ -1,5 +1,5 @@
 """A client's subscription after go-live: paid up, past due, paused or cancelled (ALY-218,
-go-live item 39, spec 040, decision D-080).
+go-live item 39, spec 040, decision D-082).
 
 The plan's clock starts the day the client's first business goes live. Each period is paid in
 advance: the first with the setup fee at go-live (D-053), every later one by card through

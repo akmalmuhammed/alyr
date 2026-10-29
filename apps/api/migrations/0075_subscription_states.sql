@@ -1,4 +1,4 @@
--- A client's subscription after go-live (ALY-218, go-live item 39, spec 040, decision D-080).
+-- A client's subscription after go-live (ALY-218, go-live item 39, spec 040, decision D-082).
 --
 -- The plan's clock starts when the client's first business goes live. Each period is paid in
 -- advance: by card through Paddle (renewals arrive by themselves, D-074) or by transfer, cash or

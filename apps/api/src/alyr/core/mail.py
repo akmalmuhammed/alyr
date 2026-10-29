@@ -1,4 +1,6 @@
-"""Email ALYR sends itself: sign-in codes, for now (D-029).
+"""Email ALYR sends itself (D-029): sign-in codes, the reminder to finish setting up, and the
+welcome and invite emails that tell a person their account exists (specs/037). The weekly report
+and a shop's documents use `send` too.
 
 One provider, Resend, called over its REST API. Nothing else in the app sends email.
 
@@ -166,7 +168,7 @@ def _day(value: str | None, lang: str) -> str:
     return f"{d.day} {_MONTHS[lang][d.month - 1]} {d.year}"
 
 
-# What ALYR writes to a client about their plan (ALY-218, D-080), by kind. `c` is the client's
+# What ALYR writes to a client about their plan (ALY-218, D-082), by kind. `c` is the client's
 # name, `p` the plan's state as `subscription.view` gives it, with its dates already written out.
 _BILLING = {
     "en": {
@@ -303,3 +305,150 @@ def sign_in_message(code: str, minutes: int) -> tuple[str, str, str]:
 رمز الدخول إلى ALYR هو <b style="color:{e["text"]}">{c}</b>. يعمل مرة واحدة وتنتهي صلاحيته خلال {minutes} دقائق.</td></tr>
 </table></td></tr></table></body></html>"""
     return subject, text, html
+
+
+# The welcome after sign-up and the invite to a team (specs/037). Neither holds a code or a link
+# that signs anyone in: the person signs in at /login, with a code, as always.
+_ACCOUNT = {
+    "en": {
+        "welcome_subject": lambda first: f"Welcome to ALYR, {first}" if first else "Welcome to ALYR",
+        "hello": lambda first: f"Hello {first}," if first else "Hello,",
+        "welcome": lambda shop: (
+            f"You created the workspace for {shop}. Keep this email: it says how to get back in."
+        ),
+        "sign_in": lambda link, email: (
+            f"To sign in, open {link} and give this address: {email}. ALYR emails you a 6-digit "
+            "code each time. There is no password to remember."
+        ),
+        "continue": "Continue your setup",
+        "reply": "Reply to this email if you want a person to help.",
+        "invite_subject": lambda by, shop: (
+            f"{by} added you to {shop} on ALYR" if by else f"Your ALYR workspace for {shop} is ready"
+        ),
+        "invite": lambda by, shop, role: (
+            f"{by} added you to the team of {shop} on ALYR, as {role}." if by
+            else f"ALYR has set up the workspace for {shop}, with you as its owner."
+        ),
+        "roles": {"owner": "an owner", "admin": "an admin", "agent": "a team member"},
+        "elsewhere": (
+            "This address is also on another business's team on ALYR. Signing in opens the one "
+            "you joined first; reply to this email if you need the other."
+        ),
+        "sign_in_button": "Sign in",
+        "unexpected": "If you did not expect this email, you can ignore it.",
+    },
+    "ar": {
+        "welcome_subject": lambda first: (
+            f"مرحباً بك في ALYR يا {first}" if first else "مرحباً بك في ALYR"
+        ),
+        "hello": lambda first: f"مرحباً {first}،" if first else "مرحباً،",
+        "welcome": lambda shop: (
+            f"أنشأت مساحة العمل لـ {shop}. احتفظ بهذه الرسالة: فيها طريقة العودة إليها."
+        ),
+        "sign_in": lambda link, email: (
+            f"لتسجيل الدخول، افتح {link} واكتب هذا البريد: {email}. ترسل لك ALYR رمزاً من "
+            "6 أرقام في كل مرة، ولا توجد كلمة مرور لتتذكرها."
+        ),
+        "continue": "أكمل إعدادك",
+        "reply": "ردّ على هذه الرسالة إن أردت أن يساعدك شخص.",
+        "invite_subject": lambda by, shop: (
+            f"أضافك {by} إلى {shop} على ALYR" if by else f"مساحة عملك على ALYR لـ {shop} جاهزة"
+        ),
+        "invite": lambda by, shop, role: (
+            f"أضافك {by} إلى فريق {shop} على ALYR، بدور {role}." if by
+            else f"جهّزت ALYR مساحة العمل لـ {shop}، وأنت مالكها."
+        ),
+        "roles": {"owner": "مالك", "admin": "مدير", "agent": "موظف"},
+        "elsewhere": (
+            "هذا البريد مسجّل أيضاً في فريق نشاط تجاري آخر على ALYR. تسجيل الدخول يفتح النشاط "
+            "الذي انضممت إليه أولاً؛ ردّ على هذه الرسالة إن احتجت الآخر."
+        ),
+        "sign_in_button": "سجّل الدخول",
+        "unexpected": "إذا لم تكن تتوقع هذه الرسالة، يمكنك تجاهلها.",
+    },
+}
+
+
+def _first(name: str) -> str:
+    return name.split()[0] if name.strip() else ""
+
+
+def _letter(parts: list[dict]) -> str:
+    """One email's HTML: ALYR's mark, then each language's part, the second under a rule. A part
+    has its paragraphs, a button (label, link) and a quieter last line."""
+    e, f = brand.EMAIL, brand.CSS_FONT["email"]
+    rows = ['<tr><td style="font-weight:700;font-size:15px;letter-spacing:.06em">ALYR</td></tr>']
+    for n, part in enumerate(parts):
+        rtl = part["lang"] == "ar"
+        cell = ' dir="rtl" style="text-align:right;' if rtl else ' style="text-align:left;'
+        # The second language under a rule, with room on both sides of it.
+        rule = f"border-top:1px solid {e['rule']};padding-top:22px;" if n else ""
+        rule += "padding-bottom:22px;" if n < len(parts) - 1 else ""
+        inner = "".join(
+            f'<p style="margin:0 0 10px;font-size:15px;line-height:1.55">{escape(line)}</p>'
+            for line in part["lines"]
+        )
+        label, link = part["button"]
+        inner += (
+            f'<p style="margin:18px 0 6px"><a href="{escape(link)}" style="display:inline-block;'
+            f'background:{e["text"]};color:{e["panel"]};text-decoration:none;font-weight:600;'
+            f'font-size:15px;padding:13px 22px;min-height:20px">{escape(label)}</a></p>'
+            f'<p style="margin:14px 0 0;font-size:13px;color:{e["muted"]}">{escape(part["small"])}</p>'
+        )
+        rows.append(f'<tr><td{cell}padding-top:18px;{rule}">{inner}</td></tr>')
+    body = "\n".join(rows)
+    return f"""<!doctype html><html><body style="margin:0;background:{e["bg"]};font-family:{f};color:{e["text"]}">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px"><tr><td align="center">
+<table role="presentation" width="100%" style="max-width:480px;background:{e["panel"]};border-radius:16px;padding:28px">
+{body}
+</table></td></tr></table></body></html>"""
+
+
+def _plain(parts: list[dict]) -> str:
+    return "\n\n---\n\n".join(
+        "\n\n".join([*part["lines"], f"{part['button'][0]}: {part['button'][1]}", part["small"]])
+        for part in parts
+    )
+
+
+def welcome_message(
+    lang: str, owner: str, shop: str, email: str, sign_in_link: str, setup_link: str,
+) -> tuple[str, str, str]:
+    """Subject, plain text and HTML of the welcome after sign-up, in the language the owner
+    signed up in. `shop` is the business's name in that language."""
+    lang = "ar" if lang == "ar" else "en"
+    w, first = _ACCOUNT[lang], _first(owner)
+    part = {
+        "lang": lang,
+        "lines": [w["hello"](first), w["welcome"](shop), w["sign_in"](sign_in_link, email)],
+        "button": (w["continue"], setup_link),
+        "small": w["reply"],
+    }
+    return w["welcome_subject"](first), _plain([part]), _letter([part])
+
+
+def invite_message(
+    lang: str, person: str, shops: dict[str, str], email: str, role: str, by: str | None,
+    sign_in_link: str, elsewhere: bool = False,
+) -> tuple[str, str, str]:
+    """Subject, plain text and HTML of the email to someone added to a business's team: `by`
+    is who added them, or None when ALYR made the business for its owner in the back office.
+    We do not know which language the person reads, so it is in both, the shop's own language
+    first (`lang`); `shops` is the business's name by language. `elsewhere` says the address is
+    already on another business's team, whose workspace signing in opens."""
+    first = _first(person)
+    order = ["ar", "en"] if lang == "ar" else ["en", "ar"]
+    parts = []
+    for code in order:
+        w = _ACCOUNT[code]
+        lines = [
+            w["hello"](first),
+            w["invite"](by, shops[code], w["roles"].get(role, w["roles"]["agent"])),
+            w["sign_in"](sign_in_link, email),
+        ]
+        if elsewhere:
+            lines.append(w["elsewhere"])
+        parts.append({"lang": code, "lines": lines, "button": (w["sign_in_button"], sign_in_link),
+                      "small": w["unexpected"]})
+    subject = _ACCOUNT[order[0]]["invite_subject"](by, shops[order[0]])
+    return subject, _plain(parts), _letter(parts)

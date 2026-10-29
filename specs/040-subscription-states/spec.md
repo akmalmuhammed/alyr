@@ -1,6 +1,6 @@
 # 040 · What happens when a client stops paying
 
-Linear ALY-218 (go-live checklist item 39). Decision D-080. Builds on D-053 (nothing is paid first: the setup fee and the first period are asked at go-live), D-074 (card payments and renewals through Paddle, spec 035), D-033 (ALYR never deletes a client's data) and D-034 (cancel with seven days' notice).
+Linear ALY-218 (go-live checklist item 39). Decision D-082. Builds on D-053 (nothing is paid first: the setup fee and the first period are asked at go-live), D-074 (card payments and renewals through Paddle, spec 035), D-033 (ALYR never deletes a client's data) and D-034 (cancel with seven days' notice).
 
 ## What it is for
 

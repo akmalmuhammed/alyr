@@ -192,7 +192,7 @@ def test_a_link_is_made_and_read_for_a_named_purpose_only():
         links.mint(DEMO_TENANT_ID, CONTACT, settings=settings())  # no purpose named
     with pytest.raises(TypeError):
         links.read("x.y", DEMO_TENANT_ID, settings=settings())
-    for unknown in ("", "pay", "track", "ORDER", None):
+    for unknown in ("", "pay", "tracking", "ORDER", None):
         with pytest.raises(ValueError):
             make(purpose=unknown, settings=settings())
         with pytest.raises(ValueError):
