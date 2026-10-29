@@ -5,12 +5,14 @@ and its habits are reused: the file is read by `items.sheets` (CSV in UTF-8, UTF
 Windows code page, comma, semicolon or tab; or Excel), nothing in it is ever calculated, and the
 upload is the request's body.
 
-1. **Upload** stores the file and answers with a **preview of every row**: which column is which
-   (found by name in either language, or from a saved mapping that fits the file), every sale it
-   would make, and every problem with its row number in English and Arabic. Nothing is written but
-   the stored file. The shop can change the mapping and the options (the kind of document when the
-   file has no such column, a way of paying when it has none, whether to send) and see the preview
-   again, and can save a mapping under a name for next time.
+1. **Upload** stores the file, with what was read from it (it is read once, off the event loop
+   and before a transaction is open, ALY-278), and answers with a **preview of every row**:
+   which column is which (found by name in either language, or from a saved mapping that fits
+   the file), every sale it would make, and every problem with its row number in English and
+   Arabic. Nothing is written but the stored file. The shop can change the mapping and the
+   options (the kind of document when the file has no such column, a way of paying when it has
+   none, whether to send) and see the preview again, and can save a mapping under a name for
+   next time.
 2. **Apply** carries the preview's hash, so what is applied is exactly what was seen, and makes
    the whole file **in one transaction through the same door as the open API** (`ingest.accept`):
    every sale is idempotent (a sale ALYR already has is skipped, not made twice), every number
@@ -38,7 +40,8 @@ from alyr.modules.connect.words import ConnectError
 from alyr.modules.documents import money
 from alyr.modules.documents import settings as doc_settings
 from alyr.modules.documents.errors import DocumentError
-from alyr.modules.items import sheets
+from alyr.modules.items import xlsx
+from alyr.modules.items.xlsx import Sheet
 
 SUBJECT = doc_settings.SUBJECT
 SHOWN_SALES = 50
@@ -75,7 +78,11 @@ def _digest(parts: list[bytes]) -> str:
 
 
 def _rows(row: asyncpg.Record) -> tuple[list[list[object]], bool]:
-    _kind, sheet = sheets.read_table(bytes(row["file"]), row["filename"])
+    """What was read from the file when it arrived. An upload kept before it was (ALY-278) is
+    not read again here: it is gone, and the shop sends the file again."""
+    if row["sheet"] is None:
+        raise ConnectError("import_not_found", 404)
+    sheet = xlsx.from_stored(row["sheet"])
     return sheet.rows, sheet.truncated
 
 
@@ -155,11 +162,11 @@ async def _preview_of(conn: asyncpg.Connection, row: asyncpg.Record) -> dict:
 
 
 async def upload(conn: asyncpg.Connection, actor: Actor, filename: str, data: bytes,
-                 max_bytes: int) -> dict:
-    """Store a file and preview it. Raises `sheets`' `SheetError` for a file that cannot be read."""
+                 max_bytes: int, sheet: Sheet) -> dict:
+    """Store a file and what was read from it (`sheets.read_table`, which the caller runs off the
+    event loop: a file that cannot be read stops there), and preview it."""
     if len(data) > max_bytes:
         raise ConnectError("import_too_big", 413)
-    _kind, sheet = sheets.read_table(data, filename)  # a file that cannot be read stops here
     headers = sale_import_plan.headers_of(sheet.rows)
     mapping = sale_import_plan.auto_mapping(headers)
     template_name = None
@@ -173,9 +180,10 @@ async def upload(conn: asyncpg.Connection, actor: Actor, filename: str, data: by
     else:
         options = {}
     row = await conn.fetchrow(
-        "insert into sale_imports (filename, file, mapping, options, actor_id, actor_name) "
-        "values ($1, $2, $3, $4, $5, $6) returning *",
-        (filename or "sales.csv")[:200], data, mapping, options, actor.id, actor.name)
+        "insert into sale_imports (filename, file, sheet, mapping, options, actor_id, actor_name) "
+        "values ($1, $2, $3, $4, $5, $6, $7) returning *",
+        (filename or "sales.csv")[:200], data, xlsx.to_stored(sheet), mapping, options, actor.id,
+        actor.name)
     preview = await _preview_of(conn, row)
     return {**preview, "template": template_name}
 
@@ -251,8 +259,8 @@ async def apply(conn: asyncpg.Connection, actor: Actor, import_id: UUID, preview
     summary = {"counts": {"sales": made + skipped, "made": made, "skipped": skipped},
                "by_kind": by_kind}
     row = await conn.fetchrow(
-        "update sale_imports set status = 'applied', file = null, applied_at = now(), "
-        "summary = $2 where id = $1 returning *", import_id, summary)
+        "update sale_imports set status = 'applied', file = null, sheet = null, "
+        "applied_at = now(), summary = $2 where id = $1 returning *", import_id, summary)
     await team.record(conn, SUBJECT, import_id, "import_applied", actor, None,
                       {"made": made, "skipped": skipped, "filename": row["filename"][:80]})
     return {**_summary(row), "counts": summary["counts"], "by_kind": by_kind}

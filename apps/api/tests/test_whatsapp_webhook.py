@@ -212,3 +212,17 @@ def test_user_id_change_keeps_the_contact_and_its_history(client):
     assert [c["user_id"] for c in people if c["name"] == "Sheena Nelson"] == [new_id]
     history = client.get(f"/sim/conversations/{new_id}").json()["messages"]
     assert len([m for m in history if m["direction"] == "in"]) == 2
+
+
+def test_a_body_longer_than_meta_sends_is_refused_without_being_read(client):
+    # Meta: "Webhook payloads can be up to 3 MB." (ALY-278: the body was read whole first.)
+    from alyr.routes.whatsapp_webhook import MAX_BODY
+
+    said = client.post("/webhooks/whatsapp", content=b"x" * (MAX_BODY + 1),
+                       headers={"content-type": "application/json"})
+    assert said.status_code == 413
+    # ... and when the length is not said, it is counted as it arrives
+    streamed = client.post("/webhooks/whatsapp", content=iter([b"x" * 1024 * 1024] * 4),
+                           headers={"content-type": "application/json"})
+    assert streamed.status_code == 413
+    assert signed_post(client, meta_payload(message_id="wamid.after-a-big-one")).status_code == 200
