@@ -36,7 +36,7 @@
 .sh-brand-text { display: grid; min-width: 0; line-height: 1.15; }
 .sh-brand-text b { font-weight: 600; font-size: var(--ui-body-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sh-brand-text small { font-family: var(--font-ui-mono); font-size: var(--ui-micro); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); }
-.sh[dir="rtl"] .sh-brand-text small { letter-spacing: 0; }
+.sh[dir="rtl"] .sh-brand-text small { font-family: var(--face); letter-spacing: 0; font-size: var(--ui-caption); }
 .sh-mark { width: 28px; height: 24px; flex: none; color: var(--ink); }
 
 .sh-search { display: flex; align-items: center; gap: 8px; margin: 6px 0 10px; padding: 0 8px 0 10px; height: 34px; border: 0; border-radius: 9px; background: var(--sheet); box-shadow: var(--lift); color: var(--ink-2); font-size: var(--ui-small); text-align: start; transition: color 0.2s var(--ease-product); }

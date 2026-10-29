@@ -13,6 +13,7 @@ import { ConnectLink, ConnectSettings } from "../../_workspace/ConnectSettings";
 import { AgentDashboard } from "../../../_agent/AgentDashboard";
 import type { AgentView } from "../../../_agent/types";
 import { color } from "../../../_tokens/tokens";
+import { Account } from "../../_workspace/Account";
 import "../../_workspace/shell.css";
 
 type Text = { en: string; ar: string };
@@ -147,6 +148,7 @@ const ICON: Record<string, string> = {
   doc: "M7 3h8l4 4v14H7z M15 3v4h4 M10 12h6 M10 16h6",
   plug: "M9 3v5 M15 3v5 M6 8h12v3a6 6 0 0 1-12 0z M12 17v4",
   users: "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z M3 21v-2a6 6 0 0 1 12 0v2 M16 4.5a3.5 3.5 0 0 1 0 6.5 M17 15a5 5 0 0 1 4 4.9V21",
+  user: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z M5 21v-1a7 7 0 0 1 14 0v1",
   plus: "M12 5v14 M5 12h14",
   search: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z M20 20l-4-4",
   chat: "M4 5h16v11H10l-6 4z M8 10h8",
@@ -526,6 +528,9 @@ export default function WorkspaceShell() {
         </section>
       </>
     );
+  } else if (section === "account") {
+    // Every role: their sign-in email and businesses; owners also download the data (specs/040).
+    body = <Account lang={lang} />;
   } else if (section === "products") {
     body = (
       <>

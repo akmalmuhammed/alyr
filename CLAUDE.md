@@ -90,6 +90,8 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               owner/ is what an owner or staff member can ask from WhatsApp, and
                               LINK proves a staff phone (specs/029-owner-actions, D-065)
   src/alyr/routes/            HTTP routes. deps.py: who is calling, which shop, which modules are on
+                              account.py: your account (switch business, change the sign-in email, all of a
+                              business's data as one ZIP; core/account.py, core/export.py, specs/040, D-081)
   src/alyr/catalog.py         What ALYR sells: modules and products (D-027)
   src/alyr/db.py              `Database.tenant(id)`: one transaction scoped to one tenant
   src/alyr/seed*.py           The fictional demo shops

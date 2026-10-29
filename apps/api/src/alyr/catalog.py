@@ -355,6 +355,8 @@ ACCOUNT_SCREENS: tuple[Screen, ...] = (
     Screen("products", Text("Products", "المنتجات"), "apps", MANAGERS),
     Screen("connections", Text("Connections", "الاتصالات"), "plug", MANAGERS),
     Screen("team", Text("Team", "الفريق"), "users"),
+    # The person's own: their businesses, sign-in email and the data download (specs/040).
+    Screen("account", Text("Your account", "حسابك"), "user"),
 )
 
 MODULE_BY_KEY = {m.key: m for m in MODULES}
