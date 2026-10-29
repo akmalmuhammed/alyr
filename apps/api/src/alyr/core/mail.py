@@ -202,8 +202,8 @@ _ACCOUNT = {
         ),
         "roles": {"owner": "an owner", "admin": "an admin", "agent": "a team member"},
         "elsewhere": (
-            "This address is also on another business's team on ALYR. Signing in opens the one "
-            "you joined first; reply to this email if you need the other."
+            "This address is also on another business's team on ALYR, so signing in opens that "
+            "one. To open this one, go to Your account and choose Open next to it."
         ),
         "sign_in_button": "Sign in",
         "unexpected": "If you did not expect this email, you can ignore it.",
@@ -231,8 +231,8 @@ _ACCOUNT = {
         ),
         "roles": {"owner": "مالك", "admin": "مدير", "agent": "موظف"},
         "elsewhere": (
-            "هذا البريد مسجّل أيضاً في فريق نشاط تجاري آخر على ALYR. تسجيل الدخول يفتح النشاط "
-            "الذي انضممت إليه أولاً؛ ردّ على هذه الرسالة إن احتجت الآخر."
+            "هذا البريد مسجّل أيضاً في فريق نشاط تجاري آخر على ALYR، لذلك يفتح تسجيل الدخول "
+            "ذلك النشاط. لفتح هذا النشاط، اذهب إلى «حسابك» واختر «افتح» بجانبه."
         ),
         "sign_in_button": "سجّل الدخول",
         "unexpected": "إذا لم تكن تتوقع هذه الرسالة، يمكنك تجاهلها.",
@@ -306,7 +306,7 @@ def invite_message(
     is who added them, or None when ALYR made the business for its owner in the back office.
     We do not know which language the person reads, so it is in both, the shop's own language
     first (`lang`); `shops` is the business's name by language. `elsewhere` says the address is
-    already on another business's team, whose workspace signing in opens."""
+    already on another business's team, whose workspace signing in opens, and how to switch."""
     first = _first(person)
     order = ["ar", "en"] if lang == "ar" else ["en", "ar"]
     parts = []

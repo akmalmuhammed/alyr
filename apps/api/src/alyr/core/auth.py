@@ -145,16 +145,22 @@ async def session_for(db: Database, email: str) -> str | None:
         if user_id is None:
             return None
         await conn.execute("select set_config('app.user_id', $1, true)", str(user_id))
-        tenant_id = await conn.fetchval(
-            "select m.tenant_id from memberships m join users u on u.id = m.user_id "
-            "where m.user_id = $1 "
-            "order by m.tenant_id is not distinct from u.last_tenant_id desc, m.created_at "
-            "limit 1",
-            user_id,
-        )
+        tenant_id = await business_at_sign_in(conn, user_id)
         if tenant_id is None:
             return None
         return await create_session(conn, user_id, tenant_id)
+
+
+async def business_at_sign_in(conn, user_id: UUID) -> UUID | None:
+    """The business signing in opens: the one the person used last, else the first they joined.
+    The caller has set app.user_id to them, so their memberships are visible."""
+    return await conn.fetchval(
+        "select m.tenant_id from memberships m join users u on u.id = m.user_id "
+        "where m.user_id = $1 "
+        "order by m.tenant_id is not distinct from u.last_tenant_id desc, m.created_at "
+        "limit 1",
+        user_id,
+    )
 
 
 async def verify_code(db: Database, email: str, code: str) -> str:
