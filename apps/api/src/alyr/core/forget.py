@@ -42,6 +42,7 @@ TABLES = {
     "payment_requests": "kept: references and statuses only",
     "activity": "kept: who did what and when (D-028), now about a forgotten customer",
     "contact_merges": "kept: IDs only",
+    "review_requests": "kept: when a review was asked for, IDs and times only (D-084)",
 }
 # Tables that keep a customer's ID with no foreign key, because their records are locked once
 # issued. They are kept as they are: the law requires the business to keep its invoices. A
