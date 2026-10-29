@@ -11,6 +11,7 @@ import { FulfilDetails, FulfilFilters, FulfilPill, matchesFilter, type FulfilFil
 import type { Fulfilment } from "../_customer/fulfil";
 import { DELIVERY } from "./deliveryCopy";
 import { PRICING } from "./pricingCopy";
+import { usePolling } from "./poll";
 import "./pricing.css";
 
 type Choice = { id: string; title: string };
@@ -404,52 +405,48 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
 
   const refresh = useCallback(async () => {
     try {
-      const [s, c] = await Promise.all([
-        maybe<Summary | null>("/api/ledger/summary", null),
-        phone
-          ? getJson<{ messages: Message[] }>(`/sim/conversations/${phone}`)
-          : Promise.resolve({ messages: [] }),
-      ]);
-      setSummary(s);
-      setMessages(c.messages);
-      setOrders((await maybe<{ orders: OrderRow[] }>("/api/orders", { orders: [] })).orders);
+      // The workspace shows one screen and asks only for it (ALY-275 PERF-1). Beside the
+      // simulator's chat (the sales demo), every tab shows its count, so all are asked for.
+      const on = (screen: WorkspaceTab) => Boolean(phone) || tab === screen;
       const lookBack = show && SHOWS[show]?.tab === "bookings";
       const range = lookBack
         ? `?first=${new Date(Date.now() - 90 * DAY_MS).toISOString().slice(0, 10)}&last=${new Date(Date.now() + 8 * DAY_MS).toISOString().slice(0, 10)}`
         : "";
-      setBookings((await maybe<{ bookings: BookingRow[] }>(`/api/bookings${range}`, { bookings: [] })).bookings);
-      setMe(await getJson<Me>("/api/auth/me"));
-      setNow(Date.now());
-      {
-        const team = await getJson<{ members: Member[]; can_manage: boolean }>("/api/team");
-        setMembers(team.members);
-        setCanManage(team.can_manage);
-      }
-      const rows = (
-        await maybe<{ conversations: InboxRow[] }>(
-          `/api/inbox/conversations?status=${inboxFilter}&assigned=${assignedFilter}`,
-          { conversations: [] },
-        )
-      ).conversations;
-      setInboxRows(rows);
-      if (tab === "inbox") {
-        setSavedReplies((await getJson<{ replies: SavedReply[] }>("/api/inbox/saved-replies")).replies);
-      }
-      if (tab === "inbox" && chatId) {
+      // The open conversation, after the list: reading it on screen is what marks it read.
+      const inbox = async () => {
+        const rows = (
+          await maybe<{ conversations: InboxRow[] }>(
+            `/api/inbox/conversations?status=${inboxFilter}&assigned=${assignedFilter}`,
+            { conversations: [] },
+          )
+        ).conversations;
+        setInboxRows(rows);
+        if (tab !== "inbox" || !chatId) return;
         const loaded = await getJson<Thread>(`/api/inbox/conversations/${chatId}`);
         setThread(loaded);
-        setPriceGroups(await maybe("/api/price-groups", { groups: [], can_manage: false }));
         const closes = loaded.customer.window_closes_at;
         setHoursLeft(closes ? Math.floor((new Date(closes).getTime() - Date.now()) / 3_600_000) : 0);
-        // Reading a conversation on screen is what marks it read.
         if (rows.find((r) => r.id === chatId)?.unread) {
           await getJson(`/api/inbox/conversations/${chatId}/read`, { method: "POST" });
         }
-      }
-      if (selected) {
-        const e = await getJson<{ entries: Entry[] }>(`/api/ledger/customers/${selected}/entries`);
-        setEntries(e.entries);
-      }
+      };
+      // Independent of one another, so asked together rather than one after another.
+      await Promise.all([
+        // The credit accounts screen is the summary; elsewhere only its shop name is used.
+        on("ledger") ? maybe<Summary | null>("/api/ledger/summary", null).then(setSummary) : null,
+        phone
+          ? getJson<{ messages: Message[] }>(`/sim/conversations/${phone}`).then((c) => setMessages(c.messages))
+          : null,
+        on("orders") ? maybe<{ orders: OrderRow[] }>("/api/orders", { orders: [] }).then((o) => setOrders(o.orders)) : null,
+        on("bookings")
+          ? maybe<{ bookings: BookingRow[] }>(`/api/bookings${range}`, { bookings: [] }).then((b) => setBookings(b.bookings))
+          : null,
+        on("inbox") ? inbox() : null,
+        tab === "ledger" && selected
+          ? getJson<{ entries: Entry[] }>(`/api/ledger/customers/${selected}/entries`).then((e) => setEntries(e.entries))
+          : null,
+      ]);
+      setNow(Date.now());
       setError("");
     } catch {
       setError("Cannot reach the Alyr API. Start it on port 8000, then this page recovers by itself.");
@@ -462,14 +459,39 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
     return () => clearTimeout(first);
   }, [loadPersonas, embedded]);
 
+  // Every 10 s while the screen is on show (every 5 s in the demo, beside its chat), and at
+  // once when what is asked for changes or the person comes back to the tab.
+  usePolling(refresh, embedded ? 10_000 : 5_000);
+
+  // Who is signed in, the team for the "Handled by" menus, who may manage, and the shop's name
+  // over every screen change rarely: asked at the start and every 5 minutes, not with every
+  // look at the lists.
+  const loadShop = useCallback(async () => {
+    await Promise.all([
+      getJson<Me>("/api/auth/me").then(setMe),
+      getJson<{ members: Member[]; can_manage: boolean }>("/api/team").then((team) => {
+        setMembers(team.members);
+        setCanManage(team.can_manage);
+      }),
+      maybe<Summary | null>("/api/ledger/summary", null).then(setSummary),
+    ]);
+  }, []);
+  usePolling(loadShop, 300_000);
+
+  // Saved replies, and the price groups the conversation's side panel offers, change rarely:
+  // asked when the inbox or a conversation is opened.
   useEffect(() => {
-    const first = setTimeout(refresh, 0);
-    const timer = setInterval(refresh, 1500);
-    return () => {
-      clearTimeout(first);
-      clearInterval(timer);
-    };
-  }, [refresh]);
+    if (tab !== "inbox") return;
+    const ask = setTimeout(async () => {
+      try {
+        setSavedReplies((await getJson<{ replies: SavedReply[] }>("/api/inbox/saved-replies")).replies);
+        if (chatId) setPriceGroups(await maybe("/api/price-groups", { groups: [], can_manage: false }));
+      } catch {
+        // The polling's own error line says the API cannot be reached.
+      }
+    }, 0);
+    return () => clearTimeout(ask);
+  }, [tab, chatId]);
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ block: "end" });
