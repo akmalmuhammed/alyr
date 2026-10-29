@@ -239,6 +239,17 @@ CATALOGUE: dict[str, Template] = {
         "وإلغاء الطلب. يرجى ردها من حسابك للدفع.",
         ("Al Noor Electricals", "QAR 179", "1001"),
     ),
+    # A new order, to the staff numbers the owner marked for it (D-079). {{4}} is what the
+    # order holds and how it goes: "2 x Croissant, 1 x Latte. Pickup · Not paid yet".
+    "order_new_staff": Template(
+        "utility",
+        "New order at {{1}}: order {{2}} for {{3}}. {{4}}. Open ALYR to confirm it.",
+        "طلب جديد في {{1}}: الطلب رقم {{2}} بمبلغ {{3}}. {{4}}. افتح ALYR لتأكيده.",
+        ("Al Noor Electricals", "1001", "QAR 179",
+         "2 x Breaker 16 A, 1 x Cable 1.5 mm. Pickup · Not paid yet"),
+        samples_ar=("النور للكهربائيات", "1001", "179 ر.ق",
+                    "2 x قاطع 16 أمبير، 1 x كابل 1.5 مم. استلام من المتجر · لم يُدفع بعد"),
+    ),
     "draft_added": Template(
         "utility",
         "New item draft at {{1}}: {{2}} sent a photo for {{3}}. Open the Catalog to check "

@@ -57,6 +57,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-061 | Company mail moves to Zoho Mail (free plan): hello@ with akmal@ and security@ as aliases, and a mailbox for Beevi Jinan, the registered owner; Resend still sends the product's email | Accepted |
 | D-063 | Order businesses get a self-serve onboarding path (a third way, `orders`) made of thin screens over the Catalog's own APIs; one flow for both doors, automatic first, money later | Accepted |
 | D-064 | The owner's test order is marked in the database (a trigger sets `orders.is_test`), counted nowhere (a guard test reads every query), and cancelled with its stock returned when the test ends | Accepted |
+| D-079 | Staff numbers the owner marks for "New orders" are told on WhatsApp about every order placed (text inside their window, a utility template outside it); nobody until a number is marked, never for the owner's test order; web push waits for a data-residency decision | Accepted |
 | D-067 | Terms and the privacy notice are versions ALYR publishes; an owner accepts them at sign-up and again when a new one is published, in an append-only record | Accepted |
 | D-068 | An owner who stops partway through setup gets two emails to come back, then none, and can stop them from the link; the funnel counts them | Accepted |
 | D-062 | The homepage hero is the explainer film (one afternoon at Qirfa Bakery in the product's own screens, three lanes at once, ending on the ALYR Agent home): "the product is the illustration" in motion; the hero's live ALYR Agent figure leaves the hero | Accepted |
@@ -1390,6 +1391,21 @@ Nothing claims more than the page, as before.
 **Revisit when** online payment can be tested on the pay page (the test then needs a stand-in that moves no money), when the customer-side counts (conversations, messages, new customers) are read by many more reports and a second guard is worth writing for contacts, or when a shop's numbering must be gapless for orders as well as documents.
 
 ---
+
+## D-079 · Staff are told about a new order on WhatsApp, when the owner asks for it
+**Date** 29 Oct 2026 · **Status** Accepted (go-live checklist item 42 is Claude's, and the founder's instruction of 29 Oct was to finish the items in Claude's scope) · Tracked under ALY-266 (Linear's free issue limit) · Spec `specs/039-new-order-alerts/spec.md` · Builds on D-039 (staff numbers, manager alerts) and D-064 (the test order)
+
+**Where we were.** A new order showed only on an open workspace screen, so an order waited until somebody looked. The staff already talk to the shop's number (D-039), and the managers are told there about low stock and refunds.
+
+**The decision.**
+- **A "New orders" switch on each staff number** (`contacts.order_alerts`, migration 0071), beside "Manager" in the Catalog's settings and on the form that adds a number. Off by default, and **no fallback**: unlike the stock alerts, which fall back to the managers and then to the report's numbers, nobody is told until the owner marks a number, because a busy shop would otherwise be sent a message per order on numbers that never asked.
+- **What is sent:** the order's number and total, the customer's name (not their number), up to eight lines, how it goes (pickup, or delivery with its area and day, and the table) and how it is paid, and the link to confirm it. In the staff member's language. Inside the number's 24-hour window it is ordinary text; outside it, the utility template `order_new_staff`, which Meta must approve first (ALY-172).
+- **A job queued with the order**, only when some number is marked, so placing an order never waits for WhatsApp; the outbound layer checks consent and the window as for every other message.
+- **Never for the owner's test order** (D-064).
+
+**Chosen over** telling the managers by default (a message per order to people who did not ask), web push to the workspace (it goes through Google's and Apple's servers outside Qatar: a `docs/data-residency.md` entry and the founder's decision come first; the owner's own number is the shop's number under Meta coexistence, so marking a second number or the workspace reaches the owner meanwhile), and a quiet time at night (an order at 23:00 needs a restaurant open late to know at once).
+
+**Revisit when** the template is approved and in use (then measure how many are sent outside the window, which Meta charges), the founder decides on web push, or shops ask for new bookings the same way.
 
 ## D-067 · Terms and the privacy notice are versions ALYR publishes; an owner accepts them at sign-up and again when a new one is published, in a record nobody can edit
 **Date** 28 Oct 2026 · **Status** Accepted (built under the founder's instruction of 28 Oct to finish automatic onboarding; the shape is the issue's own) · Linear ALY-167, epic ALY-163 · Spec `specs/031-terms-acceptance/spec.md` · Builds on D-031 (self-serve sign-up) and D-049 (the readiness check)
