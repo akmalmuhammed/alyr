@@ -67,15 +67,24 @@ def due(quote: dict | None) -> int:
 
 
 async def first_payment(conn: asyncpg.Connection, client_id: UUID) -> dict | None:
-    """What the first payment is made of, for a card checkout (ALY-180): the accepted quote,
-    its setup fee and its first period, in dirhams. None without an accepted price."""
+    """What the first payment is made of, for a card checkout (ALY-180, D-074): the accepted
+    quote, its setup fee and its first period in dirhams, and the same two in US cents as
+    Paddle charges them. None without an accepted price."""
     quote_row = await _accepted(conn, client_id)
     if quote_row is None:
         return None
-    totals = (await pricing.quote_view(conn, quote_row))["totals"]
+    return await _parts(conn, quote_row, await pricing.quote_view(conn, quote_row))
+
+
+async def _parts(conn: asyncpg.Connection, quote_row: asyncpg.Record, view: dict) -> dict:
+    dollars = pricing.usd_totals(
+        view["lines"], await pricing.items(conn), quote_row["period_months"],
+        quote_row["discount_pct"],
+    )
     return {
-        "quote_id": quote_row["id"], "setup": totals["one_time_total"],
-        "period": totals["period_total"], "months": quote_row["period_months"],
+        "quote_id": quote_row["id"], "setup": view["totals"]["one_time_total"],
+        "period": view["totals"]["period_total"], "months": quote_row["period_months"],
+        "setup_usd": dollars["one_time"], "period_usd": dollars["period"],
     }
 
 
@@ -142,13 +151,11 @@ async def summary(conn: asyncpg.Connection, client_id: UUID | None = None) -> di
     # A card pays the whole first payment at once and starts the plan's renewals, so it is
     # offered only while nothing has been paid by hand (ALY-180).
     if provider and status == "unpaid" and paid == 0:
+        parts = await _parts(conn, quote_row, quote)
         card = {
             "provider": provider,
-            "amount_text": paddle.usd_text(
-                paddle.usd_cents(quote["totals"]["one_time_total"])
-                + paddle.usd_cents(quote["totals"]["period_total"])
-            ),
-            "period_text": paddle.usd_text(paddle.usd_cents(quote["totals"]["period_total"])),
+            "amount_text": paddle.usd_text(parts["setup_usd"] + parts["period_usd"]),
+            "period_text": paddle.usd_text(parts["period_usd"]),
         }
     return {
         "status": status,

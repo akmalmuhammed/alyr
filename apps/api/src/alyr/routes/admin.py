@@ -63,6 +63,9 @@ class ItemChange(BaseModel):
     applies: str = Field(max_length=60)
     active: bool = True
     sort: int = Field(default=0, ge=0, le=10_000)
+    # In US cents, for a card payment through Paddle (D-074); null: the riyal price at the
+    # peg. Left out: unchanged.
+    price_usd: int | None = Field(default=None, ge=0, le=10_000_000)
 
 
 class TermsVersion(BaseModel):
@@ -419,16 +422,18 @@ async def save_item(
     try:
         async with _back_office(request) as conn:
             before = await conn.fetchrow(
-                "select price, active from price_items where key = $1", key
+                "select price, price_usd, active from price_items where key = $1", key
             )
             saved = await pricing.save_item(
                 conn, key, body.name, body.name_ar, body.kind, body.price, body.applies,
-                body.active, body.sort, _by(staff),
+                body.active, body.sort, _by(staff), price_usd=body.price_usd,
+                set_usd="price_usd" in body.model_fields_set,
             )
             await backoffice.audit(
                 conn, staff, "price_item.saved", "price_item", key,
                 detail={"before": dict(before) if before else None,
-                        "after": {"price": body.price, "active": body.active,
+                        "after": {"price": body.price, "price_usd": saved["price_usd"],
+                                  "active": body.active,
                                   "applies": body.applies, "kind": body.kind}},
             )
             return saved

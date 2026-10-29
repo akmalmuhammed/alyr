@@ -137,12 +137,13 @@ class CardBilling:
                 "no accepted price" if first is None
                 else "part is paid already" if paid else ""
             )
-            if first is not None and not problem and first["period"] <= 0:
+            if first is not None and not problem and min(first["period"], first["period_usd"]) <= 0:
                 problem = "the plan has no price per period"
             if problem:
                 await _fail(conn, checkout_id, problem)
                 return
-            setup, period = paddle.usd_cents(first["setup"]), paddle.usd_cents(first["period"])
+            # The dollar prices of the price list (D-074), else the peg.
+            setup, period = first["setup_usd"], first["period_usd"]
             await conn.execute(
                 "update card_checkouts set quote_id = $2, amount = $3, period_amount = $4, "
                 "period_months = $5, charge_amount = $6, period_charge = $7, updated_at = now() "

@@ -15,7 +15,7 @@ import httpx
 import pytest
 
 from alyr.config import Settings
-from alyr.core import access, paddle
+from alyr.core import access, paddle, pricing
 from alyr.db import Database
 from conftest import APP_DSN
 from test_access import payment
@@ -152,8 +152,10 @@ def test_paying_by_card_settles_go_live_and_renewals_add_a_period(owner, office,
     setup, plan = (int(i["price"]["unit_price"]["amount"]) for i in sent["items"])
     row = owner_sql("select * from card_checkouts where id = $1", checkout["id"])[0]
     assert (setup + plan, plan) == (row["charge_amount"], row["period_charge"])
-    assert row["amount"] == due["due"] and setup + plan == paddle.usd_cents(
-        due["due"] - row["period_amount"]) + paddle.usd_cents(row["period_amount"])
+    # The plan at its dollar price (the founder, 29 Oct: USD 129 for the first product); the
+    # setup fee has none, so it is the riyal price at the peg.
+    assert plan == 12900 and row["amount"] == due["due"]
+    assert setup == paddle.usd_cents(due["due"] - row["period_amount"])
     assert "billing_cycle" not in sent["items"][0]["price"]
     assert sent["items"][1]["price"]["billing_cycle"] == {"interval": "month", "frequency": 1}
     assert sent["custom_data"] == {"alyr_checkout": checkout["id"]}
@@ -229,6 +231,48 @@ def test_webhooks_need_paddles_signature(owner, office, fake):
     # Signed, about nothing of ours: answered, so Paddle does not retry, and ignored.
     assert hook(owner, "transaction.completed", {"id": "txn_nothingofours"}).status_code == 200
     assert hook(owner, "customer.created", {"id": "ctm_01"}).status_code == 200
+
+
+def quote_line(key, unit_price, kind="monthly", quantity=1):
+    return {"item_key": key, "unit_price": unit_price, "kind": kind, "quantity": quantity}
+
+
+def test_dollar_prices_of_a_quote():
+    items = [
+        {"key": "chat", "price": 44900, "price_usd": 12900, "applies": "product:chat"},
+        {"key": "bookings", "price": 44900, "price_usd": 12900, "applies": "product:bookings"},
+        {"key": "extra_product", "price": 5000, "price_usd": 1500, "applies": "extra_product"},
+        {"key": "setup", "price": 250000, "price_usd": None, "applies": "each_business"},
+        {"key": "extra_member", "price": 4000, "price_usd": None, "applies": "manual"},
+    ]
+    lines = [quote_line("chat", 44900), quote_line("bookings", 5000),
+             quote_line("setup", 250000, "one_time"), quote_line("extra_member", 4000, quantity=2)]
+    # First product 129, the added one 15, two members at the peg; setup at the peg.
+    assert pricing.usd_totals(lines, items, 1, 0) == {
+        "one_time": paddle.usd_cents(250000), "period": 12900 + 1500 + 2 * paddle.usd_cents(4000)}
+    # Three months with 10% off the monthly part, as the riyal totals work it.
+    monthly = 12900 + 1500 + 2 * paddle.usd_cents(4000)
+    assert pricing.usd_totals(lines, items, 3, 10)["period"] == (monthly - round(monthly / 10)) * 3
+    # A line ALYR priced by hand is converted at the peg, never given the list's dollar price.
+    by_hand = pricing.usd_totals([quote_line("chat", 40000)], items, 1, 0)
+    assert by_hand["period"] == paddle.usd_cents(40000)
+    assert pricing.usd_totals([quote_line(None, -5000)], items, 1, 0)["period"] == 0
+
+
+def test_the_dollar_price_is_kept_unless_the_back_office_changes_it(office):
+    item = next(i for i in office.get(f"{ADMIN}/pricing").json()["items"] if i["key"] == "chat")
+    assert item["price_usd"] == 12900
+    body = {k: item[k] for k in ("name", "name_ar", "kind", "price", "applies", "active", "sort")}
+    # A save that does not mention the dollar price (an older screen) keeps it.
+    assert office.put(f"{ADMIN}/pricing/items/chat", json=body).json()["price_usd"] == 12900
+    assert office.put(f"{ADMIN}/pricing/items/chat",
+                      json=body | {"price_usd": 13900}).json()["price_usd"] == 13900
+    assert office.put(f"{ADMIN}/pricing/items/chat",
+                      json=body | {"price_usd": None}).json()["price_usd"] is None
+    assert office.put(f"{ADMIN}/pricing/items/chat",
+                      json=body | {"price_usd": -1}).status_code == 422
+    audit = office.get(f"{ADMIN}/audit").json()["entries"][0]
+    assert audit["action"] == "price_item.saved" and audit["detail"]["after"]["price_usd"] is None
 
 
 def test_signature_check():

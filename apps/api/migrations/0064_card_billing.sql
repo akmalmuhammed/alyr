@@ -10,6 +10,19 @@
 -- are filled in by ALYR's job from the accepted quote, on a back-office connection, so an
 -- owner can never choose what Paddle charges.
 
+-- What each item of the price list costs when paid by card through Paddle, in US cents (the
+-- founder, 29 Oct 2026: USD 129 a month for the first product, USD 15 for each added one).
+-- Null: the riyal price at the peg, rounded up to the cent. Only a quote line still at its
+-- item's riyal price takes the dollar price; a line ALYR priced by hand takes the peg.
+alter table price_items add column price_usd integer check (price_usd >= 0);
+select set_config('app.platform_admin', 'on', true);
+update price_items set price_usd = 12900, updated_at = now(), updated_by = 'USD prices, 29 Oct 2026'
+    where key in ('chat', 'bookings', 'credit');
+update price_items set price_usd = 1500, updated_at = now(), updated_by = 'USD prices, 29 Oct 2026'
+    where key = 'extra_product';
+update price_items set price_usd = 0 where key = 'agent' and price = 0;
+select set_config('app.platform_admin', '', true);
+
 -- A card payment is a payment of its own kind, and remembers which provider took it and what
 -- it charged there. The provider's reference is unique, so a webhook that arrives twice can
 -- never record a payment twice.
