@@ -15,6 +15,8 @@ from alyr.core.links import check_secret as check_link_secret
 from alyr.core.media import MediaService
 from alyr.core.outbound import SEND, Outbound
 from alyr.core.storage import check_store, make_store
+from alyr.core.welcome import JOB as ACCOUNT_EMAIL
+from alyr.core.welcome import AccountMail
 from alyr.db import Database
 from alyr.modules import report
 from alyr.modules.bookings.service import REMINDER, Reminders
@@ -137,6 +139,8 @@ def create_app() -> FastAPI:
     # the PDF attached. A delivery that fails every try shows the owner "not delivered".
     document_sender = DocumentSender(app.state.db, app.state.outbound)
     app.state.jobs.register(DELIVERY_JOB, document_sender.run, document_sender.gave_up)
+    # The welcome after sign-up and the invite to a team (specs/037).
+    app.state.jobs.register(ACCOUNT_EMAIL, AccountMail(app.state.db).run)
     # Events out to the shop's other system (ALY-142): signed, retried, guarded.
     app.state.webhooks = connect_webhooks.WebhookSender(app.state.db)
     app.state.jobs.register(connect_webhooks.JOB, app.state.webhooks.run)

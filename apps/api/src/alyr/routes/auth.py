@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from alyr.config import get_settings
-from alyr.core import auth, mail, ratelimit
+from alyr.core import auth, mail, ratelimit, welcome
 from alyr.core.auth import Staff
 from alyr.routes.deps import current_staff
 
@@ -123,6 +123,8 @@ async def add_member(
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
             user_id = await auth.add_member(conn, staff.role, body.email, body.name, body.role)
+            # Who added them, as what, and how to sign in (specs/037).
+            await welcome.queue(conn, welcome.INVITE, user_id, staff.user_id)
     except (auth.AuthError, PermissionError) as error:
         raise _refuse(error) from error
     return {"id": str(user_id)}

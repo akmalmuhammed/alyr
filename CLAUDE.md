@@ -47,7 +47,8 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
   migrations/                 Plain SQL, applied in order by `python -m alyr.migrate`. Never edit an applied one
   src/alyr/channels/          Message channels: Meta Cloud API and the local simulator, same interface
   src/alyr/core/              Inbound path, contact identity, outbound layer (consent, 24-hour window), jobs,
-                              sign-in (auth), email (mail), sign-up (onboarding), pricing, back office,
+                              sign-in (auth), email (mail), the welcome and invite emails (welcome, specs/037),
+                              sign-up (onboarding), pricing, back office,
                               team accountability (team, D-028), workspace shell (workspace), templates,
                               signed customer links (links: a customer's order or booking link carries a token made for that page, never a contact ID),
                               actions (one set of actions behind the workspace and WhatsApp, D-065) and
