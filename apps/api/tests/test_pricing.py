@@ -315,9 +315,11 @@ def test_alyr_decides_which_types_may_sign_up_alone(client, client_factory, offi
 
 
 def test_a_type_without_screens_cannot_be_made_self_serve(office):
-    refused = office.put(f"{ADMIN}/pricing/types/restaurant",
-                         json={"availability": "self_serve", "price_mode": "prepared"})
-    assert refused.status_code == 422 and "set up with ALYR" in refused.json()["detail"]
+    """Wholesale (credit, price groups) and travel (requests) have no self-serve way."""
+    for key in ("wholesale", "travel"):
+        refused = office.put(f"{ADMIN}/pricing/types/{key}",
+                             json={"availability": "self_serve", "price_mode": "prepared"})
+        assert refused.status_code == 422 and "set up with ALYR" in refused.json()["detail"]
 
 
 def test_price_list_changes_reach_new_quotes_only(client, client_factory, office):

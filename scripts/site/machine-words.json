@@ -19,6 +19,8 @@
       "samples": "The screens and numbers drawn on alyr.qa are samples from fictional businesses ({shops}). They are not ALYR's results, and these are not customers.",
       "markdown": "Each page has a markdown copy at the same address with .md (the homepage at /index.md, the Arabic homepage at /ar.md). llms-full.txt holds them all.",
       "products": "Products",
+      "sectors": "For your kind of business",
+      "guides": "Guides for owners",
       "pages": "Pages",
       "optional": "Optional",
       "home": "Home",

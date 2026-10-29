@@ -8,6 +8,7 @@
 
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { api } from "../api";
+import FunnelView from "./Funnel";
 
 type Stage = "setting_up" | "ready" | "live";
 type Row = {
@@ -120,6 +121,7 @@ export default function OnboardingBoard() {
         <button type="button" role="tab" aria-selected={show === "whatsapp"} onClick={() => setShow("whatsapp")}>WhatsApp to connect <span className="num">{all.filter(toConnect).length}</span></button>
         <button type="button" role="tab" aria-selected={show === "all"} onClick={() => setShow("all")}>All</button>
       </nav>
+      <FunnelView />
       {error && <p className="sh-note" role="alert">{error}</p>}
       {rows.length === 0 ? <p className="sh-note">Nobody here.</p> : (
         <div className="tablewrap"><table>

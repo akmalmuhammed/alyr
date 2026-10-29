@@ -28,7 +28,8 @@ num="$(value projects describe "$PROJECT" --format='value(projectNumber)')"
 registry="$REGION-docker.pkg.dev"
 images="$registry/$PROJECT/alyr"
 api_url="https://alyr-api-$num.$REGION.run.app"
-web_url="${ALYR_PUBLIC_WEB_URL:-https://alyr-web-$num.$REGION.run.app}"
+# The public names come from the Cloudflare Worker in front (infra/cloudflare/edge).
+web_url="${ALYR_PUBLIC_WEB_URL:-https://app.alyr.qa}"
 
 # A short-lived token, not a stored key.
 value auth print-access-token | docker login -u oauth2accesstoken --password-stdin "https://$registry" >/dev/null
@@ -37,6 +38,7 @@ docker build -t "$images/alyr-api:$tag" "$here/apps/api"
 docker build -t "$images/alyr-web:$tag" \
   --build-arg ALYR_API_URL="$api_url" \
   --build-arg NEXT_PUBLIC_ALYR_WORKSPACE_URL="$web_url" \
+  --build-arg NEXT_PUBLIC_POSTHOG_KEY="${NEXT_PUBLIC_POSTHOG_KEY:-}" \
   "$here/apps/web"
 docker push "$images/alyr-api:$tag"
 docker push "$images/alyr-web:$tag"

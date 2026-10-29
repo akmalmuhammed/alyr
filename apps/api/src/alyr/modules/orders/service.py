@@ -13,7 +13,7 @@ from uuid import UUID, uuid4
 
 import asyncpg
 
-from alyr.core import jobs, team, templates
+from alyr.core import identity, jobs, team, templates
 from alyr.core.normalise import fmt_qar, fmt_qar_ar
 from alyr.core.outbound import Outbound
 from alyr.core.team import Actor
@@ -410,7 +410,7 @@ async def create_order(
     page (`totals`); `expected_total` is what the customer was shown, and if it is not what the
     order now comes to, the order is refused with the new figures (`total_changed`)."""
     contact = await conn.fetchrow(
-        "select id, lang, credit_limit, assigned_to, price_group_id from contacts "
+        "select id, lang, credit_limit, assigned_to, price_group_id, wa_user_id from contacts "
         "where id = $1", contact_id
     )
     if contact is None:
@@ -472,7 +472,8 @@ async def create_order(
     # A shop with no online account yet takes its money when the customer collects (ALY-170,
     # spec 024): the page and the chat still ask for "link", and it means "pay on collection".
     ways = await pay_ways.get(conn)
-    if payment == "link" and not ways["online"]:
+    # The owner's own test order moves no money, whatever the page offered (ALY-168).
+    if payment == "link" and (not ways["online"] or identity.is_test_user(contact["wa_user_id"])):
         payment = "later"
     if payment == "account":
         if not contact["credit_limit"] > 0:
@@ -752,9 +753,10 @@ _STATUS_TEXT = {
 async def cancel_order(
     conn: asyncpg.Connection, order_id: UUID, outbound: Outbound,
     actor: Actor = team.ASSISTANT, restock: bool | None = None, reason: str = "",
-    held_minutes: int | None = None,
+    held_minutes: int | None = None, notify: bool = True,
 ) -> dict | None:
-    """Cancel an order, and tell the customer.
+    """Cancel an order, and tell the customer (unless `notify` is off: the owner's own test
+    order, cancelled when the test is over, tells nobody).
 
     Stock goes back when the order had not been made yet (new or confirmed): the customer
     changed their mind, or nobody paid in time. For an order already ready or done the
@@ -778,7 +780,8 @@ async def cancel_order(
         order_id,
     )
     row = await conn.fetchrow(
-        "select number, status, payment, total, contact_id from orders where id = $1 for update",
+        "select number, status, payment, total, contact_id, is_test from orders "
+        "where id = $1 for update",
         order_id,
     )
     if row is None:
@@ -797,7 +800,8 @@ async def cancel_order(
         returned = await stock_holds.release(
             conn, order_id, actor, reason or "Order cancelled"
         )
-    refund_due = row["payment"] == "paid"
+    # Money for a test order never moved, so none is due back.
+    refund_due = row["payment"] == "paid" and not row["is_test"]
     # An order on the customer's credit account was a debt; cancelled, it is not.
     reversed_amount = 0
     if row["payment"] == "on_account":
@@ -823,6 +827,17 @@ async def cancel_order(
         # Nobody else would know: the money is in the shop's own payment account, and
         # only the shop can send it back. Tell the owner and managers (ALY-106).
         await alerts.refund_due(conn, outbound, row["number"], fmt_qar(row["total"]))
+    result = {
+        "number": row["number"], "status": "cancelled", "already": False,
+        "stock_returned": returned,
+        "refund_due": refund_due,
+        "refund_amount": row["total"] if refund_due else 0,
+        "refund_text": fmt_qar(row["total"]) if refund_due else None,
+        "credit_reversed": reversed_amount,
+        "credit_reversed_text": fmt_qar(reversed_amount) if reversed_amount else None,
+    }
+    if not notify:
+        return result
     lang = await conn.fetchval("select lang from contacts where id = $1", row["contact_id"])
     if held_minutes is not None:
         body = text.say("hold_expired", lang, {"number": row["number"], "minutes": held_minutes})
@@ -844,15 +859,7 @@ async def cancel_order(
             row["contact_id"], lang, shop["name"], shop["name_ar"], "reversal", reversed_amount,
             balance, row["number"],
         ))
-    return {
-        "number": row["number"], "status": "cancelled", "already": False,
-        "stock_returned": returned,
-        "refund_due": refund_due,
-        "refund_amount": row["total"] if refund_due else 0,
-        "refund_text": fmt_qar(row["total"]) if refund_due else None,
-        "credit_reversed": reversed_amount,
-        "credit_reversed_text": fmt_qar(reversed_amount) if reversed_amount else None,
-    }
+    return result
 
 
 async def set_status(
@@ -902,7 +909,7 @@ async def list_orders(conn: asyncpg.Connection) -> list[dict]:
         "select o.id, o.number, o.status, o.payment, o.total, o.created_at, o.fulfil_on, "
         "       o.table_label, o.subtotal, o.discount_total, o.fulfilment, o.delivery_fee, "
         "       o.delivery_zone_name, o.delivery_zone_name_ar, o.delivery_address, "
-        "       o.delivery_note, o.delivery_on, "
+        "       o.delivery_note, o.delivery_on, o.is_test, "
         "       c.name as customer, o.assigned_to, u.name as assignee, "
         "       o.price_group_name, o.price_group_name_ar, coalesce(g.is_default, false) "
         "         as price_group_default "
@@ -937,6 +944,9 @@ async def list_orders(conn: asyncpg.Connection) -> list[dict]:
             "id": str(o["id"]), "number": o["number"], "status": o["status"],
             "payment": o["payment"], "total": o["total"], "total_text": fmt_qar(o["total"]),
             "customer": o["customer"], "created_at": o["created_at"].isoformat(),
+            # The owner's own test order from the test line (ALY-168): marked in the list, and
+            # never counted anywhere that adds orders up.
+            "test": o["is_test"],
             # What the goods came to and what came off, only on an order that was given a
             # discount (ALY-150); an order without one reads exactly as it always did.
             **({"subtotal": o["subtotal"], "subtotal_text": fmt_qar(o["subtotal"]),

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ProductAnalytics } from "../../_analytics/ProductAnalytics";
 
 export const metadata: Metadata = {
   title: "Set up your business · ALYR",
@@ -6,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function StartLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return <>{children}<ProductAnalytics /></>;
 }

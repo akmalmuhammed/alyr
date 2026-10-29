@@ -15,7 +15,12 @@
 import type { ContactState, PageKey, ProductKey } from "./site";
 import { docsAr, docsEn, type DocLinkPage, type DocsPage } from "./copyDocs";
 import { shelfAr, shelfEn, type ShelfPage } from "./copyShelf";
+import { guideMeta, guidesAr, guidesEn, type GuidesCopy } from "./copyGuides";
+import { sectorMeta, sectorsAr, sectorsEn, type SectorsCopy } from "./copySectors";
 import { privacyAr, privacyEn, type PrivacyPage } from "./copyPrivacy";
+import { filmAr, filmEn, type HeroFilmWords } from "./copyFilm";
+
+export type { HeroFilmWords };
 
 export type Locale = "en" | "ar";
 
@@ -225,6 +230,9 @@ export type LiveEvent = FeedEvent & {
    * order confirmed). `summary`: the dashboard sentence that says so while it is changed,
    * in the engine's words for that count. */
   needs?: { key: string; by: 1 | -1; summary?: string };
+  /** The event taken back: the dashboard as it stood just before it (the hero film's 16:19, a
+   * minute before the sample's moment). */
+  undo?: boolean;
 };
 
 export type AgentFigure = {
@@ -301,7 +309,8 @@ type Home = {
     facts: string[];
     /** The facts while prices are off the page (`OFFER_LIVE`). */
     factsNoOffer: string[];
-    figure: { label: string };
+    /** The film beside the headline (D-062, HeroFilm.tsx). */
+    film: HeroFilmWords;
   };
   /** One order followed from the first message to collection (FlowDiagram), and a count of
    * who did what in it. */
@@ -443,6 +452,8 @@ export type SuiteFrame = {
     title: string; day: string; times: string[];
     /** The time taken: drawn in Volt, the screen's current state. */
     time: string;
+    /** Times already taken by other bookings that day, in ink (Maha J.'s 6:30 pm, booked at 16:16). */
+    taken: string[];
     service: string; who: string; booked: string;
     reminder: string; before: string; sentAt: string;
   };
@@ -560,7 +571,7 @@ export type Copy = {
   loop: {
     pause: string;
     play: string;
-    names: Record<"how" | "frame" | "figure", { pause: string; play: string }>;
+    names: Record<"how" | "frame" | "figure" | "film", { pause: string; play: string }>;
   };
   report: ReportCopy;
   agent: AgentFigure;
@@ -584,6 +595,9 @@ export type Copy = {
     cta: { title: string; body: string };
   };
   pages: { bookings: BookingsPage; agent: AgentPage; accounts: AccountsPage; shelf: ShelfPage; docs: DocsPage };
+  /** The sector pages (/for/...) and the owner guides (/guides), ALY-232 and ALY-233. */
+  sectors: SectorsCopy;
+  guides: GuidesCopy;
 };
 
 const en: Copy = {
@@ -633,6 +647,8 @@ const en: Copy = {
       description:
         "ALYR Docs makes numbered receipts from your sales and the payments you record, in Arabic and English. A shop without a commercial registration gets receipts; invoices need a CR number. Set up for you, in Qatar.",
     },
+    ...sectorMeta(sectorsEn),
+    ...guideMeta(guidesEn),
   },
   skip: "Skip to content",
   privacy: privacyEn,
@@ -743,6 +759,7 @@ const en: Copy = {
       how: { pause: "Pause the four scenes", play: "Play the four scenes" },
       frame: { pause: "Pause the six products", play: "Play the six products" },
       figure: { pause: "Pause the drawing", play: "Play the drawing" },
+      film: { pause: "Pause the film", play: "Play the film" },
     },
   },
   report: {
@@ -782,13 +799,13 @@ const en: Copy = {
           { at: "16:18", title: "Needs a look", flag: { from: "suggestion", key: "overdue" }, adds: [] },
         ],
         live: [
-          { at: "16:22", title: "Welcome menu sent", line: "To a new customer: “Welcome to Qirfa Bakery. How can we help?”", adds: ["sent"] },
+          { at: "16:22", title: "Order confirmation sent", line: "Order #1442 from Sara M., with its tracking page", adds: ["sent"] },
           { at: "16:23", title: "Order page sent", line: "Reem K. wrote “order”. The link went back at once.", adds: ["sent"] },
-          { at: "16:27", title: "Order received", line: "Order #1442 from Reem K., QAR\u00a0145, with its tracking page", adds: ["sent"], order: 145 },
+          { at: "16:27", title: "Order received", line: "Order #1443 from Reem K., QAR\u00a0145, with its tracking page", adds: ["sent"], order: 145 },
           { at: "16:30", title: "Booking reminder sent", line: "Cake tasting, today at 18:30\u00a0·\u00a0Maha J.", adds: ["sent", "booking_reminders"] },
           { at: "16:43", title: "Needs a look", flag: { from: "needs", key: "unconfirmed" }, adds: [], needs: { key: "unconfirmed", by: 1, summary: "3 orders need confirming." } },
-          { at: "16:45", title: "Ready message sent", line: "Order #1439 for Khalid A., ready for collection", adds: ["sent"] },
-          { at: "16:48", title: "Order confirmation sent", line: "Order #1442 from Reem K., with its tracking page", adds: ["sent"], needs: { key: "unconfirmed", by: -1 } },
+          { at: "16:45", title: "Ready message sent", line: "Order #1435 for Khalid A., ready for collection", adds: ["sent"] },
+          { at: "16:48", title: "Order confirmation sent", line: "Order #1443 from Reem K., with its tracking page", adds: ["sent"], needs: { key: "unconfirmed", by: -1 } },
         ],
       },
       salon: {
@@ -846,9 +863,7 @@ const en: Copy = {
       more: "See how we work",
       facts: ["We come to your shop, in Qatar", "From QAR 449 a month, no commission", "Arabic and English"],
       factsNoOffer: ["We come to your shop, in Qatar", "Six products, one workspace", "Arabic and English"],
-      figure: {
-        label: "The ALYR Agent home screen of a fictional bakery, and what ALYR did for it this afternoon",
-      },
+      film: filmEn,
     },
     see: {
       title: "One order, from the first message to collection",
@@ -1037,8 +1052,8 @@ const en: Copy = {
           inbox: "Inbox",
           rows: [
             { who: "Sara M.", text: "Here is our order page. Pick what you need.", at: "16:13" },
-            { who: "Lina F.", text: "Order #1441 received", at: "16:09" },
-            { who: "Noor A.", text: "Cake tasting, today at 18:00", at: "16:00" },
+            { who: "Omar A.", text: "Order #1440 is complete. Thank you.", at: "16:17" },
+            { who: "Maha J.", text: "Booking 113 confirmed: Cake tasting, today at 18:30", at: "16:16" },
           ],
           tag: "#1442 · New",
           newText: "Ordered 7 items, QAR 98",
@@ -1054,6 +1069,7 @@ const en: Copy = {
           day: "Thu 15 Oct",
           times: ["4:00 pm", "4:30 pm", "5:00 pm", "5:30 pm", "6:00 pm", "6:30 pm"],
           time: "6:00 pm",
+          taken: ["6:30 pm"],
           service: "Cake tasting",
           who: "Noor A.",
           booked: "Booked",
@@ -1077,7 +1093,7 @@ const en: Copy = {
       with: "With ALYR",
       uses: "What we would set up",
       split: {
-        label: "The same afternoon, today and with ALYR",
+        label: "The same hour, today and with ALYR",
         today: "Today",
         with: "With ALYR",
         slider: "Move the fold between today and with ALYR",
@@ -1119,6 +1135,39 @@ const en: Copy = {
           ask: "Show me for my bakery",
           prefill: "Hello ALYR, I run a bakery and I’d like to see how ALYR takes our orders.",
           subject: "How ALYR works for my bakery",
+        },
+        {
+          id: "groceries",
+          tab: "Groceries",
+          name: "Groceries and baqalas",
+          day: [
+            "Neighbours buy on credit, and the book behind the counter is the only record.",
+            "Flats and villas order by voice note and photo.",
+            "“How much do I owe?”, and someone has to add up the pages.",
+          ],
+          with: [
+            "Each credit sale goes on the customer’s account with one line from the staff phone, and the customer gets the new balance.",
+            "Regulars order from your list in the chat, and an order can go on their account.",
+            "Neighbours 30 days or more behind get a reminder when you press Send reminders.",
+          ],
+          products: ["chat", "accounts", "agent", "shelf"],
+          chats: [
+            { who: "Flat 12", kind: "voice", text: "0:31", at: "7:42 pm", n: 11 },
+            { who: "Ahmed", kind: "text", text: "Put it on my account, I’ll pay Thursday", at: "7:30 pm", n: 9 },
+            { who: "Fatma", kind: "text", text: "How much do I owe?", at: "7:12 pm", n: 8 },
+            { who: "Villa 7", kind: "photo", text: "This rice, 2 bags", at: "6:55 pm", n: 6 },
+            { who: "Saleh", kind: "text", text: "Do you have fresh milk?", at: "6:40 pm", n: 4 },
+          ],
+          orders: [
+            { ref: "#1188", who: "Flat 12", what: "Bread, eggs, 2 kg tomatoes", by: "Rafi", status: "On account", tone: "ok" },
+            { ref: "Credit", who: "Ahmed", what: "Credit sale, new balance sent", by: "Rafi", status: "Recorded", tone: "ok" },
+            { ref: "Credit", who: "Fatma", what: "Asked for her balance", by: "Rafi", status: "Balance sent", tone: "ok" },
+            { ref: "#1187", who: "Villa 7", what: "Basmati rice 5 kg × 2", by: "Joseph", status: "Ready, customer told", tone: "now" },
+            { ref: "Chat", who: "Saleh", what: "Asked about fresh milk", by: "Joseph", status: "Joseph is answering", tone: "wait" },
+          ],
+          ask: "Show me for my grocery",
+          prefill: "Hello ALYR, I run a grocery and I’d like to see the credit accounts and orders.",
+          subject: "How ALYR works for my grocery",
         },
         {
           id: "wholesale",
@@ -2901,6 +2950,8 @@ const en: Copy = {
     // ------------------------------------------------------------------- /docs
     docs: docsEn,
   },
+  sectors: sectorsEn,
+  guides: guidesEn,
 };
 
 const ar: Copy = {
@@ -2950,6 +3001,8 @@ const ar: Copy = {
       description:
         "يُصدر ALYR Docs إيصالات مرقّمة من مبيعاتك ومن الدفعات التي تسجّلها، بالعربية والإنجليزية. المحل الذي ليس له سجل تجاري تصدر له إيصالات، والفواتير تحتاج إلى رقم السجل التجاري. نجهّزه لك في قطر.",
     },
+    ...sectorMeta(sectorsAr),
+    ...guideMeta(guidesAr),
   },
   skip: "انتقل إلى المحتوى",
   privacy: privacyAr,
@@ -3060,6 +3113,7 @@ const ar: Copy = {
       how: { pause: "إيقاف حركة المشاهد الأربعة", play: "تشغيل حركة المشاهد الأربعة" },
       frame: { pause: "إيقاف حركة المنتجات الستة", play: "تشغيل حركة المنتجات الستة" },
       figure: { pause: "إيقاف حركة الرسم", play: "تشغيل حركة الرسم" },
+      film: { pause: "إيقاف حركة الفيلم", play: "تشغيل حركة الفيلم" },
     },
   },
   report: {
@@ -3099,13 +3153,13 @@ const ar: Copy = {
           { at: "16:18", title: "يحتاج نظرة", flag: { from: "suggestion", key: "overdue" }, adds: [] },
         ],
         live: [
-          { at: "16:22", title: "أُرسلت قائمة الترحيب", line: "لعميلة جديدة: «أهلاً بك في مخبز قرفة. كيف نقدر نساعدك؟»", adds: ["sent"] },
+          { at: "16:22", title: "أُرسل تأكيد الطلب", line: "الطلب رقم 1442 من سارة م.، مع صفحة تتبّعه", adds: ["sent"] },
           { at: "16:23", title: "أُرسلت صفحة الطلب", line: "كتبت ريم ك. «طلب»، فوصلها الرابط فوراً.", adds: ["sent"] },
-          { at: "16:27", title: "وصل طلب جديد", line: "الطلب رقم 1442 من ريم ك.، 145\u00a0ر.ق، مع صفحة تتبّعه", adds: ["sent"], order: 145 },
+          { at: "16:27", title: "وصل طلب جديد", line: "الطلب رقم 1443 من ريم ك.، 145\u00a0ر.ق، مع صفحة تتبّعه", adds: ["sent"], order: 145 },
           { at: "16:30", title: "أُرسل تذكير بموعد", line: "تذوّق الكيك، اليوم الساعة 18:30\u00a0·\u00a0مها ج.", adds: ["sent", "booking_reminders"] },
           { at: "16:43", title: "يحتاج نظرة", flag: { from: "needs", key: "unconfirmed" }, adds: [], needs: { key: "unconfirmed", by: 1, summary: "3 طلبات بحاجة إلى تأكيد." } },
-          { at: "16:45", title: "أُرسل إشعار الجاهزية", line: "الطلب رقم 1439 لخالد ع. جاهز للاستلام", adds: ["sent"] },
-          { at: "16:48", title: "أُرسل تأكيد الطلب", line: "الطلب رقم 1442 من ريم ك.، مع صفحة تتبّعه", adds: ["sent"], needs: { key: "unconfirmed", by: -1 } },
+          { at: "16:45", title: "أُرسل إشعار الجاهزية", line: "الطلب رقم 1435 لخالد ع. جاهز للاستلام", adds: ["sent"] },
+          { at: "16:48", title: "أُرسل تأكيد الطلب", line: "الطلب رقم 1443 من ريم ك.، مع صفحة تتبّعه", adds: ["sent"], needs: { key: "unconfirmed", by: -1 } },
         ],
       },
       salon: {
@@ -3163,9 +3217,7 @@ const ar: Copy = {
       more: "شاهد طريقة عملنا",
       facts: ["نأتي إلى محلك في قطر", "من 449 ر.ق شهرياً، بلا عمولة", "بالعربية والإنجليزية"],
       factsNoOffer: ["نأتي إلى محلك في قطر", "ستة منتجات في مساحة عمل واحدة", "بالعربية والإنجليزية"],
-      figure: {
-        label: "الشاشة الرئيسية لـ ALYR Agent في مخبز غير حقيقي، وما أنجزته ALYR له عصر اليوم",
-      },
+      film: filmAr,
     },
     see: {
       title: "طلب واحد، من الرسالة الأولى إلى الاستلام",
@@ -3354,8 +3406,8 @@ const ar: Copy = {
           inbox: "المحادثات",
           rows: [
             { who: "سارة م.", text: "حيّاك، اختاري طلبك من هنا.", at: "16:13" },
-            { who: "لينا ف.", text: "تم استلام الطلب رقم 1441", at: "16:09" },
-            { who: "نور أ.", text: "تذوّق الكيك، اليوم الساعة 18:00", at: "16:00" },
+            { who: "عمر ع.", text: "تم إنجاز الطلب رقم 1440. شكراً لك.", at: "16:17" },
+            { who: "مها ج.", text: "تم تأكيد الحجز رقم 113: تذوّق الكيك، اليوم الساعة 18:30", at: "16:16" },
           ],
           tag: "#1442 · جديد",
           newText: "طلبت 7 أصناف، 98 ر.ق",
@@ -3371,6 +3423,7 @@ const ar: Copy = {
           day: "الخميس 15 أكتوبر",
           times: ["4:00 م", "4:30 م", "5:00 م", "5:30 م", "6:00 م", "6:30 م"],
           time: "6:00 م",
+          taken: ["6:30 م"],
           service: "تذوّق الكيك",
           who: "نور أ.",
           booked: "محجوز",
@@ -3394,7 +3447,7 @@ const ar: Copy = {
       with: "مع ALYR",
       uses: "ما سنجهّزه لك",
       split: {
-        label: "العصر نفسه، اليوم ومع ALYR",
+        label: "الساعة نفسها، اليوم ومع ALYR",
         today: "اليوم",
         with: "مع ALYR",
         slider: "حرّك الطيّة بين اليوم ومع ALYR",
@@ -3436,6 +3489,39 @@ const ar: Copy = {
           ask: "أرني كيف تعمل لمخبزي",
           prefill: "مرحبا ALYR، عندي مخبز وأبي أشوف كيف تستقبلون طلباتنا.",
           subject: "كيف تعمل ALYR لمخبزي",
+        },
+        {
+          id: "groceries",
+          tab: "البقالات",
+          name: "البقالات والمحلات الغذائية",
+          day: [
+            "الجيران يشترون بالآجل، ولا سجل لذلك إلا دفتر الديون.",
+            "تطلب الشقق والفلل برسائل صوتية وصور.",
+            "«كم علي؟»، وعلى أحدهم أن يجمع الصفحات.",
+          ],
+          with: [
+            "كل بيع آجل يُسجَّل على حساب العميل بسطر واحد من هاتف الموظف، ويصل إلى العميل رصيده الجديد.",
+            "يطلب الزبائن الدائمون من قائمتك في المحادثة، ويمكن أن يُسجَّل الطلب على حسابهم.",
+            "يصل تذكير إلى كل جار تأخر 30 يوماً أو أكثر حين تضغط «إرسال التذكيرات».",
+          ],
+          products: ["chat", "accounts", "agent", "shelf"],
+          chats: [
+            { who: "شقة 12", kind: "voice", text: "0:31", at: "7:42 م", n: 11 },
+            { who: "أحمد", kind: "text", text: "سجّلها على حسابي، أدفع الخميس", at: "7:30 م", n: 9 },
+            { who: "فاطمة", kind: "text", text: "كم علي؟", at: "7:12 م", n: 8 },
+            { who: "فيلا 7", kind: "photo", text: "هذا الرز، كيسين", at: "6:55 م", n: 6 },
+            { who: "صالح", kind: "text", text: "عندكم حليب طازج؟", at: "6:40 م", n: 4 },
+          ],
+          orders: [
+            { ref: "#1188", who: "شقة 12", what: "خبز، بيض، 2 كغ طماطم", by: "رفيع", status: "على الحساب", tone: "ok" },
+            { ref: "آجل", who: "أحمد", what: "بيع آجل، أُرسل الرصيد الجديد", by: "رفيع", status: "سُجّل", tone: "ok" },
+            { ref: "آجل", who: "فاطمة", what: "سألت عن رصيدها", by: "رفيع", status: "أُرسل الرصيد", tone: "ok" },
+            { ref: "#1187", who: "فيلا 7", what: "رز بسمتي 5 كغ × 2", by: "جوزيف", status: "جاهز، وأُبلغ العميل", tone: "now" },
+            { ref: "محادثة", who: "صالح", what: "سأل عن الحليب الطازج", by: "جوزيف", status: "جوزيف يردّ", tone: "wait" },
+          ],
+          ask: "أرني كيف تعمل لبقالتي",
+          prefill: "مرحبا ALYR، عندي بقالة وأبي أشوف الحسابات الآجلة والطلبات.",
+          subject: "كيف تعمل ALYR لبقالتي",
         },
         {
           id: "wholesale",
@@ -5216,6 +5302,8 @@ const ar: Copy = {
     shelf: shelfAr,
     docs: docsAr,
   },
+  sectors: sectorsAr,
+  guides: guidesAr,
 };
 
 export const copy: Record<Locale, Copy> = { en, ar };

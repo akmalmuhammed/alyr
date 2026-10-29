@@ -1,5 +1,5 @@
 -- ALY-130, decision D-065 (written as D-040 and migration 0026 on 18 Oct; renumbered on
--- 28 Oct to follow main): owners and staff act on the shop from WhatsApp as well as from
+-- 28 Oct to follow main, to 0061 so it runs after every migration on main): owners and staff act on the shop from WhatsApp as well as from
 -- the workspace. This migration gives a staff WhatsApp number an owner (a person who can
 -- sign in), says which door each recorded action came through, and adds a per-person
 -- channel preference.
