@@ -89,3 +89,37 @@ def test_on_a_developer_machine_the_stand_in_still_plays_the_provider(client):
     assert client.get(WAYS).json()["online_possible"] is True
     new_business(client)
     assert check_line(check(client), "payments")["choices"] == ["cash_transfer", "online"]
+
+
+# ── a credit-account customer in the chat ─────────────────────────────────────────────
+
+
+def chat(client, text="", reply_id=""):
+    from test_simulator import say
+
+    return say(client, AHMED_PHONE, text, reply_id)[-1]
+
+
+def test_a_credit_customer_is_told_how_to_pay_the_shop_not_sent_a_link(production_like):
+    client = production_like
+    before = owner_sql("select count(*)::int as n from payment_requests")[0]["n"]
+    answer = chat(client, "pay")
+    assert answer["body"].startswith("Your balance is QAR ")
+    assert "Pay the shop by cash or bank transfer" in answer["body"]
+    assert "/pay/" not in answer["body"]
+    assert owner_sql("select count(*)::int as n from payment_requests")[0]["n"] == before
+
+
+def test_the_credit_menu_and_balance_offer_no_pay_now_button(production_like):
+    client = production_like
+    menu = chat(client, "hello")
+    assert [c["id"] for c in menu["payload"]["choices"]] == ["order", "balance"]
+    balance = chat(client, reply_id="balance")
+    assert balance["body"].startswith("Your balance is") and not balance["payload"].get("choices")
+
+
+def test_on_a_developer_machine_a_credit_customer_still_gets_the_stand_in_link(client):
+    assert "/pay/" in chat(client, "pay")["body"]
+    assert [c["id"] for c in chat(client, "hello")["payload"]["choices"]] == [
+        "order", "balance", "pay",
+    ]

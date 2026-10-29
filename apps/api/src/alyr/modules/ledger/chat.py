@@ -12,6 +12,7 @@ import asyncpg
 from alyr.channels.base import Choice, InboundMessage, OutboundMessage
 from alyr.core.normalise import fmt_qar, has_arabic, parse_amount, western_digits
 from alyr.modules.ledger import service
+from alyr.modules.orders import pay_ways
 
 BALANCE_WORDS = ("balance", "statement", "how much", "owe", "حساب", "رصيد", "كم علي", "كشف")
 PAY_WORDS = ("pay", "ادفع", "أدفع", "دفع", "سداد")
@@ -27,13 +28,13 @@ MENU = {
 }
 
 
-def _menu(to: UUID, lang: str, body: str) -> OutboundMessage:
+def _menu(to: UUID, lang: str, body: str, pay: bool) -> OutboundMessage:
+    """Pay now only where a payment link can take money (ALY-271)."""
     titles = MENU[lang]
-    return OutboundMessage(
-        to=to, kind="buttons", body=body,
-        choices=(Choice("order", titles[0]), Choice("balance", titles[1]),
-                 Choice("pay", titles[2])),
-    )
+    choices = (Choice("order", titles[0]), Choice("balance", titles[1]))
+    if pay:
+        choices += (Choice("pay", titles[2]),)
+    return OutboundMessage(to=to, kind="buttons", body=body, choices=choices)
 
 
 async def handle(
@@ -81,7 +82,7 @@ async def handle(
         f"أهلاً بك في {shop['name_ar'] or shop['name']}. كيف نقدر نساعدك؟" if lang == "ar"
         else f"Welcome to {shop['name']}. How can we help?"
     )
-    return [_menu(me, lang, greeting)]
+    return [_menu(me, lang, greeting, await pay_ways.online_possible(conn))]
 
 
 async def _balance(conn, contact, lang: str) -> OutboundMessage:
@@ -105,7 +106,7 @@ async def _balance(conn, contact, lang: str) -> OutboundMessage:
         body = f"Your balance is {fmt_qar(aged.balance)}."
         if lines:
             body += "\nLatest entries:\n" + "\n".join(lines)
-    if aged.balance <= 0:
+    if aged.balance <= 0 or not await pay_ways.online_possible(conn):
         return OutboundMessage(to=to, body=body)
     title = "ادفع الآن" if lang == "ar" else "Pay now"
     return OutboundMessage(
@@ -120,6 +121,16 @@ async def _pay(
     balance = (await service.aged(conn, contact["id"])).balance
     if balance <= 0:
         body = "لا يوجد عليك مبلغ مستحق." if lang == "ar" else "You have nothing to pay."
+        return OutboundMessage(to=to, body=body)
+    if not await pay_ways.online_possible(conn):
+        # No account of the shop's own takes money online yet: a link would open a page that
+        # cannot be paid (ALY-271). Say how the shop is paid instead.
+        how = pay_ways.say((await pay_ways.get(conn))["ways"], lang)
+        if lang == "ar":
+            body = f"رصيدك {fmt_qar(balance)}. ادفع للمحل {how}، وسيسجّل الدفعة في حسابك."
+        else:
+            body = (f"Your balance is {fmt_qar(balance)}. Pay the shop by {how}, "
+                    "and they will record it on your account.")
         return OutboundMessage(to=to, body=body)
     # "pay 500" pays part of the balance; never more than is owed.
     amount = min(part, balance) if part else balance

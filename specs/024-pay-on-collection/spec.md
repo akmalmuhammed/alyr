@@ -20,7 +20,10 @@ stops asking for money, the order keeps its stock, and staff mark it paid when t
   on a developer machine, where the stand-in page plays the provider. Until then every shop is paid on
   collection whatever it saved, with cash and transfer when it chose no ways; `PUT` refuses `online: true`
   (422); the Orders tab shows no online choice; the go-live list offers only *cash and transfer*.
-  `ALYR_STAND_IN_PAYMENTS=false` shows a developer machine what production gets.
+  `ALYR_STAND_IN_PAYMENTS=false` shows a developer machine what production gets. The credit-account
+  chat follows the same rule: no Pay now button, and "pay" is answered with the balance and how the shop
+  is paid, not a link. The credit reminders (templates whose last part is the link) still carry one:
+  they need templates without a link, approved by Meta, before a credit shop goes live.
 - **The page and the chat.** Both still ask for "link". With the link off, `create_order` makes it a *later*
   order: placed unpaid (`orders.payment = 'unpaid'`), no payment request, stock committed at once (nothing
   expires), the customer told "Pay by cash or bank transfer when you collect." in the order page's confirmation
