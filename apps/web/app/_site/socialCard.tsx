@@ -28,6 +28,18 @@ export function cardTitle(lines: string[]): string[] {
   return lines.flatMap((line) => line.split(/\n/)).map((line) => line.replace(/ /g, " "));
 }
 
+/** A long headline (a sector page's or a guide's) broken into lines of about `max`
+ * characters at word boundaries, so the card can set it large. */
+export function cardWrap(text: string, max = 30): string[] {
+  const out: string[] = [];
+  for (const word of text.replace(/ /g, " ").split(/\s+/)) {
+    const last = out.at(-1);
+    if (last !== undefined && (last + " " + word).length <= max) out[out.length - 1] = `${last} ${word}`;
+    else out.push(word);
+  }
+  return out;
+}
+
 const { bg: CARBON, ink: WHITE, ink2: CONCRETE, sep: SEPARATOR, volt: VOLT } = component.social;
 const SANS = font.family.sans[0];
 const MONO = font.family.mono[0];

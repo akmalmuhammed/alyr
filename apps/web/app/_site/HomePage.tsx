@@ -3,22 +3,21 @@ import { AgentFigure } from "./AgentFigure";
 import { Icon, type IconName } from "./brand";
 import { BusinessTabs } from "./BusinessTabs";
 import { ContactButton, ContactNote } from "./Contact";
-import { copy, type BusinessRow, type Locale, type Questions as QuestionSet } from "./copy";
+import { copy, type Locale, type Questions as QuestionSet } from "./copy";
 import { FigCaption } from "./Drawings";
-import { SampleMark, TickPath } from "./Frames";
+import { TickPath } from "./Frames";
 import { FlowDiagram } from "./FlowDiagram";
-import { FoldSplit } from "./FoldSplit";
+import { DaySplit } from "./DaySplit";
 import { HomeMotion } from "./HomeMotion";
 import { HeroFilm } from "./HeroFilm";
 import { HowCards } from "./HowCards";
 import { SAMPLE_ORDER, SAMPLES } from "./samples";
 import { SuiteFrame } from "./SuiteFrame";
 import { contactHref, Shell } from "./Shell";
-import { CONTACT_STATE, INCLUDED, OFFER_LIVE, PATHS, PRODUCTS, productPath } from "./site";
+import { CONTACT_STATE, INCLUDED, OFFER_LIVE, PATHS, PRODUCTS, productPath, SECTORS, sectorPage } from "./site";
 import { lines, rich } from "./Text";
 import "./kit.css";
 import "./home.css";
-import "./room.css";
 
 /**
  * The ALYR homepage: ALYR as the technology team an owner-run business never had (ALY-210,
@@ -186,6 +185,8 @@ function Suite({ locale }: { locale: Locale }) {
 function Business({ locale }: { locale: Locale }) {
   const t = copy[locale];
   const b = t.home.business;
+  // the sector page that draws this business's afternoon (ALY-232), if it has one
+  const pageOf = (id: string) => SECTORS.find((key) => t.sectors.items[key].row === id);
   const tags = (products: (typeof PRODUCTS)[number][]) =>
     // in the suite's order; ALYR Agent and ALYR Shelf come with each, so they close the row, lighter
     [...products]
@@ -215,15 +216,7 @@ function Business({ locale }: { locale: Locale }) {
           {b.rows.map((row, index) => (
             <div key={row.id} id={row.id} className={`biz-panel${index === 0 ? " is-on" : ""}`} role="tabpanel" aria-labelledby={`biz-tab-${row.id}`}>
               <h3 className="biz-name">{rich(row.name)}</h3>
-              <FoldSplit
-                label={b.split.label}
-                today={b.split.today}
-                with={b.split.with}
-                slider={b.split.slider}
-                value={b.split.value}
-                before={<DayChats row={row} words={b.split} />}
-                after={<DayOrders row={row} words={b.split} sample={t.fig.sample} />}
-              />
+              <DaySplit row={row} words={b.split} sample={t.fig.sample} />
               <div className="biz-cols">
                 <div className="biz-col biz-day">
                   <p className="mono-k">{b.day}</p>
@@ -259,7 +252,15 @@ function Business({ locale }: { locale: Locale }) {
                   <span className="biz-k">{b.uses}</span>
                   <span className="biz-tags">{tags(row.products)}</span>
                 </p>
-                <ContactButton locale={locale} variant="line" className="biz-ask" message={row} label={row.ask} />
+                <span className="biz-acts">
+                  {pageOf(row.id) && (
+                    <a className="link biz-more" href={PATHS[sectorPage(pageOf(row.id)!)][locale]}>
+                      <span>{t.sectors.items[pageOf(row.id)!].more}</span>
+                      <Icon name="arrow-right" className="ico ico-flip" />
+                    </a>
+                  )}
+                  <ContactButton locale={locale} variant="line" className="biz-ask" message={row} label={row.ask} />
+                </span>
               </div>
             </div>
           ))}
@@ -278,69 +279,8 @@ function Business({ locale }: { locale: Locale }) {
 }
 
 const BUSINESS_ICON: Record<string, IconName> = {
-  bakery: "bakery", wholesale: "crate", fashion: "hanger", restaurant: "cup", salon: "scissors", "home-services": "wrench",
+  bakery: "bakery", groceries: "basket", wholesale: "crate", fashion: "hanger", restaurant: "cup", salon: "scissors", "home-services": "wrench",
 };
-
-type SplitWords = (typeof copy)["en"]["home"]["business"]["split"];
-
-/** The owner's chats this afternoon, as WhatsApp lists them: voice notes, photos, "is it
- * ready??", each unread. The header counts them all; FoldSplit climbs to it once. */
-function DayChats({ row, words }: { row: BusinessRow; words: SplitWords }) {
-  const unread = row.chats.reduce((sum, chat) => sum + chat.n, 0);
-  return (
-    <div className="dc">
-      <div className="dc-top">
-        <b>{words.chats}</b>
-        <span className="dc-unread"><bdi data-unread={unread}>{unread}</bdi> {words.unread}</span>
-      </div>
-      <ul>
-        {row.chats.map((chat) => (
-          <li key={chat.who} className="dc-row">
-            <span className="dc-av">{chat.who.slice(0, 1)}</span>
-            <span className="dc-main">
-              <b>{chat.who}</b>
-              <span className="dc-prev">
-                {chat.kind !== "text" && <Icon name={chat.kind === "voice" ? "mic" : "camera"} />}
-                <span dir="auto">{chat.text}</span>
-              </span>
-            </span>
-            <span className="dc-side">
-              <span className="dc-at">{chat.at}</span>
-              <span className="dc-n">{chat.n}</span>
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-/** The same customers, row for row, as ALYR keeps them: a reference, what it is, who on the
- * team has it, and where it stands. */
-function DayOrders({ row, words, sample }: { row: BusinessRow; words: SplitWords; sample: string }) {
-  return (
-    <div className="do">
-      <div className="do-top">
-        <b>{words.orders}</b>
-        <SampleMark label={sample} />
-        <span className="do-count"><bdi>{row.orders.length}</bdi></span>
-      </div>
-      <ul>
-        {row.orders.map((order) => (
-          <li key={order.who + order.ref} className="do-row">
-            <span className="do-ref"><bdi>{order.ref}</bdi></span>
-            <span className="do-main">
-              <b>{order.who}</b>
-              <span>{order.what}</span>
-            </span>
-            <span className="do-by"><i>{order.by.slice(0, 1)}</i><span>{order.by}</span></span>
-            <span className={`do-st is-${order.tone}`}>{order.status}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
 
 // ------------------------------------------------------------ one order, start to finish
 function See({ locale }: { locale: Locale }) {

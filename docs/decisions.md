@@ -50,6 +50,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-045 | When two records turn out to be one customer, a withdrawal of consent always wins, append-only records are copied forward and nothing is deleted that cannot be found again | Accepted |
 | D-046 | The public site adds ALYR Shelf (the Catalog) and ALYR Docs (Documents), each with its own page; Payroll leaves the site until it is built; every product's state is "Set up for you" | Accepted |
 | D-056 | Search and AI visibility: be found, described correctly and contacted in Qatar, in search and AI assistants; profiles and verification switch on from settings | Accepted |
+| D-057 | Sector pages live under `/for/`, owner guides under `/guides/`, in both languages with the same Latin slugs | Accepted |
 | D-058 | The homepage hero's ALYR Agent figure (and /agent's) moves continuously, the one exception to "plays once", with a pause button and calm pacing | Accepted; the homepage hero is D-062's film since 28 Oct 2026, /agent keeps the live figure |
 | D-059 | Motion is always on: the site's figures (How we work, the products frame, the signature figures, with the flows, demos and the live Agent) keep playing, each with a Pause control; text arrives once | Accepted |
 | D-060 | ALYR runs on Google Cloud in Doha (Cloud Run, Cloud SQL, Secret Manager); replaces Azure (D-036) and the interim Cloudflare and Neon host (D-052); backups stay in Doha | Accepted |
@@ -1264,6 +1265,25 @@ Nothing claims more than the page, as before.
 - `llms.txt` and the markdown copies stay, although Google ignores `llms.txt`: they cost nothing and agents read them.
 - No fake reviews, no undisclosed posts, no AI claims about the product, no prices before the CR.
 
+## D-057 · Sector pages under `/for/`, owner guides under `/guides/`
+**Date** 25 Oct 2026 · **Status** Accepted (the founder, 28 Oct 2026, relayed by the coordinator: keep the `/for/` and `/guides/` addresses) · Linear ALY-232, ALY-233 · Plan: `docs/growth/visibility.md` (D-056) · Work: `docs/work/ALY-232-sector-pages/`
+
+**Decision.**
+- A page for one kind of business lives at `/for/<trade>`: `/for/bakeries`, `/for/salons`, `/for/groceries`, `/for/restaurants`, `/for/home-services`, `/for/fashion`.
+- The owner guides live at `/guides` (the index) and `/guides/<what it does>`: `/guides/stop-losing-whatsapp-orders`, `/guides/cut-no-shows-with-reminders`, `/guides/keep-track-of-who-owes-you`.
+- The Arabic pages add `/ar` in front and keep the same Latin slugs, as `/ar/chat` does.
+- There is no `/for` index: the homepage's "By business" is that index, and each sector page's breadcrumb points there.
+
+**Why.**
+- One prefix per kind of page keeps an audience (`/for/restaurants`) apart from a product (`/chat`) and from any product name to come.
+- "for bakeries" reads as what an owner searches; a guide's slug says what it helps with.
+- Latin slugs in both languages keep one address per page across languages and avoid percent-encoded Arabic in links shared on WhatsApp.
+
+**What it changed.** `PATHS` in `apps/web/app/_site/site.ts` lists the new pages (the sitemap, hreflang, the machine copies, the checks and `scripts/build-site.sh` all read it). The guides are signed "ALYR team" (D-043) and carry Article structured data; sector pages carry WebPage, BreadcrumbList and FAQPage.
+
+**Revisit when** the site goes to a second country (ALY-241), or Gulf keyword research (ALY-234) shows owners search for a trade by another word.
+
+---
 ## D-058 · The live Agent figure moves continuously
 **Date** 25 Oct 2026 · **Status** Accepted (the founder, 25 Oct 2026, relayed in the work's brief) · Branch `aly-hero-live-motion` · Rules: `.claude/skills/alyr-design/motion.md`, "The one exception" · Log: `docs/framer-review/06-live-motion-log.md`
 
