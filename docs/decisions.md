@@ -60,6 +60,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-064 | The owner's test order is marked in the database (a trigger sets `orders.is_test`), counted nowhere (a guard test reads every query), and cancelled with its stock returned when the test ends | Accepted |
 | D-067 | Terms and the privacy notice are versions ALYR publishes; an owner accepts them at sign-up and again when a new one is published, in an append-only record | Accepted |
 | D-068 | An owner who stops partway through setup gets two emails to come back, then none, and can stop them from the link; the funnel counts them | Accepted |
+| D-076 | Every table that holds a shop's rows has an index that starts with `tenant_id` (a test fails otherwise); a shop's default price group is made with the shop, so the order page only reads, in a read-only transaction; the worker looks for abandoned jobs once a minute | Accepted |
 | D-062 | The homepage hero is the explainer film (one afternoon at Qirfa Bakery in the product's own screens, three lanes at once, ending on the ALYR Agent home): "the product is the illustration" in motion; the hero's live ALYR Agent figure leaves the hero | Accepted |
 | D-070 | Product analytics with PostHog (EU), at two levels the visitor chooses: cookieless counting by default, cookies and masked recordings with consent; never customer pages, the inbox or names | Accepted |
 | D-071 | The homepage plays like a video: the film starts at load and moves at once; its Pause controls are not on show (only on hover, keyboard focus or while paused); a click on the film pauses it | Accepted |
@@ -1484,6 +1485,24 @@ Nothing claims more than the page, as before.
 
 **Revisit when** the founder or a visitor finds it busy or slow (`--pace` tunes all of it), or the product's screens change (the film draws them from the products frame's drawings and the real dashboard, so they follow).
 
+
+## D-076 · A shop's rows are found without reading every other shop's
+**Date** 29 Oct 2026 · **Status** Accepted (go-live checklist item 33 is Claude's, and the founder's instruction of 29 Oct was to finish the items in Claude's scope) · Linear ALY-275 (PERF-2, PERF-3, PERF-13) · Migration 0069 · Keeps D-002 (forced row-level security) and D-010 (the job queue in PostgreSQL)
+
+**Where we were.** Row-level security adds "this shop only" to every query, but several tables had no index that starts with the shop. An order's lines were found by reading every shop's lines; the catalog's "sold" counts read them all too. Every job claim also looked through the whole queue for jobs left running by a process that died. The go-live audit (29 Oct, a copy at production sizes: 300 shops, 50k orders, 244k jobs) measured the order page at 26 requests a second and that look at 91% of the database's time in a burst of messages. And the order page could write: it made a shop's default price group on the first read that found none.
+
+**The decision.**
+- **Every table that holds a shop's rows has an index whose first column is `tenant_id`.** `tests/test_tenant_isolation.py` fails for a table without one. A partial index counts: it covers the rows the shop works with. Migration 0069 adds seventeen indexes: for the twelve tables that had none (the job queue among them), and for orders by customer and by date.
+- **A query on `jobs` names the shop** (`jobs.THIS_SHOP`) as well as relying on the policy: the policy also lets the worker see every shop, and that "or" keeps PostgreSQL from using an index on the shop by itself.
+- **The worker looks for abandoned jobs once a minute,** among the running ones only (`jobs_running`), not on every claim. A job counts as abandoned after five minutes, so a minute more changes nothing for anyone.
+- **A shop is made with its default price group,** by the database (a trigger on `tenants`), whoever makes the shop: sign-up, the back office, a seed or a test. Shops without one got it in the migration. Reading the group never writes; a reset of a demo shop makes it again.
+- **The customer's order page reads in a read-only transaction.** PostgreSQL refuses a write there, so a write that creeps into a page fails its tests instead of slowing every page.
+
+**Measured** on a copy with 300 shops, 45k orders, 135k lines and 244k jobs, as the app role inside one shop, median of 15: an order's lines 13 ms → 0.2 ms; the catalog's sold counts 39 ms → 0.3 ms; the look for abandoned jobs 26 ms → 0.3 ms (and once a minute instead of on every claim); "is an alert for this item already waiting" 0.8 ms → 0.1 ms.
+
+**Chosen over** an index on every column a query filters by (more writes on every insert for little gain at 50 shops), dropping the worker's "or" from the jobs policy (it touches tenant separation; naming the shop in the few queries that need it is enough), and making the default group lazily in a separate write before the page (the page would still depend on a write).
+
+**Revisit when** a table grows past a few million rows (then measure the plans again), or the order page moves to a read replica (it is ready: it only reads).
 
 ## D-070 · Product analytics with PostHog, at two levels the visitor chooses
 **Date** 28–29 Oct 2026 · **Status** Accepted. The founder set up PostHog (startup credits) and asked for "the best out of this solution" on 29 Oct, after checking that no Qatar rule forbids it.

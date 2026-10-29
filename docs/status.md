@@ -12,7 +12,7 @@ Last updated: 29 Oct 2026 (self-serve onboarding for order businesses, the terms
 
 | Area | State | Where |
 |---|---|---|
-| Tenancy with forced row-level security | Built | `migrations/0001_core.sql`, `db.py` |
+| Tenancy with forced row-level security. **Every table that holds a shop's rows has an index that starts with the shop** (a test fails otherwise), a shop is made with its default price group, the customer's order page reads in a read-only transaction, and the worker looks for abandoned jobs once a minute, among the running ones only (D-076, ALY-275, migration 0069, not yet deployed) | Built | `migrations/0001_core.sql`, `0069_shop_first_indexes.sql`, `db.py` |
 | Simulator and Meta channels behind one interface | Built; Meta untested live | `channels/` |
 | **Jobs several at a time (D-077, ALY-276, go-live item 34):** the worker runs 5 jobs at once (`ALYR_JOBS_CONCURRENCY`), a customer's own jobs one after another in order; one connection to Meta kept open between sends; on SIGTERM it finishes what started and puts the rest back in the queue. Measured with a stand-in for Meta at 300 ms a send: 40 sends 12.2 s before, 2.5 s now | Built, not yet deployed | `core/jobs.py`, `channels/meta.py`, `worker.py` |
 | Contact identity by WhatsApp user ID, phone optional | Built | `core/identity.py` |

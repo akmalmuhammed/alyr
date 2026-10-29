@@ -159,6 +159,35 @@ def test_every_tenant_table_has_forced_row_level_security():
     assert problems == []
 
 
+def test_every_tenant_table_has_an_index_that_starts_with_the_shop():
+    """Row-level security adds "this shop only" to every query. Without an index that starts
+    with tenant_id, a shop's screen, its export or its deletion reads every other shop's rows
+    to find its own (ALY-275: an order's lines were found that way). A partial index counts:
+    it covers the rows the shop works with (the jobs still waiting, say)."""
+
+    async def scenario():
+        conn = await asyncpg.connect(OWNER_DSN)
+        try:
+            return await conn.fetch(
+                """
+                select c.relname as name
+                from pg_class c join pg_namespace n on n.oid = c.relnamespace
+                where n.nspname = 'public' and c.relkind = 'r'
+                  and exists (select 1 from pg_attribute a where a.attrelid = c.oid
+                              and a.attname = 'tenant_id' and not a.attisdropped)
+                  and not exists (
+                      select 1 from pg_index i
+                      join pg_attribute a on a.attrelid = c.oid and a.attnum = i.indkey[0]
+                      where i.indrelid = c.oid and a.attname = 'tenant_id')
+                order by 1
+                """
+            )
+        finally:
+            await conn.close()
+
+    assert [t["name"] for t in run(scenario()) if t["name"] not in GLOBAL_TABLES] == []
+
+
 def test_app_role_cannot_bypass_row_level_security():
     async def scenario():
         conn = await asyncpg.connect(OWNER_DSN)

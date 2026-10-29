@@ -35,7 +35,7 @@ async def queue(
     item as it is when it runs, so a second would find nothing new. `run_at` holds the job
     back (an alert that must wait for the morning)."""
     waiting = await conn.fetchval(
-        "select true from jobs where kind = $1 and status = 'queued' "
+        f"select true from jobs where {jobs.THIS_SHOP} and kind = $1 and status = 'queued' "
         "and payload->>'item_id' = $2 limit 1",
         kind, str(item_id),
     )

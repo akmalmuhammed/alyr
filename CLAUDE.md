@@ -149,6 +149,7 @@ scripts/api-in-docker.sh uv run pytest -q # where Windows blocks the compiled da
 - New tenant-owned tables copy the pattern in `migrations/0001_core.sql`: `tenant_id` with the `current_setting` default, RLS enabled and forced, the `tenant_isolation` policy, grants to `alyr_app`. `tests/test_tenant_isolation.py` fails if any of that is missing.
 - The app role cannot write `tenants` or `channel_numbers`. Creating a tenant is an owner-role action.
 - Workspace routes take the tenant from `Depends(current_tenant)` or `Depends(current_staff)` in `routes/deps.py`, which read the session. Never take a tenant ID from the request.
+- A new tenant-owned table gets an index whose first column is `tenant_id` (`tests/test_tenant_isolation.py` fails otherwise; D-076). A query on `jobs` names the shop with `jobs.THIS_SHOP`, because the worker's clause in its policy keeps the index from being used. What a customer's page only reads runs in `db.tenant(id, readonly=True)`.
 
 ## Conventions
 
