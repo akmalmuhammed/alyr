@@ -187,3 +187,13 @@
 .ops-access { display: grid; gap: 8px; margin-bottom: 8px; }
 .ops-access p { margin: 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
 .ops-access select, .ops-access input[type="date"] { min-height: 32px; padding: 0 8px; border-radius: 8px; border: 0; box-shadow: 0 0 0 1px var(--hair-2) inset; background: transparent; color: inherit; font: inherit; }
+
+/* The onboarding funnel (ALY-169) */
+.ops-funnel { margin: 0 0 14px; color: var(--ink-2); }
+.ops-funnel p { margin: 0 0 8px; }
+
+/* What a business accepted of the terms and the privacy notice (ALY-167) */
+.ops-terms { display: grid; gap: 4px; margin-bottom: 12px; }
+.ops-terms ul { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; font-size: var(--ui-body-sm); }
+.ops-terms code { font-family: var(--font-ui-mono); font-size: var(--ui-small); }
+.ops-terms-open { color: var(--warn); }

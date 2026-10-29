@@ -24,7 +24,7 @@ import asyncpg
 
 from alyr import catalog
 from alyr.catalog import Text
-from alyr.core import access, whatsapp_setup
+from alyr.core import access, terms, whatsapp_setup
 from alyr.modules.orders import pay_ways
 
 OWNERS = ("client", "alyr")
@@ -85,6 +85,14 @@ CHECKS: tuple[Check, ...] = (
         "price",
         Text("Your ALYR plan is accepted", "خطتك مع ALYR مقبولة"),
         Text("Read your price and accept it.", "اطّلع على سعرك واقبله."),
+    ),
+    Check(
+        "terms",
+        Text("You accepted the terms and the privacy notice", "قبلت الشروط وإشعار الخصوصية"),
+        Text(
+            "Read the terms and the privacy notice and accept them.",
+            "اقرأ الشروط وإشعار الخصوصية ثم اقبلهما.",
+        ),
     ),
     Check(
         "paid",
@@ -155,6 +163,11 @@ async def _test(conn: asyncpg.Connection, modules: set[str]) -> bool:
     )
 
 
+async def _terms_accepted(conn: asyncpg.Connection) -> bool:
+    # Every current version of the customer agreement and the privacy notice (core/terms.py).
+    return not await terms.pending(conn)
+
+
 async def _price(conn: asyncpg.Connection, modules: set[str]) -> bool:
     # Row-level security shows the owner only their own client's quotes.
     return await _exists(conn, "select 1 from quotes where status = 'accepted'")
@@ -173,6 +186,7 @@ _PASSES: dict[str, Evaluate] = {
     "hours": lambda conn, modules: _exists(conn, "select 1 from business_hours"),
     "test": _test,
     "price": _price,
+    "terms": lambda conn, modules: _terms_accepted(conn),
     "paid": lambda conn, modules: access.settled(conn),
 }
 
@@ -425,6 +439,33 @@ def board_row(row: asyncpg.Record, now: datetime) -> dict:
         "whatsapp": _board_whatsapp(row["whatsapp"], steps),
         # The Meta number attached to the business (ALY-166), if any.
         "number": row["number"],
+    }
+
+
+def funnel(raw: dict | None) -> dict:
+    """The funnel for the back office, from `admin_onboarding_funnel()`: each step with how
+    many businesses reached it and the typical hours from sign-up, in the order people get
+    there, and where the businesses that are not live are stuck. Percentages are of those who
+    started, so a handful of businesses reads as a handful, not as a trend."""
+    raw = raw or {}
+    started = raw.get("started") or 0
+    labels = {c.key: c.label.en for c in CHECKS}
+    steps = [
+        {"key": s["key"], "label": labels.get(s["key"], s["key"]), "reached": s["reached"],
+         "share": round(100 * s["reached"] / started) if started else 0,
+         "median_hours": s["median_hours"]}
+        for s in raw.get("steps", [])
+    ]
+    return {
+        "started": started, "ready": raw.get("ready") or 0, "live": raw.get("live") or 0,
+        "median_hours_to_ready": raw.get("median_hours_to_ready"),
+        "median_hours_to_live": raw.get("median_hours_to_live"),
+        "helped": raw.get("helped") or 0, "helped_live": raw.get("helped_live") or 0,
+        "quiet": raw.get("quiet") or 0, "steps": steps,
+        "stuck_on": [
+            {"key": k, "label": labels.get(k, k), "count": n}
+            for k, n in sorted((raw.get("stuck_on") or {}).items(), key=lambda kv: -kv[1])
+        ],
     }
 
 

@@ -5,6 +5,8 @@
 #   infra/gcp/setup.sh infra         network, database, registry, accounts, export bucket, budget
 #   infra/gcp/setup.sh secrets       generate database passwords and the link secret; ask for the rest
 #   infra/gcp/setup.sh env-secrets <.env>  or: copy the R2, Meta and Resend values from a .env file
+#   infra/gcp/setup.sh set-secret <name>   replace one secret (typed, hidden) and restart the apps
+#   infra/gcp/setup.sh meta-webhook <app id>  point Meta's WhatsApp webhook at api.alyr.qa
 #   infra/gcp/setup.sh apps <tag>    migration job, API, worker, web app and the nightly export
 #   infra/gcp/setup.sh first-admin <tag> <email> <name>  the first person who can sign in
 #   infra/gcp/setup.sh github        let GitHub Actions deploy without a stored key; print its variables
@@ -63,7 +65,7 @@ SECRETS=(
 )
 secrets_flag() { local IFS=,; local s=("${SECRETS[@]/%/:latest}"); echo "${s[*]}"; }
 env_flag() {
-  echo "ALYR_ENV=production,ALYR_JOBS_INLINE=false,ALYR_PUBLIC_WEB_URL=${ALYR_PUBLIC_WEB_URL:-$(url alyr-web)},ALYR_R2_BUCKET=${ALYR_R2_BUCKET:-alyr-media},ALYR_MEDIA_BASE_URL=${ALYR_MEDIA_BASE_URL:-https://media.alyr.qa}"
+  echo "ALYR_ENV=production,ALYR_JOBS_INLINE=false,ALYR_PUBLIC_WEB_URL=${ALYR_PUBLIC_WEB_URL:-https://app.alyr.qa},ALYR_R2_BUCKET=${ALYR_R2_BUCKET:-alyr-media},ALYR_MEDIA_BASE_URL=${ALYR_MEDIA_BASE_URL:-https://media.alyr.qa}"
 }
 private_net=(--network="$NETWORK" --subnet="$SUBNET" --vpc-egress=private-ranges-only)
 
@@ -75,7 +77,7 @@ case "${1:-}" in
       artifactregistry.googleapis.com cloudscheduler.googleapis.com compute.googleapis.com \
       servicenetworking.googleapis.com iamcredentials.googleapis.com iam.googleapis.com \
       sts.googleapis.com storage.googleapis.com billingbudgets.googleapis.com \
-      logging.googleapis.com monitoring.googleapis.com
+      logging.googleapis.com monitoring.googleapis.com cloudresourcemanager.googleapis.com
 
     # Google keeps logs in a "global" bucket unless told otherwise. The apps' logs carry
     # request paths and errors that can name a shop's customers, so they stay in Doha.
@@ -187,6 +189,54 @@ case "${1:-}" in
     echo "Done. Next: infra/gcp/push-images.sh <tag>, then infra/gcp/setup.sh apps <tag>"
     ;;
 
+  set-secret)
+    # Replace one secret, typed and hidden (for example a new Meta access token), then
+    # start new copies of the API and the worker so they read it.
+    name="${2:?usage: setup.sh set-secret <secret name, e.g. meta-access-token>}"
+    secret_exists "$name" || { echo "setup: no secret called $name" >&2; exit 1; }
+    read -r -s -p "New value for $name (paste once, then Enter): " value; echo
+    value="$(printf '%s' "$value" | tr -d '[:space:]')"
+    [ -n "$value" ] || { echo "Nothing typed; nothing changed."; exit 1; }
+    if [ "$name" = meta-access-token ]; then
+      # Ask Meta before storing. Only the result is shown: Meta's error text repeats the
+      # token back, so it is never printed.
+      verdict="$(curl -sS -H "Authorization: Bearer $value" "https://graph.facebook.com/v25.0/me" |
+        python -c "import json, sys; e = json.load(sys.stdin).get('error'); print('refused, error code %s' % e.get('code') if e else 'accepted')")"
+      echo "Meta: $verdict"
+      [ "$verdict" = accepted ] || { unset value; echo "Not stored; nothing changed."; exit 1; }
+    fi
+    put_secret "$name" "$value"
+    unset value
+    echo "  stored $name"
+    stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+    g run services update alyr-api --region="$REGION" --update-env-vars="ALYR_SECRETS_AT=$stamp" >/dev/null 2>&1
+    g run worker-pools update alyr-worker --region="$REGION" --update-env-vars="ALYR_SECRETS_AT=$stamp" >/dev/null 2>&1
+    echo "The API and the worker restarted with the new $name."
+    ;;
+
+  meta-webhook)
+    # Point the Meta app's WhatsApp webhook at the API (https://api.alyr.qa/webhooks/whatsapp),
+    # with the app secret and verify phrase from Secret Manager, never shown. Meta checks the
+    # address at once by calling it with the verify phrase, so the API must already be live.
+    app_id="${2:?usage: setup.sh meta-webhook <Meta app ID> [callback URL]}"
+    callback="${3:-https://api.alyr.qa/webhooks/whatsapp}"
+    graph="https://graph.facebook.com/v25.0/$app_id/subscriptions"
+    app_token="$app_id|$(read_secret meta-app-secret)"
+    fields="$(curl -fsS -G "$graph" --data-urlencode "access_token=$app_token" | python -c "
+import json, sys
+for s in json.load(sys.stdin).get('data', []):
+    if s.get('object') == 'whatsapp_business_account':
+        print(','.join(f['name'] for f in s.get('fields', [])))")"
+    fields="${fields:-messages}"
+    curl -fsS -X POST "$graph" --data-urlencode "access_token=$app_token" \
+      --data-urlencode "object=whatsapp_business_account" \
+      --data-urlencode "callback_url=$callback" \
+      --data-urlencode "verify_token=$(read_secret meta-verify-token)" \
+      --data-urlencode "fields=$fields" >/dev/null
+    unset app_token
+    echo "Meta now sends WhatsApp events ($fields) to $callback"
+    ;;
+
   env-secrets)
     # The founder's shortcut for `secrets`: copy the R2, Meta and Resend values already in
     # a local .env file straight into Secret Manager. Values are never shown; only the
@@ -287,7 +337,7 @@ case "${1:-}" in
       --set-secrets="ALYR_MIGRATION_URL=migration-url:latest,ALYR_DATABASE_URL=database-url:latest,ALYR_META_PHONE_NUMBER_ID=meta-phone-number-id:latest,ALYR_META_WABA_ID=meta-waba-id:latest" \
       --cpu=1 --memory=512Mi --max-retries=0 --task-timeout=5m
     g run jobs execute alyr-first-admin --region="$REGION" --wait
-    echo "Sign in at $(url alyr-web)/login with $email (a code is emailed)."
+    echo "Sign in at https://app.alyr.qa/login with $email (a code is emailed)."
     ;;
 
   github)
@@ -333,9 +383,14 @@ for c in json.load(sys.stdin).get('notificationChannels', []):
     fi
     for check in "alyr-api|/health/ready|API cannot reach the database" \
                  "alyr-api|/health/worker|Worker stopped checking in (reminders are not going out)" \
-                 "alyr-web|/login|Web app down (customer pages and workspace)"; do
+                 "alyr-web|/login|Web app down (customer pages and workspace)"                  "alyr.qa|/|Public site down (alyr.qa)"                  "app.alyr.qa|/login|Workspace address down (app.alyr.qa, through Cloudflare)"                  "api.alyr.qa|/health/ready|API address down (api.alyr.qa, where WhatsApp messages arrive)"; do
       IFS='|' read -r service path title <<<"$check"
-      host="${service}-$(number).$REGION.run.app"
+      # A Cloud Run service by name, or a public address. The public ones go through
+      # Cloudflare (the alyr-edge and alyr-site Workers), which the run.app checks cannot see.
+      case "$service" in
+        *.*) host="$service" ;;
+        *) host="${service}-$(number).$REGION.run.app" ;;
+      esac
       if ! value monitoring uptime list-configs --format='value(displayName)' | grep -qx "$title"; then
         g monitoring uptime create "$title" --resource-type=uptime-url \
           --resource-labels="host=$host,project_id=$PROJECT" --path="$path" --protocol=https \
@@ -361,6 +416,38 @@ for c in json.load(sys.stdin).get('notificationChannels', []):
       fi
       echo "  watching https://$host$path"
     done
+    # Errors: a server error answered by the API or web app, a crash (traceback) or a job that
+    # failed (a WhatsApp send, a reminder) in any of them. Google's Error Reporting cannot read
+    # logs kept in Doha, so this is a log-based count with its own alert. Python's log lines
+    # carry no severity on Cloud Run, hence the text match.
+    errors="alyr-app-errors"
+    if ! exists g logging metrics describe "$errors"; then
+      g logging metrics create "$errors" \
+        --description="ALYR: server errors, crashes and failed jobs" \
+        --log-filter='(resource.type="cloud_run_revision" AND resource.labels.service_name=("alyr-api" OR "alyr-web") AND httpRequest.status>=500) OR ((resource.type="cloud_run_revision" OR resource.type="cloud_run_worker_pool" OR resource.type="cloud_run_job") AND (textPayload:"Traceback" OR textPayload:"ERROR:" OR textPayload:" failed: "))' \
+        >/dev/null
+    fi
+    title="ALYR errors (server errors, crashes, failed jobs)"
+    if ! call "$api/alertPolicies" | grep -q "\"displayName\": \"$title\""; then
+      call -X POST "$api/alertPolicies" -d "{
+        \"displayName\": \"$title\",
+        \"combiner\": \"OR\",
+        \"notificationChannels\": [\"$channel\"],
+        \"alertStrategy\": {\"autoClose\": \"1800s\"},
+        \"documentation\": {\"content\": \"Read the lines in Logs Explorer (project alyr-prod) with the filter of the log-based metric $errors.\", \"mimeType\": \"text/markdown\"},
+        \"conditions\": [{
+          \"displayName\": \"Any error in 5 minutes\",
+          \"conditionThreshold\": {
+            \"filter\": \"metric.type=\\\"logging.googleapis.com/user/$errors\\\" AND resource.type=one_of(\\\"cloud_run_revision\\\", \\\"cloud_run_job\\\", \\\"cloud_run_worker_pool\\\")\",
+            \"aggregations\": [{\"alignmentPeriod\": \"300s\", \"perSeriesAligner\": \"ALIGN_SUM\",
+                                \"crossSeriesReducer\": \"REDUCE_SUM\"}],
+            \"comparison\": \"COMPARISON_GT\", \"thresholdValue\": 0, \"duration\": \"0s\",
+            \"trigger\": {\"count\": 1}
+          }
+        }]
+      }" >/dev/null
+    fi
+    echo "  watching errors (log-based metric $errors)"
     echo "Alerts go to $email (Google sends a confirmation email the first time)."
     ;;
 
@@ -373,7 +460,7 @@ for c in json.load(sys.stdin).get('notificationChannels', []):
     ;;
 
   *)
-    sed -n '2,16p' "$0"
+    sed -n '2,18p' "$0"
     exit 1
     ;;
 esac

@@ -173,7 +173,7 @@ async def order_parts(conn: asyncpg.Connection, order_id: UUID):
     order in this shop."""
     order = await conn.fetchrow(
         "select o.id, o.number, o.status, o.payment, o.total, o.contact_id, c.name, c.phone, "
-        "c.lang, c.email, o.delivery_fee, o.delivery_zone_name, o.delivery_zone_name_ar "
+        "c.lang, c.email, o.delivery_fee, o.delivery_zone_name, o.delivery_zone_name_ar, o.is_test "
         "from orders o join contacts c on c.id = o.contact_id where o.id = $1",
         order_id,
     )
@@ -218,6 +218,10 @@ async def order_body(
     if parts is None:
         return None
     order, lines = parts
+    if order["is_test"]:
+        # The owner's own test order gets no document: a number in the shop's sequence is
+        # never spent on it (ALY-168).
+        return None
     cfg = await doc_settings.get(conn)
     body = {
         "kind": kind, "customer": _customer(order), "contact_id": order["contact_id"],
@@ -381,6 +385,8 @@ async def from_order(conn: asyncpg.Connection, staff: Staff, order_id: UUID, kin
     if parts is None:
         raise DocumentError("source_not_found", 404)
     order, _ = parts
+    if order["is_test"]:
+        raise DocumentError("order_is_test", 409)
     if order["status"] == "cancelled":
         raise DocumentError("order_cancelled", 409)
     paid = order["payment"] == "paid"

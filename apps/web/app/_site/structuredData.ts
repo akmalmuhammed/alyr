@@ -15,10 +15,14 @@
 // - the questions are the ones the page shows, in its contact state and offer state.
 //
 // Types: Organization and WebSite (homepage), SoftwareApplication and BreadcrumbList (each
-// product page), FAQPage (every page with questions). Rich results are not expected: Google
+// product page), WebPage and BreadcrumbList (each sector page, ALY-232), Article and
+// BreadcrumbList (each guide, ALY-233; the author is "ALYR team", an organisation, never a
+// person, D-043), CollectionPage (the guides' index), FAQPage (every page with questions). Rich results are not expected: Google
 // shows FAQ results only for government and health sites, and software results need a price
 // and a rating, which ALYR will not invent.
 
+// the sector pages and guides (ALY-232, ALY-233), on a line of their own
+import { GUIDES, guidePage, pageKind, sectorPage, type GuideKey, type SectorKey } from "./site";
 import { copy, type Locale, type Question } from "./copy";
 import { CONTACT_EMAIL, CONTACT_STATE, OFFER_LIVE, PATHS, SAME_AS, SITE_URL, WHATSAPP_NUMBER, type PageKey, type ProductKey } from "./site";
 
@@ -87,9 +91,67 @@ function faq(locale: Locale, page: PageKey, items: Question[]): Json | null {
 
 function questionsOf(locale: Locale, page: PageKey): Question[] {
   const t = copy[locale];
-  if (page === "home") return t.home.faq.items;
-  if (page === "chat" || page === "company" || page === "privacy") return [];
-  return t.pages[page].faq.items;
+  const kind = pageKind(page);
+  if (kind.kind === "home") return t.home.faq.items;
+  if (kind.kind === "sector") return t.sectors.items[kind.key].faq.items;
+  if (kind.kind !== "product" || kind.key === "chat") return [];
+  return t.pages[kind.key].faq.items;
+}
+
+type Crumb = [name: string, path: string];
+
+function breadcrumbs(crumbs: Crumb[]): Json {
+  return {
+    "@type": "BreadcrumbList",
+    itemListElement: crumbs.map(([name, path], index) => ({ "@type": "ListItem", position: index + 1, name, item: url(path) })),
+  };
+}
+
+/** A sector page: a web page about one kind of business, from its own title and description,
+ * naming the products the page says it would set up. */
+function sectorGraph(locale: Locale, key: SectorKey): Json[] {
+  const t = copy[locale];
+  const s = t.sectors.items[key];
+  const path = PATHS[sectorPage(key)][locale];
+  return [
+    {
+      "@type": "WebPage",
+      "@id": `${url(path)}#page`,
+      name: s.title,
+      description: s.meta.description,
+      url: url(path),
+      inLanguage: locale,
+      isPartOf: { "@id": SITE_ID },
+      publisher: { "@id": ORG_ID },
+      about: { "@type": "Thing", name: s.name },
+      mentions: s.products.rows.map((row) => ({ "@type": "SoftwareApplication", name: t.products.items[row.key].name, url: url(PATHS[row.key][locale]) })),
+    },
+    breadcrumbs([
+      [t.sectors.crumbs.home, PATHS.home[locale]],
+      [t.sectors.crumbs.business, `${PATHS.home[locale]}#business`],
+      [s.name, path],
+    ]),
+  ];
+}
+
+/** A guide: an article by the ALYR team, dated as the page prints it. */
+function guideArticle(locale: Locale, key: GuideKey): Json {
+  const g = copy[locale].guides;
+  const guide = g.items[key];
+  const path = PATHS[guidePage(key)][locale];
+  return {
+    "@type": "Article",
+    "@id": `${url(path)}#article`,
+    headline: guide.title,
+    description: guide.meta.description,
+    url: url(path),
+    mainEntityOfPage: url(path),
+    inLanguage: locale,
+    datePublished: guide.published,
+    dateModified: guide.modified,
+    author: { "@type": "Organization", name: g.by, url: url(PATHS.guides[locale]) },
+    publisher: { "@id": ORG_ID },
+  };
 }
 
 /** The JSON-LD graph for one page, in its language. */
@@ -105,7 +167,10 @@ export function structuredData(locale: Locale, page: PageKey): Json {
       inLanguage: locale,
       publisher: { "@id": ORG_ID },
     });
-  } else if (page === "company" || page === "privacy") {
+  }
+  const kind = pageKind(page);
+  if (kind.kind === "plain") {
+    const page = kind.key;
     graph.push(
       {
         "@type": "WebPage",
@@ -123,8 +188,39 @@ export function structuredData(locale: Locale, page: PageKey): Json {
         ],
       },
     );
-  } else {
-    const key = page as ProductKey;
+  }
+  if (kind.kind === "sector") graph.push(...sectorGraph(locale, kind.key));
+  if (kind.kind === "guide") {
+    graph.push(
+      guideArticle(locale, kind.key),
+      breadcrumbs([
+        [t.sectors.crumbs.home, PATHS.home[locale]],
+        [t.guides.crumb, PATHS.guides[locale]],
+        [t.guides.items[kind.key].title, PATHS[page][locale]],
+      ]),
+    );
+  }
+  if (kind.kind === "guides") {
+    graph.push(
+      {
+        "@type": "CollectionPage",
+        "@id": `${url(PATHS.guides[locale])}#page`,
+        name: t.guides.title,
+        description: t.guides.meta.description,
+        url: url(PATHS.guides[locale]),
+        inLanguage: locale,
+        isPartOf: { "@id": SITE_ID },
+        publisher: { "@id": ORG_ID },
+        hasPart: GUIDES.map((key) => guideArticle(locale, key)),
+      },
+      breadcrumbs([
+        [t.sectors.crumbs.home, PATHS.home[locale]],
+        [t.guides.crumb, PATHS.guides[locale]],
+      ]),
+    );
+  }
+  if (kind.kind === "product") {
+    const key: ProductKey = kind.key;
     const product = t.products.items[key];
     const meta = t.meta[key];
     graph.push(
