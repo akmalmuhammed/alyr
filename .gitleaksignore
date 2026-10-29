@@ -1,0 +1,4 @@
+# False positives gitleaks reports on commits already pushed (docs/hygiene.md: never rewrite
+# shared history). Each line is the fingerprint from the CI log; say why beside it.
+# A setting's name and value in the go-live runbook (ALYR_PADDLE_ENVIRONMENT=live), not a key.
+6e9101952051a737c3cc635619eedebced70336c:docs/runbooks/go-live-checklist.md:generic-api-key:41

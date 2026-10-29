@@ -313,7 +313,7 @@ const en = {
   } as Record<string, string>,
   by: (who: string) => `by ${who}`,
   // The names the system writes in the record for what nobody typed.
-  actors: { Customer: "Customer", Assistant: "Assistant", ALYR: "ALYR" } as Record<string, string>,
+  actors: { Customer: "Customer", Assistant: "Auto-reply", ALYR: "ALYR" } as Record<string, string>,
   orderNo: (n: number) => `order #${n}`,
   chooseSize: "Which size or colour",
 
@@ -981,7 +981,7 @@ const ar: Copy = {
     wasted: "هالك", counted: "جرد", adjusted: "تصحيح",
   },
   by: (who) => `بواسطة ${who}`,
-  actors: { Customer: "العميل", Assistant: "المساعد", ALYR: "ALYR" },
+  actors: { Customer: "العميل", Assistant: "رد تلقائي", ALYR: "ALYR" },
   orderNo: (n) => `الطلب رقم ${n}`,
   chooseSize: "أي مقاس أو لون",
 

@@ -252,8 +252,9 @@ async def start(conn: asyncpg.Connection, shop: Shop, now: datetime, history_sta
         )
         made.hours.append((weekday, opens, closes))
 
-    # Price groups: the default one is the normal price; the shop adds its own.
-    default = await groups.default_group(conn)
+    # Price groups: the default one is the normal price; the shop adds its own. The wipe took
+    # the default group the shop was made with.
+    default = await groups.remake_default(conn)
     made.group_ids[""] = default["id"]
     made.group_names[default["id"]] = (default["name"], default["name_ar"])
     for key, name, name_ar in shop.groups:

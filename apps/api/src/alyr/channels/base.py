@@ -79,6 +79,9 @@ class OutboundMessage:
     # image. `filename` is what the customer's phone shows, with its extension.
     document: bytes = b""
     filename: str = ""
+    # The issued document that file is, when it is one: the outbound layer then keeps a pointer
+    # to the document's own stored PDF, not a second copy (ALY-276).
+    document_id: UUID | None = None
 
     def __post_init__(self) -> None:
         if self.kind == "buttons" and not 1 <= len(self.choices) <= MAX_BUTTONS:

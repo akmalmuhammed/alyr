@@ -20,7 +20,6 @@ The life of a document:
 Every step that changes something writes who did it on the activity record.
 """
 
-import asyncio
 import hashlib
 import re
 from collections.abc import Mapping
@@ -31,7 +30,7 @@ from zoneinfo import ZoneInfo
 
 import asyncpg
 
-from alyr.core import team
+from alyr.core import drawing, team
 from alyr.core.auth import Staff
 from alyr.modules.connect import webhooks
 from alyr.modules.documents import (
@@ -70,9 +69,10 @@ def _clock() -> datetime:
 
 
 async def render_pdf(doc) -> bytes:
-    """Draw a `Doc` in a thread: drawing is plain CPU work and must not hold the event loop.
-    A function of its own so a test can make it fail or count its calls."""
-    return await asyncio.to_thread(render_doc, doc)
+    """Draw a `Doc` in the drawing process: it is plain CPU work, and in this process (even in
+    a thread) it held up every request while it drew (ALY-276). A function of its own so a
+    test can make it fail or count its calls."""
+    return await drawing.run(render_doc, doc)
 
 
 # ── small reads ───────────────────────────────────────────────────────────────────────────

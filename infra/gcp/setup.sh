@@ -62,10 +62,12 @@ SECRETS=(
   ALYR_META_WABA_ID=meta-waba-id ALYR_EMAIL_API_KEY=email-api-key
   ALYR_R2_ACCOUNT_ID=r2-account-id ALYR_R2_ACCESS_KEY_ID=r2-access-key-id
   ALYR_R2_SECRET_ACCESS_KEY=r2-secret-access-key
+  ALYR_PADDLE_API_KEY=paddle-api-key ALYR_PADDLE_WEBHOOK_SECRET=paddle-webhook-secret
+  ALYR_PADDLE_CLIENT_TOKEN=paddle-client-token
 )
 secrets_flag() { local IFS=,; local s=("${SECRETS[@]/%/:latest}"); echo "${s[*]}"; }
 env_flag() {
-  echo "ALYR_ENV=production,ALYR_JOBS_INLINE=false,ALYR_PUBLIC_WEB_URL=${ALYR_PUBLIC_WEB_URL:-https://app.alyr.qa},ALYR_R2_BUCKET=${ALYR_R2_BUCKET:-alyr-media},ALYR_MEDIA_BASE_URL=${ALYR_MEDIA_BASE_URL:-https://media.alyr.qa}"
+  echo "ALYR_ENV=production,ALYR_JOBS_INLINE=false,ALYR_PUBLIC_WEB_URL=${ALYR_PUBLIC_WEB_URL:-https://app.alyr.qa},ALYR_R2_BUCKET=${ALYR_R2_BUCKET:-alyr-media},ALYR_MEDIA_BASE_URL=${ALYR_MEDIA_BASE_URL:-https://media.alyr.qa},ALYR_CARD_BILLING=${ALYR_CARD_BILLING:-},ALYR_PADDLE_ENVIRONMENT=${ALYR_PADDLE_ENVIRONMENT:-sandbox}"
 }
 private_net=(--network="$NETWORK" --subnet="$SUBNET" --vpc-egress=private-ranges-only)
 
@@ -181,9 +183,14 @@ case "${1:-}" in
     ask_secret meta-phone-number-id "Meta phone number ID"
     ask_secret meta-waba-id "Meta WhatsApp Business Account ID"
     ask_secret email-api-key "Resend API key"
+    echo "Clients paying ALYR by card (Paddle, ALY-180; sandbox until the founder goes live):"
+    ask_secret paddle-api-key "Paddle API key"
+    ask_secret paddle-webhook-secret "Paddle notification destination secret"
+    ask_secret paddle-client-token "Paddle client-side token"
     # Cloud Run refuses to start with a missing secret; "unset" keeps optional ones from
     # blocking a deploy. The API treats them as not configured.
-    for s in meta-app-secret meta-verify-token meta-access-token meta-phone-number-id meta-waba-id email-api-key; do
+    for s in meta-app-secret meta-verify-token meta-access-token meta-phone-number-id meta-waba-id email-api-key \
+             paddle-api-key paddle-webhook-secret paddle-client-token; do
       secret_exists "$s" || put_secret "$s" "unset"
     done
     echo "Done. Next: infra/gcp/push-images.sh <tag>, then infra/gcp/setup.sh apps <tag>"
@@ -253,7 +260,8 @@ for s in json.load(sys.stdin).get('data', []):
       if [ -n "$val" ]; then put_secret "$name" "$val"; echo "  stored $name"; stored=$((stored + 1)); fi
       unset val
     done
-    for s in meta-app-secret meta-verify-token meta-access-token meta-phone-number-id meta-waba-id email-api-key; do
+    for s in meta-app-secret meta-verify-token meta-access-token meta-phone-number-id meta-waba-id email-api-key \
+             paddle-api-key paddle-webhook-secret paddle-client-token; do
       secret_exists "$s" || put_secret "$s" "unset"
     done
     echo "Stored $stored values from the file."

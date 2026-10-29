@@ -26,6 +26,7 @@ from test_items import detail, line, order, people
 from test_order_by_code import ids, orders_of, tap
 from test_sign_in import sign_in
 from test_templates import no_templates_left_over, office, owner  # noqa: F401
+from test_track import tracked as track_of
 
 STORE = f"/api/store/{DEMO_SLUG}"
 QATAR = ZoneInfo("Asia/Qatar")
@@ -267,8 +268,7 @@ def test_a_delivery_is_its_own_line_kept_with_the_zones_name_and_the_address(sho
     f = listed["fulfilment"]
     assert (f["mode"], f["zone"], f["address"], f["fee"]) == (
         "delivery", "Al Wakra", "Villa 12, Street 4", 1_500)
-    tenant = owner_sql("select id from tenants where slug = $1", DEMO_SLUG)[0]["id"]
-    tracked = client.get(f"/api/track/{tenant}/{placed['order_id']}").json()["order"]
+    tracked = track_of(client, placed)
     assert tracked["fulfilment"]["mode"] == "delivery" and tracked["fulfilment"]["fee"] == 1_500
 
 
