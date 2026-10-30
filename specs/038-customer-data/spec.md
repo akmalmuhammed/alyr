@@ -81,7 +81,7 @@ The notice tells a business's customers that deletion happens with the business'
 3. The owner forgets them (or downloads their data) from the conversation; it is on the activity record.
 4. Confirm to the person by email within 30 days, as the notice promises.
 
-A business's own data, when it stops using ALYR, is deleted 60 days after it stops (the notice). That needs a business to be able to stop, which is go-live item 39; it is not built here.
+A business's own data, when it stops using ALYR, is deleted 60 days after it stops (the notice). That is not built here: it is `specs/042-erase-stopped-client/spec.md` (D-116 to D-118), which counts from the day a client's cancellation takes effect (D-082).
 
 ## Tests
 
@@ -100,6 +100,6 @@ A business's own data, when it stops using ALYR, is deleted 60 days after it sto
 ## Not in this spec
 
 - **Correcting a customer's data** (the notice's third right): there is no screen yet to change a customer's name or email. Until there is, the team keeps the right details in a note; a screen to correct them is a follow-up. A number is the customer's own.
-- **Deleting a business's data 60 days after it stops:** go-live item 39 (cancelling).
+- **Deleting a business's data 60 days after it stops:** `specs/042-erase-stopped-client/spec.md`.
 - **A customer asking from WhatsApp itself** ("delete my data"): it reaches the inbox as any message does, and the team acts on it.
 - **Purging a business's old messages while it still uses ALYR:** the notice promises none, and the business's records are its own.

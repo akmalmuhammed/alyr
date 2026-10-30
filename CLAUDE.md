@@ -61,7 +61,10 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               staff_link (links a staff number to a person by a one-time code),
                               not_sent (the messages that did not reach a customer, and sending one
                               again through the same consent checks; specs/036) and
-                              drawing (PDFs and report cards drawn in a process of their own, D-078)
+                              drawing (PDFs and report cards drawn in a process of their own, D-078),
+                              erase (a stopped client's data, deleted 60 days after it stops: a rule
+                              for every table in erase_rules.py, run daily as the database owner by
+                              alyr/erase_job.py, dry run until switched on; specs/042, D-116 to D-118)
   src/alyr/modules/           What answers customers: ledger, orders, bookings, inbox, agent (the owner's
                               weekly view), report.py (weekly report card); router.py picks the module.
                               items/ is the Catalog's engine (what a shop sells: variants, availability,
@@ -161,7 +164,7 @@ scripts/api-in-docker.sh uv run pytest -q # where Windows blocks the compiled da
 
 - Query tenant data only inside `async with db.tenant(tenant_id) as conn`. Outside it, RLS returns no rows.
 - New tenant-owned tables copy the pattern in `migrations/0001_core.sql`: `tenant_id` with the `current_setting` default, RLS enabled and forced, the `tenant_isolation` policy, grants to `alyr_app`. `tests/test_tenant_isolation.py` fails if any of that is missing.
-- A new table that points at a customer (`contacts`) says in `core/forget.py`'s `TABLES` what forgetting the customer does to it; `tests/test_forget.py` reads the foreign keys and fails otherwise. A customer's data is copied for them or forgotten only through `core/forget.py` (specs/038); working copies such as finished jobs are purged by `core/retention.py` (D-075).
+- A new table that points at a customer (`contacts`) says in `core/forget.py`'s `TABLES` what forgetting the customer does to it; `tests/test_forget.py` reads the foreign keys and fails otherwise. A customer's data is copied for them or forgotten only through `core/forget.py` (specs/038); working copies such as finished jobs are purged by `core/retention.py` (D-075). A new table of any kind says in `core/erase_rules.py` what happens to it when a stopped client's data is erased (delete, scrub, keep, people or global); `tests/test_erase.py` fails otherwise, and the daily job refuses to run while a table has no rule (specs/042).
 - The app role cannot write `tenants` or `channel_numbers`. Creating a tenant is an owner-role action.
 - Workspace routes take the tenant from `Depends(current_tenant)` or `Depends(current_staff)` in `routes/deps.py`, which read the session. Never take a tenant ID from the request.
 - A new tenant-owned table gets an index whose first column is `tenant_id` (`tests/test_tenant_isolation.py` fails otherwise; D-076). A query on `jobs` names the shop with `jobs.THIS_SHOP`, because the worker's clause in its policy keeps the index from being used. What a customer's page only reads runs in `db.tenant(id, readonly=True)`.

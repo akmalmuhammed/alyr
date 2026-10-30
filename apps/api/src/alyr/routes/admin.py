@@ -375,7 +375,10 @@ async def move_business(
         if not await conn.fetchval(
             "select admin_set_business_client($1, $2)", business_id, body.client_id
         ):
-            raise HTTPException(status_code=404, detail="no such business or client")
+            raise HTTPException(
+                status_code=404,
+                detail="no such business or client, or that client has cancelled",
+            )
         await backoffice.audit(
             conn, staff, "business.moved", "business", business_id,
             client_id=body.client_id, business_id=business_id,
@@ -958,6 +961,8 @@ async def undo_cancel(
             return await _access(conn, client_id)
     except LookupError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
+    except subscription.CancelError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
 
 
 @router.post("/clients/{client_id}/waive")
