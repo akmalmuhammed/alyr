@@ -51,7 +51,8 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               core/payment_keys.py seals its keys
   src/alyr/core/              Inbound path, contact identity, outbound layer (consent, 24-hour window), jobs,
                               sign-in (auth), email (mail), the welcome and invite emails (welcome, specs/037),
-                              sign-up (onboarding), pricing, back office,
+                              sign-up (onboarding), pricing, price_notice (the email that
+                              tells an owner their price is ready, once; D-093), back office,
                               team accountability (team, D-028), workspace shell (workspace), templates,
                               signed customer links (links: a customer's order or booking link carries a token made for that page, never a contact ID),
                               ALYR's own billing by card (paddle.py is Paddle's API and webhook signature,

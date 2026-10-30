@@ -28,6 +28,8 @@ type Product = {
   // included: every business has it (ALYR Agent); it has no switch.
   status: "active" | "available" | "included";
   modules: string[]; includes: { key: string; label: Text }[]; steps: Step[];
+  // What switching it on adds each month at ALYR's price list; null when it has no switch.
+  adds: { monthly: number; monthly_text: string; monthly_text_ar: string } | null;
 };
 type Connection = { key: string; name: Text; detail: Text; connected: boolean; available: boolean };
 type State = {
@@ -64,13 +66,16 @@ const T = {
     planReadySub: (amount: string) => `${amount} a month. Review it and accept it to go ahead.`,
     planReview: "Review and accept",
     goLive: { setting_up: "A few steps left to go live", ready: "Ready, waiting for your WhatsApp number" } as Record<string, string>,
-    goLiveSub: (left: string) => `Still to do: ${left}.`,
+    goLiveSub: (n: number, left: string) => `${n} ${n === 1 ? "step" : "steps"} left: ${left}.`,
     goLiveOpen: "See what is left",
     productsTitle: "Products", productsEyebrow: "Your plan",
     productsSub: "Switch on what your business needs. Switching off hides the screens and keeps every record.",
     active: "Active", available: "Available", on: "On", off: "Off",
     included: "Included", includedNote: "Included for every business.",
     confirmOff: "Hide its screens from your team? Nothing is deleted.", keep: "Keep on", turnOff: "Switch off",
+    confirmOn: (price: string) => `This adds ${price} a month to your ALYR price. ALYR updates your quote.`,
+    confirmOnKeep: "Not now", turnOn: (price: string) => `Switch on, ${price} a month`,
+    turnOnFailed: "It could not be switched on. Nothing was changed. Try again in a moment.",
     managersOnly: "Only an owner or admin can change products.", includes: "Includes",
     connectionsTitle: "Connections", connectionsEyebrow: "Accounts",
     connectionsSub: "The accounts ALYR works through on your behalf.",
@@ -102,14 +107,17 @@ const T = {
     planReady: "سعرك من ALYR جاهز",
     planReadySub: (amount: string) => `${amount} شهرياً. راجعه واقبله للمتابعة.`,
     planReview: "راجع واقبل",
-    goLive: { setting_up: "خطوات قليلة للإطلاق", ready: "جاهز، بانتظار رقم واتساب" },
-    goLiveSub: (left: string) => `المتبقي: ${left}.`,
+    goLive: { setting_up: "خطوات قليلة للإطلاق", ready: "جاهز، بانتظار رقم واتساب" } as Record<string, string>,
+    goLiveSub: (n: number, left: string) => `${n === 1 ? "خطوة واحدة متبقية" : n === 2 ? "خطوتان متبقيتان" : `${n} ${n <= 10 ? "خطوات" : "خطوة"} متبقية`}: ${left}.`,
     goLiveOpen: "اعرض المتبقي",
     productsTitle: "المنتجات", productsEyebrow: "خطتك",
     productsSub: "فعّل ما يحتاجه عملك. الإيقاف يخفي الشاشات ويحفظ كل السجلات.",
     active: "مفعّل", available: "متاح", on: "مفعّل", off: "متوقف",
     included: "مشمول", includedNote: "مشمول لكل منشأة.",
     confirmOff: "إخفاء شاشاته عن فريقك؟ لن يُحذف شيء.", keep: "أبقِه", turnOff: "إيقاف",
+    confirmOn: (price: string) => `يضيف هذا ${price} شهرياً إلى سعرك من ALYR. تحدّث ALYR عرض السعر الخاص بك.`,
+    confirmOnKeep: "ليس الآن", turnOn: (price: string) => `فعّله، ${price} شهرياً`,
+    turnOnFailed: "تعذّر التفعيل. لم يتغيّر شيء. حاول بعد قليل.",
     managersOnly: "تغيير المنتجات متاح للمالك أو المدير فقط.", includes: "يشمل",
     connectionsTitle: "الاتصالات", connectionsEyebrow: "الحسابات",
     connectionsSub: "الحسابات التي تعمل ALYR من خلالها نيابة عنك.",
@@ -237,6 +245,9 @@ export default function WorkspaceShell() {
   const [help, setHelp] = useState("");
   const [helpSent, setHelpSent] = useState("");
   const [confirming, setConfirming] = useState("");
+  // The product whose price is on show, waiting for the owner to confirm switching it on.
+  const [confirmingOn, setConfirmingOn] = useState("");
+  const [turnOnFailed, setTurnOnFailed] = useState(false);
   const [busy, setBusy] = useState("");
   const [clock, setClock] = useState<{ hour: number; text: string } | null>(null);
   const [palette, setPalette] = useState(false);
@@ -244,6 +255,7 @@ export default function WorkspaceShell() {
   const [cursor, setCursor] = useState(0);
   const t = T[lang];
   const pick = useCallback((text: Text) => text[lang], [lang]);
+  const price = (adds: NonNullable<Product["adds"]>) => (lang === "ar" ? adds.monthly_text_ar : adds.monthly_text);
 
   const load = useCallback(async () => {
     // Signed out (or the session ended): the sign-in page, not "cannot reach ALYR".
@@ -346,10 +358,17 @@ export default function WorkspaceShell() {
 
   async function setProduct(product: Product, on: boolean) {
     setBusy(product.key);
+    setTurnOnFailed(false);
     try {
-      await send(`/api/workspace/products/${product.key}/${on ? "enable" : "disable"}`);
+      // Switching on confirms the monthly amount that was shown (ALY-274, CJ-15).
+      await send(`/api/workspace/products/${product.key}/${on ? "enable" : "disable"}`,
+        on && product.adds ? { confirm_monthly: product.adds.monthly } : undefined);
       setConfirming("");
+      setConfirmingOn("");
       await load();
+    } catch {
+      // The price changed since it was shown, or the request failed: nothing was switched on.
+      if (on) { setConfirmingOn(""); setTurnOnFailed(true); await load(); }
     } finally {
       setBusy("");
     }
@@ -432,6 +451,15 @@ export default function WorkspaceShell() {
 
   const stagger = (i: number) => ({ "--i": i }) as React.CSSProperties;
 
+  // What is left to go live comes from the go-live check alone (ALY-274, CJ-24): the banner
+  // lists it and counts it, and "Needs you now" leaves out its own count of setup steps while
+  // the banner is showing, so the home never gives two different numbers for the same work.
+  const goLiveLeft = readiness ? readiness.checks.filter((c) => c.status !== "done") : [];
+  const goLive = readiness && readiness.stage !== "live" && state.can_manage ? readiness : null;
+  const agentView = agent && goLive
+    ? { ...agent, needs: { ...agent.needs, items: agent.needs.items.filter((item) => item.key !== "setup") } }
+    : agent;
+
   // The full setup checklist leads only while nothing has happened yet, and only for people
   // who can act on it; after that it is one row in "Needs you now" (05-critique P1-2).
   const setupTiles = state.can_manage && (!agent || agent.state === "empty")
@@ -473,19 +501,19 @@ export default function WorkspaceShell() {
             <Link className="btn small" href="/start">{t.planReview}<Icon name="arrow" className="sh-ico arrow" /></Link>
           </section>
         )}
-        {readiness && readiness.stage !== "live" && state.can_manage && (
+        {goLive && (
           <section className="sh-tile raised sh-allset sh-plan-ready sh-home-row" style={stagger(0)}>
             <span className="sh-check" />
             <div>
-              <h2>{t.goLive[readiness.stage]}</h2>
-              <p className="sh-note">{t.goLiveSub(readiness.checks.filter((c) => c.status !== "done").map((c) => pick(c.label)).join(lang === "ar" ? "، " : ", "))}</p>
+              <h2>{t.goLive[goLive.stage]}</h2>
+              <p className="sh-note">{t.goLiveSub(goLiveLeft.length, goLiveLeft.map((c) => pick(c.label)).join(lang === "ar" ? "، " : ", "))}</p>
             </div>
             <Link className="btn small" href="/start?golive">{t.goLiveOpen}<Icon name="arrow" className="sh-ico arrow" /></Link>
           </section>
         )}
-        {agent ? (
-          <AgentDashboard view={agent} link={Link} animate={agentRise} onNotNow={state.can_manage ? notNow : undefined}
-            stale={offline ? `${t.offline} ${agent.header.updated}` : null} setup={setupTiles} />
+        {agentView ? (
+          <AgentDashboard view={agentView} link={Link} animate={agentRise} onNotNow={state.can_manage ? notNow : undefined}
+            stale={offline ? `${t.offline} ${agentView.header.updated}` : null} setup={setupTiles} />
         ) : (
           <>
             {setupTiles}
@@ -535,6 +563,7 @@ export default function WorkspaceShell() {
           <p>{t.productsSub}</p>
         </header>
         {!state.can_manage && <p className="sh-note">{t.managersOnly}</p>}
+        {turnOnFailed && <p className="sh-note" role="alert">{t.turnOnFailed}</p>}
         <ul className="sh-products" style={stagger(1)}>
           {state.products.map((product) => {
             const on = product.status === "active";
@@ -558,7 +587,13 @@ export default function WorkspaceShell() {
                 </div>
                 <div className="sh-product-foot">
                   {product.status === "included" ? <span className="sh-note">{t.includedNote}</span>
-                    : confirming === product.key ? (
+                    : confirmingOn === product.key && product.adds ? (
+                      <div className="sh-confirm" role="alertdialog" aria-label={t.confirmOn(price(product.adds))}>
+                        <span>{t.confirmOn(price(product.adds))}</span>
+                        <button className="btn small" onClick={() => setConfirmingOn("")}>{t.confirmOnKeep}</button>
+                        <button className="btn small" disabled={busy === product.key} onClick={() => setProduct(product, true)}>{t.turnOn(price(product.adds))}</button>
+                      </div>
+                    ) : confirming === product.key ? (
                       <div className="sh-confirm" role="alertdialog" aria-label={t.confirmOff}>
                         <span>{t.confirmOff}</span>
                         <button className="btn small" onClick={() => setConfirming("")}>{t.keep}</button>
@@ -568,7 +603,8 @@ export default function WorkspaceShell() {
                       <label className="sh-switch-row">
                         <button type="button" role="switch" className="sh-switch" aria-checked={on}
                           aria-label={pick(product.name)} disabled={!state.can_manage || busy === product.key}
-                          onClick={() => (on ? setConfirming(product.key) : setProduct(product, true))} />
+                          onClick={() => (on ? setConfirming(product.key)
+                            : product.adds && product.adds.monthly > 0 ? setConfirmingOn(product.key) : setProduct(product, true))} />
                         {on ? t.on : t.off}
                       </label>
                     )}

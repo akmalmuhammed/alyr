@@ -15,6 +15,7 @@ type Today = { items: Item[]; later: Item[]; counts: Record<string, number> };
 
 const KIND: Record<string, string> = {
   price: "To price", answer: "Waiting for owner", request: "Asked for help",
+  payment: "Waiting for payment", change: "Price changed",
   whatsapp: "Go-live", stuck: "Stuck", delivery: "Failing",
 };
 

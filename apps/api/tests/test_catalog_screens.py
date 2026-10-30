@@ -19,6 +19,7 @@ from test_consent import owner_sql
 from test_items import fresh, mk, on_hand, on_shop
 from test_media import Switchable, drain, make_due, upload
 from test_sign_in import other_shop_with_owner, sign_in
+from test_workspace import switch_on
 
 ARABIC = re.compile(r"[؀-ۿ]")
 
@@ -690,7 +691,7 @@ def test_no_shop_has_it_until_the_back_office_switches_it_on(client):
     ) == []
     # Switching products on does not bring it in.
     for product in ("chat", "bookings", "accounts"):
-        client.post(f"/api/workspace/products/{product}/enable")
+        switch_on(client, product)
     assert "catalog" not in client.get("/api/workspace").json()["modules"]
 
     owner_sql("insert into tenant_modules (tenant_id, module_key) values ($1, 'catalog')",
