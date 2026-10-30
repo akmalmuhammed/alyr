@@ -12,6 +12,8 @@ paying is billing (ALY-85), never a deletion.
 A business with no client (made before clients existed, or in a test) owes nothing.
 """
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import date, datetime
 from uuid import UUID
 from zoneinfo import ZoneInfo
@@ -21,10 +23,20 @@ import asyncpg
 from alyr.config import Settings, get_settings
 from alyr.core import paddle, pricing
 from alyr.core.normalise import fmt_qar
+from alyr.db import Database
 
 # What ALYR's staff record by hand. A card payment ("card") is only ever written by the card
 # provider's webhook (core/card_billing.py, ALY-180).
 METHODS = ("bank_transfer", "cash", "cheque", "link")
+
+
+@asynccontextmanager
+async def office(db: Database) -> AsyncIterator[asyncpg.Connection]:
+    """One transaction on which the API declares it is ALYR itself, as `routes/admin.py`
+    does for its staff: a client's billing is ALYR's own data, not a shop's."""
+    async with db.unscoped() as conn, conn.transaction():
+        await conn.execute("select set_config('app.platform_admin', 'on', true)")
+        yield conn
 
 
 class AccessError(Exception):
@@ -47,7 +59,7 @@ async def settled(conn: asyncpg.Connection) -> bool:
 async def _covered(conn: asyncpg.Connection, client_id: UUID) -> bool:
     """Do the payments cover the accepted price? Without an accepted price nothing is due,
     and nothing is covered either: the price comes first."""
-    quote_row = await _accepted(conn, client_id)
+    quote_row = await accepted(conn, client_id)
     if quote_row is None:
         return False
     view = await pricing.quote_view(conn, quote_row)
@@ -70,7 +82,7 @@ async def first_payment(conn: asyncpg.Connection, client_id: UUID) -> dict | Non
     """What the first payment is made of, for a card checkout (ALY-180, D-074): the accepted
     quote, its setup fee and its first period in dirhams, and the same two in US cents as
     Paddle charges them. None without an accepted price."""
-    quote_row = await _accepted(conn, client_id)
+    quote_row = await accepted(conn, client_id)
     if quote_row is None:
         return None
     return await _parts(conn, quote_row, await pricing.quote_view(conn, quote_row))
@@ -100,7 +112,7 @@ def _payment(row: asyncpg.Record) -> dict:
     }
 
 
-async def _accepted(
+async def accepted(
     conn: asyncpg.Connection, client_id: UUID | None = None
 ) -> asyncpg.Record | None:
     if client_id is None:
@@ -130,7 +142,7 @@ async def summary(conn: asyncpg.Connection, client_id: UUID | None = None) -> di
         )
     if client is None:
         return {"status": "paid", "due": 0, "paid": 0, "payments": [], "card": None}
-    quote_row = await _accepted(conn, client["id"])
+    quote_row = await accepted(conn, client["id"])
     quote = await pricing.quote_view(conn, quote_row) if quote_row else None
     payments = await conn.fetch(
         "select * from client_payments where client_id = $1 order by received_on, recorded_at",
@@ -202,7 +214,7 @@ async def record(
     client = await conn.fetchrow("select id from clients where id = $1 for update", client_id)
     if client is None:
         raise LookupError("no such client")
-    quote = await _accepted(conn, client_id)
+    quote = await accepted(conn, client_id)
     if quote is None:
         raise AccessError("the client has not accepted a price yet: nothing is due")
     await conn.execute(

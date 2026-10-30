@@ -187,7 +187,7 @@ class MediaService:
         self._cpu = asyncio.Semaphore(2)
 
     def register(self, runner: jobs.JobRunner) -> None:
-        runner.register(SYNC, self.sync, self.gave_up)
+        runner.register(SYNC, self.sync, self.gave_up, background=True)
 
     # ── what a client is shown ────────────────────────────
 

@@ -4,7 +4,7 @@ from uuid import UUID
 import asyncpg
 
 from alyr.channels.base import Address, Channel, Choice, OutboundMessage
-from alyr.core import consent, jobs, templates
+from alyr.core import consent, jobs, subscription, templates
 from alyr.db import Database
 
 SEND = "send_message"
@@ -13,7 +13,8 @@ SEND = "send_message"
 @dataclass(frozen=True)
 class SendResult:
     """What the outbound layer did with a message. `blocked` is the reason it was
-    refused (window_closed, no_consent, opted_out, no_marketing_consent), or None."""
+    refused (window_closed, no_consent, opted_out, no_marketing_consent, billing_paused),
+    or None."""
 
     message_id: UUID
     blocked: str | None = None
@@ -55,6 +56,11 @@ class Outbound:
         if contact is None:
             raise LookupError("no such contact for this tenant")
         blocked = consent.refusal(contact, message)
+        # ALYR has paused what it sends for this client, who is overdue or cancelled (ALY-218,
+        # D-082): automatic replies and templates wait. A reply someone typed in the inbox
+        # still goes, inside the customer's window, so a shop can still answer by hand.
+        if blocked is None and not message.typed and await subscription.paused(conn):
+            blocked = "billing_paused"
         kind, body, image, document = message.kind, message.body, message.image, message.document
         payload: dict = {}
         if message.choices:
@@ -101,12 +107,14 @@ class Outbound:
             "blocked" if blocked else "queued", blocked,
         )
         if (image or document) and not blocked:
-            # Kept beside the message; the delivering job uploads it to the channel.
+            # Kept beside the message; the delivering job uploads it to the channel. An issued
+            # document's PDF is not copied: the row points at the document's own file (ALY-276).
+            kept = message.document_id if document else None
             await conn.execute(
-                "insert into message_media (message_id, content_type, data) "
-                "values ($1, $2, $3)",
+                "insert into message_media (message_id, content_type, data, document_id) "
+                "values ($1, $2, $3, $4)",
                 message_id, "application/pdf" if document else message.image_type,
-                document or image,
+                None if kept else document or image, kept,
             )
         if not blocked:
             # The contact puts the send in the customer's lane: their messages go in order.
@@ -135,7 +143,9 @@ class Outbound:
                 row["number_id"],
             )
             image = await conn.fetchrow(
-                "select content_type, data from message_media where message_id = $1",
+                "select m.content_type, coalesce(m.data, f.content) as data "
+                "from message_media m left join document_files f on f.document_id = m.document_id "
+                "where m.message_id = $1",
                 message_id,
             )
         if number is None:

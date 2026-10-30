@@ -188,6 +188,59 @@ CATALOGUE: dict[str, Template] = {
         "تم تغيير موعد الحجز رقم {{1}} إلى {{2}}. بانتظارك.",
         ("101", "Wed 14 Oct, 4:00 PM"),
     ),
+    # Deposits and the review request (ALY-27, D-084, spec 033). Written, NOT submitted to
+    # Meta: that is the founder's go, and `templates_sync --create` is not to be run for these
+    # until he says so. The person or chair a booking is with rides inside the blank that
+    # holds the service or the time, so the approved booking templates above do not change.
+    # The Arabic is a draft until ALY-66.
+    "booking_deposit_due": Template(
+        "utility",
+        "Booking {{1}} at {{2}}: {{3}}. Please pay the deposit of {{4}} within {{5}} minutes "
+        "to keep this time: {{6}} . The shop's rule for the deposit is on the payment page.",
+        "حجزك رقم {{1}} لدى {{2}}: {{3}}. نرجو دفع العربون {{4}} خلال {{5}} دقيقة للاحتفاظ "
+        "بهذا الموعد: {{6}} . سياسة المحل للعربون موضحة في صفحة الدفع.",
+        ("105", "Dafira Salon", "Hair colour with Reem, Thu 30 Oct, 5:00 PM", "QAR 50", "30",
+         "https://app.alyr.online/pay/dafira?t=Ab3dE.f9Gh"),
+        samples_ar=("105", "صالون ضفيرة", "صبغة شعر مع ريم، 30/10 17:00", "50 ر.ق", "30",
+                    "https://app.alyr.online/pay/dafira?t=Ab3dE.f9Gh"),
+    ),
+    "booking_deposit_paid": Template(
+        "utility",
+        "We received the deposit of {{1}} for booking {{2}}. Your visit is confirmed: {{3}}. "
+        "See you then.",
+        "استلمنا العربون {{1}} للحجز رقم {{2}}. تم تأكيد موعدك: {{3}}. بانتظارك.",
+        ("QAR 50", "105", "Hair colour with Reem, Thu 30 Oct, 5:00 PM"),
+        samples_ar=("50 ر.ق", "105", "صبغة شعر مع ريم، 30/10 17:00"),
+    ),
+    "booking_released": Template(
+        "utility",
+        "Booking {{1}} ({{2}}) was released because the deposit was not paid in time. "
+        "Nothing was charged. Send us a message to book again.",
+        "أُلغي الحجز رقم {{1}} ({{2}}) لأن العربون لم يُدفع في الوقت المحدد. لم يُخصم أي مبلغ. "
+        "راسلنا لحجز موعد جديد.",
+        ("105", "Thu 30 Oct, 5:00 PM"),
+        samples_ar=("105", "30/10 17:00"),
+    ),
+    "booking_cancelled_deposit": Template(
+        "utility",
+        "Booking {{1}} ({{2}}) has been cancelled. {{3}} Send us a message to book again.",
+        "تم إلغاء الحجز رقم {{1}} ({{2}}). {{3}} راسلنا لحجز موعد جديد.",
+        ("105", "Thu 30 Oct, 5:00 PM", "The shop will refund your deposit of QAR 50."),
+        samples_ar=("105", "30/10 17:00", "سيرد المحل إليك العربون 50 ر.ق."),
+    ),
+    # Asked after one named visit or order, with no offer in it: Meta's guidelines (checked 29
+    # Oct 2026) approve a feedback request as utility only when it names the order or
+    # interaction and has nothing promotional. Every customer gets the same words: there is
+    # no "were you happy?" first (no review gating, D-084).
+    "review_request": Template(
+        "utility",
+        "Thank you for {{1}} at {{2}}. If you have a minute, you can leave a review here: "
+        "{{3}} . You can also reply to this message.",
+        "شكراً لك على {{1}} لدى {{2}}. إن كان لديك دقيقة، يمكنك كتابة تقييم من هنا: {{3}} . "
+        "ويمكنك أيضاً الرد على هذه الرسالة.",
+        ("your visit on Thu 30 Oct", "Dafira Salon", "https://g.page/r/example/review"),
+        samples_ar=("زيارتك يوم 30/10", "صالون ضفيرة", "https://g.page/r/example/review"),
+    ),
     # The owner's weekly result report (D-030). Inside the window the whole report goes
     # as a plain message; outside it, this one line, and REPORT brings the rest.
     "weekly_report": Template(
@@ -274,6 +327,17 @@ CATALOGUE: dict[str, Template] = {
         "استرداد مستحق في {{1}}: وصلت دفعة بمبلغ {{2}} للطلب رقم {{3}} بعد انتهاء رابط الدفع "
         "وإلغاء الطلب. يرجى ردها من حسابك للدفع.",
         ("Al Noor Electricals", "QAR 179", "1001"),
+    ),
+    # A new order, to the staff numbers the owner marked for it (D-079). {{4}} is what the
+    # order holds and how it goes: "2 x Croissant, 1 x Latte. Pickup · Not paid yet".
+    "order_new_staff": Template(
+        "utility",
+        "New order at {{1}}: order {{2}} for {{3}}. {{4}}. Open ALYR to confirm it.",
+        "طلب جديد في {{1}}: الطلب رقم {{2}} بمبلغ {{3}}. {{4}}. افتح ALYR لتأكيده.",
+        ("Al Noor Electricals", "1001", "QAR 179",
+         "2 x Breaker 16 A, 1 x Cable 1.5 mm. Pickup · Not paid yet"),
+        samples_ar=("النور للكهربائيات", "1001", "179 ر.ق",
+                    "2 x قاطع 16 أمبير، 1 x كابل 1.5 مم. استلام من المتجر · لم يُدفع بعد"),
     ),
     "draft_added": Template(
         "utility",
@@ -363,7 +427,7 @@ def render(name: str, lang: str, params: list[str] | tuple[str, ...]) -> str | N
 
 def notice(
     to: UUID, name: str, lang: str, body: str, *params: object, image: bytes = b"",
-    document: bytes = b"", filename: str = "",
+    document: bytes = b"", filename: str = "", document_id: UUID | None = None,
 ) -> OutboundMessage:
     """A notice to a customer who may have last written more than 24 hours ago.
 
@@ -372,7 +436,8 @@ def notice(
     window is that image with `body` under it; outside it, the image fills the
     template's image header, and is left out if the template has none. A `document` (a PDF
     with its `filename`) goes the same way: a document message with `body` as its caption
-    inside the window, the template's document header outside it."""
+    inside the window, the template's document header outside it. `document_id` names the
+    issued document the PDF is, so it is not stored a second time."""
     template = CATALOGUE[name]
     if len(params) != len(template.samples):
         raise ValueError(f"{name} takes {len(template.samples)} values, got {len(params)}")
@@ -381,4 +446,5 @@ def notice(
         template_category=template.category,  # type: ignore[arg-type]
         template_params=tuple(clean(value) for value in params),
         lang="ar" if lang == "ar" else "en", image=image, document=document, filename=filename,
+        document_id=document_id,
     )

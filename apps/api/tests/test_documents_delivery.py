@@ -135,6 +135,28 @@ def test_inside_the_window_the_receipt_arrives_as_a_pdf_with_a_short_caption(set
     assert message["payload"]["filename"] == "RC-0001.pdf" and message["payload"]["sent_as"] == "document"
 
 
+def test_the_pdf_is_stored_once_and_the_message_points_at_it(setup):
+    """Before, every send kept a second copy of the PDF beside its message, for good (ALY-276
+    PERF-12): at 300 shops that filled the database's disk in about six weeks."""
+    shop, channel = setup()
+    who = customer(shop)
+    pay(shop, who)
+    [receipt] = documents(shop)
+    [message] = document_messages(who)
+    [kept] = owner_sql(
+        "select data, document_id, content_type from message_media where message_id = $1",
+        UUID(str(message["id"])))
+    assert kept["data"] is None and str(kept["document_id"]) == str(receipt["id"])
+    assert kept["content_type"] == "application/pdf"
+    # A file that is no document's (a picture) is still kept beside its message, and a row
+    # with both or neither is refused.
+    with pytest.raises(asyncpg.CheckViolationError):
+        owner_sql("update message_media set data = 'x' where message_id = $1",
+                  UUID(str(message["id"])))
+    # The channel was given the stored PDF itself.
+    assert channel.uploads == [("application/pdf", pdf_of(shop, receipt["id"]))]
+
+
 def test_an_arabic_customer_gets_an_arabic_caption(setup):
     shop, channel = setup()
     pay(shop, customer(shop, "هدى النعيمي", lang="ar"))
@@ -665,9 +687,13 @@ def test_the_message_kept_beside_a_document_is_the_pdf_and_marked_as_one(setup):
     who = customer(shop, window=False)
     pay(shop, who)
     [receipt] = documents(shop)
+    # The message points at the document's own file, which it carries (ALY-276: kept once).
     stored = owner_sql(
-        "select m.content_type, m.data from message_media m join messages g on g.id = m.message_id "
+        "select m.content_type, m.document_id, f.content from message_media m "
+        "join messages g on g.id = m.message_id join document_files f on f.document_id = m.document_id "
         "where g.contact_id = $1", UUID(who.id))
-    assert [(r["content_type"], hashlib.sha256(bytes(r["data"])).hexdigest()) for r in stored] == [
-        ("application/pdf", owner_sql("select pdf_sha256 from documents where id = $1",
-                                      receipt["id"])[0]["pdf_sha256"])]
+    assert [(r["content_type"], str(r["document_id"]), hashlib.sha256(bytes(r["content"])).hexdigest())
+            for r in stored] == [
+        ("application/pdf", str(receipt["id"]),
+         owner_sql("select pdf_sha256 from documents where id = $1",
+                   receipt["id"])[0]["pdf_sha256"])]

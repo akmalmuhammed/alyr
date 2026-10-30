@@ -42,13 +42,21 @@ class Settings(BaseSettings):
     signup_open: bool | None = None
 
     # Where the visitor's address is read from, for the rate limits (ALY-116). Empty: the address
-    # the connection came from. Behind Cloudflare set "cf-connecting-ip"; behind the web app's
-    # proxy set "x-forwarded-for". A header the visitor can write must never be trusted by
-    # accident, so nothing is read from one until this names it.
+    # the connection came from. A header the visitor can write must never be trusted by
+    # accident, so nothing is read from one until this names it. On Google Cloud set
+    # "x-alyr-client-ip" together with `client_ip_keys` below (ALY-265).
     client_ip_header: str = ""
     # How many proxies of ours add to a list header such as x-forwarded-for: the address is read
-    # that many places from the right, where a visitor cannot have written it.
+    # that many places from the right, where a visitor cannot have written it. Only used when
+    # `client_ip_keys` is empty.
     client_ip_proxies: int = 1
+    # Keys that vouch for the address in `client_ip_header` (ALY-265). The edge Worker signs the
+    # address it writes (HMAC-SHA256, in the header named like this one plus "-sig") with one of
+    # these; the API believes the address only with a signature that matches, and counts every
+    # other request in one shared bucket. Comma separated so a key can be replaced without a gap
+    # (the edge signs with the first; the API accepts all). Secret. Empty: the header is believed
+    # as it stands, which is only safe where nothing but our own proxy can reach the API.
+    client_ip_keys: str = ""
     # Prices and the promise are set in the back office, not here (D-032).
 
     # Local only: read the ALYR Agent as if it were this moment (ISO 8601, with an offset),
@@ -191,6 +199,13 @@ class Settings(BaseSettings):
     # The client-side token Paddle.js opens the checkout with (starts with test_ or live_).
     # Paddle makes it to be shown in a web page: not a secret.
     paddle_client_token: str = ""
+
+    # A client whose next period is not paid (ALY-218, D-082): everything keeps working for
+    # this many days after the due date, with reminders to the owner. Then, while
+    # `billing_pause_sending` is on, ALYR pauses its automatic replies and templates for the
+    # client's businesses until they pay. Nothing is deleted and the workspace stays open.
+    billing_grace_days: int = 14
+    billing_pause_sending: bool = True
 
     # Per shop, to start (D-039; our estimate). A cap stops new items or photos with a
     # clear message and never deletes anything.

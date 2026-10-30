@@ -50,6 +50,7 @@ def test_the_shell_shows_what_the_demo_shop_has(client):
         "products",
         "connections",
         "team",
+        "account",
     ]
 
 

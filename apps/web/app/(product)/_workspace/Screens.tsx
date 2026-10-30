@@ -7,6 +7,8 @@ import { formatPrice } from "../_customer/price";
 import { OrderMargin, useOrderMargins } from "./Margin";
 import { OrderSum } from "./OrderSum";
 import { MarkPaid, PayWays } from "./OrderPay";
+import { BookingsDay } from "./BookingsDay";
+import { ForgetCustomer } from "./Forget";
 import { FulfilDetails, FulfilFilters, FulfilPill, matchesFilter, type FulfilFilter } from "./OrderFulfil";
 import type { Fulfilment } from "../_customer/fulfil";
 import { DELIVERY } from "./deliveryCopy";
@@ -127,7 +129,7 @@ const T = {
     windowOpen: (h: number) => (h < 1 ? "Free replies allowed for less than an hour" : `Free replies allowed for ${h} more hours`),
     windowClosed: "More than 24 hours since their last message. WhatsApp only allows an approved template now; typed replies are refused.",
     notSent: "Not sent",
-    tabBookings: "Bookings", bookingsSub: "Today and the next seven days, booked from the chat",
+    tabBookings: "Bookings", bookingsSub: "The day by person or chair: booked from the chat, by phone or at the counter",
     noBookings: "No bookings in the next week. In the chat, send \"book\" as a customer.",
     when: "When", service: "Service", came: "Came", noShow: "No-show", cancel: "Cancel",
     bk: { booked: "Booked", completed: "Came", cancelled: "Cancelled", no_show: "No-show" } as Record<string, string>,
@@ -140,6 +142,7 @@ const T = {
     st: { new: "New", confirmed: "Confirmed", ready: "Ready", done: "Done", cancelled: "Cancelled" } as Record<string, string>,
     next: { new: "Confirm", confirmed: "Mark ready", ready: "Mark done" } as Record<string, string>,
     followsUp: "Follows up", total: "Total",
+    notDelivered: "Not delivered",
     howEnded: "How did it end?", cancelClose: "Keep open", why: "Why was it lost?",
     outcomes: { sold: "Sold", booked: "Booked", answered: "Answered", lost: "Lost" } as Record<string, string>,
     reasons: {
@@ -152,6 +155,7 @@ const T = {
       const thing = { conversation: "this conversation", order: `order${n}`, booking: `booking${n}`, account: "the credit account" }[a.subject];
       switch (a.action) {
         case "took": return `${who} took ${thing}`;
+        case "data_exported": return `${who} downloaded this customer's data`;
         case "assigned": return a.detail.to ? `${who} gave ${thing} to ${a.detail.to}` : `${who} took ${thing} back from ${a.detail.from}`;
         case "closed": return a.detail.outcome
           ? `${who} closed it: ${outcomes[a.detail.outcome]}${a.detail.reason ? `, ${reasons[a.detail.reason].toLowerCase()}` : ""}`
@@ -166,6 +170,7 @@ const T = {
         case "moved": return `${who} moved booking${n}`;
         case "price_group": return `${who} changed the price group from ${a.detail.from} to ${a.detail.to}`;
         case "asked_person": return `${who} needs a person to reply (the chat could not read or help with the message)`;
+        case "message_retried": return `${who} sent a message again that had not reached the customer`;
         default: return `${who}: ${thing} ${a.action}`;
       }
     },
@@ -199,7 +204,7 @@ const T = {
     windowOpen: (h: number) => (h < 1 ? "الرد الحر متاح لأقل من ساعة" : `الرد الحر متاح لمدة ${h} ساعة`),
     windowClosed: "مضى أكثر من ٢٤ ساعة على آخر رسالة من العميل. واتساب يسمح الآن بالقوالب المعتمدة فقط، والردود المكتوبة مرفوضة.",
     notSent: "لم تُرسل",
-    tabBookings: "الحجوزات", bookingsSub: "اليوم والأيام السبعة القادمة، من المحادثة",
+    tabBookings: "الحجوزات", bookingsSub: "اليوم حسب الموظفة أو الكرسي: من المحادثة أو الهاتف أو في المحل",
     noBookings: "لا توجد حجوزات خلال الأسبوع القادم. أرسل \"book\" كعميل في المحادثة.",
     when: "الموعد", service: "الخدمة", came: "حضر", noShow: "لم يحضر", cancel: "إلغاء",
     bk: { booked: "محجوز", completed: "حضر", cancelled: "ملغي", no_show: "لم يحضر" } as Record<string, string>,
@@ -212,6 +217,7 @@ const T = {
     st: { new: "جديد", confirmed: "مؤكد", ready: "جاهز", done: "منجز", cancelled: "ملغي" } as Record<string, string>,
     next: { new: "تأكيد", confirmed: "جاهز للاستلام", ready: "تم الإنجاز" } as Record<string, string>,
     followsUp: "المتابع", total: "المجموع",
+    notDelivered: "لم تصل",
     howEnded: "كيف انتهت؟", cancelClose: "أبقِها مفتوحة", why: "لماذا خسرناه؟",
     outcomes: { sold: "تم البيع", booked: "تم الحجز", answered: "تمت الإجابة", lost: "خسرناه" } as Record<string, string>,
     reasons: {
@@ -224,6 +230,7 @@ const T = {
       const thing = { conversation: "المحادثة", order: `الطلب${n}`, booking: `الحجز${n}`, account: "الحساب الآجل" }[a.subject];
       switch (a.action) {
         case "took": return `${who} تولّى ${thing}`;
+        case "data_exported": return `${who} نزّل بيانات هذا العميل`;
         case "assigned": return a.detail.to ? `${who} أسند ${thing} إلى ${a.detail.to}` : `${who} سحب ${thing} من ${a.detail.from}`;
         case "closed": return a.detail.outcome
           ? `${who} أغلقها: ${outcomes[a.detail.outcome]}${a.detail.reason ? `، ${reasons[a.detail.reason]}` : ""}`
@@ -238,6 +245,7 @@ const T = {
         case "moved": return `${who} غيّر موعد الحجز${n}`;
         case "price_group": return `${who} غيّر مجموعة الأسعار من ${a.detail.from} إلى ${a.detail.to}`;
         case "asked_person": return `${who} يحتاج رداً من موظف (لم تستطع المحادثة قراءة الرسالة أو مساعدته)`;
+        case "message_retried": return `${who} أعاد إرسال رسالة لم تصل إلى العميل`;
         default: return `${who}: ${thing} ${a.action}`;
       }
     },
@@ -249,6 +257,7 @@ const BLOCK_REASON: Record<string, string> = {
   no_consent: "customer has not agreed to messages",
   no_marketing_consent: "customer has not agreed to offers",
   window_closed: "more than 24 hours since their last message",
+  billing_paused: "ALYR paused automatic messages until your payment is recorded",
 };
 const NEXT_STATUS: Record<string, string> = { new: "confirmed", confirmed: "ready", ready: "done" };
 
@@ -745,7 +754,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                     ))}
                   </div>
                 )}
-                {m.status === "failed" && <span className="tag bad" dir="ltr">Not delivered</span>}
+                {m.status === "failed" && <span className="tag bad">{t.notDelivered}</span>}
                 {m.status === "blocked" && (
                   <span className="tag bad" dir="ltr">Not sent: {BLOCK_REASON[m.error ?? ""] ?? "blocked"}</span>
                 )}
@@ -951,7 +960,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                           {m.payload.choices && (
                             <span className="tag" dir="ltr">Buttons: {m.payload.choices.map((c) => c.title).join(" · ")}</span>
                           )}
-                          {m.status === "failed" && <span className="tag bad" dir="ltr">Not delivered</span>}
+                          {m.status === "failed" && <span className="tag bad">{t.notDelivered}</span>}
                           {m.status === "blocked" && (
                             <span className="tag bad" dir="ltr">Not sent: {BLOCK_REASON[m.error ?? ""] ?? "blocked"}</span>
                           )}
@@ -996,6 +1005,14 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                         disabled={composeMode === "reply" && !openThread.customer.window_open}
                       >{composeMode === "note" ? t.addNote : t.reply}</button>
                     </form>
+                    {canManage && (
+                      <ForgetCustomer
+                        key={openThread.customer.id}
+                        contactId={openThread.customer.id}
+                        lang={lang}
+                        onDone={() => { setChatId(null); refresh(); }}
+                      />
+                    )}
                   </>
                 )}
               </div>
@@ -1048,7 +1065,10 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
           )}
 
           {tab === "bookings" && filterLine}
-          {tab === "bookings" && (
+          {/* The day by person or chair (ALY-27, D-084). A link from the Agent opens the
+              filtered list below instead, with exactly the visits it counted. */}
+          {tab === "bookings" && !filter && <BookingsDay lang={lang} canManage={canManage} />}
+          {tab === "bookings" && filter && (
             shownBookings.length === 0 ? (
               <p className="empty-note">{t.noBookings}</p>
             ) : (

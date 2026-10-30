@@ -552,6 +552,7 @@ def test_making_a_shop_never_touches_another_shops_rows(shops, tmp_path):
     owner_sql("delete from contacts where tenant_id = $1", other)
     owner_sql("delete from memberships where tenant_id = $1", other)
     owner_sql("delete from tenant_modules where tenant_id = $1", other)
+    owner_sql("delete from price_groups where tenant_id = $1", other)
     owner_sql("delete from tenants where id = $1", other)
 
 
@@ -570,6 +571,8 @@ def test_it_refuses_an_address_or_an_id_that_belongs_to_a_shop_that_is_not_a_dem
         assert (row["name"], row["slug"]) == ("Real Bakery", "demo-real")  # untouched
         assert scalar("select count(*) as n from items where tenant_id = $1", real) == 0
     finally:
+        owner_sql("delete from price_groups where tenant_id = $1 or tenant_id in "
+                  "(select id from tenants where slug = 'demo-other')", real)
         owner_sql("delete from tenants where id = $1", real)
         owner_sql("delete from tenants where slug in ('demo-other')")
 

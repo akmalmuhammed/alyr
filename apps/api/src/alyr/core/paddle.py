@@ -13,6 +13,9 @@ Checked against developer.paddle.com on 29 Oct 2026:
   `checkout.url` is the account's default payment link with `?_ptxn=txn_...`.
 - Custom data on the transaction is copied to the subscription Paddle makes from it, and from
   the subscription to every renewal.
+- `POST /subscriptions/{id}/cancel` with `effective_from: immediately` cancels at once
+  (the default, `next_billing_period`, schedules it for the period's end); a cancelled
+  subscription cannot be reinstated.
 - Webhooks carry `Paddle-Signature: ts=...;h1=...`: an HMAC-SHA256, in hex, of
   `ts + ":" + raw body` with the notification destination's secret.
 
@@ -130,6 +133,14 @@ class Paddle:
 
     async def subscription(self, subscription_id: str) -> dict:
         return await self._call("GET", f"/subscriptions/{_ref(subscription_id, 'sub_')}")
+
+    async def cancel_subscription(self, subscription_id: str) -> dict:
+        """Stop a subscription now: it renews no more (ALY-218). Paddle cannot restart a
+        cancelled subscription; a client who comes back starts a new one."""
+        return await self._call(
+            "POST", f"/subscriptions/{_ref(subscription_id, 'sub_')}/cancel",
+            {"effective_from": "immediately"},
+        )
 
     async def _call(self, method: str, path: str, body: dict | None = None) -> dict:
         try:

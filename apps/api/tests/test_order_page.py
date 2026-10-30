@@ -17,6 +17,7 @@ import pytest
 from alyr.modules.items import notes
 from alyr.modules.items.clock import ShopClock
 from alyr.modules.items.service import Loaded
+from alyr.modules.orders import page as page_module
 from alyr.seed import AHMED_PHONE, DEMO_SLUG, DEMO_TENANT_ID
 from order_links import token
 from pay_links import pay, pay_page
@@ -157,6 +158,45 @@ def test_a_page_at_a_time_with_the_whole_total(client):
     assert next(c for c in first["categories"] if c["name"] == "Bakery")["count"] == 7
     assert client.get(STORE, params={"limit": 0}).status_code == 422
     assert client.get(STORE, params={"limit": 5000}).status_code == 422
+
+
+def test_the_page_takes_three_connections_and_makes_only_the_rows_it_sends(
+    client_factory, monkeypatch
+):
+    """ALY-276 PERF-6: one page took six connections from the pool (the module check twice,
+    the shop, the page, the Catalog's switch, the pricing) and made every item's row."""
+    monkeypatch.setenv("ALYR_JOBS_INLINE", "false")
+    client = client_factory()
+    for n in range(6):
+        mk(client, name=f"Bun {n}", name_ar=f"كعك {n}", category="Buns", sort=n)
+    pool = client.app.state.db.pool
+    taken = []
+    real_acquire = type(pool).acquire
+
+    def acquire(self, *args, **kwargs):
+        taken.append(1)
+        return real_acquire(self, *args, **kwargs)
+
+    made = []
+    real_row = page_module.public_row
+
+    def public_row(entry, *args, **kwargs):
+        made.append(entry.item["name"])
+        return real_row(entry, *args, **kwargs)
+
+    monkeypatch.setattr(type(pool), "acquire", acquire)
+    monkeypatch.setattr(page_module, "public_row", public_row)
+    answer = shop(client, category="Buns", limit=2, offset=2)
+    # The module check (the shop by its address, then the module), then the page itself.
+    assert len(taken) == 3
+    assert names(answer["items"]) == made == ["Bun 2", "Bun 3"]
+    assert answer["total"] == 6
+    # A search reads every item's words, so it makes every row it searches, not only the
+    # one it sends.
+    made.clear()
+    found = shop(client, q="bun", category="Buns", limit=1)
+    assert (names(found["items"]), found["total"]) == (["Bun 0"], 6)
+    assert len(made) == 6
 
 
 def test_scenario_14_arabic_search_finds_the_item_in_any_common_spelling(client):

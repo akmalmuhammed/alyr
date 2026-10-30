@@ -3,8 +3,10 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from alyr.core import forget
 from alyr.core.auth import Staff
 from alyr.core.team import actor_of
 from alyr.modules.inbox import service
@@ -146,6 +148,50 @@ async def add_note(
     except LookupError as error:
         raise HTTPException(status_code=404, detail="conversation not found") from error
     return {"id": note_id}
+
+
+@router.get("/conversations/{contact_id}/forget", dependencies=[Depends(require_manager)])
+async def forget_preview(
+    contact_id: UUID, request: Request, tenant_id: UUID = Depends(current_tenant)
+) -> dict:
+    """What forgetting this customer would delete and keep (specs/038)."""
+    async with request.app.state.db.tenant(tenant_id) as conn:
+        found = await forget.preview(conn, contact_id)
+    if found is None:
+        raise HTTPException(status_code=404, detail="customer not found")
+    return found
+
+
+@router.get("/conversations/{contact_id}/export", dependencies=[Depends(require_manager)])
+async def export_customer(
+    contact_id: UUID, request: Request, staff: Staff = Depends(current_staff)
+) -> JSONResponse:
+    """A copy of everything the business holds about this customer, as a file to check and
+    send them (specs/038). Put on the customer's record with who downloaded it."""
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        copy = await forget.export(conn, contact_id, actor_of(staff))
+    if copy is None:
+        raise HTTPException(status_code=404, detail="customer not found")
+    day = copy["made_at"][:10]
+    return JSONResponse(copy, headers={
+        "Content-Disposition": f'attachment; filename="customer-data-{day}.json"',
+        "Cache-Control": "no-store",
+    })
+
+
+@router.post("/conversations/{contact_id}/forget", dependencies=[Depends(require_manager)])
+async def forget_customer(
+    contact_id: UUID, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    """Forget a customer who asked to be deleted: owners and admins, never undone."""
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            done = await forget.forget(conn, contact_id, actor_of(staff))
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail="customer not found") from error
+    except forget.Refused as error:
+        raise HTTPException(status_code=409, detail={"reason": error.why}) from error
+    return {"forgotten": True, **done}
 
 
 @router.get("/saved-replies")

@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from alyr.channels.meta import MetaChannel
 from alyr.channels.simulator import SimulatorChannel
 from alyr.config import get_settings
+from alyr.core import account as account_notes
 from alyr.core import origin, ratelimit
 from alyr.core.card_billing import CardBilling
 from alyr.core.images import PhotoRefused
@@ -22,6 +23,7 @@ from alyr.core.welcome import AccountMail
 from alyr.db import Database
 from alyr.gateways import registry as payment_gateways
 from alyr.modules import report
+from alyr.modules.bookings import deposits as booking_deposits
 from alyr.modules.bookings.service import REMINDER, Reminders
 from alyr.modules.connect import webhooks as connect_webhooks
 from alyr.modules.documents.delivery import JOB as DELIVERY_JOB
@@ -34,7 +36,9 @@ from alyr.modules.items.import_photos import JOB as IMPORT_PHOTOS
 from alyr.modules.items.import_photos import ImportPhotos
 from alyr.modules.items.service import count_active
 from alyr.modules.orders import holds as order_holds
+from alyr.modules.orders import staff_alert
 from alyr.modules.orders.service import EXPIRE_JOB
+from alyr.routes import account as account_routes
 from alyr.routes import admin as admin_routes
 from alyr.routes import admin_media as admin_media_routes
 from alyr.routes import admin_templates as admin_template_routes
@@ -42,6 +46,7 @@ from alyr.routes import agent as agent_routes
 from alyr.routes import auth as auth_routes
 from alyr.routes import billing as billing_routes
 from alyr.routes import bookings as bookings_routes
+from alyr.routes import client_address as client_address_routes
 from alyr.routes import connect as connect_routes
 from alyr.routes import connect_setup as connect_setup_routes
 from alyr.routes import costs as cost_routes
@@ -109,11 +114,8 @@ def create_app() -> FastAPI:
         docs_url="/docs" if local else None, redoc_url=None,
         openapi_url="/openapi.json" if local else None,
     )
-    if not ratelimit.address_limits_on(settings):
-        log.warning(
-            "per-address rate limits are off: set ALYR_CLIENT_IP_HEADER to say where the "
-            "visitor's address is read from (ALY-116)"
-        )
+    for note in ratelimit.startup_notes(settings):
+        log.warning(note)
     app.add_middleware(origin.OwnPagesOnly, settings=settings)
     app.state.db = Database(settings.database_url)
     app.state.outbound = Outbound(
@@ -145,9 +147,22 @@ def create_app() -> FastAPI:
     app.state.card_billing = CardBilling(app.state.db, settings)
     app.state.card_billing.register(app.state.jobs)
     app.state.jobs.register(REMINDER, Reminders(app.state.db, app.state.outbound).send)
-    app.state.jobs.register(report.JOB, report.WeeklyReports(app.state.db, app.state.outbound).send)
+    # Work no customer is waiting for is `background`: it runs after theirs (ALY-276).
+    app.state.jobs.register(
+        report.JOB, report.WeeklyReports(app.state.db, app.state.outbound).send, background=True
+    )
     app.state.jobs.register(
         EXPIRE_JOB, order_holds.HoldExpiry(app.state.db, app.state.outbound).run
+    )
+    # A booking whose deposit was not paid in time gives its time back (D-084).
+    app.state.jobs.register(
+        booking_deposits.EXPIRE_JOB,
+        booking_deposits.DepositExpiry(app.state.db, app.state.outbound).run,
+    )
+    # The staff numbers marked for new orders are told about each one (D-079).
+    app.state.jobs.register(
+        staff_alert.JOB,
+        staff_alert.StaffAlerts(app.state.db, app.state.outbound, settings.public_web_url).run,
     )
     # Documents sent to the customer (ALY-139): WhatsApp through the outbound layer, email with
     # the PDF attached. A delivery that fails every try shows the owner "not delivered".
@@ -157,7 +172,7 @@ def create_app() -> FastAPI:
     app.state.jobs.register(ACCOUNT_EMAIL, AccountMail(app.state.db).run)
     # Events out to the shop's other system (ALY-142): signed, retried, guarded.
     app.state.webhooks = connect_webhooks.WebhookSender(app.state.db)
-    app.state.jobs.register(connect_webhooks.JOB, app.state.webhooks.run)
+    app.state.jobs.register(connect_webhooks.JOB, app.state.webhooks.run, background=True)
     # The Catalog on WhatsApp (ALY-106): back-in-stock messages, owner alerts, and photos sent
     # by staff turned into drafts. Each is a job, so none holds a request open.
     app.state.jobs.register(
@@ -176,10 +191,14 @@ def create_app() -> FastAPI:
     app.state.media.register(app.state.jobs)
     # Photos that come with an imported spreadsheet are added after it is applied (ALY-108).
     photos_job = ImportPhotos(app.state.db, app.state.media)
-    app.state.jobs.register(IMPORT_PHOTOS, photos_job.run, photos_job.gave_up)
+    app.state.jobs.register(IMPORT_PHOTOS, photos_job.run, photos_job.gave_up, background=True)
     # One message to the owner after an import that counted stock (ALY-108).
     app.state.jobs.register(
         IMPORT_ALERT, ImportAlert(app.state.db, app.state.outbound).run
+    )
+    # The note to an old sign-in address, and to owners when the data is downloaded (specs/040).
+    app.state.jobs.register(
+        account_notes.NOTICE, account_notes.AccountNotices(app.state.db).run
     )
     app.add_exception_handler(PhotoRefused, media_routes.refused)
     app.add_exception_handler(DocumentError, documents_routes.refused)
@@ -281,10 +300,13 @@ def create_app() -> FastAPI:
     )
     app.include_router(store.router, dependencies=[Depends(require_module_for_slug("orders"))])
     app.include_router(jobs_routes.router)
+    app.include_router(jobs_routes.messages)
     app.include_router(inbox.router, dependencies=[Depends(require_module("inbox"))])
     app.include_router(team_routes.router)
     app.include_router(owner_routes.router)
     app.include_router(auth_routes.router)
+    app.include_router(client_address_routes.router)
+    app.include_router(account_routes.router)
     app.include_router(
         bookings_routes.public, dependencies=[Depends(require_module_for_slug("bookings"))]
     )

@@ -52,6 +52,11 @@ def _hash(value: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()
 
 
+def token_hash(token: str) -> str:
+    """How a session cookie value is kept in `sessions`."""
+    return _hash(token)
+
+
 def clean_email(email: str) -> str:
     return email.strip().lower()
 
@@ -132,7 +137,8 @@ async def create_session(conn: asyncpg.Connection, user_id: UUID, tenant_id: UUI
 
 
 async def session_for(db: Database, email: str) -> str | None:
-    """A session in the person's first shop, or None if they work for no shop yet."""
+    """A session in the business the person opened last, else the first they joined; None if
+    they work for none yet (go-live item 40, D-081)."""
     email = clean_email(email)
     async with db.unscoped() as conn, conn.transaction():
         user_id = await conn.fetchval("select id from users where email = $1", email)
@@ -140,7 +146,10 @@ async def session_for(db: Database, email: str) -> str | None:
             return None
         await conn.execute("select set_config('app.user_id', $1, true)", str(user_id))
         tenant_id = await conn.fetchval(
-            "select tenant_id from memberships where user_id = $1 order by created_at limit 1",
+            "select m.tenant_id from memberships m join users u on u.id = m.user_id "
+            "where m.user_id = $1 "
+            "order by m.tenant_id is not distinct from u.last_tenant_id desc, m.created_at "
+            "limit 1",
             user_id,
         )
         if tenant_id is None:
