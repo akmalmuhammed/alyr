@@ -33,10 +33,13 @@ const dirty = !process.env.ALYR_BUILD_SHA && git("status", "--porcelain", "--", 
 const commit = dirty ? `${sha}-dirty` : sha;
 const built = new Date().toISOString();
 const offer = process.env.NEXT_PUBLIC_ALYR_OFFER === "on" ? "on" : "off";
+// The "Try it free" button (apps/web/app/_site/site.ts `TRY_FREE_LIVE`): which way this build went,
+// so https://alyr.qa/version.txt says what is live and tryfree-check.mjs knows what to expect.
+const tryFree = process.env.NEXT_PUBLIC_ALYR_TRY_FREE === "on" ? "on" : "off";
 
 writeFileSync(
   join(out, "version.txt"),
-  [`commit ${commit}`, `branch ${branch}`, `built ${built}`, `offer ${offer}`, ""].join("\n"),
+  [`commit ${commit}`, `branch ${branch}`, `built ${built}`, `offer ${offer}`, `try-free ${tryFree}`, ""].join("\n"),
 );
 
 function pages(dir) {

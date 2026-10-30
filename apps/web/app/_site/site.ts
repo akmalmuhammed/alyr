@@ -42,6 +42,20 @@ export const SITE_VERIFICATION = {
  * `NEXT_PUBLIC_ALYR_OFFER=on` and rebuild the day the CR is issued. */
 export const OFFER_LIVE = process.env.NEXT_PUBLIC_ALYR_OFFER === "on";
 
+/** Whether the pages lead with "Try it free", the way into the self-serve sign-up (D-031,
+ * D-053), and keep "Book a check-up" as the second action. Off until the founder switches
+ * it on at publish time (`NEXT_PUBLIC_ALYR_TRY_FREE=on`, then rebuild), and only once the
+ * sign-up behind it is open: `ALYR_SIGNUP_OPEN` on the API and one business type set to
+ * self-serve in /ops (docs/runbooks/go-live-checklist.md, "Opening self-serve sign-up").
+ * Off, the built site is the one without the button. It follows "Book a check-up", which it
+ * sits beside, so it is also off in the contact state "pending" (no way to reach ALYR). */
+export const TRY_FREE_LIVE = process.env.NEXT_PUBLIC_ALYR_TRY_FREE === "on" && CONTACT_STATE !== "pending";
+
+/** Where "Try it free" leads: the first step of the sign-up. The one place the address is
+ * written. It carries nothing about the visitor, and no source marker, because /start
+ * reads none and the onboarding funnel records none. */
+export const TRY_FREE_URL = "https://app.alyr.qa/start";
+
 /** Where staff sign in. Empty on the published site, which is the public pages only:
  * the workspace is not hosted there, so the footer shows no link to it. */
 export const WORKSPACE_URL = process.env.NEXT_PUBLIC_ALYR_WORKSPACE_URL ?? "";

@@ -2,7 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { AgentFigure } from "./AgentFigure";
 import { Icon, type IconName } from "./brand";
 import { BusinessTabs } from "./BusinessTabs";
-import { ContactButton, ContactNote } from "./Contact";
+import { Actions, ContactButton, ContactNote, TryFreeNote } from "./Contact";
 import { copy, type Locale, type Questions as QuestionSet } from "./copy";
 import { FigCaption } from "./Drawings";
 import { TickPath } from "./Frames";
@@ -14,7 +14,7 @@ import { HowCards } from "./HowCards";
 import { SAMPLE_ORDER, SAMPLES } from "./samples";
 import { SuiteFrame } from "./SuiteFrame";
 import { contactHref, Shell } from "./Shell";
-import { CONTACT_STATE, INCLUDED, OFFER_LIVE, PATHS, PRODUCTS, productPath, SECTORS, sectorPage } from "./site";
+import { CONTACT_STATE, INCLUDED, OFFER_LIVE, PATHS, PRODUCTS, productPath, SECTORS, sectorPage, TRY_FREE_LIVE } from "./site";
 import { lines, rich } from "./Text";
 import "./kit.css";
 import "./home.css";
@@ -91,14 +91,14 @@ function Hero({ locale }: { locale: Locale }) {
             <span className="hl"><span>{hero.title[1]}</span></span>
           </h1>
           <p className="hero-lead">{rich(hero.lead)}</p>
-          <div className="hero-actions" data-hero-cta>
-            <ContactButton locale={locale} lean label={hero.action} />
+          <div className={TRY_FREE_LIVE ? "hero-actions is-pair" : "hero-actions"} data-hero-cta>
+            <Actions locale={locale} lean label={hero.action} />
             <a className="link hero-more" href="#how">
               {hero.more}
               <Icon name="arrow-right" className="ico ico-flip" />
             </a>
           </div>
-          <ContactNote locale={locale} className="hero-note" />
+          {TRY_FREE_LIVE ? <TryFreeNote locale={locale} className="hero-note" /> : <ContactNote locale={locale} className="hero-note" />}
           <ul className="hero-facts">
             {(OFFER_LIVE ? hero.facts : hero.factsNoOffer).map((fact, index) => <li key={fact} style={n(index)}>{rich(fact)}</li>)}
           </ul>
@@ -459,8 +459,8 @@ function Price({ locale }: { locale: Locale }) {
           </figure>
         </div>
         <div className="price-cta">
-          <ContactButton locale={locale} lean label={copy[locale].home.final.action} />
-          <ContactNote locale={locale} />
+          <Actions locale={locale} lean label={copy[locale].home.final.action} />
+          {TRY_FREE_LIVE ? <TryFreeNote locale={locale} /> : <ContactNote locale={locale} />}
         </div>
       </div>
     </section>

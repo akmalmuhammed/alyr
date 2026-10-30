@@ -65,6 +65,9 @@ jobs:
       ALYR_BUILD_SHA: ${{ github.event.pull_request.head.sha }}
       ALYR_BUILD_BRANCH: ${{ github.head_ref }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
+      # A preview shows what the next publish will: the "Try it free" button follows the same
+      # repository variable as production (unset: off).
+      NEXT_PUBLIC_ALYR_TRY_FREE: ${{ vars.ALYR_TRY_FREE }}
       # The Cloudflare token is NOT set here: only the two steps that talk to Cloudflare get it,
       # so the dependency install and the build of the pull request's code never see it (ALY-245).
     defaults:
@@ -175,6 +178,10 @@ jobs:
       # Search engines' ownership tags in <head> (D-056); empty means no tag.
       NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION: ${{ vars.GOOGLE_SITE_VERIFICATION }}
       NEXT_PUBLIC_BING_SITE_VERIFICATION: ${{ vars.BING_SITE_VERIFICATION }}
+      # The "Try it free" button (ALY-211): shown only when the repository variable ALYR_TRY_FREE
+      # is `on`. Unset or anything else, the build is the one without it. Set it only once
+      # sign-up is open (docs/runbooks/go-live-checklist.md, "Opening self-serve sign-up").
+      NEXT_PUBLIC_ALYR_TRY_FREE: ${{ vars.ALYR_TRY_FREE }}
     defaults:
       run:
         working-directory: apps/web

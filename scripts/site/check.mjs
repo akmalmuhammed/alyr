@@ -11,6 +11,12 @@
 // 5. the pace                     scripts/site/pace-check.mjs (timed pieces follow --pace)
 // 6. :has() and the server's marks scripts/site/has-check.mjs (no :not() inside a :has();
 //                                  the header's and <main>'s marks match each built page)
+// 7. the "Try it free" switch      scripts/site/tryfree-check.mjs (off: no trace of the button in
+//                                  any readable file; on: the button, its address and the pair
+//                                  with "Book a check-up" on every page that should have them).
+//                                  Which one it checks is the build's own stamp: run
+//                                  `NEXT_PUBLIC_ALYR_TRY_FREE=on pnpm site:check` for the second
+//
 //
 // All checks run even when one fails, so one run shows everything; the exit code is 1 if
 // any failed.
@@ -28,6 +34,7 @@ const steps = [
   ["internal links", "node", [join(here, "link-check.mjs")]],
   ["the pace", "node", [join(here, "pace-check.mjs")]],
   [":has() and the server's marks", "node", [join(here, "has-check.mjs")]],
+  ["the Try it free switch", "node", [join(here, "tryfree-check.mjs")]],
 ];
 
 const results = [];
