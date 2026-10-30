@@ -21,6 +21,9 @@ from test_track import an_order, mint, token_of, track
 PAY_KEYS = {
     "amount", "status", "provider", "customer", "lang", "shop", "shop_ar", "slug",
     "order_number", "order_id", "amount_text",
+    # Where the Pay button goes (ALY-17): the stand-in, or the provider's page for this payment
+    # on the shop's own account, and whether that page is still being made or no longer works.
+    "stand_in", "preparing", "unavailable", "checkout_url",
 }
 
 

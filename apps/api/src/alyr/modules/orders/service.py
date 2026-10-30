@@ -13,7 +13,7 @@ from uuid import UUID, uuid4
 
 import asyncpg
 
-from alyr.core import identity, jobs, team, templates
+from alyr.core import identity, jobs, payments, team, templates
 from alyr.core.normalise import fmt_qar, fmt_qar_ar
 from alyr.core.outbound import Outbound
 from alyr.core.team import Actor
@@ -625,12 +625,9 @@ async def create_order(
         else:
             closing = f"Pay by {how} " + ("on delivery." if delivering else "when you collect.")
     else:
-        pay_url = await conn.fetchval(
-            "insert into payment_requests (contact_id, amount, order_id) values ($1, $2, $3) "
-            "returning id",
-            contact_id, total, order_id,
-        )
-        pay_url = f"{web_url}/pay/{tenant_id}/{pay_url}"
+        # On the shop's own payment account when it has connected one (ALY-17).
+        payment_id = await payments.request(conn, contact_id, total, order_id)
+        pay_url = f"{web_url}/pay/{tenant_id}/{payment_id}"
         closing = f"للدفع: {pay_url}" if arabic else f"Pay here: {pay_url}"
         if held_until is not None:
             closing += (

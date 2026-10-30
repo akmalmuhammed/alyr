@@ -4,7 +4,7 @@ from uuid import UUID
 import asyncpg
 
 from alyr.channels.base import Choice, OutboundMessage
-from alyr.core import team, templates
+from alyr.core import payments, team, templates
 from alyr.core.normalise import fmt_qar
 from alyr.core.outbound import Outbound
 from alyr.core.team import Actor
@@ -180,10 +180,8 @@ async def create_payment_request(
     conn: asyncpg.Connection, tenant_id: UUID, contact_id: UUID, amount: int, web_url: str
 ) -> str:
     """Record a payment request and return the link the customer opens."""
-    payment_id = await conn.fetchval(
-        "insert into payment_requests (contact_id, amount) values ($1, $2) returning id",
-        contact_id, amount,
-    )
+    # On the shop's own payment account when it has connected one (ALY-17).
+    payment_id = await payments.request(conn, contact_id, amount)
     return f"{web_url}/pay/{tenant_id}/{payment_id}"
 
 

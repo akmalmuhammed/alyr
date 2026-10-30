@@ -65,6 +65,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-070 | Product analytics with PostHog (EU), at two levels the visitor chooses: cookieless counting by default, cookies and masked recordings with consent; never customer pages, the inbox or names | Accepted |
 | D-071 | The homepage plays like a video: the film starts at load and moves at once; its Pause controls are not on show (only on hover, keyboard focus or while paused); a click on the film pauses it | Accepted |
 | D-065 | Owners and staff manage the shop from WhatsApp as well as the portal, through one shared action layer; phases 0 and 1 (link a number, read-only commands) are built first | Accepted (written as D-040 on 18 Oct; renumbered 28 Oct, D-040 is the look) |
+| D-072 | Shops get paid online through three doors, each ending in an account in the shop's own name: connect your own account (built first), ALYR-assisted sign-up with a partner (Noqoody, then SADAD), and opening by API only once a provider proves it; apply to Noqoody, SADAD and Tap. Updates D-044 | Accepted |
 
 ---
 
@@ -1470,6 +1471,8 @@ Nothing claims more than the page, as before.
 
 **Revisit when.** ALY-5's answers come back (SADAD or MyFatoorah may lead instead of Tap); the lawyer answers on ALY-32; ALYR enters another GCC country.
 
+Updated by D-072 (28 Oct 2026): Tap is no longer the automatic first partner, and opening an account by API waits until a provider proves it opens the shop's own account.
+
 ## D-062 · The homepage hero is the explainer film
 **Date** 28 Oct 2026 · **Status** Accepted (the founder, 28 Oct 2026, after reviewing four Framer prototypes of the hero, in his words, relayed in the work's brief: "go with D and publish to home page") · Branch `aly-hero-film` · Prototype: `docs/doodle-study/04-d-log.md` in the doodle worktree (`D:/alyr-doodle`) (05D, "Explainer") · Log: `docs/framer-review/09-hero-film-log.md`
 
@@ -1603,3 +1606,20 @@ Without it, analytics is off everywhere.
 
 **Revisit when.** Owners ask for commands the rules cannot understand (then phase 4 with a model), or a shop needs more than one number per person, or Meta's pricing makes nudges outside the 24-hour window too costly (ALY-64).
 
+---
+
+## D-072 · Three doors to the shop's own payment account
+**Date** 28 Oct 2026 · **Status** Accepted (the founder chose "Three doors, apply to all three" on 28 Oct 2026, in the payment layer thread) · Linear ALY-5, ALY-17, ALY-156, ALY-157 · Research: the Claude Doc "Qatar payment partners: who to work with and how" (https://claude.ai/artifact/1aAdUxVz4ru8Z7X6vkHr56) · Updates D-044 · Spec `specs/033-payment-adapters/spec.md`
+
+**What changed since D-044.** A second look at every Qatar provider found none that publicly shows an API that opens a shop's own merchant account, paid to its own IBAN. Tap's Platforms product might (its samples show the UAE and Saudi Arabia, not Qatar); Tap's Marketplace and MyFatoorah's suppliers both put the shop under the platform's account, which is model C. Noqoody publishes the lowest prices in Qatar (NAPS 1.45% + QAR 1, cards 2% + QAR 1) and has a partner programme with a technology tier; SADAD has the most complete public API and, with Dibsy, direct QA-RTGS settlement since September 2026.
+
+**The decision.** Every door ends in an account in the shop's own name; hard rule 3 is unchanged.
+1. **Connect your own account** (model A). Built first, because it needs no partner deal: the shop pastes its keys. ALY-17 builds the adapter interface, sealed keys, signed webhooks and a simulator provider; ALY-157 the screen.
+2. **ALYR-assisted sign-up.** The shop fills one form in ALYR and ALYR submits it to a partner under a referral deal: Noqoody first, SADAD second. The account that comes back is connected through door 1.
+3. **Opened by API** (D-044's model B). Only once a provider proves the shop gets its own merchant account and its own payouts.
+- **ALYR's own billing** is a separate account, chosen by a live test between SADAD and Noqoody (save a card, charge it again, refund it, pay QAR 1 by NAPS); Tap when the first GCC shop arrives.
+- **Apply now** to Noqoody, SADAD and Tap, naming ALYR (the CR is issued), with the same six questions; drafts in the project files, `payments/partner-applications-2026-10-28.md`.
+
+**Rejected.** *Tap first for model B* (D-044): unproven for Qatar, and its Marketplace product is model C. *Waiting for a model B partner before building anything*: door 1 needs no deal and every other door ends in it.
+
+**Revisit when** Tap says a Platforms lead in Qatar is the shop's own merchant (Tap becomes door 3); Noqoody's partner portal can submit applications (Noqoody becomes door 3); a provider stores data outside Qatar (it waits for a row in `docs/data-residency.md`).

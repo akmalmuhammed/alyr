@@ -84,6 +84,13 @@ class Settings(BaseSettings):
     # answered with a page that says so, and the shop sends the document again.
     document_link_days: int = 90
 
+    # Seals the keys shops paste from their payment provider (AES-256-GCM, core/payment_keys.py,
+    # ALY-17): 32 random bytes, base64. Only a local machine may leave it empty (a built-in
+    # development key is used); anywhere else connecting a payment account is refused until it
+    # is set. Never in git. Changing it makes every connected account's keys unreadable: the
+    # shops connect again.
+    payment_keys_key: str = ""
+
     meta_app_secret: str = ""
     meta_verify_token: str = ""
     meta_access_token: str = ""
