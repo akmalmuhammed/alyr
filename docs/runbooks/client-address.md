@@ -6,6 +6,12 @@ page says how the API learns that address in production on Google Cloud, how to 
 check it and how to turn it off again. Until it is turned on, the API logs "per-address rate
 limits are off" at start-up and only the per-email limits work.
 
+**Status.** On in production since 30 Oct 2026 with the founder's go-ahead: the code shipped in
+v0.3.0, then steps 2 to 5 below the same day (revision `alyr-api-00017-wg5`; `alyr-edge` version
+`c8630fa9`, the one before it `5421040a`). One thing the runbook did not say: step 2 does not let
+`alyr-run` read the new secret, so step 5 failed once (the old revision kept serving) until
+`infra/gcp/setup.sh access grant` was run. Run it after step 2.
+
 ## What it does
 
 ```
@@ -69,8 +75,9 @@ is green. Until step 5, nothing a visitor meets changes.
    `https://app.alyr.qa/login` answer 200, and
    `curl https://api.alyr.qa/api/client-address` answers `"source":"connection","counting":false`
    (it was a 404 before). Sign in at `https://app.alyr.qa/login` once.
-2. **Make the key.** `infra/gcp/setup.sh client-ip-key`. A new secret in Secret Manager; nothing
-   reads it yet.
+2. **Make the key.** `infra/gcp/setup.sh client-ip-key`. A new secret in Secret Manager, readable
+   by the API's account (`alyr-run`); nothing reads it yet. (Before 30 Oct 2026 this step did not
+   grant the read and step 5 failed until `setup.sh access grant` was run.)
 3. **Give the Worker the key** (a secret only; the Worker's code does not change yet). In
    `infra/cloudflare/edge`: `pnpm install --frozen-lockfile`. Then, logged in to the **business**
    Cloudflare account (`XDG_CONFIG_HOME=C:/Users/akmal/.alyr-cf-business` and
@@ -128,10 +135,12 @@ dropped). After a leak, drop the old key at once instead of keeping it: `finish`
 
 ## Assumed, and how it is proved
 
-- **Cloudflare replaces a `CF-Connecting-IP` a visitor writes.** Its documentation says the header
-  carries the client's address and says nothing of a value the client sends. The Worker relies on
-  it, as the interim Worker did, so the check sends a made-up one through `api.alyr.qa` and fails
-  if the API counts it.
+- **A `CF-Connecting-IP` a visitor writes never counts.** Cloudflare's documentation says the
+  header carries the client's address and says nothing of a value the client sends. Tried on
+  30 Oct 2026: Cloudflare refuses the request itself (403, "error code: 1000") before the Worker
+  runs. The Worker relies on the header either way, as the interim Worker did, so the check sends
+  a made-up one through `api.alyr.qa` and passes on the refusal, or on the API still counting the
+  address Cloudflare saw, and fails if the API counts the made-up one.
 - **Next's `/api/*` forwarding carries the two headers.** True of Next 16.4 (tried on 29 Oct with
   a stand-in API); the check goes through `app.alyr.qa` to prove it for every release.
 
