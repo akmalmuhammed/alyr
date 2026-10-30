@@ -98,6 +98,10 @@ case "${1:-}" in
       'resource.type="cloud_scheduler_job" AND resource.labels.job_id="alyr-db-export-nightly" AND severity>=ERROR'
     metric alyr-export-succeeded "ALYR: the nightly export wrote a file" \
       'resource.type="cloud_run_job" AND resource.labels.job_name="alyr-db-export" AND textPayload:"exported gs://"'
+    # Google's audit log of who changed what (ALY-34). The export account's own nightly export is not
+    # listed on purpose; a clone, a restore onto the instance, a delete of it or of a backup is.
+    metric alyr-db-protected-actions "ALYR: the production database was deleted, cloned, restored over, or a backup of it was deleted" \
+      "resource.type=\"cloudsql_database\" AND resource.labels.database_id=\"$PROJECT:$SQL\" AND logName:\"cloudaudit.googleapis.com%2Factivity\" AND protoPayload.methodName=(\"cloudsql.instances.delete\" OR \"cloudsql.instances.clone\" OR \"cloudsql.instances.restoreBackup\" OR \"cloudsql.backupRuns.delete\")"
 
     echo "Alert policies..."
     alerts apply alerts/*.json --db "$PROJECT:$SQL" --channels "$CH"

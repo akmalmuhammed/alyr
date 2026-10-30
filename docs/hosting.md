@@ -188,7 +188,17 @@ security policies and the app role's grants; the API runs on the restored copy.
   with a **new private address** (`infra/gcp/restore.sh clone alyr-db-restored <time>`), so the broken
   one stays for comparison and both database secrets are rewritten (`infra/gcp/restore.sh repoint`).
   Steps, targets and the rehearsal of 30 Oct 2026: `docs/runbooks/restore-rehearsal.md`,
-  `docs/audit/restore-2026-10-30.md`.
+  `docs/audit/restore-2026-10-30.md`. Restoring a nightly backup (the way back when the instance or
+  its disk is lost) was drilled the same day: `infra/gcp/restore.sh backup-drill`,
+  `docs/audit/hardening-2026-10-30.md`.
+- **On-demand backups never expire.** The 14 are the automatic ones. A backup taken by hand
+  (`gcloud sql backups create`, for example before a release) stays until someone deletes it, so it
+  outlives the privacy notice's "gone within 35 days" unless it is deleted by then. Delete each one
+  once its release has held for a week and in any case before it is 35 days old. `infra/gcp/audit.sh
+  database` lists any that are older.
+- **Who deleted, cloned or restored what** is watched: the alert "Production database deleted,
+  copied, restored over or its backups deleted" reads Google's audit log (ALY-34). A rehearsal clones
+  the database, so it raises it too; the alert closes by itself after a day.
 - **The nightly export:** an SQL file per night in `gs://alyr-prod-db-exports`, in Doha, kept
   35 days. A copy outside the instance, readable without Cloud SQL. `infra/gcp/setup.sh
   lock-backups` makes the 35 days unbreakable, even by the project's owner; run it only
