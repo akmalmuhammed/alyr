@@ -32,7 +32,7 @@ Today a client pays ALYR only by bank transfer, cash or cheque, and ALYR's staff
 ## Not in this spec
 
 - **Going live with Paddle.** Paddle must approve `app.alyr.qa` as a website, ALYR needs public terms, privacy and refund pages, payout details and account verification, and the customer agreement waits for the lawyer (ALY-98). Until then the environment is the sandbox.
-- **What happens when renewals stop.** A past-due or cancelled subscription is shown, and nothing closes (D-053). What ALYR does about a client who stops paying is billing (ALY-85).
+- **What happens when renewals stop.** A past-due or cancelled subscription is shown, and nothing closes (D-053). What ALYR does about a client who stops paying is spec 040 (ALY-218, D-082).
 - **Changing the plan.** A new accepted quote does not change a running Paddle subscription; staff change it in Paddle for now. Upgrades, downgrades and refunds through ALYR are later work.
 - **Local providers.** A Qatari card provider for clients in Qatar (Noqoody or SADAD, after the live test, D-072) is a second value of the same switch, with its own adapter.
 - **Paying the rest by card** after part was paid by hand.

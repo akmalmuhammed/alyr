@@ -192,6 +192,13 @@ class Settings(BaseSettings):
     # Paddle makes it to be shown in a web page: not a secret.
     paddle_client_token: str = ""
 
+    # A client whose next period is not paid (ALY-218, D-082): everything keeps working for
+    # this many days after the due date, with reminders to the owner. Then, while
+    # `billing_pause_sending` is on, ALYR pauses its automatic replies and templates for the
+    # client's businesses until they pay. Nothing is deleted and the workspace stays open.
+    billing_grace_days: int = 14
+    billing_pause_sending: bool = True
+
     # Per shop, to start (D-039; our estimate). A cap stops new items or photos with a
     # clear message and never deletes anything.
     catalog_max_items: int = 1000

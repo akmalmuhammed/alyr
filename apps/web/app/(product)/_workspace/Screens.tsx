@@ -256,6 +256,7 @@ const BLOCK_REASON: Record<string, string> = {
   no_consent: "customer has not agreed to messages",
   no_marketing_consent: "customer has not agreed to offers",
   window_closed: "more than 24 hours since their last message",
+  billing_paused: "ALYR paused automatic messages until your payment is recorded",
 };
 const NEXT_STATUS: Record<string, string> = { new: "confirmed", confirmed: "ready", ready: "done" };
 

@@ -12,3 +12,5 @@
 .tm-accept { justify-self: start; min-height: 44px; padding-inline: var(--space-5); border: 0; border-radius: var(--radius-sm); background: var(--volt); color: var(--on-volt); font-size: var(--ui-body); font-weight: var(--weight-semibold); cursor: pointer; }
 .tm-accept:disabled { opacity: 0.5; cursor: default; }
 .tm-banner :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* The plan banner (ALY-218) shares this frame; paused or ended is marked in the warning colour. */
+.tm-banner.tm-alert { border-inline-start-color: var(--bad); }

@@ -69,6 +69,8 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-070 | Product analytics with PostHog (EU), at two levels the visitor chooses: cookieless counting by default, cookies and masked recordings with consent; never customer pages, the inbox or names | Accepted |
 | D-075 | A customer's data: an owner or admin gives a customer a copy or forgets them from the conversation; the sales records stay without the person, issued documents unchanged; working copies (finished jobs, handled message IDs) are purged after 30 days, failed jobs after 90 | Accepted |
 | D-071 | The homepage plays like a video: the film starts at load and moves at once; its Pause controls are not on show (only on hover, keyboard focus or while paused); a click on the film pauses it | Accepted |
+| D-074 | Clients can pay ALYR by card through Paddle, in US dollars, recorded only from Paddle's signed webhook after reading the payment back | Accepted |
+| D-082 | A client who stops paying keeps everything for 14 days with reminders; then ALYR's automatic WhatsApp sending pauses until they pay, never their workspace or data; cancelling takes seven days | Proposed (built on the recommended option while the founder decides) |
 | D-065 | Owners and staff manage the shop from WhatsApp as well as the portal, through one shared action layer; phases 0 and 1 (link a number, read-only commands) are built first | Accepted (written as D-040 on 18 Oct; renumbered 28 Oct, D-040 is the look) |
 | D-072 | Shops get paid online through three doors, each ending in an account in the shop's own name: connect your own account (built first), ALYR-assisted sign-up with a partner (Noqoody, then SADAD), and opening by API only once a provider proves it; apply to Noqoody, SADAD and Tap. Updates D-044 | Accepted |
 
@@ -1721,6 +1723,28 @@ Without it, analytics is off everywhere.
 - *Letting staff record card payments by hand.* Only the webhook writes the `card` method, so a card payment in the list always has Paddle's own record behind it.
 
 **Revisit when** a Qatari card provider is added for clients in Qatar, the founder gives the setup fee a dollar price, or Paddle adds the riyal.
+
+
+---
+
+## D-082 · A client who stops paying keeps everything for 14 days with reminders; then ALYR pauses its automatic WhatsApp sending until they pay, never the workspace or the data; cancelling takes seven days
+**Date** 29 Oct 2026 · **Status** Proposed: built on the recommended option of the founder's decision card while he decides · Linear ALY-218 (go-live item 39) · Spec `specs/040-subscription-states/spec.md` · Branch `aly-218-subscription-states`
+
+**Where we were.** The setup fee and the first period are paid at go-live (D-053); card renewals arrive by themselves (D-074). Nothing said what happens when a later period is not paid, and D-053 says nothing closes a workspace.
+
+**The decision.**
+- **The plan's clock starts at go-live**, and periods are paid in advance. What was paid, less the setup fee, buys whole periods from the go-live day.
+- **14 days of grace** after a missed period, with an email the day after the due date and three days before the pause. Everything works meanwhile.
+- **Then ALYR pauses its own sending for the client's businesses**: automatic replies, notices and templates. A reply typed in the inbox still goes inside the 24-hour window. Sign-in, the workspace, the data and paying all stay. Nothing is deleted (D-033). Recording the payment lifts the pause at once.
+- **Cancelling takes seven days** (D-034), recorded by staff with how the client asked. On the day, sending pauses the same way and a card subscription is cancelled at Paddle. It can be undone.
+- Both values are settings (`ALYR_BILLING_GRACE_DAYS`, `ALYR_BILLING_PAUSE_SENDING`), so the founder's answer changes a number, not the code.
+
+**Rejected.**
+- *Closing the workspace or the sign-in.* Against D-053, and an owner who cannot sign in cannot pay or take their data.
+- *Pausing typed replies too.* The shop's customers would be left unanswered for ALYR's dispute with the shop; with Meta coexistence the owner can answer from their phone anyway.
+- *Deciding the state by hand in `/ops`.* The rules are a pure function of the price, the payments and the dates, checked every hour, so every client is treated the same.
+
+**Revisit when** the founder answers the decision card (a different grace length, or nothing paused), a Qatari card provider is added, or refunds through ALYR are built.
 
 ## D-073 · Alert rules live in the worker; health checks and uptime stay with the Google Cloud setup
 **Date** 28 Oct 2026 (renumbered 29 Oct from D-062) · **Status** Accepted for review (the founder, 24 Oct 2026: "i wanna start free then pay once we scale"; ntfy parked, alert email later at ops@alyr.qa, he is on call) · Linear ALY-121 · Spec `specs/034-alert-rules/spec.md` · Runbook `docs/runbooks/monitoring.md` · Builds on D-060

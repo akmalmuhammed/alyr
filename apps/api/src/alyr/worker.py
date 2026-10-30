@@ -14,7 +14,7 @@ import signal
 import socket
 
 from alyr.config import get_settings
-from alyr.core import alerts, resume
+from alyr.core import alerts, resume, subscription
 from alyr.core.links import check_secret as check_link_secret
 from alyr.core.retention import purge as purge_old_copies
 from alyr.core.storage import check_store
@@ -88,6 +88,20 @@ async def keep_owners_reminded(db) -> None:
         await asyncio.sleep(3600)
 
 
+async def keep_billing_checked(db) -> None:
+    """Where each client's plan stands (ALY-218, D-082): pause or resume what ALYR sends for
+    an overdue client, cancel at Paddle a plan whose cancellation took effect, and email the
+    owners what is due. Every hour; each email is recorded before it is sent."""
+    while True:
+        try:
+            sent = await subscription.sweep(db)
+            if sent:
+                log.info("emailed %s clients about their plan", sent)
+        except Exception:  # never let billing stop the worker
+            log.exception("could not check the clients' plans")
+        await asyncio.sleep(3600)
+
+
 async def keep_meters_fresh(media) -> None:
     """Every shop has this month's photo and item meters, even in a month it uploaded
     nothing (ALY-103)."""
@@ -133,6 +147,7 @@ async def main() -> None:
     meters = asyncio.create_task(keep_meters_fresh(app.state.media))
     watching = asyncio.create_task(alerts.keep_watching(app.state.db))
     reminders = asyncio.create_task(keep_owners_reminded(app.state.db))
+    billing = asyncio.create_task(keep_billing_checked(app.state.db))
     purger = asyncio.create_task(keep_old_copies_purged(app.state.db))
     try:
         await app.state.jobs.run_forever(heartbeat=heartbeat(app.state.db))
@@ -143,6 +158,7 @@ async def main() -> None:
         meters.cancel()
         watching.cancel()
         reminders.cancel()
+        billing.cancel()
         purger.cancel()
         await app.state.db.close()
         await close_channels(app)
