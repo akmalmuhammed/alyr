@@ -121,6 +121,35 @@ def test_a_job_abandoned_by_a_dead_process_is_picked_up_again(client_factory, mo
     assert len(channel.sent) == 1
 
 
+def test_a_runner_looks_for_abandoned_jobs_once_a_minute_not_on_every_claim(
+    client_factory, monkeypatch
+):
+    """Looking on every claim was most of the database's time in a burst of messages
+    (ALY-275). A job counts as abandoned only after five minutes, so a minute more is nothing."""
+    monkeypatch.setenv("ALYR_JOBS_INLINE", "false")
+    client = client_factory()
+    channel = use(client, FlakyChannel())
+    drain(client)  # the minute's look happens here, and finds nothing of ours
+    signed_post(client, meta_payload(message_id="wamid.abandoned-later"))
+
+    async def abandon():
+        conn = await asyncpg.connect(OWNER_DSN)
+        try:
+            await conn.execute(
+                "update jobs set status = 'running', locked_at = now() - interval '10 minutes' "
+                "where status = 'queued' and payload::text like '%wamid.abandoned-later%'"
+            )
+        finally:
+            await conn.close()
+
+    asyncio.run(abandon())
+    drain(client)
+    assert channel.sent == []  # looked less than a minute ago
+    client.app.state.jobs._reclaimed_at -= jobs.RECLAIM_EVERY_SECONDS
+    drain(client)
+    assert len(channel.sent) == 1
+
+
 def test_a_job_can_ask_for_more_attempts_and_its_retry_delay_stops_growing(
     client_factory, monkeypatch
 ):

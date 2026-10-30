@@ -479,9 +479,9 @@ def test_two_shops_cannot_see_each_others_groups_or_prices():
             for tenant_id, name in ((a, "Shop A"), (b, "Shop B")):
                 await conn.execute("insert into tenants (id, name) values ($1, $2)",
                                    tenant_id, name)
+            # Every shop is made with its default group (migration 0069).
             group = await conn.fetchval(
-                "insert into price_groups (tenant_id, name, name_ar, is_default) "
-                "values ($1, 'Retail', 'التجزئة', true) returning id", a)
+                "select id from price_groups where tenant_id = $1 and is_default", a)
             wholesale = await conn.fetchval(
                 "insert into price_groups (tenant_id, name, name_ar) "
                 "values ($1, 'Wholesale', 'الجملة') returning id", a)
@@ -536,8 +536,10 @@ def test_two_shops_cannot_see_each_others_groups_or_prices():
     import asyncio
 
     seen, untouched, kept, writes, _default = asyncio.run(scenario())
-    assert seen == {"a": [2, 1, 1], "b": [0, 0, 0]}
-    assert untouched == ("UPDATE 0", "DELETE 0", "UPDATE 0")
+    # Shop B has only its own default group, made with it (migration 0069): that is the one
+    # row its statements reach. Shop A's are untouched.
+    assert seen == {"a": [2, 1, 1], "b": [1, 0, 0]}
+    assert untouched == ("UPDATE 1", "DELETE 1", "UPDATE 0")
     assert kept == ("Retail,Wholesale", 800)
     assert writes == ["refused", "refused", "refused"]
 

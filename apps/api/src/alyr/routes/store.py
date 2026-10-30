@@ -165,7 +165,7 @@ async def _pricing(request: Request, shop_id: UUID, contact_id: UUID | None) -> 
     """What the order page needs to know of the shop's pricing features (ALY-150): empty when
     they are all off, so a shop that uses none is told nothing new."""
     out: dict = {}
-    async with request.app.state.db.tenant(shop_id) as conn:
+    async with request.app.state.db.tenant(shop_id, readonly=True) as conn:
         feats = await features.load(conn)
         if feats.on("discounts"):
             group = price_groups.pricing_id(await price_groups.group_of(conn, contact_id))
@@ -216,7 +216,8 @@ async def storefront(
     customer_link.keep_private(response)
     shop = await _shop(request, slug)
     link, state = customer_link.state(x_order_link or t, shop["id"], links.ORDER)
-    async with request.app.state.db.tenant(shop["id"]) as conn:
+    # The page only reads (ALY-275): PostgreSQL refuses a write here.
+    async with request.app.state.db.tenant(shop["id"], readonly=True) as conn:
         customer = await _identify(conn, link)
         if link is not None and customer is None:
             state = "invalid"
@@ -261,7 +262,7 @@ async def one_item(
     customer_link.keep_private(response)
     shop = await _shop(request, slug)
     link, _ = customer_link.state(x_order_link or t, shop["id"], links.ORDER)
-    async with request.app.state.db.tenant(shop["id"]) as conn:
+    async with request.app.state.db.tenant(shop["id"], readonly=True) as conn:
         customer = await _identify(conn, link)
         row = await page.one(
             conn, request.app.state.media, item_id, link.contact_id if customer else None
@@ -277,7 +278,7 @@ async def live(slug: str, body: Live, request: Request) -> dict:
     while the page is open and in front. Small on purpose."""
     shop = await _shop(request, slug)
     link, _ = customer_link.state(body.token, shop["id"], links.ORDER)
-    async with request.app.state.db.tenant(shop["id"]) as conn:
+    async with request.app.state.db.tenant(shop["id"], readonly=True) as conn:
         customer = await _identify(conn, link)
         return await page.live(conn, body.ids, link.contact_id if customer else None)
 
@@ -292,7 +293,7 @@ async def share(
     always the normal prices, and the same for everyone."""
     shop = await _shop(request, slug)
     base = get_settings().public_web_url.rstrip("/")
-    async with request.app.state.db.tenant(shop["id"]) as conn:
+    async with request.app.state.db.tenant(shop["id"], readonly=True) as conn:
         found = await page.one(conn, request.app.state.media, item) if item else None
         listing = None
         if found is None:

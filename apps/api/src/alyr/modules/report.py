@@ -360,8 +360,8 @@ def email(report: dict, shop: dict) -> tuple[str, str, str]:
 async def schedule(conn: asyncpg.Connection, week_start: date, tz: str) -> None:
     """Queue the report for this week, unless it is queued already."""
     queued = await conn.fetchval(
-        "select 1 from jobs where kind = $1 and status in ('queued', 'running') "
-        "and payload->>'week_start' = $2",
+        f"select 1 from jobs where {jobs.THIS_SHOP} and kind = $1 "
+        "and status in ('queued', 'running') and payload->>'week_start' = $2",
         JOB, week_start.isoformat(),
     )
     if not queued:
@@ -379,7 +379,8 @@ async def ensure_scheduled(db: Database, now: datetime | None = None) -> int:
     for tenant_id in tenant_ids:
         async with db.tenant(tenant_id) as conn:
             if await conn.fetchval(
-                "select 1 from jobs where kind = $1 and status in ('queued', 'running')", JOB
+                f"select 1 from jobs where {jobs.THIS_SHOP} and kind = $1 "
+                "and status in ('queued', 'running')", JOB
             ):
                 continue
             tz = await _timezone(conn)

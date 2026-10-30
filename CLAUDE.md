@@ -158,6 +158,7 @@ scripts/api-in-docker.sh uv run pytest -q # where Windows blocks the compiled da
 - A new table that points at a customer (`contacts`) says in `core/forget.py`'s `TABLES` what forgetting the customer does to it; `tests/test_forget.py` reads the foreign keys and fails otherwise. A customer's data is copied for them or forgotten only through `core/forget.py` (specs/038); working copies such as finished jobs are purged by `core/retention.py` (D-075).
 - The app role cannot write `tenants` or `channel_numbers`. Creating a tenant is an owner-role action.
 - Workspace routes take the tenant from `Depends(current_tenant)` or `Depends(current_staff)` in `routes/deps.py`, which read the session. Never take a tenant ID from the request.
+- A new tenant-owned table gets an index whose first column is `tenant_id` (`tests/test_tenant_isolation.py` fails otherwise; D-076). A query on `jobs` names the shop with `jobs.THIS_SHOP`, because the worker's clause in its policy keeps the index from being used. What a customer's page only reads runs in `db.tenant(id, readonly=True)`.
 
 ## Conventions
 

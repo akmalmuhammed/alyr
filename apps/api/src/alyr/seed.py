@@ -14,6 +14,7 @@ from alyr.channels.simulator import SIMULATOR_NUMBER_ID
 from alyr.config import get_settings
 from alyr.core import consent
 from alyr.db import Database
+from alyr.modules.items import groups as price_groups
 from alyr.modules.ledger import service
 
 DEMO_TENANT_ID = UUID("0a1f0000-0000-4000-8000-00000000a1f0")
@@ -171,6 +172,8 @@ async def reset_demo_data(db: Database) -> None:
                       "delivery_settings", "price_groups", "tenant_modules",
                       "shop_settings", "shop_features", "custom_fields"):
             await conn.execute(f"delete from {table}")
+        # A shop's default price group is made with it (migration 0069); the wipe took it.
+        await price_groups.remake_default(conn)
         await conn.execute(
             "insert into tenant_modules (module_key, enabled_by) "
             "select unnest($1::text[]), 'demo setup'", DEMO_MODULES,
