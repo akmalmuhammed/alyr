@@ -1350,6 +1350,27 @@ Nothing claims more than the page, as before.
 
 **Revisit when** the startup credits are refused or run out, a paying client needs Cloud SQL's high availability (a standby in a second zone, about double the database's cost), or the database's CPU stays above 60%.
 
+## D-090 · Production changes only by a released version: green CI, the founder's approval, a tag
+**Date** 30 Oct 2026 · **Status** Proposed (ALY-269, the go-live audit of 29 Oct). The founder accepts it by merging the pull request and applying the GitHub settings in `docs/runbooks/release.md`. The number is provisional: D-069 to D-082 are claimed by open pull requests.
+
+**Decision.** Nothing reaches production on a push or a merge. The app (`deploy-gcp`) and the public site (`site deploy`) are each started by hand from `main` with a version `v0.x.y`. A gate job first checks that the `ci` workflow finished green on that exact commit (its push run on `main`) and that the version is cut in `CHANGELOG.md` and unused. The deploy job then waits in the GitHub environment `production`, where the founder is the required reviewer and only `main` may deploy. The commit is tagged with the version after the health checks pass. The Cloudflare token and account ID are environment secrets: the production job reads them after the approval, previews read a narrower token from their own environment `preview`. Going back is a Cloud Run traffic split (`docs/runbooks/rollback.md`), rehearsed once before the first real client.
+
+**Why.**
+- On 28 Oct the `production` environment had no reviewer. Eight site publishes ran in three minutes with nobody asked, `deploy-gcp` could ship a commit whose CI later failed, and no release had a tag or a CHANGELOG section. The runbook said the opposite.
+- The repository is public and the Cloudflare token reached every Worker in the account. A token readable by any branch's workflow is too widely held; one readable only after the founder's approval, from `main`, is not.
+- A founder who merges many agents' pull requests needs one place where "this is what is live" is true and where going back is a single known command.
+
+**Chosen over.**
+- Keeping publish-on-push behind the reviewer: every merge would raise an approval for an untagged commit, and approving them one by one is how a gate turns into a habit.
+- Deploying automatically when `ci` ends green on `main`: no human decides what goes out, and `ci` takes 35 minutes, so the tip moves under it.
+- Laptop-only deploys: no record, no gate, and production credentials on a laptop.
+
+**Cost, said plainly.** A change to the site or the app is live only after a release PR (one CHANGELOG commit), about 35 minutes of `ci` on the merge commit, and one click. A hotfix pays the same, so roll back first and then fix.
+
+**Not decided here.** Whether pull requests must be up to date before merging, or use a merge queue (OPS-14); whether previews stay on, given that their token still reaches every Worker in the account; whether the Workers that carry production traffic move to a Cloudflare account the site token cannot reach (CLD-4).
+
+**Revisit when** a second person can merge, a staging environment exists, or the release steps are done often enough to script the release PR.
+
 ## D-081 · Your account: switch business, change the sign-in email, download everything
 
 Go-live checklist items 40 and 41 (tracked under ALY-266), spec 040.

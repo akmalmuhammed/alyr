@@ -15,6 +15,7 @@
 #   infra/gcp/setup.sh first-admin <tag> <email> <name>  the first person who can sign in
 #   infra/gcp/setup.sh github        let GitHub Actions deploy without a stored key; print its variables
 #   infra/gcp/setup.sh monitoring    uptime checks on the health addresses, email alerts (ALYR_ALERT_EMAIL)
+#   infra/gcp/setup.sh access [--dry-run] [grant|tighten]  who may read which secret; drops broader roles (ALY-268)
 #   infra/gcp/setup.sh lock-backups  lock the export bucket's 35-day retention (cannot be undone)
 #
 # No secret is printed, written to a file, or passed to an agent. Passwords are generated
@@ -58,9 +59,99 @@ ask_secret() { # name prompt
 # Hex only: no character needs escaping inside a database URL.
 new_password() { openssl rand -hex 24; }
 
-# Settings the API and the worker share (docs/hosting.md, "Production settings").
+# --- Who may read what (ALY-268) --------------------------------------------------------------
+# alyr-run (the API and the worker) reads the settings in SECRETS, one secret at a time.
+# alyr-migrate (the migration and first-admin jobs) reads the two database addresses, one of
+# which is the owner's, and nothing else. Nobody holds a project-wide Secret Manager role.
+# `access` brings the project to that and prints each change; --dry-run prints and changes nothing.
+DRY_RUN="${ALYR_DRY_RUN:-}"
+ACCESSOR=roles/secretmanager.secretAccessor
+MIGRATE_SECRETS=(migration-url database-url)
+# Secrets a later step may mount on the API; bound only once they exist (ALY-265).
+OPTIONAL_RUNTIME_SECRETS=(client-ip-key)
+runtime_secrets() { local pair; for pair in "${SECRETS[@]}"; do echo "${pair#*=}"; done; }
+
+change() { # what it does (shown), then the gcloud arguments
+  local what="$1"; shift
+  if [ -n "$DRY_RUN" ]; then echo "  would $what"; else echo "  $what"; g "$@" >/dev/null; fi
+}
+policy_has() { # role member, then the get-iam-policy command for the resource
+  local role="$1" member="$2" policy; shift 2
+  # Read in full, and stop if it cannot be read: a failed read must not look like "not bound".
+  policy="$(value "$@" --format=json)" || { echo "setup: could not read the policy: $*" >&2; exit 1; }
+  printf '%s' "$policy" | python -c "
+import json, sys
+role, member = sys.argv[1:3]
+bindings = json.load(sys.stdin).get('bindings', [])
+sys.exit(0 if any(b['role'] == role and member in b.get('members', []) for b in bindings) else 1)" "$role" "$member"
+}
+grant_secret() { # secret account
+  local member="serviceAccount:$(sa "$2")"
+  if ! secret_exists "$1"; then echo "  no secret $1 yet; run 'setup.sh secrets', then this again"; return 0; fi
+  if ! policy_has "$ACCESSOR" "$member" secrets get-iam-policy "$1"; then
+    change "let $2 read $1" secrets add-iam-policy-binding "$1" --member="$member" --role="$ACCESSOR"
+  fi
+}
+revoke_secret() { # secret account
+  local member="serviceAccount:$(sa "$2")"
+  secret_exists "$1" || return 0
+  if policy_has "$ACCESSOR" "$member" secrets get-iam-policy "$1"; then
+    change "stop $2 reading $1" secrets remove-iam-policy-binding "$1" --member="$member" --role="$ACCESSOR"
+  fi
+}
+# The additions: nothing here takes access away, so it is safe before the apps are rolled.
+access_grant() {
+  local s
+  echo "Who reads which secret:"
+  if ! exists g iam service-accounts describe "$(sa alyr-migrate)"; then
+    change "create the account alyr-migrate" iam service-accounts create alyr-migrate \
+      --display-name="ALYR migrations and first admin (database owner)"
+  fi
+  for s in $(runtime_secrets); do grant_secret "$s" alyr-run; done
+  for s in "${OPTIONAL_RUNTIME_SECRETS[@]}"; do
+    if secret_exists "$s"; then grant_secret "$s" alyr-run; fi
+  done
+  for s in "${MIGRATE_SECRETS[@]}"; do grant_secret "$s" alyr-migrate; done
+  # GitHub's deploy updates the migration job's image, which needs the right to run as its account.
+  if exists g iam service-accounts describe "$(sa alyr-migrate)" &&
+     ! policy_has roles/iam.serviceAccountUser "serviceAccount:$(sa alyr-deploy)" iam service-accounts get-iam-policy "$(sa alyr-migrate)"; then
+    change "let alyr-deploy run jobs as alyr-migrate" iam service-accounts add-iam-policy-binding "$(sa alyr-migrate)" \
+      --member="serviceAccount:$(sa alyr-deploy)" --role=roles/iam.serviceAccountUser
+  fi
+}
+# The removals: run them once the API and the worker run without the owner's address.
+access_tighten() {
+  local pair role who member
+  echo "What was broader than that:"
+  member="serviceAccount:$(sa alyr-run)"
+  if policy_has "$ACCESSOR" "$member" projects get-iam-policy "$PROJECT"; then
+    change "remove alyr-run's secret access to the whole project" projects remove-iam-policy-binding "$PROJECT" \
+      --member="$member" --role="$ACCESSOR" --condition=None
+  fi
+  # The default compute account is an Editor on a new project. Nothing here runs as it.
+  member="serviceAccount:$(number)-compute@developer.gserviceaccount.com"
+  if policy_has roles/editor "$member" projects get-iam-policy "$PROJECT"; then
+    change "remove Editor from the default compute account" projects remove-iam-policy-binding "$PROJECT" \
+      --member="$member" --role=roles/editor --condition=None
+  fi
+  # A new bucket lets every Editor and Viewer of the project read and delete the exports. The
+  # project's Owner keeps its access, and Cloud SQL its own account's objectCreator.
+  if exists g storage buckets describe "gs://$EXPORTS"; then
+    for pair in storage.legacyBucketOwner:projectEditor storage.legacyObjectOwner:projectEditor \
+                storage.legacyBucketReader:projectViewer storage.legacyObjectReader:projectViewer; do
+      role="roles/${pair%%:*}"; who="${pair#*:}:$PROJECT"
+      if policy_has "$role" "$who" storage buckets get-iam-policy "gs://$EXPORTS"; then
+        change "remove $who from $role on the export bucket" storage buckets remove-iam-policy-binding "gs://$EXPORTS" \
+          --member="$who" --role="$role"
+      fi
+    done
+  fi
+}
+
+# Settings the API and the worker share (docs/hosting.md, "Production settings"). The owner's
+# address (migration-url) is not one of them: only the migration and first-admin jobs read it (ALY-268).
 SECRETS=(
-  ALYR_DATABASE_URL=database-url ALYR_MIGRATION_URL=migration-url ALYR_LINK_SECRET=link-secret
+  ALYR_DATABASE_URL=database-url ALYR_LINK_SECRET=link-secret
   ALYR_META_APP_SECRET=meta-app-secret ALYR_META_VERIFY_TOKEN=meta-verify-token
   ALYR_META_ACCESS_TOKEN=meta-access-token ALYR_META_PHONE_NUMBER_ID=meta-phone-number-id
   ALYR_META_WABA_ID=meta-waba-id ALYR_EMAIL_API_KEY=email-api-key
@@ -125,9 +216,14 @@ case "${1:-}" in
         --storage-auto-increase --backup-start-time=23:00 --retained-backups-count=14 \
         --enable-point-in-time-recovery --retained-transaction-log-days=7 \
         --maintenance-window-day=FRI --maintenance-window-hour=0 --deletion-protection \
-        --root-password="$postgres_pw"
+        --backup-location="$REGION" --root-password="$postgres_pw"
       put_secret postgres-password "$postgres_pw"
       unset postgres_pw
+    fi
+    # Left alone, Google stores the backups in the nearest multi-region, which for Doha is `eu`
+    # (ALY-267, hard rule 2). Backups already taken stay where they were taken.
+    if [ "$(value sql instances describe "$SQL" --format='value(settings.backupConfiguration.location)')" != "$REGION" ]; then
+      g sql instances patch "$SQL" --backup-location="$REGION"
     fi
     exists g sql databases describe alyr --instance="$SQL" || g sql databases create alyr --instance="$SQL"
 
@@ -136,13 +232,13 @@ case "${1:-}" in
         --description="ALYR images"
 
     echo "Accounts the apps run as..."
-    for a in alyr-run:"ALYR API, worker and migrations" alyr-web:"ALYR web app" \
+    for a in alyr-run:"ALYR API and worker" alyr-web:"ALYR web app" \
+             alyr-migrate:"ALYR migrations and first admin (database owner)" \
              alyr-export:"ALYR nightly database export" alyr-deploy:"ALYR deploys from GitHub"; do
       exists g iam service-accounts describe "$(sa "${a%%:*}")" ||
         g iam service-accounts create "${a%%:*}" --display-name="${a#*:}"
     done
-    g projects add-iam-policy-binding "$PROJECT" --member="serviceAccount:$(sa alyr-run)" \
-      --role=roles/secretmanager.secretAccessor --condition=None >/dev/null
+    # Who reads which secret is set secret by secret once the secrets exist: `setup.sh access`.
     # The export account may start an export of this instance and nothing else.
     exists g iam roles describe alyrSqlExporter ||
       g iam roles create alyrSqlExporter --title="ALYR SQL exporter" \
@@ -335,7 +431,7 @@ for s in json.load(sys.stdin).get('data', []):
     stored=0
     for pair in "${SECRETS[@]}"; do
       key="${pair%%=*}"; name="${pair#*=}"
-      case "$name" in database-url|migration-url|link-secret) continue ;; esac
+      case "$name" in database-url|link-secret) continue ;; esac
       val="$(grep -E "^[[:space:]]*$key=" "$file" | tail -1 | cut -d= -f2- | tr -d '\r' |
              sed -E 's/^[[:space:]]+|[[:space:]]+$//g; s/^"(.*)"$/\1/; s/^'"'"'(.*)'"'"'$/\1/')"
       if [ -n "$val" ]; then put_secret "$name" "$val"; echo "  stored $name"; stored=$((stored + 1)); fi
@@ -363,9 +459,13 @@ for s in json.load(sys.stdin).get('data', []):
     g iam service-accounts add-iam-policy-binding "$(sa alyr-web)" \
       --member="serviceAccount:$(sa alyr-deploy)" --role=roles/iam.serviceAccountUser >/dev/null
 
+    DRY_RUN=
+    access_grant   # each account reads its own secrets before anything is deployed with them
+
     echo "Migrations first..."
+    # Runs as alyr-migrate, the only account that reads the database owner's address (ALY-268).
     g run jobs deploy alyr-migrate --region="$REGION" --image="$images/alyr-api:$tag" \
-      --args=python,-m,alyr.migrate --service-account="$(sa alyr-run)" "${private_net[@]}" \
+      --args=python,-m,alyr.migrate --service-account="$(sa alyr-migrate)" "${private_net[@]}" \
       --set-env-vars=ALYR_ENV=production --set-secrets="ALYR_MIGRATION_URL=migration-url:latest,ALYR_DATABASE_URL=database-url:latest" \
       --cpu=1 --memory=1Gi --max-retries=0 --task-timeout=10m
     g run jobs execute alyr-migrate --region="$REGION" --wait
@@ -416,9 +516,32 @@ for s in json.load(sys.stdin).get('data', []):
       --oauth-service-account-email="$(sa alyr-export)" \
       --oauth-token-scope=https://www.googleapis.com/auth/cloud-platform
 
+    # The new revisions run on per-secret access alone; now take the broader roles away.
+    access_tighten
+
     echo "API:  $(url alyr-api)/health/ready"
     echo "      $(url alyr-api)/health/worker"
     echo "Web:  $(url alyr-web)/login"
+    ;;
+
+  access)
+    # Who may read which secret (ALY-268). Safe to run again; prints every change, and with
+    # --dry-run only says what it would change. The two halves are separate so production can
+    # take them in order: `grant` (additions only), roll the API and the worker (`apps`), then
+    # `tighten` (removals). `apps` does all three itself. Without a word it does both halves.
+    shift
+    stage=all
+    for a in "$@"; do
+      case "$a" in
+        --dry-run) DRY_RUN=1 ;;
+        grant|tighten|all) stage="$a" ;;
+        *) echo "usage: setup.sh access [--dry-run] [grant|tighten]" >&2; exit 1 ;;
+      esac
+    done
+    [ -z "$DRY_RUN" ] || echo "Dry run: nothing will be changed."
+    case "$stage" in grant|all) access_grant ;; esac
+    case "$stage" in tighten|all) access_tighten ;; esac
+    echo "Done."
     ;;
 
   first-admin)
@@ -427,14 +550,30 @@ for s in json.load(sys.stdin).get('data', []):
     tag="${2:?usage: setup.sh first-admin <image tag> <email> <name>}"
     email="${3:?usage: setup.sh first-admin <image tag> <email> <name>}"
     name="${4:?usage: setup.sh first-admin <image tag> <email> <name>}"
+    # It runs as alyr-migrate, which reads only the database addresses. ALYR's own WhatsApp
+    # number comes from two more secrets, so alyr-migrate gets them for the length of the run.
+    DRY_RUN=
+    access_grant
+    own_number_secrets=(meta-phone-number-id meta-waba-id)
+    for s in "${own_number_secrets[@]}"; do grant_secret "$s" alyr-migrate; done
     # `^|^` makes | the list separator: an email address has an @ in it.
-    g run jobs deploy alyr-first-admin --region="$REGION" \
-      --image="$REGION-docker.pkg.dev/$PROJECT/$REPO/alyr-api:$tag" \
-      --args="^|^python|-m|alyr.first_admin|--email|$email|--name|$name|--own-number" \
-      --service-account="$(sa alyr-run)" "${private_net[@]}" --set-env-vars=ALYR_ENV=production \
-      --set-secrets="ALYR_MIGRATION_URL=migration-url:latest,ALYR_DATABASE_URL=database-url:latest,ALYR_META_PHONE_NUMBER_ID=meta-phone-number-id:latest,ALYR_META_WABA_ID=meta-waba-id:latest" \
-      --cpu=1 --memory=512Mi --max-retries=0 --task-timeout=5m
-    g run jobs execute alyr-first-admin --region="$REGION" --wait
+    failed=
+    {
+      g run jobs deploy alyr-first-admin --region="$REGION" \
+        --image="$REGION-docker.pkg.dev/$PROJECT/$REPO/alyr-api:$tag" \
+        --args="^|^python|-m|alyr.first_admin|--email|$email|--name|$name|--own-number" \
+        --service-account="$(sa alyr-migrate)" "${private_net[@]}" --set-env-vars=ALYR_ENV=production \
+        --set-secrets="ALYR_MIGRATION_URL=migration-url:latest,ALYR_DATABASE_URL=database-url:latest,ALYR_META_PHONE_NUMBER_ID=meta-phone-number-id:latest,ALYR_META_WABA_ID=meta-waba-id:latest" \
+        --cpu=1 --memory=512Mi --max-retries=0 --task-timeout=5m &&
+      g run jobs execute alyr-first-admin --region="$REGION" --wait
+    } || failed=1
+    # The job's arguments hold the person's email and name and it mounts the owner's address,
+    # so it does not stay behind (ALY-268). The run's logs stay in Cloud Logging.
+    if exists g run jobs describe alyr-first-admin --region="$REGION"; then
+      g run jobs delete alyr-first-admin --region="$REGION" >/dev/null
+    fi
+    for s in "${own_number_secrets[@]}"; do revoke_secret "$s" alyr-migrate; done
+    [ -z "$failed" ] || { echo "setup: the first-admin run failed; see the job's logs in Cloud Logging" >&2; exit 1; }
     echo "Sign in at https://app.alyr.qa/login with $email (a code is emailed)."
     ;;
 

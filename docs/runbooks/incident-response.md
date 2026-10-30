@@ -73,6 +73,11 @@ Things that trip people:
 Cloud Run keeps every revision, and the environment and secrets go back with it, so this is
 faster and safer than rebuilding an old image.
 
+**Use the script:** `infra/gcp/rollback.sh status`, `revisions alyr-api`, `to alyr-api <revision>`,
+`forward`, `check`. It prints each command and asks for `yes` first; the page is
+`docs/runbooks/rollback.md` (ALY-269), including going back across a migration. The commands
+below are the same thing typed by hand, for when the script will not run.
+
 ```bash
 gcloud run revisions list --service alyr-api            # newest first; note the last good one
 gcloud run services update-traffic alyr-api --to-revisions=<good revision>=100
@@ -81,10 +86,12 @@ curl -s https://api.alyr.qa/health/ready                # check
 ```
 
 - To try the new one on a few visitors first: `--to-revisions=<good>=90,<new>=10`.
-- **The worker has no traffic.** It runs the image it was deployed with. Roll it back by naming the
-  old image (the API revision shows it: `gcloud run revisions describe <good revision>
-  --format='value(spec.containers[0].image)'`):
-  `gcloud run worker-pools update alyr-worker --image=<that image>`.
+- **The worker has no traffic.** It is a worker pool with its own revisions:
+  `infra/gcp/rollback.sh to alyr-worker <revision>`, or by hand
+  `gcloud run worker-pools update-instance-split alyr-worker --to-revisions=<revision>=100`.
+  Naming the old image also works (the API revision shows it: `gcloud run revisions describe
+  <good revision> --format='value(spec.containers[0].image)'`, then
+  `gcloud run worker-pools update alyr-worker --image=<that image>`).
 - **Migrations only go forward.** If the bad deploy ran one, ask whether the old code still works
   with the new tables before rolling back. If not, fix forward, or restore (section 4).
 - Traffic stays pinned to the revision you chose: later deploys are not served until you run
