@@ -13,12 +13,22 @@ import asyncpg
 from alyr import catalog
 from alyr.core import pricing, readiness
 from alyr.core.auth import Staff
-from alyr.core.normalise import fmt_qar
+from alyr.core.normalise import fmt_qar, fmt_qar_ar
 from alyr.db import Database
 
 
 class WorkspaceError(Exception):
     """A request the workspace cannot carry out; the message is safe to show."""
+
+
+class PriceNotConfirmed(WorkspaceError):
+    """Switching a product on costs more each month, and the owner has not confirmed the
+    amount they were shown (ALY-274, CJ-15)."""
+
+
+# The step key of the request a workspace leaves for ALYR's staff when its owner switches a
+# product on: the back office's Today queue shows it as a changed price, not as a call for help.
+PRODUCT_ADDED = "product_added"
 
 
 def _text(value: catalog.Text) -> dict:
@@ -159,6 +169,9 @@ async def state(conn: asyncpg.Connection, staff: Staff) -> dict:
                 "modules": list(product.modules),
                 "includes": includes,
                 "steps": steps,
+                # What switching it on adds each month at ALYR's price list, shown before
+                # the owner confirms (ALY-274, CJ-15). Only for a product that can be switched on.
+                "adds": await _adds(conn, product, modules) if status == "available" else None,
             }
         )
 
@@ -273,15 +286,55 @@ def _can_manage(staff: Staff) -> None:
         raise PermissionError("only an owner or admin can change products")
 
 
-async def enable_product(conn: asyncpg.Connection, staff: Staff, key: str) -> list[str]:
+async def monthly_added(
+    conn: asyncpg.Connection, product: catalog.Product, modules: set[str] | frozenset[str]
+) -> int:
+    """What switching this product on adds to the business's monthly price, in dirhams, at
+    ALYR's price list: the monthly lines of a quote drafted with it, less those without it.
+    The product after the first costs the "each extra product" price (D-035)."""
+    tenant = await conn.fetchrow(
+        "select id, name from tenants "
+        "where id = nullif(current_setting('app.tenant_id', true), '')::uuid"
+    )
+    price_list = await pricing.items(conn, only_active=True)
+
+    def monthly(on: frozenset[str]) -> int:
+        business = pricing.Business(tenant["id"], tenant["name"], on)
+        lines = pricing.draft_lines(price_list, [business])
+        return sum(x["quantity"] * x["unit_price"] for x in lines if x["kind"] == "monthly")
+
+    before = frozenset(modules)
+    return monthly(before | set(product.modules)) - monthly(before)
+
+
+async def _adds(conn: asyncpg.Connection, product: catalog.Product, modules: set[str]) -> dict:
+    amount = await monthly_added(conn, product, modules)
+    return {
+        "monthly": amount, "monthly_text": fmt_qar(amount), "monthly_text_ar": fmt_qar_ar(amount),
+    }
+
+
+async def enable_product(
+    conn: asyncpg.Connection, staff: Staff, key: str, confirm_monthly: int | None = None
+) -> list[str]:
     """Switch every module of a product on. Data from an earlier time is kept, so turning
-    a product back on picks up where the shop left off."""
+    a product back on picks up where the shop left off.
+
+    A product that adds to the monthly price is switched on only when the owner confirms the
+    amount they were shown (`confirm_monthly`, in dirhams), and it leaves ALYR's staff an item
+    on the Today queue to bring the client's quote in line (ALY-274, CJ-15)."""
     _can_manage(staff)
     product = catalog.PRODUCT_BY_KEY.get(key)
     if product is None:
         raise LookupError("no such product")
     if product.status == "included":
         raise WorkspaceError(f"{product.name.en} is included for every business")
+    added = await monthly_added(conn, product, await enabled_modules(conn))
+    if added > 0 and confirm_monthly != added:
+        raise PriceNotConfirmed(
+            f"{product.name.en} adds {fmt_qar(added)} a month to your price. "
+            "Confirm the amount to switch it on."
+        )
     for module in product.modules:
         await conn.execute(
             "insert into tenant_modules (module_key, enabled, enabled_at, enabled_by) "
@@ -289,6 +342,18 @@ async def enable_product(conn: asyncpg.Connection, staff: Staff, key: str) -> li
             "on conflict (tenant_id, module_key) do update set enabled = true, "
             "enabled_at = now(), enabled_by = excluded.enabled_by",
             module,
+            staff.name,
+        )
+    if added > 0 and not await conn.fetchval(
+        "select true from setup_requests where product_key = $1 and step_key = $2 "
+        "and status = 'open'",
+        key, PRODUCT_ADDED,
+    ):
+        await conn.execute(
+            "insert into setup_requests (product_key, step_key, note, requested_by) "
+            "values ($1, $2, $3, $4)",
+            key, PRODUCT_ADDED,
+            f"The owner confirmed {fmt_qar(added)} a month more. Bring the client's quote in line.",
             staff.name,
         )
     return list(product.modules)

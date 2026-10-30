@@ -16,11 +16,18 @@ class Ask(BaseModel):
     note: str = Field(default="", max_length=500)
 
 
+class Enable(BaseModel):
+    # The monthly amount the owner was shown and confirmed, in dirhams (ALY-274, CJ-15).
+    confirm_monthly: int | None = Field(default=None, ge=0)
+
+
 def _refuse(error: Exception) -> HTTPException:
     if isinstance(error, PermissionError):
         return HTTPException(status_code=403, detail=str(error))
     if isinstance(error, LookupError):
         return HTTPException(status_code=404, detail=str(error))
+    if isinstance(error, workspace.PriceNotConfirmed):
+        return HTTPException(status_code=409, detail=str(error))
     return HTTPException(status_code=422, detail=str(error))
 
 
@@ -39,10 +46,13 @@ async def home(request: Request, staff: Staff = Depends(current_staff)) -> dict:
 
 
 @router.post("/products/{key}/enable")
-async def enable(key: str, request: Request, staff: Staff = Depends(current_staff)) -> dict:
+async def enable(
+    key: str, request: Request, body: Enable | None = None, staff: Staff = Depends(current_staff)
+) -> dict:
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
-            return {"enabled": await workspace.enable_product(conn, staff, key)}
+            return {"enabled": await workspace.enable_product(
+                conn, staff, key, body.confirm_monthly if body else None)}
     except (workspace.WorkspaceError, PermissionError, LookupError) as error:
         raise _refuse(error) from error
 

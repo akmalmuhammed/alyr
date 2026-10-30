@@ -12,7 +12,9 @@ from uuid import UUID
 import asyncpg
 
 from alyr import catalog
+from alyr.core import access
 from alyr.core.auth import Staff
+from alyr.core.workspace import PRODUCT_ADDED
 
 STAFF_SESSION_HOURS = 12
 
@@ -140,9 +142,40 @@ async def today(conn: asyncpg.Connection) -> dict:
             f"Quote {q['number']} published {days} days ago. Follow up in person.",
             q["published_at"], client_id=q["client_id"], urgent=days >= 5,
         ))
+    # A client accepted a price and has not paid yet. The workspace tells them ALYR sends the
+    # bank details, so this is the item that makes that true (ALY-274, CJ-5). It holds the
+    # reference the client writes on the transfer, so the payment can be matched when it lands.
+    for a in await conn.fetch(
+        "select q.client_id, q.number, q.accepted_at from quotes q "
+        "join clients c on c.id = q.client_id "
+        "where q.status = 'accepted' and c.payment_waived_at is null"
+    ):
+        if a["client_id"] not in with_business:
+            continue
+        owes = await access.summary(conn, a["client_id"])
+        if owes["status"] != "unpaid":
+            continue
+        items.append(_item(
+            "payment", a["client_id"],
+            f"{clients.get(a['client_id'], 'A client')} accepted: waiting for payment",
+            f"Quote {a['number']} accepted; {owes['left_text']} still to pay. "
+            + ("The pay panel shows them the bank details. " if owes["bank"]
+               else "The pay panel has no bank details yet: email them. ")
+            + f"The transfer should carry the reference {owes['reference']}.",
+            a["accepted_at"], client_id=a["client_id"], urgent=_days(a["accepted_at"], now) >= 1,
+        ))
     names = {b["id"]: b for b in businesses}
     for r in await conn.fetch("select * from admin_setup_requests('open')"):
         business = names.get(r["tenant_id"])
+        if r["step_key"] == PRODUCT_ADDED:
+            # The owner switched a product on in the workspace after the price was set.
+            items.append(_item(
+                "change", r["id"], f"{r['business']} changed their products",
+                f"{_product_name(r['product_key'])} was switched on. {r['note']}".strip(),
+                r["created_at"], client_id=business["client_id"] if business else None,
+                business_id=r["tenant_id"], urgent=_days(r["created_at"], now) >= 1,
+            ))
+            continue
         items.append(_item(
             "request", r["id"], f"{r['business']} asked for help",
             f"{_product_name(r['product_key'])} · {r['step_key'] or 'general'}"

@@ -13,6 +13,7 @@
 
 import { useState } from "react";
 import { api, toDirhams } from "./api";
+import { qatarDay } from "./qatarDay";
 
 export type Access = {
   status: "paid" | "no_price" | "unpaid"; waived: boolean; waived_note: string;
@@ -49,7 +50,7 @@ const METHODS: Record<string, string> = { bank_transfer: "Bank transfer", cash: 
 const SHOWN: Record<string, string> = { ...METHODS, card: "Card (Paddle)" };
 
 export function ClientAccess({ clientId, access, onDone }: { clientId: string; access: Access; onDone: () => void }) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = qatarDay();
   const [form, setForm] = useState({ amount: "", method: "bank_transfer", reference: "", received_on: today, note: "" });
   const [reason, setReason] = useState("");
   const [cancelNote, setCancelNote] = useState("");

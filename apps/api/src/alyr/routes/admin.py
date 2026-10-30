@@ -8,6 +8,7 @@ run unless this module has declared, inside the same transaction, that it checke
 caller. Every change is written to the audit log in the same transaction (D-033).
 """
 
+import logging
 import re
 from contextlib import asynccontextmanager
 from datetime import UTC, date, datetime, timedelta
@@ -25,6 +26,7 @@ from alyr.core import (
     auth,
     backoffice,
     card_billing,
+    price_notice,
     pricing,
     readiness,
     subscription,
@@ -39,6 +41,7 @@ from alyr.modules.items import template, template_change
 from alyr.routes.deps import current_staff
 
 router = APIRouter(prefix="/api/admin", tags=["back office"])
+log = logging.getLogger("alyr.admin")
 
 _SLUG = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$")
 
@@ -581,13 +584,22 @@ async def quote_action(
     try:
         async with _back_office(request) as conn:
             client_id = await _client_of(conn, quote_id)
+            was = await conn.fetchval("select status from quotes where id = $1", quote_id)
             await pricing.set_quote_status(conn, quote_id, action, _by(staff))
             await backoffice.audit(
                 conn, staff, f"quote.{action}", "quote", quote_id, client_id=client_id
             )
-            return await pricing.client(conn, client_id)
+            detail = await pricing.client(conn, client_id)
     except pricing.PricingError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
+    if action == "publish" and was != "published":
+        # Once the price is committed, tell the owner it is ready (ALY-274). A failed email
+        # never undoes the publishing: the Today queue still shows the quote as waiting.
+        try:
+            await price_notice.send_ready(request.app.state.db, quote_id)
+        except Exception:
+            log.exception("could not email a client that their price is ready")
+    return detail
 
 
 # ── today, staff and the audit log (D-033) ────────────────
@@ -870,6 +882,8 @@ async def record_payment(
             )
             # A payment can end a pause at once (ALY-218).
             await subscription.refresh(conn, client_id)
+            # And it is a go-live step: the onboarding board shows it now, not at "Check now".
+            await _recheck(conn, client_id, staff)
             await backoffice.audit(
                 conn, staff, "client.payment", "client", client_id, client_id=client_id,
                 detail={"amount": body.amount, "method": body.method,
@@ -905,6 +919,20 @@ async def change_card_billing(
                 detail={"from": before["card_billing"], "to": body.card_billing},
             )
         return await _access(conn, client_id)
+
+
+async def _recheck(conn, client_id: UUID, staff: Staff) -> None:
+    """Run the go-live check for each of a client's businesses, so the onboarding board
+    (which shows the last state the check saw) does not stay stale after a payment (ALY-274,
+    CJ-24). The connection is scoped to each business in turn and left unscoped after."""
+    ids = [r["id"] for r in await conn.fetch(
+        "select id from tenants where client_id = $1 order by created_at", client_id)]
+    try:
+        for business_id in ids:
+            await conn.execute("select set_config('app.tenant_id', $1, true)", str(business_id))
+            await readiness.run(conn, _by(staff), by_alyr=True)
+    finally:
+        await conn.execute("select set_config('app.tenant_id', '', true)")
 
 
 async def _access(conn, client_id: UUID) -> dict:
@@ -974,6 +1002,7 @@ async def waive_payment(
         async with _back_office(request) as conn:
             if await access.waive(conn, client_id, body.reason):
                 await subscription.refresh(conn, client_id)
+                await _recheck(conn, client_id, staff)
                 await backoffice.audit(
                     conn, staff, "client.payment_waived", "client", client_id, client_id=client_id,
                     detail={"reason": body.reason.strip()},

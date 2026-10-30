@@ -5,6 +5,7 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- A client no longer has to chase ALYR to pay (ALY-274, D-093, migration 0077, no new dependency): the owner is emailed once when ALYR publishes their price; `/ops` Today lists a client who accepted and has not paid, with the reference to match the transfer, and a client who switched a product on; the pay panel no longer says the bank details come "today"; switching a product on in the workspace shows the monthly price and asks for a confirmation; the back office dates a payment by the day in Doha; the onboarding board follows a recorded payment at once; and the home counts what is left to go live once.
 
 ## v0.3.1 (30 Oct 2026)
 - Cloudflare edge and DNS hardening of alyr.qa (ALY-116 first layer, CLD-7, CLD-18, D-113; no code change, no migration, no new dependency): every address is HTTPS only, the zone refuses TLS 1.0 and 1.1, SSL is Full (strict), CAA names the CAs Cloudflare issues from, SPF drops Email Routing's retired include, and the API and the media host send security headers (`x-powered-by` is gone from the web app); `alyr.online`, which sends no mail, is locked against spoofing (SPF `-all`, DMARC `quarantine`). Done in Cloudflare on 30 Oct and recorded here with the undo steps (`docs/runbooks/cloudflare-edge.md`, `infra/cloudflare/zone/`, `scripts/check-edge.sh`). The edge rate-limit rule is prepared, not applied: the Free plan only blocks.

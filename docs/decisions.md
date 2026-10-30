@@ -77,6 +77,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-082 | A client who stops paying keeps everything for 14 days with reminders; then ALYR's automatic WhatsApp sending pauses until they pay, never their workspace or data; cancelling takes seven days | Proposed (built on the recommended option while the founder decides) |
 | D-065 | Owners and staff manage the shop from WhatsApp as well as the portal, through one shared action layer; phases 0 and 1 (link a number, read-only commands) are built first | Accepted (written as D-040 on 18 Oct; renumbered 28 Oct, D-040 is the look) |
 | D-091 | Recovery targets (data lost under 10 minutes, back in about 15) and the rule that an alert counts only when it reaches a phone; a restore is always a point-in-time clone to a new instance | Proposed |
+| D-093 | A client is not left to chase ALYR: the owner is emailed once when their price is published, an accepted and unpaid client is an item on Today, and switching a product on shows its monthly price, asks for a confirmation and leaves staff an item to bring the quote in line | Proposed (the founder signs off the wording) |
 | D-072 | Shops get paid online through three doors, each ending in an account in the shop's own name: connect your own account (built first), ALYR-assisted sign-up with a partner (Noqoody, then SADAD), and opening by API only once a provider proves it; apply to Noqoody, SADAD and Tap. Updates D-044 | Accepted |
 | D-092 | No setup fee for now: at go-live a client pays the first period of their plan and nothing else; the price list's setup line is out of use, not deleted | Accepted |
 | D-116 | A stopped client's data is deleted 60 days after its cancellation takes effect (never earlier than 31); until then nothing is deleted and the workspace stays open; coming back inside the 60 days keeps everything; the deletion only reports until the founder switches it on | Proposed (built and tested; switched off; the founder switches it on once the lawyer has read D-118) |
@@ -1354,6 +1355,33 @@ Nothing claims more than the page, as before.
 **Chosen over** Azure on full price (no credits; D-036), the interim Cloudflare and Neon host (outside Qatar; D-052), and a copy of backups on Cloudflare R2 in the EU (the founder chose Doha only).
 
 **Revisit when** the startup credits are refused or run out, a paying client needs Cloud SQL's high availability (a standby in a second zone, about double the database's cost), or the database's CPU stays above 60%.
+
+## D-093 · A client is not left to chase ALYR: the price-ready email, an item for the unpaid, and a priced, confirmed switch-on
+**Date** 30 Oct 2026 · **Status** Proposed (ALY-274, the go-live audit of 29 Oct, CJ-5, CJ-14, CJ-15, CJ-24 and CJ-27). The founder accepts it by merging the pull request, and signs off the wording of the email, the confirmation and the pay panel (Arabic by a native reviewer, ALY-66).
+
+**Decision.**
+- **The owner is emailed once when ALYR publishes their price** ("Your ALYR price is ready: QAR 449 a month", English or Arabic as they signed up, with a plain-text twin and a link to the workspace). It is sent through the same mail path as the other emails, claimed on the quote (`quotes.owner_notified_at`, migration 0077) before it goes, so publishing twice, or taking a price back and publishing it again, never sends twice; a refused send releases the claim. A price that is shown at sign-up (a business type set to show its price at once) is on their screen already and is not emailed. Nothing is sent where mail is not set up or the address is one reserved for examples.
+- **A client who accepted a price and has not paid is an item on Today** ("accepted: waiting for payment"), with what is left and the reference the client writes on the transfer. It stays until the payments cover what is due, or the payment is waived. This is what makes the pay panel's sentence about the bank details true: a person sees the item. The panel no longer says "today". The item never carries the bank details; they are the founder's value in `ALYR_BANK_TRANSFER_DETAILS`, which this decision does not set.
+- **Switching a product on in the workspace shows what it adds each month** (the price list's figure: the "each extra product" price for a business that already has one), asks the owner to confirm it, and refuses the switch if the confirmation is missing or differs from the price the API now works out. A switch that adds to the price leaves one open item for ALYR's staff ("changed their products") to bring the client's quote in line. An accepted quote is locked, so the quote is not changed by the switch itself.
+- **Recording or waiving a payment re-runs the go-live check** for the client's businesses, so the onboarding board shows it at once, not after "Check now". The home gives one count of what is left to go live, from that check: the banner counts and lists it, and "Needs you now" leaves out its own count of product setup steps while the banner shows.
+- **The payment date in the back office defaults to the date in Doha**, not the UTC day.
+
+**Why.**
+- On 29 Oct a client could accept a price, read "ALYR sends you the bank details by email today", and then wait: no code sent anything and nobody was told to. A solo founder cannot remember who is waiting; the queue has to.
+- An owner told "you can close this page" had no way to know when the price came. One email, once, ends the wait.
+- Switching a product on was free and silent, and the quote stayed at the old price although the price list says otherwise.
+
+**Chosen over.**
+- *Sending the bank details automatically.* They are the founder's, the repository is public, and there is no company account yet (BIZ-2).
+- *Changing the accepted quote when a product is switched on.* An accepted price never changes (D-032); staff make a new quote and the owner accepts it.
+- *Emailing on every publish.* A price edited five times would send five emails.
+- *Reading the home's count from the product steps and the banner from the check.* They measure different things; two numbers for one job is the defect.
+
+**Not decided here.** The bank account and the value of `ALYR_BANK_TRANSFER_DETAILS`; whether a client who switches a product off gets a credit; a "price changed" email to the owner when staff edit a published price.
+
+**Revisit when** ALYR has more than ten clients (the Today item should become a state in billing, ALY-85), or a company account exists and the pay panel can show real details.
+
+---
 
 ## D-090 · Production changes only by a released version: green CI, the founder's approval, a tag
 **Date** 30 Oct 2026 · **Status** Proposed (ALY-269, the go-live audit of 29 Oct). The founder accepts it by merging the pull request and applying the GitHub settings in `docs/runbooks/release.md`. The number is provisional: D-069 to D-082 are claimed by open pull requests.

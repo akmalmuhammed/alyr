@@ -20,6 +20,13 @@ def product(state, key):
     return next(p for p in state["products"] if p["key"] == key)
 
 
+def switch_on(client, key):
+    """Switch a product on the way the workspace does: confirm the monthly price it shows."""
+    adds = product(shell(client), key)["adds"]
+    body = {"confirm_monthly": adds["monthly"]} if adds and adds["monthly"] > 0 else None
+    return client.post(f"/api/workspace/products/{key}/enable", json=body)
+
+
 def nav_keys(state):
     return [s["key"] for group in ("core", "products", "account") for s in state["nav"][group]]
 
@@ -77,7 +84,7 @@ def test_switching_a_product_off_hides_it_everywhere_and_back_on_restores_it(cli
     assert reply["body"] == "Welcome to Al Noor Electricals. How can we help?"
     assert [c["id"] for c in reply["payload"]["choices"]] == ["book", "my_booking", "prices"]
 
-    assert client.post("/api/workspace/products/accounts/enable").json() == {"enabled": ["ledger"]}
+    assert switch_on(client, "accounts").json() == {"enabled": ["ledger"]}
     summary = client.get("/api/ledger/summary").json()
     assert summary["outstanding"] > 0  # the data was kept while it was off
 
@@ -90,7 +97,7 @@ def test_turning_off_bookings_closes_the_public_booking_page(client):
     assert client.get(f"/api/book/{DEMO_SLUG}").status_code == 404
     assert client.get(f"/api/store/{DEMO_SLUG}").status_code == 200
     assert client.get("/api/inbox/conversations").status_code == 200
-    client.post("/api/workspace/products/bookings/enable")
+    switch_on(client, "bookings")
     assert client.get(f"/api/book/{DEMO_SLUG}").status_code == 200
 
 
@@ -111,8 +118,8 @@ def test_the_shared_inbox_goes_off_only_with_the_last_product_using_it(client):
     assert off == {"disabled": ["inbox", "bookings", "payments"]}
     assert client.get("/api/inbox/conversations").status_code == 403
     assert product(shell(client), "agent")["status"] == "included"
-    client.post("/api/workspace/products/chat/enable")
-    client.post("/api/workspace/products/bookings/enable")
+    switch_on(client, "chat")
+    switch_on(client, "bookings")
     assert client.get("/api/inbox/conversations").status_code == 200
 
 
