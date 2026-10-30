@@ -108,6 +108,8 @@ export default function ClientsPage() {
                 {p.name.en}
               </label>
             ))}
+            {/* The Catalog is ALYR Shelf's module and the platform default gives it to every new business (ALY-113). */}
+            <small className="sh-note">Every new business also gets ALYR Shelf while the platform default is on. ALYR Docs is on only if ticked.</small>
           </fieldset>
           <button className="btn primary" type="submit">Create shop</button>
           {message && <p className="ops-ok" role="status">{message}</p>}

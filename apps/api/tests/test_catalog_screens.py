@@ -673,11 +673,15 @@ def test_scenario_29_another_shop_sees_none_of_this_shops_photos_items_or_change
 # ── the Catalog module: off until the go-live sweep ──────
 
 
-def test_the_catalog_module_is_declared_and_off_for_every_product_and_every_setup():
+def test_the_catalog_module_is_alyr_shelfs_and_no_starting_setup_names_it():
     assert "catalog" in catalog.MODULE_BY_KEY
-    assert all("catalog" not in product.modules for product in catalog.PRODUCTS)
+    # It is ALYR Shelf's module and no other product's (D-046, D-123)...
+    assert [product.key for product in catalog.PRODUCTS if "catalog" in product.modules] == [
+        "shelf"
+    ]
+    assert catalog.products_for({"catalog"}) == ["agent", "shelf"]
+    # ...and no starting setup names it: onboarding adds it by its own setting.
     assert all("catalog" not in preset.modules for preset in presets.PRESETS)
-    assert catalog.products_for({"catalog"}) == ["agent"]  # it makes no product "in use"
 
 
 def test_no_shop_has_it_until_the_back_office_switches_it_on(client):

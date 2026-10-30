@@ -44,6 +44,8 @@ from alyr.modules.agent.words import (
 # an Arabic line that opens with "ALYR Chat" would run left to right without it.
 RLM = "\u200f"
 PRODUCT_OF = {"orders": "chat", "bookings": "bookings", "ledger": "accounts", "inbox": "chat"}
+# The products that get a line in the report (`_line`).
+REPORT_PRODUCTS = frozenset(PRODUCT_OF.values())
 DAY_INITIAL = ("ح", "ن", "ث", "ر", "خ", "ج", "س")  # Sunday to Saturday
 NO_SHOWS = (("no-show", "no-shows"), ("غياب واحد", "غيابان", "حالات غياب", "حالة غياب"))
 
@@ -382,9 +384,10 @@ def summary(w: Week, lang: str) -> str:
 
 
 def products(w: Week) -> list[str]:
-    """The products the business uses, its main product first (ALYR Agent is the report
-    itself, so it has no line)."""
-    using = [p for p in catalog.products_for(w.f.modules) if p not in ("agent",)]
+    """The products the business uses, its main product first. Only the three the report has
+    numbers for get a line: ALYR Agent is the report itself, and Shelf and Docs have none yet
+    (a product without a line would fall into the Accounts branch of `_line`)."""
+    using = [p for p in catalog.products_for(w.f.modules) if p in REPORT_PRODUCTS]
     lead = PRODUCT_OF[w.main]
     return sorted(using, key=lambda p: (p != lead, using.index(p)))
 
