@@ -1606,6 +1606,32 @@ Without it, analytics is off everywhere.
 
 **Revisit when.** Owners ask for commands the rules cannot understand (then phase 4 with a model), or a shop needs more than one number per person, or Meta's pricing makes nudges outside the 24-hour window too costly (ALY-64).
 
+
+---
+
+## D-074 · Clients can pay ALYR by card through Paddle, in US dollars (USD 129 + 15 per added product), recorded only from Paddle's signed webhook after reading the payment back
+**Date** 29 Oct 2026 · **Status** Accepted (the founder chose Paddle for ALYR's own billing on 20 Oct, ALY-180, opened the Paddle account on 29 Oct and asked: "help me integrate paddle step by step i created a paddle account") · Linear ALY-180 · Spec `specs/035-card-billing/spec.md` · Branch `aly-180-paddle-billing`
+
+**Where we were.** A client pays ALYR the setup fee and first period at go-live (D-053) only by transfer, cash or cheque, recorded by hand in `/ops`. Nothing renews by itself.
+
+**The decision.**
+- **Paddle takes card payments for ALYR's own service**, as merchant of record. This is ALYR's billing, never a shop's customer paying a shop (hard rule 3 is about the shop's money; D-044 and D-072 cover that).
+- **US dollars, at prices ALYR sets.** Paddle has no Qatari riyal (checked 29 Oct). Each price-list item can carry a dollar price; the founder chose **USD 129 a month for the first product and USD 15 for each added one** (decision card, 29 Oct 2026, over 125 + 14 and 119 + 13). A line at its list price takes the item's dollar price; anything else (a line priced by hand, an item with no dollar price, such as the setup fee for now) is converted at the peg, QAR 3.64 to USD 1, rounded up to the cent. The client's payment row keeps both: what it covers in dirhams (so go-live and the books stay in riyals) and what Paddle took in cents with tax.
+- **The owner never chooses what is charged.** The owner's request writes an empty checkout; ALYR's job fills the amounts from the accepted quote on a back-office connection, and row-level security refuses an owner's row with an amount in it.
+- **A payment is recorded only from Paddle itself.** The webhook must carry a valid `Paddle-Signature` and only queues a job; the job reads the transaction back from Paddle's API and records it if the currency, the subtotal and the absence of a discount match exactly what ALYR asked. A different amount is marked for staff and never opens go-live. Paddle's transaction ID is unique, so retries record once. Renewals are recorded the same way, one period each.
+- **Offered per client, by ALYR.** A platform switch (`ALYR_CARD_BILLING`) and a per-client one in `/ops` (on the audit log). Several billing providers can run side by side later: the switch takes another value per provider (a Qatari provider for clients in Qatar, D-072).
+- **Only while nothing is paid by hand**, because a card pays the whole first payment and starts the renewals.
+- **Sandbox first.** Live waits for Paddle's website approval, public terms, privacy and refund pages, and the customer agreement from the lawyer (ALY-98).
+
+**Data.** Paddle (outside Qatar) receives what the owner types into Paddle's checkout (name, email, card, country and postcode for tax) and from ALYR only a checkout ID and the price lines. It is listed in `docs/data-residency.md`. No shop's customer data goes to Paddle.
+
+**Rejected.**
+- *Charging in riyals through Paddle.* Not offered by Paddle.
+- *Trusting the webhook's body for the amount.* A signed body is Paddle's, but reading the transaction back gives its current state whatever order events arrive in, and the same path serves renewals.
+- *Letting staff record card payments by hand.* Only the webhook writes the `card` method, so a card payment in the list always has Paddle's own record behind it.
+
+**Revisit when** a Qatari card provider is added for clients in Qatar, the founder gives the setup fee a dollar price, or Paddle adds the riyal.
+
 ## D-073 · Alert rules live in the worker; health checks and uptime stay with the Google Cloud setup
 **Date** 28 Oct 2026 (renumbered 29 Oct from D-062) · **Status** Accepted for review (the founder, 24 Oct 2026: "i wanna start free then pay once we scale"; ntfy parked, alert email later at ops@alyr.qa, he is on call) · Linear ALY-121 · Spec `specs/034-alert-rules/spec.md` · Runbook `docs/runbooks/monitoring.md` · Builds on D-060
 

@@ -71,7 +71,10 @@ type Payment = {
   status: "paid" | "no_price" | "unpaid"; due_text: string; paid: number; paid_text: string;
   left: number; left_text: string; setup_text: string; period_text: string; period_months: number;
   reference: string; bank: string;
+  // Offered while nothing is paid yet and ALYR's card provider is set up (ALY-180).
+  card: { provider: "paddle"; amount_text: string; period_text: string } | null;
 };
+type CardCheckout = { id: string; status: "creating" | "open" | "paid" | "failed" | "mismatch"; transaction: string | null };
 type Booking = { customer: string; service: string; when_text: string; status: string };
 // A version of the customer agreement or the privacy notice (ALY-167).
 type TermsVersion = {
@@ -174,6 +177,8 @@ export default function Start() {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteFlash, setQuoteFlash] = useState(false);
   const [pay, setPay] = useState<Payment | null>(null);
+  const [cardBusy, setCardBusy] = useState(false);
+  const [cardFailed, setCardFailed] = useState(false);
   const quoteSeen = useRef("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -416,6 +421,32 @@ export default function Start() {
     await call(`/api/orders/${testedOrder.id}/status`, "POST", { status: "ready" });
     await refreshTry("orders");
   });
+
+  // ── paying ALYR by card (ALY-180, D-074) ─────────────
+  // ALYR asks Paddle for the checkout in a job, so ask again until it is open (a few
+  // seconds), then go to the billing page, where Paddle's checkout opens for it.
+  const payByCard = async () => {
+    setCardBusy(true); setCardFailed(false);
+    try {
+      const started = await call<CardCheckout>("/api/onboarding/payment/card", "POST");
+      if (!started.ok) return setCardFailed(true);
+      for (let i = 0; i < 20; i += 1) {
+        const now = await call<{ checkout: CardCheckout | null }>("/api/onboarding/payment/card");
+        const checkout = now.ok ? now.data.checkout : null;
+        if (checkout?.status === "open" && checkout.transaction) {
+          // A full page load, not the router: only that page's security policy lets Paddle in.
+          // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+          window.location.assign(`/app/billing?_ptxn=${encodeURIComponent(checkout.transaction)}`);
+          return;
+        }
+        if (checkout && checkout.status !== "creating") return setCardFailed(checkout.status !== "paid");
+        await new Promise((done) => setTimeout(done, 1500));
+      }
+      setCardFailed(true);
+    } finally {
+      setCardBusy(false);
+    }
+  };
 
   // ── the price ALYR prepared (D-032) ───────────────────
   // While the owner looks at the plan, ask again every few seconds: ALYR may publish or
@@ -1027,8 +1058,17 @@ export default function Start() {
               <p className="ob-pay-total"><span>{t.plan.payTotal}</span><b className="num"><bdi dir="ltr">{pay.left_text}</bdi></b></p>
               <small>{t.plan.paySetup(pay.setup_text)} · {t.plan.payPeriod(pay.period_months, pay.period_text)}</small>
               {pay.paid > 0 && <small>{t.plan.paidSoFar(pay.paid_text, pay.left_text)}</small>}
+              {pay.card && (
+                <div className="ob-pay-card">
+                  <button type="button" className="ob-btn small ob-tall" disabled={cardBusy} onClick={payByCard}>
+                    {cardBusy ? t.plan.payCardPreparing : t.plan.payCard}
+                  </button>
+                  <small>{t.plan.payCardNote(pay.card.amount_text, pay.card.period_text, pay.period_months)}</small>
+                  {cardFailed && <small role="alert">{t.plan.payCardFailed}</small>}
+                </div>
+              )}
               <div className="ob-pay-how">
-                <b>{t.plan.payHow}</b>
+                <b>{pay.card ? t.plan.payOrTransfer : t.plan.payHow}</b>
                 {pay.bank ? <pre dir="ltr">{pay.bank}</pre> : <small>{t.plan.payNoBank}</small>}
                 <small>{t.plan.payRef}</small>
                 <code dir="ltr">{pay.reference}</code>

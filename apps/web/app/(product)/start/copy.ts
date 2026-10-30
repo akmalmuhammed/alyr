@@ -69,6 +69,20 @@ const en = {
   // What an owner accepts before the business is made, and again when ALYR publishes a new
   // version (ALY-167). The titles and the pages come from the API, in both languages.
   // The page the link in a reminder email opens (ALY-171).
+  // The billing page Paddle's checkout opens on (ALY-180, D-074): /app/billing?_ptxn=...
+  billing: {
+    title: "Pay ALYR by card",
+    loading: "Opening Paddle's secure checkout…",
+    body: "Paddle, ALYR's card provider, takes the payment in its own secure window. ALYR never sees your card.",
+    reopen: "Open the payment again",
+    confirming: "Paid. ALYR is confirming it with Paddle…",
+    paid: "Paid. You can go live.",
+    slow: "Paddle took your payment. ALYR is still confirming it: this page and your go-live list update by themselves.",
+    nothing: "There is no card payment to open. Go back to your go-live list to start one.",
+    failed: "Paddle's checkout could not be opened. Try again, or pay by bank transfer from your go-live list.",
+    signIn: "Sign in to pay",
+    back: "Back to my go-live list",
+  },
   resumeStop: {
     title: "We will not email you about setup again",
     body: "You can still finish your setup any time at alyr.qa/start. Nothing else has changed.",
@@ -213,6 +227,13 @@ const en = {
     payRef: "Write this reference on the transfer",
     paySameDay: "ALYR sees your payment the same working day. Until then everything else stays open to you.",
     paidSoFar: (paid: string, left: string) => `Received ${paid}. Still to pay: ${left}.`,
+    // A card payment through Paddle (ALY-180, D-074). Paddle charges in US dollars.
+    payCard: "Pay by card",
+    payCardNote: (now: string, period: string, months: number) =>
+      `Paddle, ALYR's card provider, charges in US dollars: ${now} now, then ${period} ${months > 1 ? `every ${months} months` : "each month"}. You can stop renewing at any time.`,
+    payCardPreparing: "Preparing your card payment…",
+    payCardFailed: "The card payment could not be prepared. Try again in a moment, or pay by bank transfer.",
+    payOrTransfer: "Or pay by bank transfer",
     payOpen: "Paid. You can go live.",
     waitingPrice: "Waiting for your price",
     includes: [
@@ -367,6 +388,19 @@ const ar: typeof en = {
     create: "أنشئ نشاطي",
     expired: "انتهت صلاحية التسجيل. اطلب رمزاً جديداً.",
   },
+  billing: {
+    title: "ادفع لـ ALYR بالبطاقة",
+    loading: "نفتح صفحة الدفع الآمنة من Paddle…",
+    body: "تتولى Paddle، مزوّد الدفع بالبطاقة لدى ALYR، أخذ الدفعة في نافذتها الآمنة. لا ترى ALYR بطاقتك أبداً.",
+    reopen: "افتح صفحة الدفع مرة أخرى",
+    confirming: "تم الدفع. تتأكد ALYR منه مع Paddle…",
+    paid: "تم الدفع. يمكنك أن تبدأ العمل.",
+    slow: "استلمت Paddle دفعتك، وما زالت ALYR تتأكد منها: تتحدّث هذه الصفحة وقائمة البدء من تلقاء نفسها.",
+    nothing: "لا توجد دفعة بالبطاقة لفتحها. ارجع إلى قائمة البدء لتبدأ واحدة.",
+    failed: "تعذّر فتح صفحة الدفع من Paddle. حاول مرة أخرى، أو ادفع بتحويل بنكي من قائمة البدء.",
+    signIn: "سجّل الدخول للدفع",
+    back: "العودة إلى قائمة البدء",
+  },
   resumeStop: {
     title: "لن نراسلك عن الإعداد مرة أخرى",
     body: "ما زال بإمكانك إكمال إعدادك في أي وقت من alyr.qa/start. لم يتغير أي شيء آخر.",
@@ -509,6 +543,12 @@ const ar: typeof en = {
     payRef: "اكتب هذا المرجع على التحويل",
     paySameDay: "تصل دفعتك إلى ALYR في يوم العمل نفسه. وإلى ذلك الحين يبقى كل شيء آخر مفتوحاً لك.",
     paidSoFar: (paid, left) => `وصلنا ${paid}. المتبقي: ${left}.`,
+    payCard: "ادفع بالبطاقة",
+    payCardNote: (now, period, months) =>
+      `تتقاضى Paddle، مزوّد الدفع بالبطاقة لدى ALYR، المبلغ بالدولار الأمريكي: ${now} الآن، ثم ${period} ${months > 1 ? `كل ${months} ${months >= 11 ? "شهراً" : "أشهر"}` : "كل شهر"}. يمكنك إيقاف التجديد في أي وقت.`,
+    payCardPreparing: "نجهّز الدفع بالبطاقة…",
+    payCardFailed: "تعذّر تجهيز الدفع بالبطاقة. حاول بعد لحظات، أو ادفع بتحويل بنكي.",
+    payOrTransfer: "أو ادفع بتحويل بنكي",
     payOpen: "تم الدفع. يمكنك أن تبدأ العمل.",
     waitingPrice: "بانتظار سعرك",
     includes: [
