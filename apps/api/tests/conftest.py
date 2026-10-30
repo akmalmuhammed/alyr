@@ -61,6 +61,10 @@ async def _clear_rate_hits() -> None:
     conn = await asyncpg.connect(OWNER_DSN)
     try:
         await conn.execute("delete from rate_hits")
+        # A spent code still counts toward the five an email may ask for in an hour, and the
+        # test database lives for the whole run: without this the back-office address signs in
+        # in a dozen tests and the sixth one in the run is refused with a 429.
+        await conn.execute("delete from login_codes where used")
     finally:
         await conn.close()
 

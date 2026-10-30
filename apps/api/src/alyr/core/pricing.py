@@ -202,10 +202,11 @@ def _applies_to(applies: str, modules: frozenset[str]) -> bool:
 
 
 def _paid_product(item: dict) -> bool:
-    """An item priced per product a business can switch on (not one that is included)."""
+    """An item priced per product a business can switch on (not one that is included, and not
+    one that comes with every product, ALYR Shelf: D-046)."""
     kind, _, key = item["applies"].partition(":")
     product = catalog.PRODUCT_BY_KEY.get(key) if kind == "product" else None
-    return product is not None and product.status == "available"
+    return product is not None and product.status == "available" and not product.bundled
 
 
 def draft_lines(price_list: list[dict], businesses: list[Business]) -> list[dict]:

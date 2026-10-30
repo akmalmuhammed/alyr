@@ -107,7 +107,9 @@ def test_a_trader_is_quoted_alyr_accounts_and_asks_alyr_under_it(client, office)
     )
     assert [(r["product_key"], r["step_key"]) for r in asked] == [("accounts", "onboarding")]
     business = client_of(office, name)["businesses"][0]
-    assert business["products"] == ["ALYR Chat", "ALYR Agent", "ALYR Accounts"]
+    # (ALYR Shelf too: the trader's Catalog is on, and it is ALYR Shelf's module. No price item
+    # names it, so the quote above is unchanged.)
+    assert business["products"] == ["ALYR Chat", "ALYR Agent", "ALYR Accounts", "ALYR Shelf"]
 
 
 def test_each_product_a_business_adds_costs_the_extra_price(office):

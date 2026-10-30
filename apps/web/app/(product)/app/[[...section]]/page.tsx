@@ -28,6 +28,7 @@ type Product = {
   key: string; name: Text; descriptor: Text; summary: Text;
   // included: every business has it (ALYR Agent); it has no switch.
   status: "active" | "available" | "included";
+  off_note: Text | null;
   modules: string[]; includes: { key: string; label: Text }[]; steps: Step[];
 };
 type Connection = { key: string; name: Text; detail: Text; connected: boolean; available: boolean };
@@ -136,7 +137,7 @@ const MODULE_ICON: Record<string, string> = {
   inbox: "inbox", bookings: "calendar", orders: "receipt", payments: "card", ledger: "book",
 };
 const PRODUCT_ICON: Record<string, string> = {
-  chat: "chat", bookings: "calendar", agent: "chart", accounts: "book",
+  chat: "chat", bookings: "calendar", agent: "chart", accounts: "book", shelf: "catalog", docs: "doc",
 };
 const CONNECTION_ICON: Record<string, string> = { whatsapp: "chat", payments: "card" };
 
@@ -569,8 +570,8 @@ export default function WorkspaceShell() {
                 <div className="sh-product-foot">
                   {product.status === "included" ? <span className="sh-note">{t.includedNote}</span>
                     : confirming === product.key ? (
-                      <div className="sh-confirm" role="alertdialog" aria-label={t.confirmOff}>
-                        <span>{t.confirmOff}</span>
+                      <div className="sh-confirm" role="alertdialog" aria-label={product.off_note ? pick(product.off_note) : t.confirmOff}>
+                        <span>{product.off_note ? pick(product.off_note) : t.confirmOff}</span>
                         <button className="btn small" onClick={() => setConfirming("")}>{t.keep}</button>
                         <button className="btn small danger" disabled={busy === product.key} onClick={() => setProduct(product, false)}>{t.turnOff}</button>
                       </div>

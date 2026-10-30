@@ -27,14 +27,17 @@ def nav_keys(state):
 def test_the_shell_shows_what_the_demo_shop_has(client):
     state = shell(client)
     assert state["business"]["slug"] == DEMO_SLUG
-    # The line-up of 17 Oct 2026, in its order (D-035).
+    # The line-up of 17 Oct 2026, in its order (D-035), and ALYR Shelf and ALYR Docs (D-046).
     assert [p["key"] for p in state["products"]] == [
-        "chat", "bookings", "agent", "accounts",
+        "chat", "bookings", "agent", "accounts", "shelf", "docs",
     ]
     assert product(state, "chat")["status"] == "active"
     assert product(state, "bookings")["status"] == "active"
     assert product(state, "agent")["status"] == "included"
     assert product(state, "accounts")["status"] == "active"
+    # The demo shop has neither the Catalog nor Documents: both can be switched on.
+    assert product(state, "shelf")["status"] == "available"
+    assert product(state, "docs")["status"] == "available"
     accounts = product(state, "accounts")
     assert accounts["name"] == {"en": "ALYR Accounts", "ar": "ALYR Accounts"}
     assert accounts["descriptor"]["ar"] == "الحسابات الآجلة"
@@ -225,7 +228,8 @@ def test_the_back_office_creates_a_shop_whose_owner_can_sign_in(client_factory, 
         == 409
     )
     listed = {b["slug"]: b for b in client.get("/api/admin/businesses").json()["businesses"]}
-    assert listed["zaitoon-grill-test"]["products"] == ["chat", "agent"]
+    # (ALYR Shelf too: the Catalog is on for every new business, and it is ALYR Shelf's module.)
+    assert listed["zaitoon-grill-test"]["products"] == ["chat", "agent", "shelf"]
 
     owner = client_factory()
     owner.post(

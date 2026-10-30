@@ -69,6 +69,10 @@ async def _steps(conn: asyncpg.Connection, module: catalog.Module, connected: di
     return steps
 
 
+def _off_note_applies(product: catalog.Product, modules: set[str]) -> bool:
+    return product.off_note is not None and product.off_note_when in ("", *modules)
+
+
 def _visible(screen: catalog.Screen, role: str) -> bool:
     return role in screen.roles
 
@@ -151,10 +155,11 @@ async def state(conn: asyncpg.Connection, staff: Staff) -> dict:
             status = "included"
         else:
             status = "active" if active else product.status
-        includes = (
-            [{"key": m, "label": _text(catalog.MODULE_BY_KEY[m].name)} for m in product.modules]
-            or [{"key": "", "label": _text(part)} for part in product.parts]
-        )
+        # A product that words its own parts (Agent, Shelf, Docs) lists those; the others list
+        # their modules' names.
+        includes = [{"key": "", "label": _text(part)} for part in product.parts] or [
+            {"key": m, "label": _text(catalog.MODULE_BY_KEY[m].name)} for m in product.modules
+        ]
         products.append(
             {
                 "key": product.key,
@@ -162,6 +167,10 @@ async def state(conn: asyncpg.Connection, staff: Staff) -> dict:
                 "descriptor": _text(product.descriptor),
                 "summary": _text(product.summary),
                 "status": status,
+                # Said before it is switched off, when it does more than hide screens.
+                "off_note": (
+                    _text(product.off_note) if _off_note_applies(product, modules) else None
+                ),
                 "modules": list(product.modules),
                 "includes": includes,
                 "steps": steps,

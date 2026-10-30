@@ -202,11 +202,12 @@ def test_a_shop_without_documents_gets_nothing(client_factory, monkeypatch):
                      off.tenant_id)[0]["n"] == 0
 
 
-def test_documents_is_in_no_product_and_no_starting_setup():
+def test_documents_is_alyr_docs_and_in_no_starting_setup():
     from alyr import catalog, presets
 
     assert "documents" in catalog.MODULE_BY_KEY
-    assert all("documents" not in p.modules for p in catalog.PRODUCTS)
+    # It is ALYR Docs' module and no other product's (D-046, D-123).
+    assert [p.key for p in catalog.PRODUCTS if "documents" in p.modules] == ["docs"]
     for preset in presets.PRESETS:
         assert "documents" not in (*preset.modules, *preset.with_catalog), preset.key
     # The screens exist (ALY-146): a section and two numbers on the home screen, and nothing to

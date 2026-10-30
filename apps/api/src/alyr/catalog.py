@@ -9,13 +9,16 @@ Two layers, on purpose:
 * **Products** are what a shop buys. A product is a named bundle of modules. Pricing
   and packaging can change by editing this file, without touching the modules.
 
-The line-up (17 Oct 2026, `docs/agent-dashboard/00-founder-decisions.md`): ALYR Chat,
-ALYR Bookings, ALYR Agent and ALYR Accounts. A product appears in the workspace only when it
-is built (D-039): ALYR Payroll is added here, with its module, on the day it works. Two modules are
-shared: the team inbox and payment links belong to both Chat and Bookings, because a
-business whose number runs on ALYR answers its customers nowhere else, and a booking can
-be paid by link as an order can. ALYR Agent has no module of its own: it is the home
-dashboard and the Sunday report, and every business has it.
+The line-up (17 Oct 2026, `docs/agent-dashboard/00-founder-decisions.md`; Shelf and Docs
+added by D-046 and D-123): ALYR Chat, ALYR Bookings, ALYR Agent, ALYR Accounts, ALYR Shelf
+(the Catalog) and ALYR Docs (Documents), in the order the public site lists them. A product
+appears in the workspace only when it is built (D-039): ALYR Payroll is added here, with its
+module, on the day it works. Two modules are shared: the team inbox and payment links belong
+to both Chat and Bookings, because a business whose number runs on ALYR answers its customers
+nowhere else, and a booking can be paid by link as an order can. ALYR Agent has no module of
+its own: it is the home dashboard and the Sunday report, and every business has it. ALYR
+Shelf is "with every product" (D-046): it is switched on like Docs, but never priced as an
+added product.
 
 To add a product later: write its modules, declare them here, and add the product. The
 shell, the setup checklist, the home dashboard and the back office pick it up.
@@ -100,8 +103,20 @@ class Product:
     # available: a shop can switch it on. included: every business has it; it cannot be
     # switched on or off. Nothing is listed that does not work, so there is no other state.
     status: str = "available"
-    # What an included product brings, since it has no modules to list.
+    # What the product brings, in words, for the Products screen: an included product has no
+    # modules to list, and one whose module's name says too little (the Catalog) lists these
+    # instead. Each part is a thing that is built today.
     parts: tuple[Text, ...] = ()
+    # Comes with every product and is never priced as one (D-046, ALYR Shelf): a price item
+    # for it is charged as written, but it does not count as a product added to the first
+    # (`pricing._paid_product`), so it can never be turned into the "each extra product" price.
+    bundled: bool = False
+    # What switching it off does beyond hiding its screens, said in the confirm step before the
+    # owner switches it off; empty says only that its screens are hidden and nothing is deleted.
+    # `off_note_when` is a module that must be on for the note to apply (the Catalog's
+    # note is about the order page, so it is said only to a shop that takes orders).
+    off_note: Text | None = None
+    off_note_when: str = ""
     tags: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -212,11 +227,12 @@ MODULES: tuple[Module, ...] = (
             ),
         ),
     ),
-    # The Catalog: a shop's items, photos and stock (D-039, ALY-104). It belongs to no
-    # product and no starting setup: onboarding adds it for a new shop of a type that has one
-    # (`Settings.catalog_for_new_shops`, on since ALY-113), migration 0032 gave it to the shops
-    # that existed, and the back office switches it off for one shop (`tenant_modules`). Its
-    # API answers where this module or the orders module is on.
+    # The Catalog: a shop's items, photos and stock (D-039, ALY-104). It is ALYR Shelf (D-046,
+    # D-123), a product of its own, but no starting setup names it: onboarding adds it for a new
+    # shop of a type that has one (`Settings.catalog_for_new_shops`, on since ALY-113),
+    # migration 0032 gave it to the shops that existed, and the back office or the owner (on
+    # the Products screen) switches it off for one shop (`tenant_modules`). Its API answers
+    # where this module or the orders module is on.
     Module(
         "catalog",
         Text("Catalog", "الكتالوج"),
@@ -235,9 +251,10 @@ MODULES: tuple[Module, ...] = (
         ),
     ),
     # Documents: receipts, invoices, quotes, delivery notes, statements, credit notes, deposit
-    # receipts and proformas (ALY-138, D-042, spec 011). It is in no product and no starting
-    # setup, and it is off for every shop until the product lead switches it on (the back
-    # office can for one shop, `SWITCHABLE_MODULES`). With it on, the workspace shows a
+    # receipts and proformas (ALY-138, D-042, spec 011). It is ALYR Docs (D-046, D-123), in no
+    # starting setup, and it is off for every shop until the shop's owner or admin switches it
+    # on (on the Products screen) or the back office does for one shop (`SWITCHABLE_MODULES`).
+    # With it on, the workspace shows a
     # Documents section (ALY-146, spec 015) and two numbers on the home screen, each the size of
     # the list it opens (`modules/documents/listing.py` works them out; the list and the card
     # share one query). It has no setup step: nothing has to be done before it is useful.
@@ -347,6 +364,67 @@ PRODUCTS: tuple[Product, ...] = (
         ),
         modules=("ledger",),
     ),
+    # ALYR Shelf is the Catalog under its public name (D-046). It is "with every product": not
+    # priced on its own, so `bundled`. It is `available` rather than `included` because the
+    # module is not on for every business (a travel office has none, and the back office can
+    # switch it off), and an included product cannot be switched.
+    Product(
+        "shelf",
+        Text("ALYR Shelf", "ALYR Shelf"),
+        Text("Items and stock", "الأصناف والمخزون"),
+        Text(
+            "Everything you sell, with photos, prices, sizes and choices, in Arabic and English. "
+            "Each sale takes its stock off the items you count, and an item that has sold out "
+            "can no longer be ordered. It comes with every product and is not priced on its own.",
+            "كل ما تبيعه في مكان واحد، بصوره وأسعاره ومقاساته وخياراته بالعربية والإنجليزية. "
+            "يُخصم كل بيع من مخزون الأصناف التي تتابع كميتها، ولا يمكن طلب صنف نفد. "
+            "يأتي مع كل منتج ولا يُسعَّر وحده.",
+        ),
+        modules=("catalog",),
+        parts=(
+            Text("Items with photos, sizes and choices", "أصناف بصور ومقاسات وخيارات"),
+            Text("Stock counted on every sale", "مخزون يُخصم مع كل بيع"),
+            Text("Import from Excel or CSV", "استيراد من Excel أو CSV"),
+        ),
+        bundled=True,
+        off_note=Text(
+            "Customers will see the older order page, and discounts, delivery fees and costs "
+            "stop applying. Nothing is deleted.",
+            "سيرى عملاؤك صفحة الطلب الأقدم، وتتوقف الخصومات ورسوم التوصيل والتكاليف. "
+            "لا يُحذف شيء.",
+        ),
+        off_note_when="orders",
+    ),
+    # ALYR Docs is Documents under its public name (D-046). Off for every shop until its owner
+    # or admin switches it on; the price is the founder's (D-123), so no price item names it.
+    Product(
+        "docs",
+        Text("ALYR Docs", "ALYR Docs"),
+        Text("Receipts and invoices", "الإيصالات والفواتير"),
+        Text(
+            "Numbered receipts and invoices from your orders, bookings and credit-account "
+            "payments, in Arabic and English, with your logo and colour. They reach your "
+            "customer in the WhatsApp chat while it is open, or by email or a link. A shop "
+            "with no commercial registration number gets receipts; invoices need one.",
+            "إيصالات وفواتير مرقّمة من طلباتك وحجوزاتك ودفعات الحسابات الآجلة، بالعربية "
+            "والإنجليزية وبشعارك ولونك. تصل إلى عميلك في محادثة واتساب ما دامت مفتوحة، "
+            "أو بالبريد الإلكتروني أو برابط. المتجر الذي بلا رقم سجل تجاري يُصدر إيصالات، "
+            "والفواتير تتطلب رقماً.",
+        ),
+        modules=("documents",),
+        parts=(
+            Text("Receipts and invoices", "إيصالات وفواتير"),
+            Text("Credit notes", "إشعارات دائنة"),
+            Text("Your logo, colour and numbering", "شعارك ولونك وترقيمك"),
+            Text("Connect another system", "ربط نظام آخر"),
+        ),
+        off_note=Text(
+            "Your shop stops making receipts and invoices, and the Documents screens are "
+            "hidden. The papers already made are kept.",
+            "يتوقف متجرك عن إصدار الإيصالات والفواتير، وتُخفى شاشات المستندات. "
+            "تبقى المستندات التي صدرت.",
+        ),
+    ),
 )
 
 # Sections every workspace has, whatever the shop has bought.
@@ -402,6 +480,10 @@ def check() -> None:
         # products it shares them with.
         assert not product.modules or own_modules(product), f"{product.key} has no own module"
         assert product.status != "included" or not product.modules, product.key
+        # "With every product" is about price, and only a product that is priced can be bundled.
+        assert not product.bundled or product.status == "available", product.key
+        assert not product.off_note_when or product.off_note_when in MODULE_BY_KEY, product.key
+        assert product.status != "included" or product.off_note is None, product.key
     for module in MODULES:
         for step in module.steps:
             assert not step.connection or step.connection in CONNECTION_BY_KEY, step.key
