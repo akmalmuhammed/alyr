@@ -23,8 +23,8 @@ Meta's webhook and the customer links still use the laptop.
 ALYR_BILLING_ACCOUNT=0140A6-0D3762-57B25D infra/gcp/setup.sh infra
 ```
 
-Private network, Cloud SQL (PostgreSQL 16, private address only), the image registry, the
-four service accounts, the export bucket and the budget. Safe to run again.
+Private network, Cloud SQL (PostgreSQL 16, private address only, backups stored in Doha), the
+image registry, the five service accounts, the export bucket and the budget. Safe to run again.
 
 **3. Secrets.** Database passwords and the link secret are generated. You are then asked,
 one at a time and hidden, for the three R2 values (required; the same as in
@@ -54,11 +54,22 @@ worker, the web app and the nightly export:
 infra/gcp/setup.sh apps <tag>
 ```
 
+It also sets who may read which secret (ALY-268): the API and the worker read the secrets
+listed in `SECRETS` in `setup.sh` one by one, and only the migration job's account,
+`alyr-migrate`, reads the database owner's address. To see or change that alone: `infra/gcp/setup.sh access --dry-run` prints what
+it would change, `access grant` adds access, and `access tighten` takes the broader roles away
+(a project-wide Secret Manager role, Editor on the default compute account, the legacy project
+roles on the export bucket). On a project that already runs, do them in that order with the
+`apps` rollout between, so no running app loses a secret before it has been rolled.
+
 **6. Check from outside:** the three addresses step 5 prints should answer 200:
 `/health/ready`, `/health/worker` and `/login`.
 
 **7. GitHub deploys** (once GitHub Actions runs again, ALY-206): print the four variables,
-set them in the repository, then use Actions > `deploy-gcp`.
+set them in the repository, then use Actions > `deploy-gcp` with a release version. It
+deploys only a commit whose `ci` run is green, after the founder approves in the `production`
+environment, and tags the release (`docs/runbooks/release.md`). Going back:
+`infra/gcp/rollback.sh` (`docs/runbooks/rollback.md`).
 
 ```bash
 infra/gcp/setup.sh github
@@ -74,6 +85,21 @@ read logs kept in Doha, so this replaces it. Google emails a confirmation first.
 ```bash
 ALYR_ALERT_EMAIL=akmal@alyr.qa infra/gcp/setup.sh monitoring
 ```
+
+**8b. Alerts for the database, backups, the nightly export and cost** (ALY-277), and the phone.
+`infra/gcp/monitoring.sh apply` makes the alert policies in `infra/gcp/alerts/` (database CPU, disk and
+connections; a failed or missing backup; the nightly export not starting or not writing a file in
+26 hours), a budget on gross cost (credits excluded, USD 150, `ALYR_GROSS_BUDGET` to change it), and
+sends every alert and both budgets to every notification channel that can deliver. Run it again after
+`setup.sh monitoring` makes a new policy, and after adding the phone. `status` shows what exists;
+`test-fire` opens a throwaway alert to prove delivery. The two "missing for N hours" alerts wait until
+their metric has reported once (the first night after `apply`); run `apply` again the next day.
+
+The phone is added by hand, once, by the founder: install the **Google Cloud** app on the phone,
+sign in as akmal@alyr.qa and open the project `alyr-prod`; a channel appears after a few minutes
+under Monitoring > Alerting > Edit notification channels > Mobile devices (or add an SMS number
+there and type the code Google sends). Then run `infra/gcp/monitoring.sh apply`, and
+`infra/gcp/monitoring.sh test-fire` to see it arrive.
 
 **9. After a tested restore from an export** (`docs/hosting.md`, "Backups on Google"):
 `infra/gcp/setup.sh lock-backups`. It cannot be undone.
@@ -118,4 +144,5 @@ a message to ALYR's test number was answered from production within two seconds.
   refused with 401.
 
 Not yet proven: that `roles/run.developer` is enough for GitHub's deploy account to update
-the worker pool (the first `deploy-gcp` run will tell).
+the worker pool, and to move its instance split back to "latest" (the first `deploy-gcp` run
+will tell).

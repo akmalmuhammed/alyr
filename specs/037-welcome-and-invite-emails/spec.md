@@ -21,7 +21,7 @@ Today nobody is told that their account exists:
 
 **Neither email signs anyone in:** it holds no code and no link with a token. The person signs in at `/login` with a code, as always. A forwarded or leaked invite therefore gives nobody access.
 
-**When signing in opens another business:** a person can be on more than one business's team. Signing in opens the first business they joined (`auth.session_for`), and there is no way to switch yet (go-live item 40). So an invite to a person whose first business is another one says so, and that a reply gets them help.
+**When signing in opens another business:** a person can be on more than one business's team. Signing in opens the business they used last, else the first they joined (`auth.business_at_sign_in`, D-081). So an invite to a person whose sign-in opens another business says so, and how to open this one: Your account, then Open next to it (specs/040).
 
 **Replies** go to ALYR's address (`email_reply_to`), as for the setup reminders.
 
@@ -57,7 +57,7 @@ Today nobody is told that their account exists:
 
 ## Not in this spec
 
-- **A way to switch between businesses,** or to change the sign-in email: go-live item 40.
+- **A way to switch between businesses,** or to change the sign-in email: go-live item 40, in specs/040-your-account.
 - **Telling an owner when a person they added first signs in.**
 - **An email when someone is removed from a team,** or their role changes.
 - **Checking the emails in a real inbox:** go-live item 22. It needs the Resend key in production and an inbox to read.

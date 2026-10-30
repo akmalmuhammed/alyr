@@ -1,0 +1,17 @@
+{
+  "displayName": "Database backup failed",
+  "combiner": "OR",
+  "alertStrategy": {"autoClose": "86400s"},
+  "documentation": {
+    "mimeType": "text/markdown",
+    "content": "Cloud SQL's automatic backup failed (log-based metric alyr-backup-failed). Point-in-time recovery may still work. First step: `gcloud sql operations list --instance alyr-db --limit 5` for the error, then take a backup by hand with `gcloud sql backups create --instance alyr-db`. Recovery steps: docs/runbooks/restore-rehearsal.md."
+  },
+  "conditions": [{
+    "displayName": "A backup run failed",
+    "conditionThreshold": {
+      "filter": "metric.type=\"logging.googleapis.com/user/alyr-backup-failed\" AND resource.type=\"cloudsql_database\"",
+      "aggregations": [{"alignmentPeriod": "300s", "perSeriesAligner": "ALIGN_SUM", "crossSeriesReducer": "REDUCE_SUM"}],
+      "comparison": "COMPARISON_GT", "thresholdValue": 0, "duration": "0s", "trigger": {"count": 1}
+    }
+  }]
+}

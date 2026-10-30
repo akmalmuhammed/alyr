@@ -11,6 +11,7 @@ Where the cost lives (tables of its own) is the first line of defence; these are
 """
 
 import io
+import random
 import re
 import zipfile
 from uuid import UUID
@@ -52,6 +53,39 @@ def seen_in(text: str) -> list[str]:
     found += KEYS.findall(text)
     found += WORDS.findall(text)
     return found
+
+
+# ── the search itself (a cost must be found, and a random id or time must not be) ───────────
+
+
+def test_a_cost_is_not_found_inside_an_id_or_a_time():
+    """Answers are full of random ids and times, and a cost's digits sit inside one now and then:
+    ci failed on 28 and 29 Oct on `27711` in a time and `18663` in an id (ALY-269). Every place
+    the three numbers can sit in a UUID, or in a time with microseconds, must read as harmless."""
+    rnd = random.Random(269)
+    hexa = "0123456789abcdef"
+    for number in (str(COST), str(PRICE - COST), str(VARIANT_COST)):
+        for group, size in ((0, 8), (4, 12)):  # the two UUID groups long enough for five digits
+            for at in range(size - len(number) + 1):
+                parts = ["".join(rnd.choice(hexa) for _ in range(n)) for n in (8, 4, 4, 4, 12)]
+                parts[group] = parts[group][:at] + number + parts[group][at + len(number):]
+                uuid = "-".join(parts)
+                assert seen_in(f'"id":"{uuid}"') == [], uuid
+                assert seen_in(f"'id': 'item:{uuid}'") == [], uuid
+        for at in (0, 1):  # a time such as 22:29:18.277110
+            fraction = "".join(rnd.choice("0123456789") for _ in range(6))
+            fraction = fraction[:at] + number + fraction[at + len(number):]
+            assert seen_in(f'"at":"2026-10-29T22:29:18.{fraction}+00:00"') == [], fraction
+
+
+def test_a_cost_is_still_found_as_a_number():
+    """…and the stricter search misses none of the shapes a leaked cost really takes."""
+    for leak in (
+        '"price": 31337', "{'cost': 31337}", "[31337]", ",31337,", "<v>31337</v>", "-31337",
+        "QAR 313.37", "313.37 QAR", "QAR 186.63", "1,313.37", ",277.11,", "<v>313.37</v>",
+        "(277.11)", "margin 37.3%", "(37.3 %)",
+    ):
+        assert seen_in(leak), leak
 
 
 @pytest.fixture

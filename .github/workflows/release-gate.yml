@@ -1,0 +1,74 @@
+name: release gate
+
+# What must be true before anything goes to production (ALY-269). Called by deploy-gcp and by
+# site deploy as the first job, before their `production` job asks the founder to approve:
+#
+# 1. It runs from main. Nothing else is released.
+# 2. The `ci` workflow finished green on this exact commit. Pull request runs do not count: they
+#    tested a merge with an older main, not the commit that is about to ship.
+# 3. The version (v0.x.y) is cut in CHANGELOG.md, is the newest cut section, nothing is left
+#    under "Unreleased", and the tag is unused or already on this commit (scripts/release.sh).
+#
+# It holds no secrets and can deploy nothing. Procedure: docs/runbooks/release.md.
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: "The release tag, v0.x.y"
+        required: true
+        type: string
+
+permissions: {}
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Release from main only
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "::error::Releases go from main, not from $REF."
+            exit 1
+          fi
+
+      - name: ci is green on this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          # The newest push run of the ci workflow on main for exactly this commit (a re-run keeps
+          # its run, so the newest run carries the latest result).
+          run="$(gh api "repos/$REPO/actions/workflows/ci.yml/runs?head_sha=$SHA&event=push&branch=main&per_page=20" \
+            --jq '.workflow_runs | sort_by(.created_at) | last // empty | "\(.status) \(.conclusion // "none") \(.html_url)"')"
+          if [ -z "$run" ]; then
+            echo "::error::No ci run on main for ${SHA:0:12}. It starts on every push to main; wait for it, then run this again."
+            exit 1
+          fi
+          read -r status conclusion url <<<"$run"
+          echo "ci for ${SHA:0:12}: $status, $conclusion ($url)" | tee -a "$GITHUB_STEP_SUMMARY"
+          if [ "$status" != "completed" ]; then
+            echo "::error::ci is still $status for ${SHA:0:12} ($url). Run this again when it is green."
+            exit 1
+          fi
+          if [ "$conclusion" != "success" ]; then
+            echo "::error::ci ended '$conclusion' for ${SHA:0:12} ($url). A commit that failed ci is not released."
+            exit 1
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: The version is cut in CHANGELOG.md and unused
+        env:
+          VERSION: ${{ inputs.version }}
+          SHA: ${{ github.sha }}
+        run: |
+          bash scripts/release.sh check "$VERSION" "$SHA"
+          echo "Releasing $VERSION from ${SHA:0:12}." >> "$GITHUB_STEP_SUMMARY"

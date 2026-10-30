@@ -154,8 +154,28 @@ def test_an_invite_says_so_when_signing_in_opens_another_business(client_factory
     by_shop = {m["subject"].split(" added you to ")[1].removesuffix(" on ALYR"): m["text"]
                for m in to(sent, both)}
     assert "another business" not in by_shop[first_name]
-    assert "Signing in opens the one you joined first" in by_shop[second_name]
-    assert "تسجيل الدخول يفتح النشاط الذي انضممت إليه أولاً" in by_shop[second_name]
+    switch = "so signing in opens that one. To open this one, go to Your account"
+    assert switch in by_shop[second_name]
+    assert "لفتح هذا النشاط، اذهب إلى «حسابك»" in by_shop[second_name]
+
+
+def test_an_invite_to_the_business_used_last_says_nothing_of_another(client_factory, sent):
+    # Signing in opens the business a person used last (D-081), and the invite follows it: Nora
+    # switches to the second business, leaves its team and is added again.
+    first, second, nora = client_factory(), client_factory(), client_factory()
+    sign_up(first)
+    second_id, _, second_name = sign_up(second)
+    both = address("nora")
+    added = [o.post("/api/team", json={"email": both, "name": "Nora"}) for o in (first, second)]
+    assert [a.status_code for a in added] == [200, 200]
+    sign_in(nora, both)
+    assert nora.post("/api/account/switch", json={"business_id": second_id}).status_code == 200
+    assert second.delete(f"/api/team/{added[1].json()['id']}").status_code == 200
+    sent.clear()
+    assert second.post("/api/team", json={"email": both, "name": "Nora"}).status_code == 200
+    [again] = to(sent, both)
+    assert second_name in again["subject"]
+    assert "another business" not in again["text"]
 
 
 def test_nothing_is_queued_for_an_example_address_or_while_email_is_off(client_factory, sent,

@@ -83,6 +83,7 @@ the rule still applies where they do not reach.
 ## 7. Releases
 
 - A phase whose demo works is tagged on `main` as `v0.<phase>.0` with its CHANGELOG section.
+- Every production deploy is a release `v0.<phase>.<n>`: its CHANGELOG section is cut by `scripts/release.sh`, and the deploy workflows check `ci` and the version, wait for the founder, and tag the commit (`docs/runbooks/release.md`). Going back: `docs/runbooks/rollback.md`.
 - Before anything goes live: the go-live checklist in `docs/runbooks/go-live-checklist.md`.
 
 ## 8. Reviews

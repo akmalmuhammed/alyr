@@ -76,6 +76,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-074 | Clients can pay ALYR by card through Paddle, in US dollars, recorded only from Paddle's signed webhook after reading the payment back | Accepted |
 | D-082 | A client who stops paying keeps everything for 14 days with reminders; then ALYR's automatic WhatsApp sending pauses until they pay, never their workspace or data; cancelling takes seven days | Proposed (built on the recommended option while the founder decides) |
 | D-065 | Owners and staff manage the shop from WhatsApp as well as the portal, through one shared action layer; phases 0 and 1 (link a number, read-only commands) are built first | Accepted (written as D-040 on 18 Oct; renumbered 28 Oct, D-040 is the look) |
+| D-091 | Recovery targets (data lost under 10 minutes, back in about 15) and the rule that an alert counts only when it reaches a phone; a restore is always a point-in-time clone to a new instance | Proposed |
 | D-072 | Shops get paid online through three doors, each ending in an account in the shop's own name: connect your own account (built first), ALYR-assisted sign-up with a partner (Noqoody, then SADAD), and opening by API only once a provider proves it; apply to Noqoody, SADAD and Tap. Updates D-044 | Accepted |
 
 ---
@@ -1349,6 +1350,27 @@ Nothing claims more than the page, as before.
 
 **Revisit when** the startup credits are refused or run out, a paying client needs Cloud SQL's high availability (a standby in a second zone, about double the database's cost), or the database's CPU stays above 60%.
 
+## D-090 · Production changes only by a released version: green CI, the founder's approval, a tag
+**Date** 30 Oct 2026 · **Status** Proposed (ALY-269, the go-live audit of 29 Oct). The founder accepts it by merging the pull request and applying the GitHub settings in `docs/runbooks/release.md`. The number is provisional: D-069 to D-082 are claimed by open pull requests.
+
+**Decision.** Nothing reaches production on a push or a merge. The app (`deploy-gcp`) and the public site (`site deploy`) are each started by hand from `main` with a version `v0.x.y`. A gate job first checks that the `ci` workflow finished green on that exact commit (its push run on `main`) and that the version is cut in `CHANGELOG.md` and unused. The deploy job then waits in the GitHub environment `production`, where the founder is the required reviewer and only `main` may deploy. The commit is tagged with the version after the health checks pass. The Cloudflare token and account ID are environment secrets: the production job reads them after the approval, previews read a narrower token from their own environment `preview`. Going back is a Cloud Run traffic split (`docs/runbooks/rollback.md`), rehearsed once before the first real client.
+
+**Why.**
+- On 28 Oct the `production` environment had no reviewer. Eight site publishes ran in three minutes with nobody asked, `deploy-gcp` could ship a commit whose CI later failed, and no release had a tag or a CHANGELOG section. The runbook said the opposite.
+- The repository is public and the Cloudflare token reached every Worker in the account. A token readable by any branch's workflow is too widely held; one readable only after the founder's approval, from `main`, is not.
+- A founder who merges many agents' pull requests needs one place where "this is what is live" is true and where going back is a single known command.
+
+**Chosen over.**
+- Keeping publish-on-push behind the reviewer: every merge would raise an approval for an untagged commit, and approving them one by one is how a gate turns into a habit.
+- Deploying automatically when `ci` ends green on `main`: no human decides what goes out, and `ci` takes 35 minutes, so the tip moves under it.
+- Laptop-only deploys: no record, no gate, and production credentials on a laptop.
+
+**Cost, said plainly.** A change to the site or the app is live only after a release PR (one CHANGELOG commit), about 35 minutes of `ci` on the merge commit, and one click. A hotfix pays the same, so roll back first and then fix.
+
+**Not decided here.** Whether pull requests must be up to date before merging, or use a merge queue (OPS-14); whether previews stay on, given that their token still reaches every Worker in the account; whether the Workers that carry production traffic move to a Cloudflare account the site token cannot reach (CLD-4).
+
+**Revisit when** a second person can merge, a staging environment exists, or the release steps are done often enough to script the release PR.
+
 ## D-081 · Your account: switch business, change the sign-in email, download everything
 
 Go-live checklist items 40 and 41 (tracked under ALY-266), spec 040.
@@ -1772,6 +1794,22 @@ Without it, analytics is off everywhere.
 
 **Revisit when.** Owners ask for commands the rules cannot understand (then phase 4 with a model), or a shop needs more than one number per person, or Meta's pricing makes nudges outside the 24-hour window too costly (ALY-64).
 
+## D-091 · Recovery targets, and an alert counts only when it reaches a phone
+**Date** 30 Oct 2026 · **Status** Proposed (written by Claude in ALY-277 for the founder to accept or change) · Linear ALY-277 · Builds on D-060
+
+**The decision.**
+- **Targets.** Data lost in a disaster: under 10 minutes (RPO). Time to be back from the decision to restore: about 15 minutes, planned as 30 (RTO). Measured on 30 Oct 2026 with the data as small as it is today (`docs/audit/restore-2026-10-30.md`); repeated at ten customers and after any change to the database tier.
+- **A restore is always a point-in-time clone to a new instance**, never in place. The clone has a new private address and a new name, so both database secrets are rewritten and the API and worker restarted (`infra/gcp/restore.sh`, `docs/runbooks/restore-rehearsal.md`). No standby database until a paying client needs a firmer RTO.
+- **An alert reaches a phone or it does not count.** Every alert policy and both budgets go to every notification channel that can deliver; email alone is a log. The phone is the Google Cloud app, added by the founder (`infra/gcp/README.md`, 8b); `infra/gcp/monitoring.sh test-fire` proves it.
+- **What is watched, beyond the uptime checks:** the database's CPU (80% for 10 minutes), disk (80%) and connections (over 40 of 50), a failed automatic backup, no backup in 30 hours, the nightly export failing to start, no export file in 26 hours, and cost with credits excluded (USD 150 a month) beside the existing budget that counts them.
+
+**Why.** The go-live audit of 29 Oct found alerts sent only to an email alias and never test-fired, nothing watching the database or the backups, a budget that cannot alert while credits pay, and a restore nobody had tried (OPS-5, OPS-8, CLD-5, CLD-8, CLD-9). The first rehearsal also found things nobody had written down: a clone gets a new address, inherits deletion protection, and takes its own first backup before it can be deleted.
+
+**Costs.** Alert policies, log-based metrics and budgets are free. The rehearsal costs cents. A database with a standby in a second zone is roughly double the database's cost (about USD 34 a month today).
+
+**Chosen over** SMS as the phone channel (Google does not publish which countries it reaches, so Qatar is unconfirmed), ntfy for the infrastructure alerts (D-073 uses it for the app's own alerts, where it fits; an outside service is not needed for Google's), and a standby database now (no client has paid for a response time).
+
+**Revisit when** a paying client is promised a response time, the data reaches a gigabyte or ten clients, the tier changes, or the credits run out (then the "ALYR monthly" budget starts to count).
 
 ---
 
