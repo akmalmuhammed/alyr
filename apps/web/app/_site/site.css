@@ -95,6 +95,13 @@ svg { display: block; }
 [dir="rtl"] .btn-line::after { clip-path: polygon(calc(var(--notch) - .88px) 0, 100% 0, 100% 100%, 0 100%, 0 calc(var(--notch) - .88px)); }
 .btn-line:hover::after { background: var(--surface-subtle); }
 .btn-line:active { transform: translateY(1px); }
+/* The same twin on a Carbon block (a product page's opening, the closing call): its line and
+   its fill come from the band, so it reads as an outline there and not as a pale button. Used
+   only beside "Try it free" (Contact.tsx `tone="band"`). */
+.btn-line.btn-band { color: var(--on-band); }
+.btn-line.btn-band::before { background: var(--on-band); }
+.btn-line.btn-band::after { background: var(--band); }
+.btn-line.btn-band:hover::after { background: var(--dark-line); }
 .btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 3px; }
 .btn-notch { padding-inline: 1.125rem .625rem; }
 .btn-sm.btn-notch { padding-inline: .9375rem .875rem; }
@@ -466,6 +473,11 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 .cta-draft { position: relative; max-width: 26rem; padding: .625rem .875rem; border: 1px dashed var(--band-rule); border-radius: .5rem .5rem .5rem 0; color: var(--dark-text); font-size: .9375rem; line-height: 1.45; }
 [dir="rtl"] .cta-draft { border-radius: .5rem .5rem 0 .5rem; }
 .cta-small { color: var(--on-band-faint); font-size: .875rem; }
+/* "Try it free" and "Book a check-up" side by side in the closing call; the line under them
+   says what the first costs (Contact.tsx `TryFreeNote`) */
+.cta-buttons { display: flex; flex-wrap: wrap; gap: .75rem; }
+.try-note { color: var(--text-muted); font-size: .9375rem; line-height: 1.5; max-width: 28rem; }
+.try-note.is-band { color: var(--concrete); }
 .cta .status-line { color: var(--concrete); }
 .cta :focus-visible, .product :focus-visible { outline-color: var(--volt); }
 
@@ -680,6 +692,9 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
   .eyebrow { font-size: .6875rem; letter-spacing: .07em; }
   .btn { min-height: 3rem; }
   .cta-actions { justify-items: stretch; }
+  /* the pair takes the column's width, as the opening's buttons do */
+  .cta-actions.is-pair { justify-self: stretch; }
+  .cta-buttons { display: grid; }
   .btn-sm { min-height: 2.75rem; }
   .statement, .company-say { font-size: 1.5rem; }
   .steps li { padding-block: 1.375rem; }

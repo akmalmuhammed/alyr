@@ -1,8 +1,8 @@
 import { Icon, Logo, Symbol } from "./brand";
-import { ContactAddress, ContactButton, contactLink, ContactPending } from "./Contact";
+import { ContactAddress, ContactButton, contactLink, ContactPending, TryFreeButton, TryFreeNote } from "./Contact";
 import { copy, fill, type Locale } from "./copy";
 import {
-  CONTACT_EMAIL, CONTACT_STATE, INCLUDED, OFFER_LIVE, pageKind, PATHS, PRODUCTS, productPath, SECTORS, sectorPage, WHATSAPP_NUMBER, WORKSPACE_URL,
+  CONTACT_EMAIL, CONTACT_STATE, INCLUDED, OFFER_LIVE, pageKind, PATHS, PRODUCTS, productPath, SECTORS, sectorPage, TRY_FREE_LIVE, TRY_FREE_URL, WHATSAPP_NUMBER, WORKSPACE_URL,
   type PageKey, type ProductKey,
 } from "./site";
 import { SiteMotion } from "./SiteMotion";
@@ -91,6 +91,15 @@ export function Shell({
   const { kind } = pageKind(page);
   const product = kind === "product";
   const hero = kind === "home" || kind === "sector" || (product && CONTACT_STATE !== "pending");
+  // While "Try it free" is on (site.ts), the pages that have an opening button lead with it and
+  // keep "Book a check-up" as the outlined twin: their closing call says both. A guide, the
+  // company page and the privacy page keep their own closing call, which is about writing to us;
+  // the header's button says "Try it free" on every page.
+  const both = TRY_FREE_LIVE && hero;
+  const closing = both ? { title: t.tryFree.final.title, body: t.tryFree.final.body } : cta;
+  // The phone's menu holds "Book a check-up" as a row of its own while the header's button says
+  // "Try it free", so the check-up is one tap from every page on a phone.
+  const menuLinks = TRY_FREE_LIVE ? [...sections, [contact, action] as const] : sections;
 
   return (
     <>
@@ -115,10 +124,16 @@ export function Shell({
               {t.nav.other}
             </a>
             <ThemeSwitch locale={locale} place="bar" />
-            <a className="btn btn-volt btn-sm btn-notch" href={contact}>
-              <span className="top-cta-full">{action}</span>
-              <span className="top-cta-short">{short}</span>
-            </a>
+            {TRY_FREE_LIVE ? (
+              <a className="btn btn-volt btn-sm btn-notch" href={TRY_FREE_URL} data-cta="try-free-header">
+                <span>{t.tryFree.action}</span>
+              </a>
+            ) : (
+              <a className="btn btn-volt btn-sm btn-notch" href={contact}>
+                <span className="top-cta-full">{action}</span>
+                <span className="top-cta-short">{short}</span>
+              </a>
+            )}
             <details className="top-menu" data-menu>
               <summary aria-label={t.nav.menu}><Icon name="menu" className="ico" /></summary>
               <div className="top-menu-list">
@@ -137,7 +152,7 @@ export function Shell({
                   })}
                 </ul>
                 <span className="tm-rule" aria-hidden="true" />
-                {sections.map(([href, label]) => (
+                {menuLinks.map(([href, label]) => (
                   <a key={href} href={href}>{label}</a>
                 ))}
                 <a href={other} lang={otherLocale} hrefLang={otherLocale} data-lang>{t.nav.other}</a>
@@ -162,13 +177,23 @@ export function Shell({
           <div className="wrap cta-in">
             <div className="cta-copy">
               <span className="cta-mark" data-m aria-hidden="true"><Symbol /></span>
-              <h2 className="cta-title" id="contact-title">{rich(cta.title)}</h2>
-              <p className="cta-body">{rich(cta.body)}</p>
+              <h2 className="cta-title" id="contact-title">{rich(closing.title)}</h2>
+              <p className="cta-body">{rich(closing.body)}</p>
               {CONTACT_STATE === "pending" ? (
                 <ContactPending locale={locale} className="cta-pending" />
               ) : (
-                <div className="cta-actions" data-final-cta>
-                  <ContactButton locale={locale} lean label={action} />
+                <div className={both ? "cta-actions is-pair" : "cta-actions"} data-final-cta>
+                  {both ? (
+                    <>
+                      <div className="cta-buttons">
+                        <TryFreeButton locale={locale} lean />
+                        <ContactButton locale={locale} variant="line" tone="band" label={action} />
+                      </div>
+                      <TryFreeNote locale={locale} tone="band" />
+                    </>
+                  ) : (
+                    <ContactButton locale={locale} lean label={action} />
+                  )}
                   {CONTACT_STATE === "whatsapp" ? (
                     <p className="cta-draft">
                       <span className="sr-only">{t.contact.draft}: </span>
@@ -224,8 +249,12 @@ export function Shell({
       </footer>
 
       {CONTACT_STATE !== "pending" && (
-        <div className="bar" data-bar role="region" aria-label={t.contact.bar}>
-          <ContactButton locale={locale} className="bar-btn" label={action} />
+        <div className="bar" data-bar role="region" aria-label={TRY_FREE_LIVE ? t.tryFree.bar : t.contact.bar}>
+          {TRY_FREE_LIVE ? (
+            <TryFreeButton locale={locale} className="bar-btn" cta="try-free-bar" />
+          ) : (
+            <ContactButton locale={locale} className="bar-btn" label={action} />
+          )}
         </div>
       )}
       <SiteMotion />

@@ -32,6 +32,21 @@
       "why": "Not offered; nothing is shown as coming (D-039)"
     },
     {
+      "term": "free trial",
+      "lang": "en",
+      "why": "Not offered: nothing is paid before go-live, but there is no trial period or free plan (D-034, D-053, honesty.md section 2). 'Try it free' says the trying is free and 'You pay only when you go live' says when payment starts; neither says 'trial'"
+    },
+    {
+      "term": "free pilot",
+      "lang": "en",
+      "why": "Not offered (D-025, D-034, honesty.md section 2)"
+    },
+    {
+      "term": "free plan",
+      "lang": "en",
+      "why": "Not offered: ALYR Agent comes with each product, but no plan is free (D-035, D-053)"
+    },
+    {
       "term": "Payroll",
       "lang": "en",
       "why": "Payroll is off the site until it is built (founder, 20 Oct 2026)"

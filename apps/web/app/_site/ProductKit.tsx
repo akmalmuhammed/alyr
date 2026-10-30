@@ -1,10 +1,10 @@
 import type { CSSProperties, ReactNode } from "react";
 import { Icon } from "./brand";
 import { copy, fill, type FlowSet, type InsideSection, type Locale, type ProductBar as Bar, type Questions, type ScreenSection, type WhoSection, type WorksSection } from "./copy";
-import { ContactButton } from "./Contact";
+import { Actions, TryFreeNote } from "./Contact";
 import { FlowDiagram } from "./FlowDiagram";
 import { contactHref } from "./Shell";
-import { CONTACT_STATE, OFFER_LIVE, PRODUCTS, productPath, type ProductKey } from "./site";
+import { CONTACT_STATE, OFFER_LIVE, PRODUCTS, productPath, TRY_FREE_LIVE, type ProductKey } from "./site";
 import { lines, rich } from "./Text";
 import "./kit.css";
 
@@ -45,10 +45,18 @@ export function ProductBar({ bar }: { bar: Bar }) {
  * to reach ALYR. */
 export function HeroAction({ locale }: { locale: Locale }) {
   if (CONTACT_STATE === "pending") return null;
-  return (
+  const buttons = (
     <div className="pk-actions" data-hero-cta>
-      <ContactButton locale={locale} lean label={copy[locale].home.hero.action} />
+      <Actions locale={locale} lean label={copy[locale].home.hero.action} tone="band" />
     </div>
+  );
+  // the note under the buttons only with the switch on; off, the markup is what it was
+  if (!TRY_FREE_LIVE) return buttons;
+  return (
+    <>
+      {buttons}
+      <TryFreeNote locale={locale} tone="band" />
+    </>
   );
 }
 
