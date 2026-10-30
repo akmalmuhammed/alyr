@@ -16,6 +16,7 @@ from alyr.core import activation, auth, mail
 from alyr.db import Database
 from conftest import APP_DSN
 from test_access import pay
+from test_card_billing import fake, hook, owner, start_card  # noqa: F401 - fixtures
 from test_consent import owner_sql
 from test_onboarding import BASE, accepted_terms, signup_token
 from test_pricing import ADMIN, client_of
@@ -209,6 +210,26 @@ def test_two_payments_recorded_at_the_same_moment_make_one_activation(
     with ThreadPoolExecutor(2) as pool:
         answers = list(pool.map(lambda o: pay(o, client_id, due), offices))
     assert [a.status_code for a in answers] == [200, 200]
+    assert len(mine(office, client_id)) == 1 and len(ready(sent, email)) == 1
+
+
+def test_a_card_payment_activates_the_client_once_and_a_renewal_does_not(
+    owner, office, fake, sent,  # noqa: F811 - the fixtures of test_card_billing
+):
+    tenant, email, name = sign_up(owner)
+    accept_price(owner, office, name)
+    client_id = client_of(office, name)["id"]
+    checkout = start_card(owner)["checkout"]
+    sub = fake.pay(checkout["transaction"])
+    assert hook(owner, "transaction.completed", fake.transactions[checkout["transaction"]]
+                ).status_code == 200
+    [one] = mine(office, client_id)
+    assert (one["status"], one["trigger"], one["recorded_by"]) == ("done", "card", "Paddle")
+    assert len(ready(sent, email)) == 1
+
+    plan = int(fake.created[0]["items"][1]["price"]["unit_price"]["amount"])
+    renewal = fake.renew(sub, plan)
+    assert hook(owner, "transaction.completed", fake.transactions[renewal]).status_code == 200
     assert len(mine(office, client_id)) == 1 and len(ready(sent, email)) == 1
 
 
