@@ -69,6 +69,15 @@ async def _covered(conn: asyncpg.Connection, client_id: UUID) -> bool:
     return paid >= due(view)
 
 
+async def paid_up(conn: asyncpg.Connection, client_id: UUID) -> bool:
+    """Has the client paid what is due, or had it waived? The test the activation job (ALY-213)
+    waits for. Back office connection only."""
+    waived = await conn.fetchval(
+        "select payment_waived_at is not null from clients where id = $1", client_id
+    )
+    return bool(waived) or await _covered(conn, client_id)
+
+
 def due(quote: dict | None) -> int:
     """What opens the workspace: the setup fee and the first period of the accepted price,
     in dirhams. Nothing is due without an accepted price."""

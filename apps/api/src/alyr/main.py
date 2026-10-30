@@ -9,6 +9,7 @@ from alyr.channels.simulator import SimulatorChannel
 from alyr.config import get_settings
 from alyr.core import account as account_notes
 from alyr.core import origin, ratelimit
+from alyr.core.activation import Activation
 from alyr.core.card_billing import CardBilling
 from alyr.core.images import PhotoRefused
 from alyr.core.inbound import INBOUND, InboundHandler
@@ -170,6 +171,8 @@ def create_app() -> FastAPI:
     app.state.jobs.register(DELIVERY_JOB, document_sender.run, document_sender.gave_up)
     # The welcome after sign-up and the invite to a team (specs/037).
     app.state.jobs.register(ACCOUNT_EMAIL, AccountMail(app.state.db).run)
+    # A payment turns a signed-up business into a working workspace (ALY-213, spec 041).
+    Activation(app.state.db).register(app.state.jobs)
     # Events out to the shop's other system (ALY-142): signed, retried, guarded.
     app.state.webhooks = connect_webhooks.WebhookSender(app.state.db)
     app.state.jobs.register(connect_webhooks.JOB, app.state.webhooks.run, background=True)

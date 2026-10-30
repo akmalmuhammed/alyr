@@ -19,6 +19,7 @@ import httpx
 
 from alyr import brand
 from alyr.config import get_settings
+from alyr.core import words
 
 log = logging.getLogger("alyr.mail")
 
@@ -452,3 +453,72 @@ def invite_message(
                       "small": w["unexpected"]})
     subject = _ACCOUNT[order[0]]["invite_subject"](by, shops[order[0]])
     return subject, _plain(parts), _letter(parts)
+
+
+# The email that says the workspace is ready (ALY-213, spec 041): the plan is active, what comes
+# next and who does it, and a button that signs the owner in once. Unlike the welcome it carries a
+# link that signs someone in, so it says that, and says not to pass it on. The Arabic is written
+# whole, not translated, and waits for a native reader (ALY-66).
+_READY = {
+    "en": {
+        "subject": lambda first: (
+            f"Your ALYR workspace is ready, {first}" if first else "Your ALYR workspace is ready"
+        ),
+        "ready": lambda shop: f"Your plan for {shop} is active, and your workspace is ready.",
+        "next": "What comes next, and who does it:",
+        "none": "Everything is done, and your business is working.",
+        "you": lambda n, todo: f"{n}. {todo}",
+        "alyr": lambda n, label: f"{n}. {label}. ALYR does this for you.",
+        "sign_in": lambda hours, login, email: (
+            f"The button below signs you in, once. It stops working after {hours}, so please do "
+            f"not pass this email on. After that, sign in at {login} with the 6-digit code ALYR "
+            f"sends to {email}. There is no password."
+        ),
+        "button": "Open your workspace",
+        "help": "Questions about any step? Reply to this email and a person at ALYR will read it.",
+        "unexpected": "If you did not expect this email, you can ignore it.",
+    },
+    "ar": {
+        "subject": lambda first: (
+            f"مساحة عملك على ALYR جاهزة يا {first}" if first else "مساحة عملك على ALYR جاهزة"
+        ),
+        "ready": lambda shop: f"خطتك لـ {shop} مفعّلة، ومساحة عملك جاهزة.",
+        "next": "الخطوات القادمة، ومن يتولاها:",
+        "none": "كل شيء منجز، ونشاطك يعمل.",
+        "you": lambda n, todo: f"{n}. {todo}",
+        "alyr": lambda n, label: f"{n}. {label}. تتولى ALYR هذه الخطوة عنك.",
+        "sign_in": lambda hours, login, email: (
+            f"يسجّل الزر أدناه دخولك مرة واحدة، ويتوقف عن العمل بعد {hours}، فلا تعد توجيه "
+            f"هذه الرسالة إلى غيرك. بعد ذلك سجّل الدخول من {login} برمز من 6 أرقام ترسله ALYR "
+            f"إلى {email}. ولا توجد كلمة مرور."
+        ),
+        "button": "افتح مساحة عملك",
+        "help": "هل لديك سؤال عن أي خطوة؟ ردّ على هذه الرسالة وسيقرؤها شخص من فريق ALYR.",
+        "unexpected": "إذا لم تكن تتوقع هذه الرسالة، يمكنك تجاهلها.",
+    },
+}
+
+
+def workspace_ready_message(
+    lang: str, owner: str, shop: str, email: str, steps: list[dict], link: str, login: str,
+    hours: int,
+) -> tuple[str, str, str]:
+    """Subject, plain text and HTML of "your workspace is ready", in the language the owner reads.
+    `steps` are what is left, in order, at most three: each has `label` and `todo` (both texts by
+    language) and `who` ("you" or "alyr"). `link` signs the owner in once, for `hours` hours;
+    `login` is where they sign in with a code after that."""
+    lang = "ar" if lang == "ar" else "en"
+    w, first = _READY[lang], _first(owner)
+    lines = [_ACCOUNT[lang]["hello"](first), w["ready"](shop)]
+    if steps:
+        lines.append(w["next"])
+        for n, step in enumerate(steps, 1):
+            lines.append(
+                w["you"](n, step["todo"][lang]) if step["who"] == "you"
+                else w["alyr"](n, step["label"][lang])
+            )
+    else:
+        lines.append(w["none"])
+    lines += [w["sign_in"](words.counted(hours, words.HOURS, lang), login, email), w["help"]]
+    part = {"lang": lang, "lines": lines, "button": (w["button"], link), "small": w["unexpected"]}
+    return w["subject"](first), _plain([part]), _letter([part])

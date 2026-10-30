@@ -25,6 +25,8 @@ Today nobody is told that their account exists:
 
 **Replies** go to ALYR's address (`email_reply_to`), as for the setup reminders.
 
+> **One email is different (ALY-213, D-101).** The "your workspace is ready" email that follows a payment (`specs/041-activation-job`) does carry a link that signs the owner in, once. These two emails still carry none.
+
 ## How they are sent (`core/welcome.py`)
 
 - **Queued as a job** (`account_email`) in the same transaction that made the account:

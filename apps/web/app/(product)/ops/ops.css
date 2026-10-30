@@ -200,3 +200,26 @@
 .ops-terms ul { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; font-size: var(--ui-body-sm); }
 .ops-terms code { font-family: var(--font-ui-mono); font-size: var(--ui-small); }
 .ops-terms-open { color: var(--warn); }
+
+/* Activations: what happened when a payment turned a workspace on (ALY-213) */
+.ops-act table { min-width: 760px; }
+.ops-act thead th { color: var(--ink-2); }
+.ops-act td { vertical-align: top; }
+.ops-act td small { color: var(--ink-3); font-family: var(--face); }
+.ops-act-steps { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; font-size: var(--ui-body-sm); }
+.ops-act-steps li.failed b { color: var(--bad); }
+.ops-act-steps li.waiting { color: var(--ink-3); }
+.ops-act-error { margin: 6px 0 0; font-size: var(--ui-small); color: var(--bad); overflow-wrap: anywhere; }
+@media (max-width: 56rem) {
+  .ops-act table { min-width: 0; }
+  .ops-act thead { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); }
+  .ops-act tr { display: grid; gap: 8px; padding: 12px 14px; border-top: 1px solid var(--hair); }
+  .ops-act tbody tr:first-child { border-top: 0; }
+  .ops-act td { display: grid; gap: 2px; padding: 0 !important; border: 0 !important; text-align: start; }
+  .ops-act td::before { content: attr(data-label); font-family: var(--face); font-size: var(--ui-caption); color: var(--ink-3); }
+  .ops-act td:first-child::before { display: none; }
+  .ops-act td.r { text-align: start; }
+  .ops-act td > .sh-pill, .ops-act td > .btn { justify-self: start; }
+  .ops-act td.r:empty { display: none; }
+  .ops-act td.r::before { display: none; }
+}

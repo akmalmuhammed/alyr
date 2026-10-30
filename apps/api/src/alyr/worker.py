@@ -14,7 +14,7 @@ import signal
 import socket
 
 from alyr.config import get_settings
-from alyr.core import alerts, resume, subscription
+from alyr.core import activation, alerts, resume, subscription
 from alyr.core.links import check_secret as check_link_secret
 from alyr.core.retention import purge as purge_old_copies
 from alyr.core.storage import check_store
@@ -107,6 +107,20 @@ async def keep_billing_checked(db) -> None:
         await asyncio.sleep(3600)
 
 
+async def keep_activations_swept(db) -> None:
+    """Activate the clients whose payment no other path reported (ALY-213, spec 041): paid up,
+    nothing made for them yet. Every minute; the usual path queues the job at the payment itself,
+    so this only matters when a way of recording payments forgot to."""
+    while True:
+        try:
+            queued = await activation.sweep(db)
+            if queued:
+                log.info("queued %s activations the payment paths missed", queued)
+        except Exception:  # never let the sweep stop the worker
+            log.exception("could not sweep for activations")
+        await asyncio.sleep(60)
+
+
 async def keep_meters_fresh(media) -> None:
     """Every shop has this month's photo and item meters, even in a month it uploaded
     nothing (ALY-103)."""
@@ -153,6 +167,7 @@ async def main() -> None:
     watching = asyncio.create_task(alerts.keep_watching(app.state.db))
     reminders = asyncio.create_task(keep_owners_reminded(app.state.db))
     billing = asyncio.create_task(keep_billing_checked(app.state.db))
+    activations = asyncio.create_task(keep_activations_swept(app.state.db))
     purger = asyncio.create_task(keep_old_copies_purged(app.state.db))
     try:
         await app.state.jobs.run_forever(heartbeat=heartbeat(app.state.db))
@@ -164,6 +179,7 @@ async def main() -> None:
         watching.cancel()
         reminders.cancel()
         billing.cancel()
+        activations.cancel()
         purger.cancel()
         await app.state.db.close()
         await close_channels(app)
