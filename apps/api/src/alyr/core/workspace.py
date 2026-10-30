@@ -142,8 +142,14 @@ async def state(conn: asyncpg.Connection, staff: Staff) -> dict:
                 listed.add(key)
                 for step in await _steps(conn, catalog.MODULE_BY_KEY[key], connected):
                     step["asked"] = step["key"] in asked
-                    if section is not None and key == "orders" and step["key"] == "products":
-                        step = _catalog_step(step, section)
+                    if key == "orders" and step["key"] == "products":
+                        # Items are added in the Catalog. Without it no screen can do this step
+                        # (the Orders screen only lists orders), so it names none and the owner
+                        # is told to ask ALYR instead of being sent somewhere that cannot do it.
+                        if section is not None:
+                            step = _catalog_step(step, section)
+                        else:
+                            step = step | {"screen": ""}
                     steps.append(step)
         if product.status == "included":
             status = "included"

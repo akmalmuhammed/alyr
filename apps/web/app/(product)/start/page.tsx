@@ -18,6 +18,7 @@ import { COPY, type Lang } from "./copy";
 import { areaName, bookingWhat } from "./format";
 import { loginUrl } from "../login/next";
 import { HandoverView, ProductsView, moneyText, useHandover, useProducts } from "./OrderSteps";
+import { testSendOutcome } from "./testLine";
 import "./start.css";
 
 type Text = { en: string; ar: string };
@@ -185,6 +186,8 @@ export default function Start() {
   const quoteSeen = useRef("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // The business has no test line (ALYR's own has none): said on the "Try it" step, with a way on.
+  const [noTestLine, setNoTestLine] = useState(false);
   // The order path's two steps (ALY-164): what you sell, and pickup, delivery and payment.
   const products = useProducts(step === "products", t);
   const handover = useHandover(step === "handover", t);
@@ -417,7 +420,10 @@ export default function Start() {
     if (!text.trim() && !choice) return;
     setDraft("");
     const answer = await call<{ messages: ChatMessage[] }>("/api/onboarding/test-chat", "POST", { text: choice ? choice.title : text, reply_id: choice?.id ?? "" });
-    if (answer.ok) setChat(answer.data.messages);
+    const outcome = testSendOutcome(answer.ok, answer.status);
+    if (outcome === "sent") { setNoTestLine(false); setChat(answer.data.messages); }
+    else if (outcome === "no_line") setNoTestLine(true);
+    else setError(t.try.notSent);
   });
 
   // The owner marks their test order ready, as staff would, and the message the customer gets
@@ -877,6 +883,10 @@ export default function Start() {
               ? <p className="ob-note" role="status"><Ico name="check" size={18} />{t.tryOrder.readyDone}</p>
               : <button className="ob-btn small ob-ready" type="button" disabled={busy} onClick={markReady}>{t.tryOrder.ready}</button>)}
           </>
+        ) : noTestLine ? (
+          <p className="ob-error" role="alert">
+            {t.try.noLine} <a href={`mailto:${t.try.noLineAddress}`}><bdi dir="ltr">{t.try.noLineAddress}</bdi></a>
+          </p>
         ) : (
           <p className="ob-waiting" role="status"><span className="ob-pulse" />{c.waiting}</p>
         )}

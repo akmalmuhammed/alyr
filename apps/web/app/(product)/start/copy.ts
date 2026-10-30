@@ -198,6 +198,10 @@ const en = {
     workedSub: "This is exactly what your customers get, and your team sees it in the workspace.",
     skip: "Skip for now",
     test: "Test mode · only you can see this",
+    // The business has no test line (ALYR's own, made by the first-admin job), or the send failed.
+    noLine: "The test line is not ready for this business. Skip this step or message ALYR:",
+    noLineAddress: "hello@alyr.qa",
+    notSent: "Your message was not sent. Try again in a moment.",
   },
   // The test order of the order path (ALY-168): the same private line, an order instead of a visit.
   tryOrder: {
@@ -526,6 +530,9 @@ const ar: typeof en = {
     workedSub: "هذا تماماً ما يصل لعملائك، ويراه فريقك في مساحة العمل.",
     skip: "تخطَّ الآن",
     test: "وضع التجربة · لا يراه غيرك",
+    noLine: "الخط التجريبي غير جاهز لهذا النشاط. تخطَّ هذه الخطوة أو راسل ALYR:",
+    noLineAddress: "hello@alyr.qa",
+    notSent: "لم تُرسل رسالتك. حاول بعد قليل.",
   },
   tryOrder: {
     title: "جرّبه كعميل",

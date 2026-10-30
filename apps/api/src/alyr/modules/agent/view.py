@@ -318,6 +318,15 @@ def _summary(f: Facts, main: str, state: str, lang: str) -> list[dict]:
 # ── needs you now ─────────────────────────────────────────
 
 
+def _setup_href(step: dict) -> str:
+    """Where the row for a step still to do leads: the screen that does it; the connections
+    for a step that is a connection; the help box on the home for a step only ALYR can do
+    (never a screen that cannot do it, as the Orders list cannot add a menu)."""
+    if step["screen"]:
+        return f"/app/{step['screen']}"
+    return "/app/connections" if step.get("connection") else "/app#ask"
+
+
 def _needs(f: Facts, state: str, lang: str) -> dict:
     items = []
     for insight in INSIGHTS:
@@ -347,7 +356,7 @@ def _needs(f: Facts, state: str, lang: str) -> dict:
         items.append({
             "key": "setup", "count": n, "words": words,
             "detail": rich(first["label"]["ar"] if lang == "ar" else first["label"]["en"]),
-            "href": f"/app/{first['screen']}" if first["screen"] else "/app/connections",
+            "href": _setup_href(first),
             "rule": f"{RULE[lang]} · " + T(lang, "a step of a product you use, not done yet",
                                           "خطوة في منتج تستخدمه ولم تُنجز بعد"),
         })

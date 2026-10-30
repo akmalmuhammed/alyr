@@ -84,6 +84,8 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-118 | What ALYR keeps when it erases a client is data in one file (`core/erase_rules.py`), with ALYR's reading of the law: its own billing records and audit log stay, the shop's receipts to its customers go; every line the lawyer may change is marked | Proposed (pending the lawyer, ALY-51) |
 | D-123 | The workspace's line-up is the public site's six products: ALYR Shelf (the Catalog, "with every product", never priced as an added product) and ALYR Docs (Documents, switched on per shop, no price named) join Chat, Bookings, Agent and Accounts; no quote, no shop and no Sunday report changes | Proposed |
 | D-119 | The public site can lead with "Try it free" (the self-serve sign-up) with "Book a check-up" beside it, behind a build-time switch that is off until the founder turns it on at publish time | Proposed |
+| D-121 | The owner is emailed once when ALYR publishes their price, ahead of the rest of the payment path: English or Arabic as they signed up, claimed on the quote so it never goes twice, nothing sent for a price they already saw or an address that cannot be real. The part of D-093 that shipped on its own | Proposed (the founder signs off the wording) |
+| D-122 | ALYR's own business keeps no test line: the "Try it" step says so and offers to skip, and the one-off first-admin job does not create one | Proposed |
 | D-113 | The Cloudflare zone is hardened with what the Free plan offers and the state is written down: HTTPS only, minimum TLS 1.2, strict SSL, CAA, a trimmed SPF and response-header rules for the API and media host are live; the edge rate-limit rule waits because Free has only Block; no Access until Zero Trust is onboarded; DMARC stays `none` until the reports are read, never `reject` | Proposed |
 
 ---
@@ -2020,6 +2022,34 @@ Without it, analytics is off everywhere.
 **Costs.** A second `site:check` in CI (about a minute and a half). With the switch on, the closing call on the homepage, the product pages and the sector pages is one generic pair instead of each page's own "Tell us how orders reach your bakery today."; the sector pages' own opening still carries the trade's words. Not decided: whether the guides' closing call should lead with "Try it free" too.
 
 **Revisit when** sign-up is open and the first owners have used the button (look at `/ops` → Onboarding and the `cta_click` count, then whether the closing call should return to page-specific words), a source marker can be recorded (add it then, in one place), or the founder wants the guides to lead with it.
+
+---
+
+## D-121 · The owner is emailed once when ALYR publishes their price
+**Date** 30 Oct 2026 · **Status** Proposed (ALY-163 and ALY-274, CJ-14 of the go-live audit; built and tested; the founder signs off the wording, the Arabic by a native reviewer, ALY-66). This is the first bullet of D-093 shipped on its own; the rest of D-093 stays in the held pull request #204, which carries the same code and the same migration file.
+
+**Decision.** When a person in the back office publishes a client's quote, the owner gets one email: "Your ALYR price is ready: QAR 449 a month", English or Arabic as they signed up, with a plain-text twin and a link to `/app`. The send is claimed on the quote (`quotes.owner_notified_at`, migration 0077) before it goes out, so publishing again, taking the price back and publishing again, or two requests at once never send a second email. A provider that refuses the message releases the claim, so the next publish tries again; the publishing itself is never undone by a failed email. Nothing is sent where mail is not set up, for an address reserved for examples, or for a price already shown at sign-up (a type set to show its price at once).
+
+**Why.** A new owner reaches the plan step and is told "ALYR is preparing your price. You can close this page". Nothing called them back when staff published it, so the first price waited for the owner to think of coming back. One email, once, ends the wait.
+
+**Chosen over** emailing on every publish (a price edited five times would send five); sending from a worker after commit (one more moving part for a message that is at most one per client); waiting for the whole payment path to ship (the held pull request has no date).
+
+**Not decided here.** A "price changed" email when staff edit a published price; the bank details and anything about paying (D-093 and its pull request).
+
+**Revisit when** the held payment path (#204) merges: its decision then drops this bullet.
+
+---
+
+## D-122 · ALYR's own business keeps no test line
+**Date** 30 Oct 2026 · **Status** Proposed (ALY-163, the end-to-end test of 30 Oct)
+
+**Decision.** The "Try it" step of `/start` answers a business with no test line by saying so, in the language on screen: "The test line is not ready for this business. Skip this step or message ALYR", with `hello@alyr.qa`, and "Skip for now" stays beside it. Before this the API answered 409 and the page showed nothing. ALYR's own business, which the one-off `first_admin` job makes, still gets no test line, and the job does not create one.
+
+**Why not create it.** ALYR's business is not a client: it has no sign-up to rehearse, and its inbox is ALYR's real one, where a simulator customer would sit beside real messages. A line appears on production only when someone re-runs the job there, which is a change to production data the founder should not need for a walk-through. Whoever wants to try the steps signs up a test business with another address, which is what a client does.
+
+**If this is reversed,** the change is one insert in `first_admin.py` (`number_id` `sim-alyr`, channel `simulator`) and a re-run of the job, which is idempotent.
+
+---
 
 ## D-123 · The workspace lists ALYR Shelf and ALYR Docs beside the other four products
 **Date** 31 Oct 2026 · **Status** Proposed (built and tested; three questions are the founder's, below) · Linear ALY-205 · Follows D-046 (the public site's two new products), D-039 (the Catalog) and D-042 (Documents); keeps D-035's combination pricing and D-053's price as they are
