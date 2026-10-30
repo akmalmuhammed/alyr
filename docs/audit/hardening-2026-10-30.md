@@ -12,7 +12,7 @@ or printed: secrets were listed by name, version and date, never opened. Times a
 ## Verdict
 
 - **The database is protected as the docs say, and thin for a few more days.** Point-in-time recovery is on (7 days;
-  only 14 hours of it exist, because deleting the `eu` backups moved its start; full on 5 Nov), a backup runs every
+  only 14 hours of it exist, because the founder had the old `eu` backups deleted for data residency, which moved its start; full on 5 Nov), a backup runs every
   night at 02:00 Doha with 14 kept, all in Doha (one so far; 14 by 12 Nov), no public address, deletion protection on, and the newest backup and
   export are inside the limits their alerts watch. `infra/gcp/audit.sh` now checks all of it in one command and
   reports **no FAIL**.
@@ -28,7 +28,7 @@ or printed: secrets were listed by name, version and date, never opened. Times a
 
 | Item in ALY-34 | Finding | State |
 |---|---|---|
-| Automated Postgres backups with point-in-time recovery | PITR **on**; transaction logs kept 7 days; the newest recoverable moment was 36 to 118 s behind real time in the audit. Automatic backup at 23:00 UTC (02:00 Doha), **14 kept** (counted, not dated), stored in `me-central1`. **Only one automatic backup exists in Doha so far** (29 Oct; the two before it were in `eu` and are gone), so a restore reaches back one night today and the full 14 nights exist from 12 Nov. **The point-in-time window shrank when those backups were deleted**: its earliest moment was 27 Oct 21:55 UTC before, and is 29 Oct 23:29 UTC now (about 14 hours). It grows by a day a day and is 7 days on 5 Nov. Until then an incident can only be restored to a moment after 29 Oct 23:29 UTC | ok; thin until 5 Nov |
+| Automated Postgres backups with point-in-time recovery | PITR **on**; transaction logs kept 7 days; the newest recoverable moment was 36 to 118 s behind real time in the audit. Automatic backup at 23:00 UTC (02:00 Doha), **14 kept** (counted, not dated), stored in `me-central1`. **Only one automatic backup exists in Doha so far** (29 Oct; the two before it were in `eu` and are gone), so a restore reaches back one night today and the full 14 nights exist from 12 Nov. **The point-in-time window shrank when those backups were deleted**: its earliest moment was 27 Oct 21:55 UTC before, and is 29 Oct 23:29 UTC now (about 14 hours). It grows by a day a day and is 7 days on 5 Nov. Until then an incident can only be restored to a moment after 29 Oct 23:29 UTC. **It is short because the founder had the four old `eu` backups deleted on the morning of 30 Oct, for data residency (hard rule 2); the window is back to 7 days on 5 Nov** | ok; thin until 5 Nov |
 | Backups stay in Qatar (hard rule 2) | The four older backups stored in the `eu` multi-region (CLD-1) were deleted on 30 Oct between 13:17 and 13:19 UTC by `akmal@alyr.qa` (the audit trail shows the four deletes). None is stored outside `me-central1` now | ok |
 | One full restore, timed | Point-in-time: usable in 354 s, whole rehearsal 726 s (29 Oct). **Nightly backup: usable 12 min 8 s** (this page, section 2). Export to a scratch database: done on 27 Oct with the demo shop only | ok, export on production data open |
 | The nightly export | `gs://alyr-prod-db-exports`, Doha, retention 35 days, objects deleted at 36, public access blocked, 3 files, newest 14 h old, schedule enabled. **Retention is not locked** (an owner could still shorten it) | ok; lock waits (section 5) |
