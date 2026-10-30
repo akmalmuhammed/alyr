@@ -23,6 +23,10 @@ class CodeCheck(CodeRequest):
     code: str = Field(min_length=4, max_length=12)
 
 
+class LinkUse(BaseModel):
+    token: str = Field(min_length=20, max_length=100)
+
+
 class NewMember(BaseModel):
     email: str = Field(min_length=3, max_length=200)
     name: str = Field(min_length=1, max_length=120)
@@ -79,6 +83,24 @@ async def verify(body: CodeCheck, request: Request, response: Response) -> dict:
     await ratelimit.check(request, "guess-address", ratelimit.GUESSES_PER_ADDRESS)
     try:
         token = await auth.verify_code(db, body.email, body.code)
+    except auth.AuthError as error:
+        raise HTTPException(status_code=401, detail=str(error)) from error
+    response.set_cookie(
+        auth.COOKIE, token, max_age=auth.SESSION_DAYS * 86400, httponly=True,
+        samesite="lax", secure=get_settings().env != "local", path="/",
+    )
+    return _me(await auth.resolve(db, token))
+
+
+@router.post("/auth/link")
+async def use_link(body: LinkUse, request: Request, response: Response) -> dict:
+    """Sign in with the one-time link in the "your workspace is ready" email (ALY-213, D-101).
+    The email's address opens a page with a button, and the button is what posts here, so a mail
+    program that opens the link to check it cannot spend it."""
+    db = request.app.state.db
+    await ratelimit.check(request, "link-address", ratelimit.GUESSES_PER_ADDRESS)
+    try:
+        token = await auth.use_link(db, body.token)
     except auth.AuthError as error:
         raise HTTPException(status_code=401, detail=str(error)) from error
     response.set_cookie(

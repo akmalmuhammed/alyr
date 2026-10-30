@@ -163,6 +163,57 @@ async def business_at_sign_in(conn, user_id: UUID) -> UUID | None:
     )
 
 
+async def mint_link(
+    conn: asyncpg.Connection, user_id: UUID, tenant_id: UUID, activation_id: UUID | None,
+    hours: int,
+) -> str:
+    """A sign-in link's token for this person in this business, for the email that says their
+    workspace is ready (ALY-213, D-101). It works once and stops working after `hours`. Only a
+    hash is kept, so nobody who reads the database can use it. A new link for the same
+    activation ends the unused ones before it. `conn` is unscoped."""
+    token = secrets.token_urlsafe(32)
+    if activation_id is not None:
+        await conn.execute(
+            "delete from signin_links where activation_id = $1 and used_at is null", activation_id
+        )
+    await conn.execute(
+        "insert into signin_links (token_hash, user_id, tenant_id, activation_id, expires_at) "
+        "values ($1, $2, $3, $4, now() + make_interval(hours => $5))",
+        _hash(token), user_id, tenant_id, activation_id, hours,
+    )
+    await conn.execute("delete from signin_links where expires_at < now() - interval '7 days'")
+    return token
+
+
+async def use_link(db: Database, token: str) -> str:
+    """Exchange a sign-in link's token for a session in the business it was made for. Raises
+    AuthError when the link is unknown, used or expired, or the person has left the team.
+
+    One UPDATE spends it, so two people opening the same link at the same moment cannot both
+    get in. The business it opens is remembered, as when someone switches business."""
+    refused = AuthError("this link has expired or was already used; sign in with a code instead")
+    async with db.unscoped() as conn, conn.transaction():
+        row = await conn.fetchrow(
+            "update signin_links set used_at = now() "
+            "where token_hash = $1 and used_at is null and expires_at > now() "
+            "returning user_id, tenant_id",
+            _hash(token.strip()),
+        )
+        if row is None:
+            raise refused
+        await conn.execute("select set_config('app.user_id', $1, true)", str(row["user_id"]))
+        member = await conn.fetchval(
+            "select true from memberships where user_id = $1 and tenant_id = $2",
+            row["user_id"], row["tenant_id"],
+        )
+        if not member:
+            raise refused
+        await conn.execute(
+            "update users set last_tenant_id = $2 where id = $1", row["user_id"], row["tenant_id"]
+        )
+        return await create_session(conn, row["user_id"], row["tenant_id"])
+
+
 async def verify_code(db: Database, email: str, code: str) -> str:
     """Exchange a correct code for a session token. Raises AuthError otherwise."""
     await check_code(db, email, code)

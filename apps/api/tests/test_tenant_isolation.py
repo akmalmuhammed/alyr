@@ -41,6 +41,11 @@ GLOBAL_TABLES = {
     # What owners are asked to accept: every shop may read it, only the back office adds to it
     # (ALY-167). Forced row-level security.
     "terms_versions",
+    # What happened when a client's payment turned its workspace on (ALY-213): only the back
+    # office reads or writes it. Forced row-level security.
+    "activations",
+    # The one-time sign-in links in those emails: a person's, like sessions, kept as hashes.
+    "signin_links",
 }
 
 

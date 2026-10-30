@@ -22,6 +22,7 @@ from alyr import catalog, presets
 from alyr.config import get_settings
 from alyr.core import (
     access,
+    activation,
     auth,
     backoffice,
     card_billing,
@@ -233,9 +234,14 @@ async def _admin_call(request: Request, sql: str, *args, fetch: str = "fetch"):
 async def _back_office(request: Request):
     """A connection, in one transaction, on which the API declares the caller is ALYR
     staff. Row-level security and the back-office functions check that declaration."""
-    async with request.app.state.db.unscoped() as conn, conn.transaction():
+    db = request.app.state.db
+    async with db.unscoped() as conn, conn.transaction():
         await conn.execute("select set_config('app.platform_admin', 'on', true)")
         yield conn
+    # Only reached when the transaction committed, as in `Database.tenant`: where jobs run inline
+    # (a laptop, the tests) a job queued in it, such as an activation (ALY-213), runs now.
+    if db.after_commit is not None:
+        await db.after_commit()
 
 
 def _by(staff: Staff) -> str:
@@ -867,6 +873,8 @@ async def record_payment(
             )
             # A payment can end a pause at once (ALY-218).
             await subscription.refresh(conn, client_id)
+            # And turn the signed-up business into a working workspace (ALY-213).
+            await activation.after_payment(conn, client_id, "payment", _by(staff))
             await backoffice.audit(
                 conn, staff, "client.payment", "client", client_id, client_id=client_id,
                 detail={"amount": body.amount, "method": body.method,
@@ -877,6 +885,44 @@ async def record_payment(
         raise HTTPException(status_code=404, detail=str(error)) from error
     except access.AccessError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+class Retry(BaseModel):
+    # Send the "workspace is ready" email again even though it went (the client lost it): the new
+    # link ends the old one.
+    resend: bool = False
+
+
+@router.get("/activations")
+async def activations(request: Request, _: Staff = Depends(platform_admin)) -> dict:
+    """What happened when each client's payment turned their workspace on (ALY-213, spec 041):
+    every step's result, the email, and whether the owner has used the sign-in link."""
+    async with _back_office(request) as conn:
+        rows = await activation.listing(conn)
+    return {"activations": rows, "failed": sum(r["status"] == "failed" for r in rows)}
+
+
+@router.post("/activations/{activation_id}/retry")
+async def retry_activation(
+    activation_id: UUID, body: Retry, request: Request, staff: Staff = Depends(platform_admin)
+) -> dict:
+    """Run a failed activation again; its steps are safe to repeat. With `resend`, a finished one
+    too, and the email goes a second time."""
+    async with _back_office(request) as conn:
+        client_id = await conn.fetchval(
+            "select client_id from activations where id = $1", activation_id
+        )
+        if client_id is None:
+            raise HTTPException(status_code=404, detail="no such activation")
+        if not await activation.retry(conn, activation_id, body.resend):
+            raise HTTPException(
+                status_code=409, detail="there is nothing to run again: it is waiting or done"
+            )
+        await backoffice.audit(
+            conn, staff, "activation.retry", "activation", activation_id, client_id=client_id,
+            detail={"resend": body.resend},
+        )
+    return {"queued": True}
 
 
 @router.put("/clients/{client_id}/card-billing")
@@ -969,6 +1015,7 @@ async def waive_payment(
         async with _back_office(request) as conn:
             if await access.waive(conn, client_id, body.reason):
                 await subscription.refresh(conn, client_id)
+                await activation.after_payment(conn, client_id, "waived", _by(staff))
                 await backoffice.audit(
                     conn, staff, "client.payment_waived", "client", client_id, client_id=client_id,
                     detail={"reason": body.reason.strip()},

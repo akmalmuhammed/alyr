@@ -77,6 +77,8 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-082 | A client who stops paying keeps everything for 14 days with reminders; then ALYR's automatic WhatsApp sending pauses until they pay, never their workspace or data; cancelling takes seven days | Proposed (built on the recommended option while the founder decides) |
 | D-065 | Owners and staff manage the shop from WhatsApp as well as the portal, through one shared action layer; phases 0 and 1 (link a number, read-only commands) are built first | Accepted (written as D-040 on 18 Oct; renumbered 28 Oct, D-040 is the look) |
 | D-091 | Recovery targets (data lost under 10 minutes, back in about 15) and the rule that an alert counts only when it reaches a phone; a restore is always a point-in-time clone to a new instance | Proposed |
+| D-100 | A payment (or a waiver) turns a signed-up business into a working workspace through one activation job per client: the plan is checked, the modules of the accepted price are switched on, the starting setup and the onboarding steps with their owners are in place, and the owner is emailed; every step is safe to repeat, a failure shows in `/ops` with a Retry, and a client already live is never activated | Proposed (built while the founder answers the three questions in spec 041) |
+| D-101 | The "workspace is ready" email carries a sign-in link that works once and stops after 24 hours; opening it signs nobody in, a button on a page does, and the token sits in the address fragment; sign-in stays passwordless (D-022) | Proposed |
 | D-072 | Shops get paid online through three doors, each ending in an account in the shop's own name: connect your own account (built first), ALYR-assisted sign-up with a partner (Noqoody, then SADAD), and opening by API only once a provider proves it; apply to Noqoody, SADAD and Tap. Updates D-044 | Accepted |
 
 ---
@@ -1891,3 +1893,45 @@ Without it, analytics is off everywhere.
 **Rejected.** *Tap first for model B* (D-044): unproven for Qatar, and its Marketplace product is model C. *Waiting for a model B partner before building anything*: door 1 needs no deal and every other door ends in it.
 
 **Revisit when** Tap says a Platforms lead in Qatar is the shop's own merchant (Tap becomes door 3); Noqoody's partner portal can submit applications (Noqoody becomes door 3); a provider stores data outside Qatar (it waits for a row in `docs/data-residency.md`).
+
+---
+
+## D-100 · A payment turns a signed-up business into a working workspace, once, and shows that it did
+**Date** 30 Oct 2026 · **Status** Proposed (built by Claude in ALY-213 while the founder answers the three questions at the end of the spec) · Linear ALY-213 · Spec `specs/041-activation-job/spec.md` · Builds on D-049, D-053, D-082, D-010
+
+**Where we were.** Recording a client's payment changed one line on the go-live checklist. The owner was not told, nothing made the modules of the price they accepted match the business, and nobody had written down who does what next. The founder's clients are waiting, so the step between "paid" and "can use it" is the critical path.
+
+**The decision.**
+- **One activation per client**, made in the same transaction that records a payment (staff in `/ops`, Paddle's webhook) or a waiver, when the payments cover what is due and none of the client's businesses is live. A second payment, the same payment twice, two at once and a waiver after a payment all find the first row. The worker's sweep (every minute) catches a payment no path reported, but never one recorded before the migration, so nobody is emailed about an old payment.
+- **Five steps, each safe to repeat:** the plan is active; the modules of the products on the accepted price are on (nothing is ever switched off, and a module switched off by hand stays off); the starting setup is in place where it is missing; the onboarding steps exist with their owners (in the assisted way ALYR owns what it does for the business; an owner someone already chose is kept); the owner is emailed.
+- **A failure is visible and can be run again.** What retrying cannot fix until someone acts is recorded at once with its reason; a Resend hiccup is retried by the queue first. `/ops` has an Activations screen with every step's result and a **Retry**; **Send the email again** is there for a client who lost it. Both are audited.
+- **No new vendor.** Email goes through the Resend path of D-029. Without a key the email step fails with a clear message and everything before it is done.
+
+**Why.** The alternatives were a checkbox ("paid") and a human remembering to write to the client. A job in the queue is the pattern the rest of ALYR uses for anything that can fail or must happen later (D-010), it shows its own result, and it keeps the founder out of the loop for the common case.
+
+**Costs and risks, said plainly.** Until the Resend key and domain exist (ALY-74) every activation ends "failed at the email" and each needs a Retry once the key is set; the workspace itself is already done. The Arabic of the email waits for a native reader (ALY-66). A client with several businesses gets one email, for its oldest business.
+
+**Chosen over** activating on the first payment of any amount (the plan would be "active" while the price is not covered), activating again on every renewal (a second "workspace is ready" is noise), and a database trigger (the work needs the queue and the mail path, not SQL).
+
+**Revisit when** a payment path is added that does not call `activation.after_payment` (the sweep will cover it, but add the call), a second business is added to a live client and should be activated, or the founder answers the spec's questions differently.
+
+---
+
+## D-101 · The "workspace is ready" email signs the owner in once, by a button, and the sign-in stays passwordless
+**Date** 30 Oct 2026 · **Status** Proposed · Linear ALY-213 · Spec `specs/041-activation-job/spec.md` · Builds on D-022; changes one line of spec 037 for this email only
+
+**The decision.** The email carries a link to `/login/link#t=<token>&l=<language>`. The page has one button; the button posts the token to `POST /api/auth/link`, which signs the person into the business the link was made for.
+- **The token is random (32 bytes) and kept only as a hash.** It is in the email and nowhere else.
+- **It works once** (one `UPDATE ... RETURNING` spends it, so two openings at the same moment give one session) **and expires after 24 hours.** A new email ends the unused link before it. A person who has left the team is refused.
+- **Opening the address spends nothing.** Mail programs fetch addresses to scan them; if the fetch signed anyone in, the link would be dead before the owner saw it. The token is in the fragment, which no server, log or Referer header receives.
+- **Guesses are rate limited** like code guesses.
+- **Never a password.** After the link, the owner signs in with a code as always (D-022).
+
+**Why.** The onboarding plan of 23 Oct asked for "a one-time sign-in link, never a password", and a new owner who has just paid should arrive in a working workspace in one press, on the phone they read the email on.
+
+**What it changes.** Spec 037 says the welcome and invite emails hold no link that signs anyone in, so a forwarded email gives nobody access. That is still true of those two emails. This one is different on purpose, and says so: it works once, stops after a day, and tells the owner not to pass it on. Whoever can read the owner's inbox can already ask for a sign-in code, so no new trust is needed; the window is longer than a code's ten minutes, which is the cost.
+
+**Rejected.** *A link that signs in when opened* (scanners spend it). *A link that does not expire* (an old email in a shared inbox would be a key). *A password* (D-022). *The token in the query string* (it would reach the edge's and the host's logs).
+
+**Revisit when** the founder wants a different lifetime, or sign-in by WhatsApp code replaces email codes.
+

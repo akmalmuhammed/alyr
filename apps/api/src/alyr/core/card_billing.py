@@ -26,7 +26,7 @@ from zoneinfo import ZoneInfo
 import asyncpg
 
 from alyr.config import Settings
-from alyr.core import access, jobs, paddle
+from alyr.core import access, activation, jobs, paddle
 from alyr.core import subscription as plans
 from alyr.core.normalise import fmt_qar
 from alyr.db import Database
@@ -326,6 +326,8 @@ class CardBilling:
         )
         # A renewal ends a pause at once (ALY-218).
         await plans.refresh(conn, row["client_id"], self._settings)
+        # The first payment turns the workspace on (ALY-213); a renewal finds it done.
+        await activation.after_payment(conn, row["client_id"], "card", "Paddle")
         if first:
             await conn.execute(
                 "update card_checkouts set status = 'paid', problem = '', "
