@@ -86,6 +86,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-119 | The public site can lead with "Try it free" (the self-serve sign-up) with "Book a check-up" beside it, behind a build-time switch that is off until the founder turns it on at publish time | Proposed |
 | D-121 | The owner is emailed once when ALYR publishes their price, ahead of the rest of the payment path: English or Arabic as they signed up, claimed on the quote so it never goes twice, nothing sent for a price they already saw or an address that cannot be real. The part of D-093 that shipped on its own | Proposed (the founder signs off the wording) |
 | D-122 | ALYR's own business keeps no test line: the "Try it" step says so and offers to skip, and the one-off first-admin job does not create one | Proposed |
+| D-124 | Requests from public authorities follow three written rules: check it is lawful, give the minimum, keep a record; how to challenge one waits for a lawyer | Accepted |
 | D-113 | The Cloudflare zone is hardened with what the Free plan offers and the state is written down: HTTPS only, minimum TLS 1.2, strict SSL, CAA, a trimmed SPF and response-header rules for the API and media host are live; the edge rate-limit rule waits because Free has only Block; no Access until Zero Trust is onboarded; DMARC stays `none` until the reports are read, never `reject` | Proposed |
 
 ---
@@ -2073,3 +2074,18 @@ Without it, analytics is off everywhere.
 **Chosen over** making Shelf `included` (a false statement for shops without a catalog), leaving the products unregistered and showing them only on the site (the founder found the gap on the Products screen), and a price item at QAR 0 for Shelf (the trap above).
 
 **Revisit when** the founder prices Docs, ALY-143 (the accountant export, statements) or ALY-147 (ALYR's own invoices) is built and the words may grow, or Shelf is made included.
+
+---
+
+## D-124 · Requests from public authorities follow three written rules
+**Date** 31 Oct 2026 · **Status** Accepted (the founder, 31 Oct 2026) · Linear ALY-262 · Text: `docs/company/authority-requests.md`
+
+**Decision.** Any request from a public authority for personal data goes to the founder, who checks it is lawful before anything is handed over; ALYR gives only what the request names; and every request is recorded, outside this public repository.
+
+**Why now.** Meta's App Review asks which policies ALYR has for these requests. It had none, so ticking any would have been untrue. The founder chose to adopt three rules ALYR can keep, on the day of the submission.
+
+**What we told Meta.** Legality review, data minimisation and documentation are ticked. "Provisions for challenging these requests" is not: that needs a lawyer's advice (ALY-51, question 15 of the brief).
+
+**Chosen over** answering "None of the above", which was true and needed no document, but would have left ALYR with no answer on the day a first request arrives. Whether either answer affects Meta's approval is not known.
+
+**Revisit when** the lawyer has read it, or a first request arrives.

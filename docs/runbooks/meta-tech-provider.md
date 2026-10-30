@@ -1,7 +1,7 @@
 # Becoming a Meta Tech Provider (ALY-52, D-007)
 
 Written 28 Oct 2026, the day Meta verified the business; updated the same evening after the
-app settings were done. Checked against Meta's page "Become a Tech Provider" (the founder
+app settings were done; updated 31 Oct 2026, the day App Review was submitted. Checked against Meta's page "Become a Tech Provider" (the founder
 pasted it into a session on 28 Oct 2026, and the dashboard showed the same steps):
 https://developers.facebook.com/documentation/business-messaging/whatsapp/solution-providers/get-started-for-tech-providers
 
@@ -19,11 +19,12 @@ including a number already in the WhatsApp Business app (coexistence).
 |---|---|
 | Meta app with the WhatsApp use case, in the business portfolio | Done: app `alyr`, ID 1071845795713841, portfolio "Alyr" 1123909593527755. The app also has an Instagram use case; ALYR does not use it, and nothing in App Review should ask for Instagram permissions |
 | Step 1. Business verification | **Done 28 Oct 2026** ("Verification for alyr software"): legal name alyr software, CR 255539, website alyr.qa (legal name in the footer, PR #144; company page, PR #146), domain alyr.qa verified by DNS TXT record. Submitted by Beevi Jinan, the registered owner, from her account |
-| Onboarding type and Tech Provider Terms | **Not done. Needs Akmal.** Dashboard: Use cases → Customize (WhatsApp) → Become Tech Provider → Continue. Choose **Independent Tech Provider** (D-007). Pressing **Start onboarding** accepts Meta's Tech Provider Terms, so the founder reads them and presses it |
+| Onboarding type and Tech Provider Terms | **Done:** Akmal chose **Independent Tech Provider** (D-007). The dashboard shows "Onboard as an independent Tech Provider", 1 of 2 steps complete, on 31 Oct |
 | Step 2a. App settings | **Done 28 Oct 2026**, saved and checked after a reload: app domain `alyr.qa`, contact `akmal@alyr.qa`, privacy policy `https://alyr.qa/privacy` (published 28 Oct, PR #148), data deletion instructions `https://alyr.qa/privacy#delete`, category "Business and pages", icon (the ALYR mark on Carbon, 1024 × 1024). Terms of service URL left empty: none is published |
-| Step 2b. Two videos | Not done. Needs Akmal |
-| Step 2c. Advanced access to `whatsapp_business_messaging` and `whatsapp_business_management` | Not requested |
-| Submit: **Begin App Review** | Not done; the founder submits |
+| Step 2b. Two videos | **Done:** both edited recordings are attached to their permissions in the submission |
+| Step 2c. Advanced access to `whatsapp_business_messaging` and `whatsapp_business_management` | **Requested** in the submission, with the wording in step 5. Not granted until Meta approves |
+| Website platform | **Done 31 Oct 2026:** `https://alyr.qa/`. App Review's reviewer step stays locked until the app has a platform; the app is called through the API, so Website is the fitting one |
+| Submit: **Begin App Review** | **Submitted 31 Oct 2026 (ALY-262):** Akmal ticked Meta's terms and pressed Submit. Meta shows "Review in progress". A submission cannot be edited or cancelled while it is in review |
 | Webhooks | Done for the test number (12 Oct); the app is subscribed to `messages` |
 
 Meta's page does not list a separate "access verification" step (it did in 2025).
@@ -73,8 +74,34 @@ success stories, and holds the steps below.
      it, calls on accounts the portfolio does not own fail with error code 200: "ALYR reads
      each connected business's phone numbers and message templates, and creates the
      templates the business uses, so the shop does not need WhatsApp Manager."
-6. **Begin App Review** (founder). Meta gives no review time; providers report a few
-   business days.
+6. **Begin App Review** (founder). Done 31 Oct 2026. The page says most submissions are
+   reviewed within 20 days, and longer if Meta needs more information.
+
+## What we told Meta (31 Oct 2026)
+
+Keep these true. If one stops being true, change the answer at the next review, not after it.
+
+- **Reviewer note:** ALYR is software for small businesses in Qatar; a business connects its
+  own number and ALYR uses the Cloud API and the Business Management API from our servers;
+  nothing to install and no test account is needed, the two recordings show each permission
+  end to end; ALYR uses only the WhatsApp Business Platform and no public_profile data.
+- **Facebook Login:** No, it is not integrated. The note says Embedded Signup, which uses
+  Facebook Login for Business, comes after approval (ALY-39).
+- **Processors with access to Meta's data** (from `docs/data-residency.md`, as IT services):
+  Google Cloud (Qatar); Cloudflare (Qatar, United States: its network has no one location, so
+  these are the two certain ones, for customers' pages and Meta's webhooks); Resend (Ireland,
+  United States: the data is in Ireland, the company is American). PostHog and Zoho are not
+  listed because neither receives Meta's data.
+- **Responsible entity:** alyr software W.L.L., Qatar.
+- **National security requests in the past 12 months:** No.
+- **Policies for requests from authorities:** legality review, data minimisation and
+  documentation, the three rules of `docs/company/authority-requests.md` (D-124). "Provisions
+  for challenging these requests" is not ticked: that waits for a lawyer (ALY-51).
+- **Agreements:** allowed usage for the two permissions and `public_profile`, and the Meta
+  Platform Terms and Developer Policies at Submit, which Akmal ticked.
+
+Keep the template Video 2 created (`app_review_order_ready`) until Meta approves: the
+recording shows it being made.
 
 ## After approval
 

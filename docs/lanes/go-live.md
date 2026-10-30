@@ -23,7 +23,7 @@ Anything else belongs to another lane. If a task needs it, keep the change small
 
 ## Now (update this section in the same pull request as the work)
 
-Last updated 30 Oct 2026 (Cloudflare edge and DNS hardening, ALY-116 first layer, branch `claude/cf-edge-dns-hardening-ae84c8`; and the production database's backups, restore and secrets audited, ALY-34, branch `claude/aly-34-backups-restore-2b913c`), on top of 29 Oct 2026 (the visitor's address for the rate limits, ALY-265, branch `aly-ratelimit-trusted-client-ip`) and 24 Oct 2026 (site tooling, branch `aly-site-tooling`, `docs/site-audit/05-tooling-log.md`).
+Last updated 31 Oct 2026 (Meta App Review submitted, ALY-262), on top of 30 Oct 2026 (Cloudflare edge and DNS hardening, ALY-116 first layer, branch `claude/cf-edge-dns-hardening-ae84c8`; and the production database's backups, restore and secrets audited, ALY-34, branch `claude/aly-34-backups-restore-2b913c`), on top of 29 Oct 2026 (the visitor's address for the rate limits, ALY-265, branch `aly-ratelimit-trusted-client-ip`) and 24 Oct 2026 (site tooling, branch `aly-site-tooling`, `docs/site-audit/05-tooling-log.md`).
 
 - **Cloudflare edge and DNS of alyr.qa hardened (ALY-116 first layer, CLD-7, CLD-18, D-113), live since 30 Oct,
   recorded in a pull request.** Always Use HTTPS, minimum TLS 1.2, SSL Full (strict), CAA for the three CAs
@@ -77,7 +77,7 @@ Last updated 30 Oct 2026 (Cloudflare edge and DNS hardening, ALY-116 first layer
   replacing Azure Qatar Central (D-036, Microsoft refused startup credits) and the interim
   Cloudflare and Neon host (D-052). The images, the worker heartbeat and the backup and restore
   were rehearsed under ALY-63; `infra/gcp/` builds the Doha setup (ALY-10).
-- **Meta business verification done 28 Oct 2026** (alyr software, CR 255539; domain alyr.qa verified). Next is Tech Provider approval (ALY-52): app settings with the privacy policy URL, two screen recordings, Advanced access to `whatsapp_business_messaging` and `whatsapp_business_management`, then App Review. The steps: `docs/runbooks/meta-tech-provider.md`. The first live round trip on Meta's test number worked on 12 Oct (docs/status.md); the test account's limit is 250 business-initiated conversations a day.
+- **Meta business verification done 28 Oct 2026** (alyr software, CR 255539; domain alyr.qa verified). **App Review submitted 31 Oct 2026 (ALY-52, ALY-262):** app settings, the two recordings, and Advanced access to `whatsapp_business_messaging` and `whatsapp_business_management`, all in review; Meta says most are reviewed within 20 days. The steps and what we told Meta: `docs/runbooks/meta-tech-provider.md`. The first live round trip on Meta's test number worked on 12 Oct (docs/status.md); the test account's limit is 250 business-initiated conversations a day.
 - The webhook address `api.alyr.online` is a tunnel to the laptop and is down whenever the laptop is.
 - The public site is served from Cloudflare. `alyr.qa` is the main address and the redirect switch is on (since 12 Oct; `docs/status.md`).
 
