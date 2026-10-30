@@ -11,6 +11,7 @@ import * as qty from "./qty.ts";
 import { fold, matches, searchWords } from "./fold.ts";
 import { amount, formatPrice, formatRange } from "./price.ts";
 import { waHref, waParts } from "./order/wa.ts";
+import { sitePath } from "./link.ts";
 
 const cases = JSON.parse(
   readFileSync(fileURLToPath(new URL("../../../../../specs/005-order-page-v2/fold-cases.json", import.meta.url)), "utf8"),
@@ -334,4 +335,9 @@ test("a fraction is written the way the server's reader is tested to read it, un
     assert.deepEqual(parts.map((p) => p.text), c.parts, c.label);
     for (const part of parts) assert.ok(part.text.length <= 140, `${c.label}: ${part.text.length}`);
   }
+});
+
+test("a link from the API opens on this site with its signed token", () => {
+  assert.equal(sitePath("https://app.alyr.qa/t/al-noor?t=AbC-1.x_Y"), "/t/al-noor?t=AbC-1.x_Y");
+  assert.equal(sitePath("http://localhost:3100/pay/a/b"), "/pay/a/b");
 });

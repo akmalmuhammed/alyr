@@ -35,25 +35,21 @@ from test_orders import say
 from test_sign_in import sign_in
 
 STORE = f"/api/store/{DEMO_SLUG}"
-# A cost, the margin it leaves, and the percentage. Unlikely numbers, but not impossible ones:
-# five digits turn up inside a random id or a time (below), so the numbers are searched as whole
-# numbers, and the percentages, which end in "%" or start with "(", as they are.
+# A cost, the margin it leaves, and the percentage: numbers nobody would meet by accident.
 COST, VARIANT_COST, PRICE = 31_337, 27_711, 50_000
-NUMBERS = ("31337", "313.37", "18663", "186.63", "27711", "277.11")
-PERCENTS = ("37.3%", "(37.3")
-# A whole number: not part of a longer run of digits, hex letters or a fraction. A UUID or a hash
-# is hex, and a time such as 22:29:18.277110 has six random digits after the dot; each held
-# `27711` or `18663` now and then, and plain substring search failed ci on 28 and 29 Oct (ALY-269).
-WHOLE = re.compile(
-    r"(?<![0-9A-Fa-f.])(?:" + "|".join(re.escape(n) for n in NUMBERS) + r")(?![0-9A-Fa-f]|\.\d)"
-)
+SECRETS = ("31337", "313.37", "18663", "186.63", "27711", "277.11", "37.3%", "(37.3")
 KEYS = re.compile(r'"(cost|unit_cost|margin|margins|margin_pct|cost_price|valuation)"\s*:')
 WORDS = re.compile(r"\b(unit cost|cost price|gross margin|your margin|it costs you)\b", re.I)
+# Ids, link tokens, hashes and times are random or move with the clock, so now and then one
+# holds the digits of a secret by chance: they are taken out before the digits are looked for.
+NOISE = re.compile(
+    r"[\w-]{20,}|\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(\.\d+)?([+-]\d{2}:?\d{2}|Z)?", re.ASCII
+)
 
 
 def seen_in(text: str) -> list[str]:
-    found = WHOLE.findall(text)
-    found += [s for s in PERCENTS if s in text]
+    plain = NOISE.sub(" ", text)
+    found = [s for s in SECRETS if s in plain]
     found += KEYS.findall(text)
     found += WORDS.findall(text)
     return found
@@ -156,7 +152,8 @@ def customer_paths(shop):
     return [
         STORE, f"{STORE}/items/{plain}", f"{STORE}/items/{sized}", f"{STORE}/share",
         f"{STORE}/share?item={plain}", f"{STORE}?q=cake",
-        f"/api/track/{DEMO_TENANT_ID}/{first['order_id']}", f"{STORE}?t={token(mine['id'])}",
+        f"/api/track/{DEMO_SLUG}?t={first['track_url'].split('?t=')[1]}",
+        f"{STORE}?t={token(mine['id'])}",
     ]
 
 

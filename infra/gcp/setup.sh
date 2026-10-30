@@ -7,6 +7,10 @@
 #   infra/gcp/setup.sh env-secrets <.env>  or: copy the R2, Meta and Resend values from a .env file
 #   infra/gcp/setup.sh set-secret <name>   replace one secret (typed, hidden) and restart the apps
 #   infra/gcp/setup.sh meta-webhook <app id>  point Meta's WhatsApp webhook at api.alyr.qa
+#   infra/gcp/setup.sh client-ip-key [create|rotate|finish]  the key the edge signs the visitor's address with (ALY-265)
+#   infra/gcp/setup.sh edge-key      give the edge Worker that key, unseen (run logged in to the business Cloudflare account)
+#   infra/gcp/setup.sh client-ip-on  the API counts per-address limits by the address the edge signs (after edge-key)
+#   infra/gcp/setup.sh client-ip-off the API stops counting them again (one command back to how it was)
 #   infra/gcp/setup.sh apps <tag>    migration job, API, worker, web app and the nightly export
 #   infra/gcp/setup.sh first-admin <tag> <email> <name>  the first person who can sign in
 #   infra/gcp/setup.sh github        let GitHub Actions deploy without a stored key; print its variables
@@ -62,12 +66,25 @@ SECRETS=(
   ALYR_META_WABA_ID=meta-waba-id ALYR_EMAIL_API_KEY=email-api-key
   ALYR_R2_ACCOUNT_ID=r2-account-id ALYR_R2_ACCESS_KEY_ID=r2-access-key-id
   ALYR_R2_SECRET_ACCESS_KEY=r2-secret-access-key
+  ALYR_PADDLE_API_KEY=paddle-api-key ALYR_PADDLE_WEBHOOK_SECRET=paddle-webhook-secret
+  ALYR_PADDLE_CLIENT_TOKEN=paddle-client-token
 )
 secrets_flag() { local IFS=,; local s=("${SECRETS[@]/%/:latest}"); echo "${s[*]}"; }
 env_flag() {
-  echo "ALYR_ENV=production,ALYR_JOBS_INLINE=false,ALYR_PUBLIC_WEB_URL=${ALYR_PUBLIC_WEB_URL:-https://app.alyr.qa},ALYR_R2_BUCKET=${ALYR_R2_BUCKET:-alyr-media},ALYR_MEDIA_BASE_URL=${ALYR_MEDIA_BASE_URL:-https://media.alyr.qa}"
+  echo "ALYR_ENV=production,ALYR_JOBS_INLINE=false,ALYR_PUBLIC_WEB_URL=${ALYR_PUBLIC_WEB_URL:-https://app.alyr.qa},ALYR_R2_BUCKET=${ALYR_R2_BUCKET:-alyr-media},ALYR_MEDIA_BASE_URL=${ALYR_MEDIA_BASE_URL:-https://media.alyr.qa},ALYR_CARD_BILLING=${ALYR_CARD_BILLING:-},ALYR_PADDLE_ENVIRONMENT=${ALYR_PADDLE_ENVIRONMENT:-sandbox}"
 }
 private_net=(--network="$NETWORK" --subnet="$SUBNET" --vpc-egress=private-ranges-only)
+
+# The API's visitor-address settings (ALY-265, docs/runbooks/client-address.md): the header the
+# edge Worker writes, and the key that vouches for it. `client-ip-on` sets both in one revision
+# and `client-ip-off` removes both. A full deploy (`apps`) replaces every setting, so it asks
+# the live API first and keeps these if they are there.
+CLIENT_IP_HEADER="x-alyr-client-ip"
+api_reads_edge_address() {
+  local live
+  live="$(value run services describe alyr-api --region="$REGION" --format=json 2>/dev/null || true)"
+  case "$live" in *'"ALYR_CLIENT_IP_HEADER"'*) return 0 ;; *) return 1 ;; esac
+}
 
 case "${1:-}" in
   infra)
@@ -181,9 +198,14 @@ case "${1:-}" in
     ask_secret meta-phone-number-id "Meta phone number ID"
     ask_secret meta-waba-id "Meta WhatsApp Business Account ID"
     ask_secret email-api-key "Resend API key"
+    echo "Clients paying ALYR by card (Paddle, ALY-180; sandbox until the founder goes live):"
+    ask_secret paddle-api-key "Paddle API key"
+    ask_secret paddle-webhook-secret "Paddle notification destination secret"
+    ask_secret paddle-client-token "Paddle client-side token"
     # Cloud Run refuses to start with a missing secret; "unset" keeps optional ones from
     # blocking a deploy. The API treats them as not configured.
-    for s in meta-app-secret meta-verify-token meta-access-token meta-phone-number-id meta-waba-id email-api-key; do
+    for s in meta-app-secret meta-verify-token meta-access-token meta-phone-number-id meta-waba-id email-api-key \
+             paddle-api-key paddle-webhook-secret paddle-client-token; do
       secret_exists "$s" || put_secret "$s" "unset"
     done
     echo "Done. Next: infra/gcp/push-images.sh <tag>, then infra/gcp/setup.sh apps <tag>"
@@ -237,6 +259,72 @@ for s in json.load(sys.stdin).get('data', []):
     echo "Meta now sends WhatsApp events ($fields) to $callback"
     ;;
 
+  client-ip-key)
+    # The key the edge Worker signs the visitor's address with and the API checks it by
+    # (ALY-265). Generated here, never shown. `create` makes it once. `rotate` puts a new key
+    # first and keeps the old one after it, so the API accepts both while the Worker is changed
+    # over (edge-key); `finish` then drops the old one. Both restart the API, if it uses the key.
+    what="${2:-create}"
+    restart_api() {
+      api_reads_edge_address || return 0
+      g run services update alyr-api --region="$REGION" \
+        --update-env-vars="ALYR_SECRETS_AT=$(date -u +%Y%m%dT%H%M%SZ)" >/dev/null 2>&1
+      echo "The API restarted with the new key list."
+    }
+    case "$what" in
+      create)
+        if secret_exists client-ip-key; then
+          echo "client-ip-key already exists; nothing changed."
+        else
+          put_secret client-ip-key "$(openssl rand -hex 32)"
+          echo "  stored client-ip-key. Next: setup.sh edge-key, deploy the Worker, then setup.sh client-ip-on"
+        fi ;;
+      rotate)
+        secret_exists client-ip-key || { echo "setup: no client-ip-key to rotate" >&2; exit 1; }
+        put_secret client-ip-key "$(openssl rand -hex 32),$(read_secret client-ip-key)"
+        echo "  new key first, old kept. Next: setup.sh edge-key, then setup.sh client-ip-key finish"
+        restart_api ;;
+      finish)
+        secret_exists client-ip-key || { echo "setup: no client-ip-key" >&2; exit 1; }
+        put_secret client-ip-key "$(read_secret client-ip-key | cut -d, -f1 | tr -d '[:space:]')"
+        echo "  old key dropped."
+        restart_api ;;
+      *) echo "usage: setup.sh client-ip-key [create|rotate|finish]" >&2; exit 1 ;;
+    esac
+    ;;
+
+  edge-key)
+    # Give the edge Worker (alyr-edge) its signing key without showing it: the first key in
+    # Secret Manager goes to wrangler's standard input. Run it logged in to the BUSINESS
+    # Cloudflare account, the one that holds alyr-edge (docs/runbooks/client-address.md). This
+    # changes the Worker's secret, not its code; the code that uses it is deployed separately.
+    # Refuses without CLOUDFLARE_ACCOUNT_ID: the personal account may still hold an old copy of
+    # alyr-edge, and a secret put there would look like success and change nothing.
+    [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] || { echo "setup: set CLOUDFLARE_ACCOUNT_ID to the business account's ID (and its login), see docs/runbooks/client-address.md" >&2; exit 1; }
+    key="$(read_secret client-ip-key | cut -d, -f1 | tr -d '[:space:]')"
+    [ -n "$key" ] || { echo "setup: client-ip-key is empty; run 'setup.sh client-ip-key' first" >&2; exit 1; }
+    ( cd "$(dirname "$0")/../cloudflare/edge" && pnpm exec wrangler whoami && printf '%s' "$key" | pnpm exec wrangler secret put CLIENT_IP_KEY )
+    unset key
+    ;;
+
+  client-ip-on)
+    # Needs the key (client-ip-key) and a Worker that already signs with it (edge-key and a
+    # deploy of the Worker). One new revision of the API with both settings; the old revision
+    # serves until this one is ready. Then run scripts/check-client-address.sh.
+    secret_exists client-ip-key || { echo "setup: no client-ip-key; run 'setup.sh client-ip-key' first" >&2; exit 1; }
+    g run services update alyr-api --region="$REGION" \
+      --update-env-vars="ALYR_CLIENT_IP_HEADER=$CLIENT_IP_HEADER" \
+      --update-secrets="ALYR_CLIENT_IP_KEYS=client-ip-key:latest"
+    echo "The API now counts per-address limits by the address the edge signs."
+    echo "Check it: scripts/check-client-address.sh   (undo: setup.sh client-ip-off)"
+    ;;
+
+  client-ip-off)
+    g run services update alyr-api --region="$REGION" \
+      --remove-env-vars=ALYR_CLIENT_IP_HEADER --remove-secrets=ALYR_CLIENT_IP_KEYS
+    echo "The API no longer counts per-address limits (the per-email limits are unchanged)."
+    ;;
+
   env-secrets)
     # The founder's shortcut for `secrets`: copy the R2, Meta and Resend values already in
     # a local .env file straight into Secret Manager. Values are never shown; only the
@@ -253,7 +341,8 @@ for s in json.load(sys.stdin).get('data', []):
       if [ -n "$val" ]; then put_secret "$name" "$val"; echo "  stored $name"; stored=$((stored + 1)); fi
       unset val
     done
-    for s in meta-app-secret meta-verify-token meta-access-token meta-phone-number-id meta-waba-id email-api-key; do
+    for s in meta-app-secret meta-verify-token meta-access-token meta-phone-number-id meta-waba-id email-api-key \
+             paddle-api-key paddle-webhook-secret paddle-client-token; do
       secret_exists "$s" || put_secret "$s" "unset"
     done
     echo "Stored $stored values from the file."
@@ -281,11 +370,20 @@ for s in json.load(sys.stdin).get('data', []):
       --cpu=1 --memory=1Gi --max-retries=0 --task-timeout=10m
     g run jobs execute alyr-migrate --region="$REGION" --wait
 
+    api_env="$(env_flag)"
+    api_secrets="$(secrets_flag)"
+    if api_reads_edge_address; then
+      # A full deploy replaces every setting: keep what `client-ip-on` set (ALY-265).
+      api_env="$api_env,ALYR_CLIENT_IP_HEADER=$CLIENT_IP_HEADER"
+      api_secrets="$api_secrets,ALYR_CLIENT_IP_KEYS=client-ip-key:latest"
+      echo "Keeping the API's visitor-address settings."
+    fi
+
     echo "The API, the worker and the web app..."
     g run deploy alyr-api --region="$REGION" --image="$images/alyr-api:$tag" --args=api --port=8080 \
       --cpu=1 --memory=1Gi --min-instances=1 --max-instances=3 --concurrency=40 --cpu-boost \
       --service-account="$(sa alyr-run)" "${private_net[@]}" --allow-unauthenticated \
-      --set-env-vars="$(env_flag)" --set-secrets="$(secrets_flag)"
+      --set-env-vars="$api_env" --set-secrets="$api_secrets"
     g run worker-pools deploy alyr-worker --region="$REGION" --image="$images/alyr-api:$tag" \
       --args=worker --instances=1 --cpu="${ALYR_WORKER_CPU:-1}" --memory="${ALYR_WORKER_MEMORY:-512Mi}" \
       --service-account="$(sa alyr-run)" "${private_net[@]}" \
@@ -460,7 +558,7 @@ for c in json.load(sys.stdin).get('notificationChannels', []):
     ;;
 
   *)
-    sed -n '2,18p' "$0"
+    sed -n '2,22p' "$0"
     exit 1
     ;;
 esac

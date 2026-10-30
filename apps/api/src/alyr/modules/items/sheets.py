@@ -8,16 +8,39 @@ uses a semicolon, so both are handled. Nothing is evaluated: a CSV cell that sta
 is text.
 
 `write_csv` writes what Excel opens correctly: UTF-8 with a byte-order mark.
+
+`off_loop` is how a request reads a file: in a worker thread, a couple at a time.
 """
 
+import asyncio
 import csv
 import io
+import weakref
+from collections.abc import Callable
 from decimal import Decimal
 
 from alyr.modules.items import xlsx
 from alyr.modules.items.xlsx import SheetError
 
 CSV_ROWS = xlsx.MAX_ROWS
+READERS = 2  # files one API instance reads at once
+
+_readers: weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, asyncio.Semaphore] = (
+    weakref.WeakKeyDictionary()
+)
+
+
+async def off_loop[T](read: Callable[..., T], *args: object) -> T:
+    """Run a file reader (`read_table`, the photo zip's `index`) in a worker thread, `READERS`
+    at a time. A large sheet takes seconds to read: on the event loop it would hold every
+    other request of every shop, and inside a transaction a database connection, so a request
+    reads its file here, before it opens one (ALY-278)."""
+    loop = asyncio.get_running_loop()
+    limit = _readers.get(loop)
+    if limit is None:
+        limit = _readers[loop] = asyncio.Semaphore(READERS)
+    async with limit:
+        return await asyncio.to_thread(read, *args)
 
 
 def kind_of(data: bytes, filename: str) -> str:

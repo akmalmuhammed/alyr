@@ -24,9 +24,12 @@ from alyr.core import (
     access,
     auth,
     backoffice,
+    card_billing,
     pricing,
     readiness,
+    subscription,
     terms,
+    welcome,
     whatsapp_attach,
     whatsapp_setup,
 )
@@ -62,6 +65,9 @@ class ItemChange(BaseModel):
     applies: str = Field(max_length=60)
     active: bool = True
     sort: int = Field(default=0, ge=0, le=10_000)
+    # In US cents, for a card payment through Paddle (D-074); null: the riyal price at the
+    # peg. Left out: unchanged.
+    price_usd: int | None = Field(default=None, ge=0, le=10_000_000)
 
 
 class TermsVersion(BaseModel):
@@ -151,6 +157,16 @@ class Payment(BaseModel):
     reference: str = Field(default="", max_length=120)
     received_on: date
     note: str = Field(default="", max_length=500)
+
+
+class CardBillingChange(BaseModel):
+    # Null: the platform's setting (ALYR_CARD_BILLING). "off": this client pays by transfer.
+    card_billing: Literal["off", "paddle"] | None
+
+
+class Cancellation(BaseModel):
+    # How the client asked: "email from the owner, 29 Oct", "call with Fatima".
+    note: str = Field(min_length=1, max_length=500)
 
 
 class OpenWithout(BaseModel):
@@ -307,6 +323,12 @@ async def create_business(
             await template.apply(
                 conn, target, await shop_clock.load(conn), samples_too=False, by=_by(staff)
             )
+    # The owner learns the workspace exists and how to sign in to it (specs/037).
+    async with request.app.state.db.tenant(tenant_id) as conn:
+        owner = await conn.fetchval(
+            "select user_id from memberships where role = 'owner' order by created_at limit 1"
+        )
+        await welcome.queue(conn, welcome.INVITE, owner)
     return {"id": str(tenant_id), "slug": slug, "modules": modules,
             "template": target.key if target else None}
 
@@ -413,16 +435,18 @@ async def save_item(
     try:
         async with _back_office(request) as conn:
             before = await conn.fetchrow(
-                "select price, active from price_items where key = $1", key
+                "select price, price_usd, active from price_items where key = $1", key
             )
             saved = await pricing.save_item(
                 conn, key, body.name, body.name_ar, body.kind, body.price, body.applies,
-                body.active, body.sort, _by(staff),
+                body.active, body.sort, _by(staff), price_usd=body.price_usd,
+                set_usd="price_usd" in body.model_fields_set,
             )
             await backoffice.audit(
                 conn, staff, "price_item.saved", "price_item", key,
                 detail={"before": dict(before) if before else None,
-                        "after": {"price": body.price, "active": body.active,
+                        "after": {"price": body.price, "price_usd": saved["price_usd"],
+                                  "active": body.active,
                                   "applies": body.applies, "kind": body.kind}},
             )
             return saved
@@ -472,7 +496,7 @@ async def client(client_id: UUID, request: Request, _: Staff = Depends(platform_
     try:
         async with _back_office(request) as conn:
             return await pricing.client(conn, client_id) | {
-                "access": await access.summary(conn, client_id)
+                "access": await _access(conn, client_id)
             }
     except pricing.PricingError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
@@ -841,16 +865,99 @@ async def record_payment(
                 reference=body.reference, received_on=body.received_on, note=body.note,
                 by=_by(staff),
             )
+            # A payment can end a pause at once (ALY-218).
+            await subscription.refresh(conn, client_id)
             await backoffice.audit(
                 conn, staff, "client.payment", "client", client_id, client_id=client_id,
                 detail={"amount": body.amount, "method": body.method,
                         "received_on": body.received_on.isoformat(), "covered": covered},
             )
-            return await access.summary(conn, client_id)
+            return await _access(conn, client_id)
     except LookupError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except access.AccessError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.put("/clients/{client_id}/card-billing")
+async def change_card_billing(
+    client_id: UUID, body: CardBillingChange, request: Request,
+    staff: Staff = Depends(platform_admin),
+) -> dict:
+    """Offer this client a card payment, or not (ALY-180, D-074). A card provider can only be
+    offered once it is set up for the whole platform; this never starts or stops a payment
+    already made."""
+    async with _back_office(request) as conn:
+        before = await conn.fetchrow(
+            "select card_billing from clients where id = $1 for update", client_id
+        )
+        if before is None:
+            raise HTTPException(status_code=404, detail="no such client")
+        if before["card_billing"] != body.card_billing:
+            await conn.execute(
+                "update clients set card_billing = $2 where id = $1", client_id, body.card_billing
+            )
+            await backoffice.audit(
+                conn, staff, "client.card_billing", "client", client_id, client_id=client_id,
+                detail={"from": before["card_billing"], "to": body.card_billing},
+            )
+        return await _access(conn, client_id)
+
+
+async def _access(conn, client_id: UUID) -> dict:
+    """What the client owes and paid, their latest card checkout, and where their plan
+    stands (ALY-218)."""
+    now = await subscription.current(conn, client_id)
+    note = await conn.fetchrow(
+        "select cancel_note, cancel_requested_at, sending_paused_at from clients where id = $1",
+        client_id,
+    )
+    return await access.summary(conn, client_id) | {
+        "checkout": await card_billing.latest(conn, client_id),
+        "subscription": subscription.view(now) | {
+            "cancel_note": note["cancel_note"] if note else "",
+            "paused_since": note["sending_paused_at"].isoformat()
+            if note and note["sending_paused_at"] else None,
+        },
+    }
+
+
+@router.post("/clients/{client_id}/cancel")
+async def cancel_client(
+    client_id: UUID, body: Cancellation, request: Request, staff: Staff = Depends(platform_admin)
+) -> dict:
+    """The client asked to cancel. It takes effect in seven days (D-034): from that day ALYR
+    sends nothing more for its businesses and its card subscription is cancelled. Nothing is
+    deleted and the workspace stays open (D-033)."""
+    try:
+        async with _back_office(request) as conn:
+            day = await subscription.cancel(conn, client_id, body.note)
+            await backoffice.audit(
+                conn, staff, "client.cancel", "client", client_id, client_id=client_id,
+                detail={"cancels_on": day.isoformat(), "note": body.note.strip()},
+            )
+            return await _access(conn, client_id)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except subscription.CancelError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.delete("/clients/{client_id}/cancel")
+async def undo_cancel(
+    client_id: UUID, request: Request, staff: Staff = Depends(platform_admin)
+) -> dict:
+    """The client stays after all."""
+    try:
+        async with _back_office(request) as conn:
+            if await subscription.undo_cancel(conn, client_id):
+                await backoffice.audit(
+                    conn, staff, "client.cancel_undone", "client", client_id,
+                    client_id=client_id,
+                )
+            return await _access(conn, client_id)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
 
 
 @router.post("/clients/{client_id}/waive")
@@ -861,11 +968,12 @@ async def waive_payment(
     try:
         async with _back_office(request) as conn:
             if await access.waive(conn, client_id, body.reason):
+                await subscription.refresh(conn, client_id)
                 await backoffice.audit(
                     conn, staff, "client.payment_waived", "client", client_id, client_id=client_id,
                     detail={"reason": body.reason.strip()},
                 )
-            return await access.summary(conn, client_id)
+            return await _access(conn, client_id)
     except LookupError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except access.AccessError as error:

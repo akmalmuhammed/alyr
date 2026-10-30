@@ -4,7 +4,7 @@ from uuid import UUID
 import asyncpg
 
 from alyr.channels.base import Choice, OutboundMessage
-from alyr.core import team, templates
+from alyr.core import payments, team, templates
 from alyr.core.normalise import fmt_qar
 from alyr.core.outbound import Outbound
 from alyr.core.team import Actor
@@ -12,6 +12,7 @@ from alyr.modules.documents import sales as documents_sales
 from alyr.modules.items import alerts
 from alyr.modules.items import holds as stock_holds
 from alyr.modules.ledger.ageing import Aged, age
+from alyr.modules.orders import pay_ways
 
 # Every function takes a tenant-scoped connection (Database.tenant). RLS does the filtering.
 
@@ -134,7 +135,7 @@ async def summary(conn: asyncpg.Connection, now: datetime | None = None) -> dict
         )
     collected = await conn.fetchrow(
         "select coalesce(sum(amount), 0)::bigint as total, count(*) as payments "
-        "from payment_requests where status = 'paid' and order_id is null"
+        "from payment_requests where status = 'paid' and order_id is null and booking_id is null"
     )
     out, totals = [], Aged()
     for c in customers:
@@ -179,10 +180,8 @@ async def create_payment_request(
     conn: asyncpg.Connection, tenant_id: UUID, contact_id: UUID, amount: int, web_url: str
 ) -> str:
     """Record a payment request and return the link the customer opens."""
-    payment_id = await conn.fetchval(
-        "insert into payment_requests (contact_id, amount) values ($1, $2) returning id",
-        contact_id, amount,
-    )
+    # On the shop's own payment account when it has connected one (ALY-17).
+    payment_id = await payments.request(conn, contact_id, amount)
     return f"{web_url}/pay/{tenant_id}/{payment_id}"
 
 
@@ -195,9 +194,20 @@ def reminder_tier(oldest_days: int) -> str:
     return "gentle"
 
 
+def pay_the_shop(ways: list[str], lang: str) -> str:
+    """How a credit customer pays while the shop takes no money online (ALY-271)."""
+    how = pay_ways.say(ways, lang)
+    if lang == "ar":
+        return f"يمكنك الدفع لنا {how}، وسنسجّل الدفعة في حسابك."
+    return f"You can pay us by {how}, and we will record it on your account."
+
+
 def reminder_text(
-    lang: str, shop: str, shop_ar: str, amount: int, days: int, link: str, tier: str
+    lang: str, shop: str, shop_ar: str, amount: int, days: int, link: str, tier: str,
+    how: str = "",
 ) -> str:
+    """The reminder's own wording. `how` replaces the payment link when the shop takes no
+    money online (ALY-271)."""
     money = fmt_qar(amount)
     if lang == "ar":
         name = shop_ar or shop
@@ -207,14 +217,16 @@ def reminder_text(
             "final": f"إشعار أخير من {name}: مبلغ {money} متأخر منذ أكثر من ٩٠ يوماً. "
                      "نرجو السداد أو التواصل معنا اليوم.",
         }[tier]
-        return f"{opening} أقدم فاتورة غير مدفوعة منذ {days} يوماً. للدفع: {link}"
+        closing = how or f"للدفع: {link}"
+        return f"{opening} أقدم فاتورة غير مدفوعة منذ {days} يوماً. {closing}"
     opening = {
         "gentle": f"A friendly reminder from {shop}: {money} is due.",
         "firm": f"Reminder from {shop}: {money} is now overdue.",
         "final": f"Final notice from {shop}: {money} has been overdue for more than 90 days. "
                  "Please pay or contact us today.",
     }[tier]
-    return f"{opening} Your oldest unpaid purchase was {days} days ago. Pay here: {link}"
+    closing = how or f"Pay here: {link}"
+    return f"{opening} Your oldest unpaid purchase was {days} days ago. {closing}"
 
 
 async def send_reminders(
@@ -227,6 +239,10 @@ async def send_reminders(
     last few days, so one press of the button can never spam a customer.
     """
     shop = await conn.fetchrow("select name, name_ar from tenants where id = $1", tenant_id)
+    # A shop that takes no money online yet reminds without a link and says how it is paid,
+    # with the templates made for that (ALY-271): a link would open a page that cannot pay.
+    online = await pay_ways.online_possible(conn)
+    ways = [] if online else (await pay_ways.get(conn))["ways"]
     now = datetime.now(UTC)
     result = {"sent": 0, "skipped_promised": 0, "skipped_recent": 0, "skipped_opted_out": 0}
     for customer in (await summary(conn))["customers"]:
@@ -243,11 +259,20 @@ async def send_reminders(
             result["skipped_recent"] += 1
             continue
         contact_id = UUID(customer["id"])
-        link = await create_payment_request(
-            conn, tenant_id, contact_id, customer["balance"], web_url
-        )
         arabic = customer["lang"] == "ar"
+        link = how = ""
+        if online:
+            link = await create_payment_request(
+                conn, tenant_id, contact_id, customer["balance"], web_url
+            )
+        else:
+            how = pay_the_shop(ways, "ar" if arabic else "en")
         tier = reminder_tier(customer["oldest_days"])
+        promise = Choice("promise", "سأدفع خلال أسبوع" if arabic else "I'll pay within a week")
+        template = {
+            "gentle": "payment_reminder", "firm": "payment_reminder_overdue",
+            "final": "payment_reminder_final",
+        }[tier] + ("" if online else "_offline")
         await outbound.send(
             conn,
             OutboundMessage(
@@ -255,20 +280,17 @@ async def send_reminders(
                 kind="template",
                 body=reminder_text(
                     customer["lang"], shop["name"], shop["name_ar"], customer["balance"],
-                    customer["oldest_days"], link, tier,
+                    customer["oldest_days"], link, tier, how,
                 ),
                 choices=(
-                    Choice("pay", "ادفع الآن" if arabic else "Pay now"),
-                    Choice("promise", "سأدفع خلال أسبوع" if arabic else "I'll pay within a week"),
+                    (Choice("pay", "ادفع الآن" if arabic else "Pay now"), promise) if online
+                    else (promise,)
                 ),
-                template_name={
-                    "gentle": "payment_reminder", "firm": "payment_reminder_overdue",
-                    "final": "payment_reminder_final",
-                }[tier],
+                template_name=template,
                 template_category="utility",
                 template_params=(
                     shop["name_ar"] if arabic and shop["name_ar"] else shop["name"],
-                    fmt_qar(customer["balance"]), str(customer["oldest_days"]), link,
+                    fmt_qar(customer["balance"]), str(customer["oldest_days"]), link or how,
                 ),
                 lang="ar" if arabic else "en",
             ),
@@ -375,21 +397,33 @@ async def complete_payment(
     row = await conn.fetchrow(
         "update payment_requests set status = 'paid', paid_at = now() "
         "where id = $1 and status = 'pending' "
-        "returning contact_id, amount, provider, order_id",
+        "returning contact_id, amount, provider, order_id, booking_id",
         payment_id,
     )
     if row is None:
         late = await conn.fetchrow(
-            "select status, order_id, contact_id, amount, provider from payment_requests "
-            "where id = $1", payment_id,
+            "select status, order_id, booking_id, contact_id, amount, provider "
+            "from payment_requests where id = $1", payment_id,
         )
         if late is None:
             return "not_found"
+        if late["status"] == "expired" and late["booking_id"] and late["provider"] != "standin":
+            # A real gateway took a deposit after its booking was released (D-084).
+            from alyr.modules.bookings import deposits
+
+            await deposits.late_payment(conn, late)
         if late["status"] == "expired" and late["order_id"] and late["provider"] != "standin":
             # A real gateway took the money after the link had expired and the order was
             # cancelled. The stand-in gateway moves no money, so it never lands here.
             await _late_payment(conn, outbound, payment_id, late)
         return late["status"]
+    if row["booking_id"] is not None:
+        # A booking's deposit (D-084): the booking is confirmed and the receipt made. It was
+        # never a debt, so the ledger is not touched.
+        from alyr.modules.bookings import deposits
+
+        await deposits.paid(conn, outbound, row)
+        return "paid"
     lang = await conn.fetchval("select lang from contacts where id = $1", row["contact_id"])
     if row["order_id"] is not None:
         # Paying for an order settles the order. It was never a debt, so the ledger

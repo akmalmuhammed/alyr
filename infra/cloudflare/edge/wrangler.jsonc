@@ -2,6 +2,9 @@
 // because Cloud Run's custom domains are refused in me-central1. Deploy by hand from this
 // folder: `pnpm install && pnpm exec wrangler deploy`. Wrangler creates the two DNS records
 // itself (custom domains); no other record may hold those names.
+// The Worker also needs one secret, CLIENT_IP_KEY, which signs the visitor's address for the
+// API (ALY-265). Never put it here: `infra/gcp/setup.sh edge-key` sets it from Secret Manager
+// without showing it, and a deploy leaves it alone. Steps: docs/runbooks/client-address.md.
 {
   "name": "alyr-edge",
   "main": "src/index.ts",

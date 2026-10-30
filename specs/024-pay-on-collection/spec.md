@@ -15,6 +15,21 @@ stops asking for money, the order keeps its stock, and staff mark it paid when t
   `pay_later_ways` (cash, bank transfer, card machine). Turning the link off needs at least one way.
   Set from the Orders tab (owners and admins), by `PUT /api/orders-payment-ways`, or by the go-live list's
   payments choice: *cash and transfer* turns the link off and opens cash and transfer; *online* turns it on.
+- **Only where the link can take money (ALY-271, 29 Oct).** `pay_ways.online_possible` is true once the
+  shop's own payment account is connected (the "payments" connection in `catalog.py`; none can be yet) or
+  on a developer machine, where the stand-in page plays the provider. Until then every shop is paid on
+  collection whatever it saved, with cash and transfer when it chose no ways; `PUT` refuses `online: true`
+  (422); the Orders tab shows no online choice; the go-live list offers only *cash and transfer*.
+  `ALYR_STAND_IN_PAYMENTS=false` shows a developer machine what production gets. The credit-account
+  chat follows the same rule: no Pay now button, and "pay" is answered with the balance and how the shop
+  is paid, not a link. The credit reminders follow it too: they go on `payment_reminder_offline`,
+  `payment_reminder_overdue_offline` and `payment_reminder_final_offline`, whose last blank is how the
+  shop is paid ("You can pay us by cash or bank transfer, and we will record it on your account."),
+  with only the "I'll pay within a week" button and no payment request made. Like every template they
+  need Meta's approval on the shop's account before they reach a customer outside 24 hours (ALY-172).
+- **A phone number is not a name (ALY-271, CJ-17).** A customer with no WhatsApp profile name is stored
+  as "+974…". The pay page and the order page print no name for them (`normalise.shown_name`), rather
+  than the number, so a forwarded link does not show it.
 - **The page and the chat.** Both still ask for "link". With the link off, `create_order` makes it a *later*
   order: placed unpaid (`orders.payment = 'unpaid'`), no payment request, stock committed at once (nothing
   expires), the customer told "Pay by cash or bank transfer when you collect." in the order page's confirmation

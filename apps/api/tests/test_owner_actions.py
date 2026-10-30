@@ -195,6 +195,7 @@ def test_a_code_from_another_shop_does_nothing(two_people):
         # Other tests look for shops and people by name; leave nothing of this one behind.
         owner_sql("delete from staff_link_codes where tenant_id = $1", other)
         owner_sql("delete from memberships where tenant_id = $1", other)
+        owner_sql("delete from price_groups where tenant_id = $1", other)
         owner_sql("delete from tenants where id = $1", other)
         owner_sql("delete from users where id = $1", user)
 

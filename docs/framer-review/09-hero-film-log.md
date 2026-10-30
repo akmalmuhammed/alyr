@@ -161,8 +161,10 @@ How it got there:
    bytes (brotli) smaller than main's, the English 265.
 4. TBT: on this site **every DOM insertion re-styles the whole page**, because of its
    `:root:has(...)` rules (measured: one insertion costs 10 to 20 ms on a 4× slowed phone, about
-   1 ms with those rules removed). So the canvas goes in as one commit, its windows unlaid
-   (`content-visibility: hidden`) until they start, the parts start in two frames, and the film
+   1 ms with those rules removed). (Corrected 28 Oct 2026: the cause was the Agent figure's
+   `:has(.af-more:not([open]))` rules, not the `:root:has(...)` ones; see "For the founder", 6.)
+   So the canvas goes in as one commit, its windows unlaid (`content-visibility: hidden`) until
+   they start, the parts start in two frames, and the film
    starts half a live beat (2.6 s) after the page settles, as the old hero's first event did. Once
    running, the film is CSS only: no React work per beat (main's live hero re-rendered every
    5.2 s, about 110 ms each on a slowed phone).
@@ -246,7 +248,9 @@ Every image was looked at.
 4. The cheesecake's price is now QAR 85 everywhere (was 185).
 5. The Arabic of every new line (ALY-66).
 6. Worth a separate fix: the homepage's `:root:has(...)` rules make every DOM change re-style the
-   whole page.
+   whole page. (Corrected 28 Oct 2026, branch `aly-has-style-recalc`: a bisect by rule found the
+   cause in the Agent figure's four `:has(.af-more:not([open]))` rules in `agentfig.css`, not the
+   `:root:has(...)` ones, which cost nothing measurable; the four are rewritten.)
 
 ## Not checked
 

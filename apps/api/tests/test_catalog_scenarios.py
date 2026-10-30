@@ -53,6 +53,7 @@ from test_items import (
 )
 from test_orders import customer, product
 from test_sign_in import other_shop_with_owner, sign_in
+from test_track import tracked as track_of
 
 
 def another(client) -> dict:
@@ -687,8 +688,7 @@ def test_scenario_22_deleting_an_item_with_order_history_archives_it(client):
     row = client.get("/api/orders").json()["orders"][0]
     # The order still shows what was bought.
     assert [(i["name"], i["quantity"]) for i in row["items"]] == [("Old special", 2)]
-    tenant_id = str(DEMO_TENANT_ID)
-    tracked = client.get(f"/api/track/{tenant_id}/{placed['order_id']}").json()["order"]
+    tracked = track_of(client, placed)
     assert tracked["items"][0]["name"] == "Old special"
     assert special["id"] not in [p["id"] for p in client.get(STORE).json()["products"]]
     assert order(client, ahmed, [line(special)]).status_code == 422  # and it cannot be ordered
@@ -729,7 +729,7 @@ def test_an_order_keeps_a_copy_of_its_variant_and_options_as_ordered(client):
     )
     abaya_line = orders_now[bought["order_id"]]["items"][0]
     assert (abaya_line["variant"], abaya_line["line_text"]) == ("Black / L", "QAR 270")
-    tracked = client.get(f"/api/track/{DEMO_TENANT_ID}/{bought['order_id']}").json()["order"]
+    tracked = track_of(client, bought)
     assert tracked["items"][0]["variant"] == "Black / L"
     saved = json.loads(owner_sql(
         "select options::text as o from order_items where order_id = $1",

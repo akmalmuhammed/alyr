@@ -4,13 +4,15 @@ are too big, damaged, macro-enabled or old. No database: these are the pure part
 flow through the API is in test_catalog_import.py."""
 
 import io
+import json
+import time
 import zipfile
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 import pytest
 
-from alyr.modules.items import columns, exports, sheets, values, xlsx
+from alyr.modules.items import columns, exports, import_photos, sheets, values, xlsx
 from alyr.modules.items.values import CellError
 from alyr.modules.items.xlsx import SheetError
 
@@ -368,6 +370,139 @@ def test_rows_beyond_what_is_read_are_cut_off_and_said_so():
     )
     sheet = xlsx.read(minimal(f"<worksheet {NS}><sheetData>{rows}</sheetData></worksheet>"))
     assert sheet.truncated and len(sheet.rows) == xlsx.MAX_ROWS
+
+
+# ── a file built to hold the reader (ALY-278) ────────────
+
+def quickly(call, seconds: float = 1.0):
+    started = time.perf_counter()
+    result = call()
+    assert time.perf_counter() - started < seconds
+    return result
+
+
+def test_a_cell_address_no_sheet_could_have_is_not_worked_out():
+    # The letters of an address were read as a number however many there were.
+    cells = "".join(
+        f'<c r="{ref}"><v>{n}</v></c>'
+        for n, ref in enumerate(("A" * 900_000 + "1", "ZZZZ1", "B12345678"), 7)
+    )
+    data = minimal(f'<worksheet {NS}><sheetData><row r="1">{cells}</row></sheetData></worksheet>')
+    assert len(data) < 5_000
+    sheet = quickly(lambda: xlsx.read(data))
+    # none is an address a sheet can have, so each cell is placed after the one before it
+    assert sheet.rows == [[Decimal("7"), Decimal("8"), Decimal("9")]]
+
+
+def test_row_numbers_no_sheet_could_have_do_not_make_it_longer():
+    # A row number out of range made the sheet as long as the gap.
+    numbers = ("-2000000000", "0", "x", "99999999999", "1048577")
+    rows = "".join(f'<row r="{r}"><c><v>{n}</v></c></row>' for n, r in enumerate(numbers, 1))
+    sheet = quickly(lambda: xlsx.read(
+        minimal(f"<worksheet {NS}><sheetData>{rows}</sheetData></worksheet>")
+    ))
+    assert sheet.first_row == 1 and [r[0] for r in sheet.rows] == [Decimal(n) for n in range(1, 6)]
+
+
+def fastest(call, times: int = 3) -> float:
+    took = []
+    for _ in range(times):
+        started = time.perf_counter()
+        call()
+        took.append(time.perf_counter() - started)
+    return min(took)
+
+
+def test_rows_without_numbers_are_read_in_one_pass():
+    # Each row with no number looked through every row before it: 20,000 such rows took about
+    # 22 times as long as the same rows with their numbers. Timed against those, not the clock,
+    # so a slow or busy machine slows both alike; now the two take about as long.
+    bare = "<row><c><v>1</v></c></row>" * xlsx.MAX_ROWS
+    numbered = "".join(f'<row r="{n}"><c><v>1</v></c></row>' for n in range(1, xlsx.MAX_ROWS + 1))
+    without, with_numbers = (
+        minimal(f"<worksheet {NS}><sheetData>{rows}</sheetData></worksheet>")
+        for rows in (bare, numbered)
+    )
+    assert len(without) < 10_000
+    sheet = xlsx.read(without)
+    assert len(sheet.rows) == xlsx.MAX_ROWS and not sheet.truncated
+    assert fastest(lambda: xlsx.read(without)) < 5 * fastest(lambda: xlsx.read(with_numbers))
+
+
+ENTITIES = '<!DOCTYPE s [<!ENTITY a "aaaaaaaaaa">]>'
+INLINE = (f'<worksheet {NS}><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>&a;&a;</t></is>'
+          "</c></row></sheetData></worksheet>")
+
+
+@pytest.mark.parametrize("label, part", [
+    # A search of the bytes missed both of these: the parser says whether there is one.
+    ("in UTF-16", ('<?xml version="1.0" encoding="UTF-16"?>' + ENTITIES + INLINE).encode(
+        "utf-16")),
+    ("after a long comment",
+     '<?xml version="1.0"?><!--' + "x" * 70_000 + "-->" + ENTITIES + INLINE),
+    ("with no entities", '<?xml version="1.0"?><!DOCTYPE s>' + INLINE.replace("&a;", "a")),
+], ids=["utf-16", "after-a-long-comment", "no-entities"])
+def test_a_document_type_is_refused_however_and_wherever_it_is_written(label, part):
+    for where in ("xl/worksheets/sheet2.xml", "xl/sharedStrings.xml"):
+        good = (f'<worksheet {NS}><sheetData><row r="1"><c r="A1"><v>1</v></c></row>'
+                "</sheetData></worksheet>")
+        data = minimal(part, {}) if where.endswith("sheet2.xml") else minimal(good, {where: part})
+        with pytest.raises(SheetError) as raised:
+            xlsx.read(data)
+        assert raised.value.code == "not_a_spreadsheet", (label, where)
+
+
+def test_a_zip_that_lists_more_than_a_spreadsheet_holds_is_refused_before_it_is_listed(
+    monkeypatch,
+):
+    good = (f'<worksheet {NS}><sheetData><row r="1"><c r="A1"><v>1</v></c></row>'
+            "</sheetData></worksheet>")
+    plain = minimal(good)
+    listed = plain.rfind(b"PK\x05\x06") - plain.find(b"PK\x01\x02")
+    assert xlsx.zip_directory_bytes(plain) == listed
+    crowded = minimal(good, {f"xl/media/{n:06d}-{'x' * 40}": b"" for n in range(25_000)})
+    assert xlsx.zip_directory_bytes(crowded) > xlsx.MAX_DIRECTORY_BYTES
+
+    def never(*_args, **_kwargs):
+        raise AssertionError("the zip was listed")
+
+    monkeypatch.setattr(xlsx.zipfile, "ZipFile", never)
+    for read in (xlsx.read, lambda data: import_photos.index(data, 10**6)):
+        with pytest.raises(SheetError):
+            read(crowded)
+
+
+def test_every_entry_of_a_photo_zip_counts_folders_and_a_macs_files_among_them():
+    photo = b"\xff\xd8\xff" + b"0" * 100
+    fine = zip_of({"photos/": b"", "photos/tea.jpg": photo, "__MACOSX/photos/._tea.jpg": b"x"})
+    assert import_photos.index(fine, 10**6).entries == 1
+    padded = zip_of({"tea.jpg": photo, **{
+        f"__MACOSX/._{n}": b"" for n in range(3 * import_photos.MAX_ENTRIES)
+    }})
+    with pytest.raises(SheetError) as raised:
+        import_photos.index(padded, 10**6)
+    assert raised.value.code == "zip_too_many"
+
+
+def test_what_was_read_is_kept_as_json_and_comes_back_the_same():
+    sheet = xlsx.Sheet(
+        rows=[
+            ["Name", None, "Price", None],
+            ["Tea", True, Decimal("12.50"), None],
+            [None, None, None, None],
+            ["Tea", date(2026, 1, 2), datetime(2026, 1, 2, 3, 4, 5), "=1+1"],
+        ],
+        first_row=3, formulas={(1, 2)}, name="Items", truncated=True,
+    )
+    kept = json.loads(json.dumps(xlsx.to_stored(sheet)))
+    assert xlsx.from_stored(kept) == sheet
+    # rows of different lengths (a CSV's) keep their lengths
+    ragged = sheets.read_csv(b"a,b,c\nd\n,,\n")
+    assert xlsx.from_stored(json.loads(json.dumps(xlsx.to_stored(ragged)))) == ragged
+    # one long text in every cell is kept once
+    long = "x" * xlsx.MAX_CELL_CHARS
+    many = xlsx.Sheet(rows=[[long] * xlsx.MAX_COLUMNS for _ in range(1_000)])
+    assert len(json.dumps(xlsx.to_stored(many))) < 2 * xlsx.MAX_CELL_CHARS + 300_000
 
 
 # ── the files we hand out ────────────────────────────────

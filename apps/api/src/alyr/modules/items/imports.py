@@ -4,9 +4,11 @@
 The shape is the bulk actions' (`bulk.py`): the owner sees exactly what will happen, then
 applies it carrying the preview's hash, and the newest import can be undone once.
 
-* **Upload** reads the file, builds the plan and stores the file (not before: a file that
-  cannot be read stores nothing). The row is `preview`.
-* **Preview** is the plan again, from the stored file and the shop as it is now.
+* **Upload** reads the file, builds the plan and stores the file with what was read from it
+  (not before: a file that cannot be read stores nothing). The row is `preview`. The file is
+  read once, in a worker thread and outside any transaction (`sheets.off_loop`, ALY-278); the
+  zip of photos likewise.
+* **Preview** is the plan again, from what was read and the shop as it is now.
 * **Apply** builds the plan once more and refuses (`changed_since_preview`) if it is not the
   one the owner saw. Then, in one transaction, it adds and updates every item the plan says
   and writes the stock numbers into the stock log as an opening count or a count with the
@@ -19,6 +21,7 @@ applies it carrying the preview's hash, and the newest import can be undone once
 Every function takes a tenant-scoped connection.
 """
 
+from dataclasses import asdict
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -36,12 +39,12 @@ from alyr.modules.items import (
     import_photos,
     import_plan,
     service,
-    sheets,
     stock,
+    xlsx,
 )
 from alyr.modules.items.clock import ShopClock
-from alyr.modules.items.import_plan import Plan, Snapshot
-from alyr.modules.items.xlsx import SheetError
+from alyr.modules.items.import_plan import Plan, Snapshot, ZipView
+from alyr.modules.items.xlsx import Sheet, SheetError
 
 Refused = SheetError  # a request that cannot be carried out: code, English, Arabic, status
 
@@ -120,20 +123,14 @@ async def snapshot(
 
 async def _plan(
     conn: asyncpg.Connection, media: MediaService, clock: ShopClock, tenant_id: UUID,
-    data: bytes, filename: str, options: dict, zip_data: bytes | None, zip_name: str | None,
-) -> tuple[Plan, str]:
-    kind, sheet = sheets.read_table(data, filename)
-    zip_view = (
-        import_photos.index(zip_data, media.settings.media_max_upload_bytes) if zip_data else None
-    )
-    label = {"name": zip_name, "bytes": len(zip_data)} if zip_data else None
+    sheet: Sheet, options: dict, zip_view: ZipView | None, zip_label: dict | None,
+) -> Plan:
     try:
-        plan = import_plan.build(
-            sheet, options, await snapshot(conn, media, clock, tenant_id), zip_view, label
+        return import_plan.build(
+            sheet, options, await snapshot(conn, media, clock, tenant_id), zip_view, zip_label
         )
     except ValueError as error:
         raise _refusal(str(error)) from error
-    return plan, kind
 
 
 def _check_mode(mode: str) -> str:
@@ -178,23 +175,25 @@ async def _tidy(conn: asyncpg.Connection) -> None:
 
 async def start(
     conn: asyncpg.Connection, media: MediaService, clock: ShopClock, tenant_id: UUID,
-    actor: Actor, data: bytes, filename: str, on_duplicate: str,
+    actor: Actor, data: bytes, filename: str, kind: str, sheet: Sheet, on_duplicate: str,
 ) -> dict:
-    """Read an uploaded sheet and keep it for the owner to look at. Raises `Refused` (and
-    stores nothing) for a file that cannot be used."""
+    """Keep an uploaded sheet, and what was read from it (`sheets.read_table`, which the caller
+    runs off the event loop), for the owner to look at. Raises `Refused` (and stores nothing)
+    for a file that cannot be used."""
     options = {"on_duplicate": _check_mode(on_duplicate)}
-    plan, kind = await _plan(conn, media, clock, tenant_id, data, filename, options, None, None)
+    plan = await _plan(conn, media, clock, tenant_id, sheet, options, None, None)
     await _tidy(conn)
     row = await conn.fetchrow(
-        "insert into item_imports (filename, kind, file, options, actor_id, actor_name) "
-        "values ($1, $2, $3, $4, $5, $6) returning *",
-        filename[:200] or "items", kind, data, options, actor.id, actor.name,
+        "insert into item_imports (filename, kind, file, sheet, options, actor_id, actor_name) "
+        "values ($1, $2, $3, $4, $5, $6, $7) returning *",
+        filename[:200] or "items", kind, data, xlsx.to_stored(sheet), options, actor.id,
+        actor.name,
     )
     return preview_view(row, plan)
 
 
-# What a row says about itself, without the uploaded sheet and zip: those can be megabytes and
-# are read only by what works out a plan from them.
+# What a row says about itself, without the uploaded sheet and zip: those can be megabytes.
+# What was read from them (`sheet`, `zip_index`) is fetched only by what works out a plan.
 _LIGHT = (
     "id, status, filename, kind, options, zip_name, summary, changes, photos, actor_id, "
     "actor_name, created_at, applied_at, undone_at, undone_by"
@@ -204,7 +203,7 @@ _LIGHT = (
 async def _row(
     conn: asyncpg.Connection, import_id: UUID, lock: bool = False, blobs: bool = False
 ) -> asyncpg.Record:
-    columns = _LIGHT + ", file, zip" if blobs else _LIGHT
+    columns = _LIGHT + ", sheet, zip_index, octet_length(zip) as zip_bytes" if blobs else _LIGHT
     row = await conn.fetchrow(
         f"select {columns} from item_imports where id = $1" + (" for update" if lock else ""),
         import_id,
@@ -218,16 +217,19 @@ async def _row_plan(
     conn: asyncpg.Connection, media: MediaService, clock: ShopClock, tenant_id: UUID,
     row: asyncpg.Record,
 ) -> Plan:
-    if row["status"] != "preview" or row["file"] is None:
+    if row["status"] != "preview":
         raise Refused(
             "already_applied", "This import has already been done.",
             "تم هذا الاستيراد بالفعل.", 409,
         )
-    plan, _kind = await _plan(
-        conn, media, clock, tenant_id, row["file"], row["filename"], dict(row["options"]),
-        row["zip"], row["zip_name"],
+    if row["sheet"] is None:
+        raise _gone()  # an upload kept before the file was read once (ALY-278): upload it again
+    zip_view = ZipView(**row["zip_index"]) if row["zip_index"] else None
+    label = {"name": row["zip_name"], "bytes": row["zip_bytes"]} if zip_view else None
+    return await _plan(
+        conn, media, clock, tenant_id, xlsx.from_stored(row["sheet"]), dict(row["options"]),
+        zip_view, label,
     )
-    return plan
 
 
 async def preview(
@@ -247,26 +249,29 @@ async def set_options(
 ) -> dict:
     row = await _row(conn, import_id, lock=True, blobs=True)
     options = {**row["options"], "on_duplicate": _check_mode(on_duplicate)}
-    row = await conn.fetchrow(
-        "update item_imports set options = $2 where id = $1 and status = 'preview' returning *",
+    if await conn.fetchrow(
+        "update item_imports set options = $2 where id = $1 and status = 'preview' returning id",
         import_id, options,
-    ) or row
+    ):
+        row = await _row(conn, import_id, blobs=True)
     return preview_view(row, await _row_plan(conn, media, clock, tenant_id, row))
 
 
 async def set_zip(
     conn: asyncpg.Connection, media: MediaService, clock: ShopClock, tenant_id: UUID,
-    import_id: UUID, data: bytes | None, name: str,
+    import_id: UUID, data: bytes | None, name: str, zip_view: ZipView | None,
 ) -> dict:
-    """Add (or, with no data, take away) the zip of photos for a preview. A zip that cannot
-    be read is refused and the preview keeps whatever it had."""
+    """Add (or, with no data, take away) the zip of photos for a preview, with its list of
+    files (`import_photos.index`, which the caller runs off the event loop and which refuses
+    a zip that cannot be read: the preview then keeps whatever it had)."""
     row = await _row(conn, import_id, lock=True, blobs=True)
-    if data:
-        import_photos.index(data, media.settings.media_max_upload_bytes)  # raises if unusable
-    row = await conn.fetchrow(
-        "update item_imports set zip = $2, zip_name = $3 where id = $1 and status = 'preview' "
-        "returning *", import_id, data or None, (name[:200] or "photos.zip") if data else None,
-    ) or row
+    if await conn.fetchrow(
+        "update item_imports set zip = $2, zip_name = $3, zip_index = $4 "
+        "where id = $1 and status = 'preview' returning id",
+        import_id, data or None, (name[:200] or "photos.zip") if data else None,
+        asdict(zip_view) if data and zip_view else None,
+    ):
+        row = await _row(conn, import_id, blobs=True)
     return preview_view(row, await _row_plan(conn, media, clock, tenant_id, row))
 
 
@@ -591,6 +596,7 @@ async def apply(
     photos = import_photos.initial_progress(steps) if steps else {}
     await conn.execute(
         "update item_imports set status = 'applied', applied_at = now(), file = null, "
+        "sheet = null, zip_index = null, "
         "summary = $2, changes = $3, photos = $4, zip = case when $5 then zip else null end, "
         "actor_id = $6, actor_name = $7 where id = $1",
         import_id, summary, changes, photos, uses_zip, actor.id, actor.name,
