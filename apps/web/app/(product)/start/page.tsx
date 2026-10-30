@@ -69,7 +69,8 @@ const WHATSAPP_OFFERED = ["new_number", "move_number", "own_account"];
 // What the client pays ALYR to go live (ALY-242, D-053): the setup fee and the first period.
 type Payment = {
   status: "paid" | "no_price" | "unpaid"; due_text: string; paid: number; paid_text: string;
-  left: number; left_text: string; setup_text: string; period_text: string; period_months: number;
+  // `setup` is 0 when the accepted price has no setup line (no setup fee for now, D-092).
+  left: number; left_text: string; setup: number; setup_text: string; period_text: string; period_months: number;
   reference: string; bank: string;
   // Offered while nothing is paid yet and ALYR's card provider is set up (ALY-180).
   card: { provider: "paddle"; amount_text: string; period_text: string } | null;
@@ -1065,7 +1066,7 @@ export default function Start() {
             <section className="ob-check-more ob-pay" aria-label={t.plan.payTitle}>
               <h2>{t.plan.payTitle}</h2>
               <p className="ob-pay-total"><span>{t.plan.payTotal}</span><b className="num"><bdi dir="ltr">{pay.left_text}</bdi></b></p>
-              <small>{t.plan.paySetup(pay.setup_text)} · {t.plan.payPeriod(pay.period_months, pay.period_text)}</small>
+              <small>{pay.setup > 0 && <>{t.plan.paySetup(pay.setup_text)} · </>}{t.plan.payPeriod(pay.period_months, pay.period_text)}</small>
               {pay.paid > 0 && <small>{t.plan.paidSoFar(pay.paid_text, pay.left_text)}</small>}
               {pay.card && (
                 <div className="ob-pay-card">

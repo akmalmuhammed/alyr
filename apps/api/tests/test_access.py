@@ -51,7 +51,7 @@ def test_paying_what_is_due_settles_the_go_live_check(client, office):
     tenant, _, name = new_business(client, paid=False)
     accept_price(client, office, name)
     due = payment(client)
-    assert due["status"] == "unpaid" and due["due"] > 0
+    assert due["status"] == "unpaid" and due["due"] > 0 and due["setup"] > 0
     assert due["due"] == owner_sql(
         "select sum(l.quantity * l.unit_price) from quote_lines l join quotes q on q.id = "
         "l.quote_id where q.status = 'accepted' and q.client_id = "
@@ -76,6 +76,20 @@ def test_paying_what_is_due_settles_the_go_live_check(client, office):
     assert audit[0]["detail"]["covered"] is True and audit[1]["detail"]["covered"] is False
     # More money later never unsettles it.
     assert pay(office, client_id, 500).json()["status"] == "paid"
+
+
+def test_without_a_setup_fee_only_the_first_period_is_due(client, office):
+    """No setup fee for now (D-092): with the setup line out of use in the price list, a new
+    quote has none, and what is due at go-live is the first period alone."""
+    owner_sql("update price_items set active = false where key = 'setup'")
+    try:
+        _, _, name = new_business(client, paid=False)
+        accept_price(client, office, name)
+        due = payment(client)
+    finally:
+        owner_sql("update price_items set active = true where key = 'setup'")
+    assert due["status"] == "unpaid" and due["setup"] == 0
+    assert due["due"] == due["left"] > 0
 
 
 def test_nothing_is_recorded_before_a_price_is_accepted_or_in_the_future(client, office):
