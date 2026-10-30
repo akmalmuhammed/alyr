@@ -1,10 +1,12 @@
 """Order link (D-016): a customer orders from the shop's page and pays or puts it on account."""
 
 import re
+from uuid import UUID
 
 from alyr.seed import AHMED_PHONE, DEMO_SLUG
 from order_links import token
 from pay_links import pay, pay_page
+from test_consent import owner_sql
 
 STORE = f"/api/store/{DEMO_SLUG}"
 
@@ -168,6 +170,18 @@ def test_shop_moves_an_order_along_and_the_customer_is_told(client):
     assert client.get("/api/orders").json()["orders"][0]["status"] == "done"
     bad = client.post(f"/api/orders/{order['order_id']}/status", json={"status": "shipped"})
     assert bad.status_code == 422
+
+
+def test_a_delivery_that_is_ready_is_not_told_to_come_and_collect(client):
+    ahmed = customer(client)
+    order = place(client, ahmed["id"], [(product(client, "Switch"), 1)], "link").json()
+    owner_sql("update orders set fulfilment = 'delivery' where id = $1", UUID(order["order_id"]))
+    change = client.post(f"/api/orders/{order['order_id']}/status", json={"status": "ready"})
+    assert change.status_code == 200
+    last = client.get(f"/sim/conversations/{AHMED_PHONE}").json()["messages"][-1]
+    # The notice or, outside the 24-hour window, its template: both say delivery.
+    assert f"{order['number']} is ready for delivery." in last["body"]
+    assert "collection" not in last["body"]
 
 
 def test_order_numbers_count_up(client):

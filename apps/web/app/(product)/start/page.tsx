@@ -544,10 +544,19 @@ export default function Start() {
   }, [tested]);
 
   // ── the live preview on the right ─────────────────────
+  const takesOrders = way === "orders";
   const preview = useMemo((): ChatMessage[] => {
     const name = shopShown || t.yourBusiness;
     const ar = lang === "ar";
-    const greeting: ChatMessage = {
+    // A shop that takes orders greets with its order link and the menu button (modules/orders/chat.py),
+    // not the booking menu.
+    const greeting: ChatMessage = takesOrders ? {
+      direction: "out",
+      body: ar
+        ? `أهلاً بك في ${name}. تقدر تطلب من هنا: app.alyr.qa/s/…\nإذا عندك سؤال، اكتبه وسنرد عليك هنا.`
+        : `Welcome to ${name}. You can order here: app.alyr.qa/s/…\nIf you have a question, write it and we will reply here.`,
+      payload: { choices: [{ id: "p0", title: ar ? "القائمة" : "See the menu" }] },
+    } : {
       direction: "out", body: ar ? `أهلاً بك في ${name}. كيف نقدر نخدمك؟` : `Welcome to ${name}. How can we help?`,
       payload: { choices: (ar ? ["احجز موعداً", "حجزي", "الأسعار"] : ["Book a visit", "My booking", "Prices"]).map((title, i) => ({ id: `p${i}`, title })) },
     };
@@ -594,7 +603,7 @@ export default function Start() {
       ];
     }
     return [greeting];
-  }, [step, rows, shopShown, lang, t, products.rows, handover.pickup, handover.delivery]);
+  }, [step, rows, shopShown, lang, t, takesOrders, products.rows, handover.pickup, handover.delivery]);
 
   // ── screens ──────────────────────────────────────────
   const total = rail.length;
