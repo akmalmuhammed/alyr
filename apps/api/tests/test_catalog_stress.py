@@ -71,9 +71,13 @@ def after_every_round(client, round_number: int) -> None:
 
 def give_back_what_ran_out(client) -> None:
     """The worker's sweep: every hold that has run out is given back."""
+    # Two sweeps at once each locked the held rows in the order they found them, and could each
+    # wait for the other (a deadlock). Holds another sweep or a request has locked are left for
+    # the next sweep, as the last one, which runs alone, gives back everything still held.
     owner_sql(
-        "update stock_holds set expires_at = now() - interval '1 hour' "
-        "where status = 'held' and tenant_id = $1", DEMO_TENANT_ID,
+        "update stock_holds set expires_at = now() - interval '1 hour' where id in "
+        "(select id from stock_holds where status = 'held' and tenant_id = $1 "
+        "for update skip locked)", DEMO_TENANT_ID,
     )
     client.portal.call(
         order_holds.expire_shop, client.app.state.db, client.app.state.outbound, DEMO_TENANT_ID
