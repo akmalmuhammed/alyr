@@ -30,9 +30,10 @@ Last updated 30 Oct 2026 (Cloudflare edge and DNS hardening, ALY-116 first layer
   Cloudflare issues from, SPF without the retired Email Routing include, and response-header rules that give the
   API and the media host their security headers. Nothing else moved: the Worker `alyr-edge` was not touched, MX
   and DMARC are as they were (`p=none`, review 13 Nov). Every step was checked from outside with
-  `scripts/check-edge.sh`. **Waiting on the founder (Needs Akmal):** the four answers in
-  `docs/runbooks/cloudflare-edge.md`, section 4 (the Block-only rate-limit rule, `alyr.online`'s two records,
-  Zero Trust for the back office, the old tunnel). Not done: Access and `ops.alyr.qa` (ALY-219), the edge
+  `scripts/check-edge.sh`. `alyr.online`, which sends no mail, got SPF `-all` and DMARC `quarantine` after the
+  founder's yes. **Waiting on the founder (Needs Akmal):** the three answers in
+  `docs/runbooks/cloudflare-edge.md`, section 4 (the Block-only rate-limit rule, Zero Trust for the back
+  office, the old tunnel). Not done: Access and `ops.alyr.qa` (ALY-219), the edge
   rate-limit rule, DNSSEC (`.qa` is not signed), MTA-STS.
 
 - **Per-address rate limits in production (ALY-265, D-083), in a pull request, nothing applied

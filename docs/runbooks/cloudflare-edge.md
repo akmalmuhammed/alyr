@@ -17,7 +17,7 @@ Every name below (`app`, `api`, `media`, `www`) is in the zone `alyr.qa` of the 
 - The rule definitions that were applied or are waiting are in `infra/cloudflare/zone/`.
 - **Before anything changed**, everything below was saved on the laptop, outside the repository:
   `C:\Users\akmal\alyr-cf-snapshots\2026-10-30\` (`dns-records-before_alyr.qa.json`,
-  `zone-settings-before_alyr.qa.txt`, `public/` with the DNS answers and the response headers). It holds no secret.
+  `zone-settings-before_alyr.qa.txt`, `dns-records-before_alyr.online.json`, `public/` with the DNS answers and the response headers). It holds no secret.
 - `infra/cloudflare/edge` (the Worker `alyr-edge`) was not touched. The Worker was redeployed by the ALY-265 rollout during this work (version `c8630fa9`, previous `5421040a`); `scripts/check-edge.sh` passed before and after.
 - To check the live state from any network at any time: `scripts/check-edge.sh` (curl only; changes nothing).
 
@@ -79,12 +79,13 @@ so it was left; adding them there is a product change in `apps/web/next.config.t
 | Email Routing's leftover key `cf2024-1._domainkey` | present | present | Harmless; it can be deleted whenever |
 | DMARC | `v=DMARC1; p=none; rua=mailto:akmal@alyr.qa` | Same | Already what was wanted. Not `reject`. Review date below |
 | MTA-STS, TLS-RPT | none | none | Skipped: MTA-STS needs a policy file served from `mta-sts.alyr.qa` (a new Worker) and gives little with one mail provider. Revisit with the first clients |
-| `alyr.online` (no mail is sent from it) | no SPF, no DMARC, no CAA, so it can be spoofed | Same | CLD-18. Two records are prepared (section 3) |
+| `alyr.online` (no mail is sent from it) | no SPF, no DMARC, no CAA, so it could be spoofed | **SPF `v=spf1 -all` and DMARC `v=DMARC1; p=quarantine;`** | CLD-18. Done after the founder's yes on 30 Oct (the audit suggests `p=reject`; `quarantine` was chosen, section 2). It has no MX, Email Routing is not set up on it, and Resend has only `alyr.qa` verified |
 
 ## 2. What was changed, in order, and how to put each back
 
-Each step was one change, then a check from outside before the next. The check after step 6 is the last full run
-of `scripts/check-edge.sh`.
+Each step was one change, then a check from outside before the next. Steps 1 to 6 are on `alyr.qa`; steps 7 and 8 are on
+the second zone, `alyr.online`, and were made after the founder said yes to that domain by name (30 Oct, relayed by the
+session that runs the rollout). The last full run of `scripts/check-edge.sh` is after step 8.
 
 | # | Change | Before | After | Verified | Undo |
 |---|---|---|---|---|---|
@@ -94,8 +95,10 @@ of `scripts/check-edge.sh`.
 | 4 | CAA (7 records on `alyr.qa`, comment starts `ALY-116 CAA`) | none | `letsencrypt.org`, `pki.goog; cansignhttpexchanges=yes`, `ssl.com` (issue and issuewild), `iodef` | Seen in public DNS (Cloudflare's and Google's); the served certificates and their expiry unchanged | DNS, Records, delete the seven CAA records; Cloudflare's hidden ones should go with them (check with `dig alyr.qa CAA`) |
 | 5 | SPF on `alyr.qa` | `v=spf1 include:_spf.mx.cloudflare.net include:zohomail.com ~all` | `v=spf1 include:zohomail.com ~all` | The zone's own nameserver and public DNS answer the new value; MX, DKIM and DMARC unchanged | Edit the apex TXT back to the "before" text |
 | 6 | Response header Transform Rules (`infra/cloudflare/zone/response-header-rules.json`) | none | API and media get the headers above; `x-powered-by` removed on `app` | Headers read on every host; webhook, sign-in code, sign-up code and Paddle paths still answered by the API | Rules, Transform Rules, Modify Response Header: disable or delete the three rules |
+| 7 | SPF on `alyr.online` (a new TXT record, comment `CLD-18 30 Oct 2026: ...`) | none | `v=spf1 -all` (no sender is allowed) | The zone's own nameserver and Google's resolver answer it; `https://alyr.online/` and `www` still 301 to `alyr.qa` | DNS, Records, delete that TXT record |
+| 8 | DMARC on `alyr.online` (`_dmarc` TXT) | none | `v=DMARC1; p=quarantine;` (no `rua`: a report address on another domain needs an authorisation record, and there is nothing to report) | The same | DNS, Records, delete that TXT record |
 
-**Checked after the six changes** (`scripts/check-edge.sh`, 30 Oct 2026, 40 checks, all passing): HTTPS redirects, site, sign-in page and
+**Checked after the eight changes** (`scripts/check-edge.sh`, 30 Oct 2026, 43 checks, all passing): HTTPS redirects, site, sign-in page and
 `/health/ready` answer; an empty POST to the WhatsApp webhook, a wrong verify token and an unsigned Paddle post are
 each refused **by the API** (`bad signature`, `verification failed`, `not signed by Paddle`), so Cloudflare lets
 them through; the sign-in code route answers 422 to an empty body (no email sent); the headers above; TLS 1.0 and
@@ -112,14 +115,13 @@ certificate renewal under the new CAA records (the first renewals start about a 
 | What | Why not applied | What is needed |
 |---|---|---|
 | **The edge rate-limit rule** (`infra/cloudflare/zone/rate-limit-rule.json`). The sign-in code and verify, the sign-up code, verify and business, the account email code and the order placement paths: 30 requests per 10 seconds per address and data centre, then 429 for 10 seconds. It is only a coarse flood guard above the API's own per-address limits, which are on since the Worker rollout of 30 Oct (ALY-265: 20 sign-in or sign-up codes, 30 code guesses and 10 sign-ups an hour, 30 orders or bookings in 10 minutes, per address; `apps/api/src/alyr/core/ratelimit.py`) | The brief was "log or challenge first, not block". The Free plan offers **only Block** for rate limiting (a paid plan is needed for Log and the challenges) | The founder's or the parent's yes to a Block rule at these numbers, or a paid plan. Numbers seen in the last 24 hours: the five sign-in and sign-up paths and the order path saw one or two POSTs each (founder tests); the largest POST burst anywhere in the zone was 45 in a minute (about 7 in 10 seconds), all scanners posting to `/signup`, `/login`, `/signin`, `/register` and `/api/auth/signin` on the static site, which already answers 403. So 30 in 10 seconds would not have touched a real visitor. Booking is left out because a booking page's POST and GET share one path, and Cloudflare's documentation lists only the URI path and "verified bot" as fields on Free (so the method cannot be told apart); the app's own limit covers it |
-| **`alyr.online`: SPF `v=spf1 -all` and DMARC `v=DMARC1; p=quarantine;`** (CLD-18). Nothing is sent from that domain (the repository has no address on it) | The change was refused by the session's safety check because the authorisation named the `alyr.qa` zone, not `alyr.online`. The audit suggests `p=reject`; `p=quarantine` is used here because of the standing rule against `reject` | A yes that names `alyr.online`. Undo: delete the two TXT records |
 | **Access for the back office** (ALY-219) | Needs four things this work cannot do: the Zero Trust account (below), a new name `ops.alyr.qa` on the Worker `alyr-edge` (off limits here, the parent is changing it), the web app serving the console on that name and answering 404 for `/ops` on `app` (product), and the API checking the `Cf-Access-Jwt-Assertion` header. Without that last part Access is only a front door: the API's public `run.app` address skips Cloudflare entirely (CLD-3) | See "Needs the founder", item 3 |
 | **HSTS with `includeSubDomains`** on `alyr.qa` (CLD-7's last point) | Every web name is HTTPS today, but it commits every future subdomain for a year | A yes, then one Transform Rule on the apex; preload is a separate, near-permanent step |
 
 ## 4. Needs the founder
 
 1. **Say whether to apply the rate-limit rule** (section 3), or whether a paid plan is wanted for log and challenge modes. One call applies it; no token is needed if it is done in the dashboard session again.
-2. **A yes that names `alyr.online`** for the two records in section 3.
+2. ~~A yes that names `alyr.online`~~ **Done 30 Oct** (the founder said yes by name; steps 7 and 8). The item stays so the numbers below do not move.
 3. **Zero Trust (Cloudflare Access).** The founder onboards the account: Cloudflare One, Get started, a team name, the Free plan. **Cloudflare asks for payment details even for the Free plan (nothing is charged)**, which an agent must not enter. After that, an Access application for the back office with the sign-in method "one-time PIN to `akmal@alyr.qa`", and the three code changes of section 3. Decide whether the console moves to `ops.alyr.qa` (ALY-219) or stays on a path of `app.alyr.qa` behind Access.
 4. **The tunnel `alyr-dev`** (CLD-18) is not in the business account (it has none), so it is in the personal one: the founder deletes it there (`cloudflared tunnel delete alyr-dev`, signed in to that account) and removes its credentials file under `~/.cloudflared`. An agent must not act in the personal account.
 5. **Look for the first DMARC report** (an XML attachment from Google, Microsoft or Zoho) in `akmal@alyr.qa` within two days; if none comes, the mailbox or the record is wrong.

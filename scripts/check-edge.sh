@@ -8,7 +8,7 @@
 #   scripts/check-edge.sh
 #
 # Other hosts or another zone:  ALYR_ZONE=alyr.qa  ALYR_APP=app.alyr.qa  ALYR_API=api.alyr.qa
-#                               ALYR_MEDIA=media.alyr.qa
+#                               ALYR_MEDIA=media.alyr.qa  ALYR_PARKED=alyr.online (the domain that sends no mail)
 set -u
 
 zone="${ALYR_ZONE:-alyr.qa}"
@@ -27,9 +27,15 @@ headers() { curl -sS --max-time 25 -o /dev/null -D - "$@" 2>/dev/null | tr -d '\
 has_header() { printf '%s\n' "$1" | grep -qi "^$2:"; }
 # TXT or CAA records of a name, one per line, through Cloudflare's DNS-over-HTTPS (JSON).
 dns() {
-  curl -sS --max-time 25 -H 'accept: application/dns-json' \
+  # Cloudflare's resolver first; Google's if it has nothing (a new record can hide behind a short negative cache).
+  # The answer section only: a name with no record comes back with the zone's SOA under "Authority".
+  local out
+  out="$(curl -sS --max-time 25 -H 'accept: application/dns-json' \
     "https://cloudflare-dns.com/dns-query?name=$1&type=$2" 2>/dev/null |
-    grep -o '"data":"[^}]*' | sed 's/^"data":"//; s/"$//; s/\\"/"/g; s/" "//g; s/^"//; s/"$//'
+    tr -d '\n' | sed 's/"Authority":\[[^]]*\]//g' | grep -o '"data":"[^}]*')"
+  [ -n "$out" ] || out="$(curl -sS --max-time 25 "https://dns.google/resolve?name=$1&type=$2" 2>/dev/null |
+    tr -d '\n' | sed 's/"Authority":\[[^]]*\]//g' | grep -o '"data":"[^}]*')"
+  printf '%s\n' "$out" | sed 's/^"data":"//; s/"$//; s/\\"/"/g; s/" "//g; s/^"//; s/"$//'
 }
 
 echo "== 1. HTTPS only (CLD-7)"
@@ -123,6 +129,15 @@ case "$dmarc" in
   *) fail "DMARC is missing or odd: ${dmarc:-none}" ;;
 esac
 case "$dmarc" in *rua=mailto:*) pass "DMARC reports go to a mailbox" ;; *) fail "DMARC has no rua= report address" ;; esac
+
+echo "== 7. alyr.online sends no mail, so nobody may send as it (CLD-18)"
+parked="${ALYR_PARKED:-alyr.online}"
+[ "$(dns "$parked" TXT | grep -i '^v=spf1')" = "v=spf1 -all" ] && pass "$parked: SPF allows no sender" || fail "$parked: SPF is not exactly v=spf1 -all"
+case "$(dns "_dmarc.$parked" TXT | head -1)" in
+  *p=quarantine*|*p=reject*) pass "$parked: DMARC asks receivers to quarantine or reject" ;;
+  *) fail "$parked: DMARC is missing or p=none" ;;
+esac
+[ -z "$(dns "$parked" MX)" ] && pass "$parked: no MX (it receives no mail either)" || fail "$parked has an MX record"
 
 if [ "$failed" = 0 ]; then echo "All checks passed."; else echo "Something is wrong: see docs/runbooks/cloudflare-edge.md, 'How to undo each change'."; fi
 exit "$failed"
