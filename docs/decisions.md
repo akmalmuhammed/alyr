@@ -55,6 +55,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-059 | Motion is always on: the site's figures (How we work, the products frame, the signature figures, with the flows, demos and the live Agent) keep playing, each with a Pause control; text arrives once | Accepted |
 | D-060 | ALYR runs on Google Cloud in Doha (Cloud Run, Cloud SQL, Secret Manager); replaces Azure (D-036) and the interim Cloudflare and Neon host (D-052); backups stay in Doha | Accepted |
 | D-061 | Company mail moves to Zoho Mail (free plan): hello@ with akmal@ and security@ as aliases, and a mailbox for Beevi Jinan, the registered owner; Resend still sends the product's email | Accepted |
+| D-081 | A person's own account screen: they switch between the businesses they work for (signing in opens the one they used last), change their sign-in email by a code sent to the new address (the old one is told), and an owner downloads everything the business keeps as one ZIP (every owner is emailed each time) | Accepted |
 | D-063 | Order businesses get a self-serve onboarding path (a third way, `orders`) made of thin screens over the Catalog's own APIs; one flow for both doors, automatic first, money later | Accepted |
 | D-077 | The worker runs several jobs at once (5 per process), one customer's jobs one after another in the order they were queued; one HTTP connection to Meta is kept open; on SIGTERM the worker finishes what started and puts the rest back | Accepted |
 | D-078 | Customers' jobs are claimed before background work (weekly reports, photos for the store, events to a shop's own system); PDFs and report cards are drawn in a process of their own; a sent document's PDF is stored once; the order page reads in one transaction | Accepted |
@@ -1341,6 +1342,22 @@ Nothing claims more than the page, as before.
 **Chosen over** Azure on full price (no credits; D-036), the interim Cloudflare and Neon host (outside Qatar; D-052), and a copy of backups on Cloudflare R2 in the EU (the founder chose Doha only).
 
 **Revisit when** the startup credits are refused or run out, a paying client needs Cloud SQL's high availability (a standby in a second zone, about double the database's cost), or the database's CPU stays above 60%.
+
+## D-081 · Your account: switch business, change the sign-in email, download everything
+
+Go-live checklist items 40 and 41 (tracked under ALY-266), spec 040.
+
+**The problem.** A person who works for two businesses could only ever reach the first they joined. Nobody could change the address they sign in with without ALYR editing the database. And a client could take only the catalog's spreadsheet out of ALYR: not their customers, messages, orders or documents. That locks a client in, and leaves them unable to answer their own customers about their data.
+
+**Decided.**
+- **Your account** (`/app/account`) is a screen for every role, under Account in the navigation.
+- **Switching** replaces this browser's session with one in the other business; the old one ends, so a cookie only ever opens the business on screen. The business switched to is kept on the person (`users.last_tenant_id`, migration 0072), and signing in opens it again.
+- **The sign-in email** changes only with a code sent to the new address. The code is a sign-in code kept under its own key, so it cannot sign anyone in or crowd out the new address's own codes, and it is limited like one. The person's other sessions end, every business they work for records the change, and the old address is told, with the new one shown only in part. An address that already signs someone in is refused only after the code proves the person owns it, so the form tells nobody who has an account. ALYR's own staff change theirs through ALYR, because the back office knows them by address.
+- **The download** is for owners. It holds every table with a business's rows, as CSV files Excel opens with Arabic intact, and the files themselves (document PDFs, logo, stamp, photos, what customers sent). A new table is in it without anyone adding it. Secrets are never in it: a list, and any column whose name says secret, password, token, credential, sealed or private key, or ends in `api_key` or `_hash`. Bytes never go into a CSV. Every owner is emailed each time, and it is on the activity record, so a stolen session cannot take the data quietly. Five downloads an hour per business.
+
+**Chosen over** a download made in the background and emailed as a link (more moving parts, and a link to all of a business's data in someone's inbox; the download is written as it is sent, so its size is not held in memory), and asking ALYR for an export (the client waits on us, and we would handle their data by hand).
+
+**Revisit when** a business is too large to download while the owner waits, or the terms (ALY-98) say what happens to a closed business's data.
 
 ## D-061 · Company mail moves to Zoho Mail
 **Date** 28 Oct 2026 (the move was made on 25 Oct 2026) · **Status** Accepted (the founder, 25 Oct 2026: "i want zoho email", then "i want akmal@alyr.qa running and working receiving and sending") · Replaces the mail-in half of D-029

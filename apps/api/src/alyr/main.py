@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from alyr.channels.meta import MetaChannel
 from alyr.channels.simulator import SimulatorChannel
 from alyr.config import get_settings
+from alyr.core import account as account_notes
 from alyr.core import origin, ratelimit
 from alyr.core.card_billing import CardBilling
 from alyr.core.images import PhotoRefused
@@ -36,6 +37,7 @@ from alyr.modules.items.service import count_active
 from alyr.modules.orders import holds as order_holds
 from alyr.modules.orders import staff_alert
 from alyr.modules.orders.service import EXPIRE_JOB
+from alyr.routes import account as account_routes
 from alyr.routes import admin as admin_routes
 from alyr.routes import admin_media as admin_media_routes
 from alyr.routes import admin_templates as admin_template_routes
@@ -190,6 +192,10 @@ def create_app() -> FastAPI:
     app.state.jobs.register(
         IMPORT_ALERT, ImportAlert(app.state.db, app.state.outbound).run
     )
+    # The note to an old sign-in address, and to owners when the data is downloaded (specs/040).
+    app.state.jobs.register(
+        account_notes.NOTICE, account_notes.AccountNotices(app.state.db).run
+    )
     app.add_exception_handler(PhotoRefused, media_routes.refused)
     app.add_exception_handler(DocumentError, documents_routes.refused)
     app.add_exception_handler(connect_routes.Invalid, connect_routes.invalid)
@@ -295,6 +301,7 @@ def create_app() -> FastAPI:
     app.include_router(team_routes.router)
     app.include_router(owner_routes.router)
     app.include_router(auth_routes.router)
+    app.include_router(account_routes.router)
     app.include_router(
         bookings_routes.public, dependencies=[Depends(require_module_for_slug("bookings"))]
     )
