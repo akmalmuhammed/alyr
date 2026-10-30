@@ -93,3 +93,19 @@ test("a way to write to ALYR is on every screen, laptop and phone", () => {
   const css = readFileSync(join(HERE, "start.css"), "utf8");
   assert.match(css, /@media \(min-width: 1024px\) \{ \.ob-help-line \{ display: none; \} \}/);
 });
+
+test("the reminder's stop page names the right address and always has a way on", () => {
+  for (const lang of ["en", "ar"]) {
+    const body = COPY[lang].resumeStop.body;
+    // Sign-up lives on the app's address; the public site has no /start.
+    assert.match(body, /app\.alyr\.qa\/start/, body);
+    assert.doesNotMatch(body, /(^|[^.\w])alyr\.qa\/start/, body);
+    assert.ok(COPY[lang].resumeStop.failedTitle.trim());
+  }
+  const stop = readFileSync(join(HERE, "stop/page.tsx"), "utf8");
+  const failed = stop.slice(stop.indexOf('phase === "failed"'));
+  assert.match(failed, /<h1>/, "a link that does not work still has a heading");
+  assert.match(failed, /href="\/start"/, "and a way into setup");
+  assert.match(failed, /mailto:/, "and a way to write to ALYR");
+});
+

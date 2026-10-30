@@ -93,8 +93,9 @@ const en = {
   },
   resumeStop: {
     title: "We will not email you about setup again",
-    body: "You can still finish your setup any time at alyr.qa/start. Nothing else has changed.",
+    body: "You can still finish your setup any time at app.alyr.qa/start. Nothing else has changed.",
     open: "Open my setup",
+    failedTitle: "This link does not work",
     failed: "This link does not work any more. Reply to the email and a person will stop them for you.",
     working: "Stopping the reminders…",
   },
@@ -419,8 +420,9 @@ const ar: typeof en = {
   },
   resumeStop: {
     title: "لن نراسلك عن الإعداد مرة أخرى",
-    body: "ما زال بإمكانك إكمال إعدادك في أي وقت من alyr.qa/start. لم يتغير أي شيء آخر.",
+    body: "ما زال بإمكانك إكمال إعدادك في أي وقت من app.alyr.qa/start. لم يتغير أي شيء آخر.",
     open: "افتح إعدادي",
+    failedTitle: "هذا الرابط لا يعمل",
     failed: "هذا الرابط لم يعد يعمل. ردّ على الرسالة وسيوقفها لك أحد من فريقنا.",
     working: "جارٍ إيقاف التذكيرات…",
   },
