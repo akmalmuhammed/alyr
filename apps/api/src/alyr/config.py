@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     jobs_inline: bool = True
     # First retry delay; it doubles on each further attempt.
     jobs_backoff_seconds: float = 5.0
+    # How many jobs one process runs at once (a customer's own jobs still one at a time, in
+    # order; ALY-276). Each running job may hold two database connections at a moment, so
+    # keep it at most half the pool (10 per process).
+    jobs_concurrency: int = 5
     # /health/worker answers 503 when the worker has not checked in for this long.
     worker_stale_seconds: int = 120
 

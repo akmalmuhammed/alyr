@@ -14,6 +14,7 @@ Last updated: 29 Oct 2026 (the customer dead ends of the go-live checklist, thre
 |---|---|---|
 | Tenancy with forced row-level security | Built | `migrations/0001_core.sql`, `db.py` |
 | Simulator and Meta channels behind one interface | Built; Meta untested live | `channels/` |
+| **Jobs several at a time (D-077, ALY-276, go-live item 34):** the worker runs 5 jobs at once (`ALYR_JOBS_CONCURRENCY`), a customer's own jobs one after another in order; one connection to Meta kept open between sends; on SIGTERM it finishes what started and puts the rest back in the queue. Measured with a stand-in for Meta at 300 ms a send: 40 sends 12.2 s before, 2.5 s now | Built, not yet deployed | `core/jobs.py`, `channels/meta.py`, `worker.py` |
 | Contact identity by WhatsApp user ID, phone optional | Built | `core/identity.py` |
 | Credit ledger in chat, ageing, reminders, pay link | Built | `modules/ledger/` |
 | Order link: products, order page, pay or on account | Built | `modules/orders/`, `apps/web/app/s/` |

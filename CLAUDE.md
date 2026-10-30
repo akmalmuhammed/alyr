@@ -154,7 +154,7 @@ scripts/api-in-docker.sh uv run pytest -q # where Windows blocks the compiled da
 ## Conventions
 
 - Modules receive `InboundMessage` and return `OutboundMessage` objects. They do not know which channel is in use, so everything works against the simulator first.
-- Every outgoing message goes through `core/outbound.py`, which records it and queues a job; `core/jobs.py` delivers it with retries. Never call a channel or a slow outside service directly from a request: enqueue a job.
+- Every outgoing message goes through `core/outbound.py`, which records it and queues a job; `core/jobs.py` delivers it with retries. Never call a channel or a slow outside service directly from a request: enqueue a job. Jobs run several at a time; a job about one customer names them in its payload (`contact_id`, or the sender's number) so it runs after that customer's earlier jobs, in order (D-077).
 - Compliance outputs (SIF files, UBL invoices), when they exist, are tested against golden files in `fixtures/` (to be created with them), byte for byte.
 - User-facing text exists in Arabic and English. No hard-coded strings in UI code.
 - Amounts are integers in dirhams (1 QAR = 100 dirhams). Never floats.

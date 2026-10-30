@@ -56,6 +56,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-060 | ALYR runs on Google Cloud in Doha (Cloud Run, Cloud SQL, Secret Manager); replaces Azure (D-036) and the interim Cloudflare and Neon host (D-052); backups stay in Doha | Accepted |
 | D-061 | Company mail moves to Zoho Mail (free plan): hello@ with akmal@ and security@ as aliases, and a mailbox for Beevi Jinan, the registered owner; Resend still sends the product's email | Accepted |
 | D-063 | Order businesses get a self-serve onboarding path (a third way, `orders`) made of thin screens over the Catalog's own APIs; one flow for both doors, automatic first, money later | Accepted |
+| D-077 | The worker runs several jobs at once (5 per process), one customer's jobs one after another in the order they were queued; one HTTP connection to Meta is kept open; on SIGTERM the worker finishes what started and puts the rest back | Accepted |
 | D-064 | The owner's test order is marked in the database (a trigger sets `orders.is_test`), counted nowhere (a guard test reads every query), and cancelled with its stock returned when the test ends | Accepted |
 | D-067 | Terms and the privacy notice are versions ALYR publishes; an owner accepts them at sign-up and again when a new one is published, in an append-only record | Accepted |
 | D-068 | An owner who stops partway through setup gets two emails to come back, then none, and can stop them from the link; the funnel counts them | Accepted |
@@ -1371,6 +1372,23 @@ Nothing claims more than the page, as before.
 **Revisit when** an owner needs more than a flat delivery fee at setup (zones are in the Catalog's Delivery screen), when wholesale needs its own path (price groups and credit), or when the onboarding agent (ALY-174, ALY-175) proposes the catalogue from a menu photo: it would fill this step's items, and the owner would still approve them.
 
 ---
+
+## D-077 · The worker runs several jobs at once, one customer's in order
+**Date** 29 Oct 2026 · **Status** Accepted (go-live checklist item 34 is Claude's, and the founder's instruction of 29 Oct was to finish the items in Claude's scope; the number is one setting) · Linear ALY-276 (PERF-4, PERF-11) · Changes how D-010's queue is run, not what it stores
+
+**Where we were.** The worker ran one job at a time and opened a new HTTP connection to Meta for every send. A send mostly waits for Meta (about 300 ms), so the whole platform sent about 3 to 4 messages a second; the go-live audit measured a reply's p95 at 81 s at 5 messages a second. A deploy stopped the worker in the middle of a batch, and the jobs it had claimed waited five minutes to count as abandoned.
+
+**The decision.**
+- **Several jobs at once:** `ALYR_JOBS_CONCURRENCY`, 5 by default. A running job can hold two database connections at a moment, and a process has a pool of 10, so the number stays at most half the pool.
+- **A customer's jobs stay in order.** A job about one customer names them in its payload (a send names the contact, a received message its sender); jobs with the same customer in one shop run one after another in the order they were queued, and the next batch is claimed only when this one is done. A job's time in the queue is the clock's, not its transaction's start, so two messages queued in one transaction keep their order too (before, they had the same time and could go either way). Jobs about no one in particular run on their own.
+- **One HTTP client for Meta,** kept open between sends, with the same ten-second limit on a send.
+- **On SIGTERM** the worker finishes the jobs it started, puts the ones it claimed but had not started back in the queue with their attempt unspent, and stops.
+
+**Measured** with a stand-in for Meta at 300 ms a send: 40 sends to 40 customers took 12.2 s one at a time and 2.5 s five at a time.
+
+**Chosen over** one worker process per job (more connections, which the database tier cannot spare: ALY-276 PERF-9), running a whole batch at once without lanes (two messages to one customer could arrive the wrong way round), and a lane column in the queue (the payload already says who a job is about).
+
+**Revisit when** one worker is not enough at peak (then a second instance: lanes keep order within a process, not across two), or the database tier grows (then more at once).
 
 ## D-064 · The owner's test order is marked in the database, counted nowhere, and cancelled when the test ends
 **Date** 28 Oct 2026 · **Status** Accepted (built under the founder's go-ahead for the order path, 28 Oct: "Start part 3"; the rules are the issue's own: test orders never count in reports, the Agent or the money-back result) · Linear ALY-168, epic ALY-163 · Spec `specs/028-order-test/spec.md` · Builds on D-031 (the private test line) and D-063 (the order path)
