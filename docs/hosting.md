@@ -28,7 +28,10 @@ The public site at alyr.qa is not part of this: it is static files on Cloudflare
 | Database backups | Cloud SQL's own daily backups (14 kept) and point-in-time recovery (7 days), plus a nightly export to a bucket in Doha kept 35 days | Set up with production |
 | Interim host on Cloudflare and Neon (D-052) | Not used for real clients | Superseded by D-060 |
 
-Everything stays in Doha: the founder chose on 28 Oct 2026 to keep no copy outside Qatar.
+Everything stays in Doha: the founder chose on 28 Oct 2026 to keep no copy outside Qatar. That includes
+Cloud SQL's backups, which are pinned to `me-central1` (`--backup-location` in `setup.sh infra`): left
+alone, Google stores them in the nearest multi-region, `eu`, and the backups taken before 29 Oct 2026
+21:32 UTC are there until the founder decides to delete them (ALY-267).
 
 ## On Google Cloud
 
@@ -46,9 +49,13 @@ Everything stays in Doha: the founder chose on 28 Oct 2026 to keep no copy outsi
 
 The apps reach the database over a private network (`alyr-net`, Cloud Run's direct VPC
 egress); the database has no public address. Each app runs as its own service account:
-`alyr-run` (API, worker, migrations; may read secrets), `alyr-web` (no secrets),
-`alyr-export` (may only start an export of this one database), `alyr-deploy` (GitHub's
-deploys; may update the apps and push images).
+`alyr-run` (API and worker; reads the secrets listed under "Production settings", one secret at
+a time, and not the database owner's address), `alyr-migrate` (the migration job and, while it
+runs, the first-admin job; the only account that reads the owner's address, `migration-url`, and
+the application address), `alyr-web` (no secrets), `alyr-export` (may only start an export of
+this one database), `alyr-deploy` (GitHub's deploys; may update the apps and push images).
+Nobody holds a project-wide Secret Manager role, and the default compute account has no
+project role: `infra/gcp/setup.sh access` sets and checks this (ALY-268).
 
 **Roughly a month at Doha list prices (28 Oct 2026):** database about USD 34, API about
 USD 14, web app about USD 14, worker about USD 37, the rest a few dollars: about USD 100 to 105,
@@ -83,7 +90,7 @@ only in the worker.
 | Setting | What it is | Secret |
 |---|---|---|
 | `ALYR_DATABASE_URL` | The application role; cannot bypass row-level security | Yes |
-| `ALYR_MIGRATION_URL` | The owner role (`postgres` on Cloud SQL); used only by migrations | Yes |
+| `ALYR_MIGRATION_URL` | The owner role (`postgres` on Cloud SQL, which bypasses row-level security); used only by migrations, the seeds, the doctor and the first-admin job. **Not given to the API or the worker** on Google: they never read it, and a leak of their environment must not hand over the owner (ALY-268) | Yes |
 | `ALYR_BACKUP_URL` | Only for the single-server backup job: a read-only role with BYPASSRLS. Not set on Google, where Cloud SQL's backups and export do this | Yes |
 | `ALYR_PUBLIC_WEB_URL` | Where links in chats point: the web app's address | No |
 | `ALYR_META_*` | The five Meta values (see `apps/api/.env.example`) | Yes |
@@ -107,7 +114,9 @@ invoices) are PDFs kept in the database (D-042), so they are in every backup.
 
 Secrets live in Secret Manager (or `.env.prod` on a single server). `infra/gcp/setup.sh
 secrets` generates the database passwords and the link secret there without showing them,
-and asks the founder for the rest, hidden as typed. No agent reads or prints them.
+and asks the founder for the rest, hidden as typed. No agent reads or prints them. Which
+account may read which secret is set by `infra/gcp/setup.sh access` (`--dry-run` shows the
+changes first); `setup.sh apps` runs it too.
 
 ## Health checks
 
@@ -166,8 +175,10 @@ security policies and the app role's grants; the API runs on the restored copy.
 
 ## Backups on Google
 
-- **Cloud SQL's own:** a full backup every night at 02:00 Doha, 14 kept, and point-in-time
-  recovery for the last 7 days. Restoring makes a new instance (`gcloud sql instances clone
+- **Cloud SQL's own:** a full backup every night at 02:00 Doha, 14 kept, stored in Doha
+  (`me-central1`; the setting is explicit, ALY-267), and point-in-time recovery for the last
+  7 days, whose logs are in Doha too. Backups taken before 29 Oct 2026 21:32 UTC were stored in
+  `eu` and age out of the 14 unless the founder deletes them sooner. Restoring makes a new instance (`gcloud sql instances clone
   alyr-db alyr-db-restored --point-in-time <time>`), so the broken one stays for comparison.
 - **The nightly export:** an SQL file per night in `gs://alyr-prod-db-exports`, in Doha, kept
   35 days. A copy outside the instance, readable without Cloud SQL. `infra/gcp/setup.sh

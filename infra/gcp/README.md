@@ -23,8 +23,8 @@ Meta's webhook and the customer links still use the laptop.
 ALYR_BILLING_ACCOUNT=0140A6-0D3762-57B25D infra/gcp/setup.sh infra
 ```
 
-Private network, Cloud SQL (PostgreSQL 16, private address only), the image registry, the
-four service accounts, the export bucket and the budget. Safe to run again.
+Private network, Cloud SQL (PostgreSQL 16, private address only, backups stored in Doha), the
+image registry, the five service accounts, the export bucket and the budget. Safe to run again.
 
 **3. Secrets.** Database passwords and the link secret are generated. You are then asked,
 one at a time and hidden, for the three R2 values (required; the same as in
@@ -53,6 +53,14 @@ worker, the web app and the nightly export:
 ```bash
 infra/gcp/setup.sh apps <tag>
 ```
+
+It also sets who may read which secret (ALY-268): the API and the worker read the secrets
+listed in `SECRETS` in `setup.sh` one by one, and only the migration job's account,
+`alyr-migrate`, reads the database owner's address. To see or change that alone: `infra/gcp/setup.sh access --dry-run` prints what
+it would change, `access grant` adds access, and `access tighten` takes the broader roles away
+(a project-wide Secret Manager role, Editor on the default compute account, the legacy project
+roles on the export bucket). On a project that already runs, do them in that order with the
+`apps` rollout between, so no running app loses a secret before it has been rolled.
 
 **6. Check from outside:** the three addresses step 5 prints should answer 200:
 `/health/ready`, `/health/worker` and `/login`.
