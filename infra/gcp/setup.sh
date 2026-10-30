@@ -373,6 +373,7 @@ for s in json.load(sys.stdin).get('data', []):
           echo "client-ip-key already exists; nothing changed."
         else
           put_secret client-ip-key "$(openssl rand -hex 32)"
+          grant_secret client-ip-key alyr-run   # without this, client-ip-on cannot start a revision
           echo "  stored client-ip-key. Next: setup.sh edge-key, deploy the Worker, then setup.sh client-ip-on"
         fi ;;
       rotate)
