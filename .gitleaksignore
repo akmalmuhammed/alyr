@@ -2,3 +2,5 @@
 # shared history). Each line is the fingerprint from the CI log; say why beside it.
 # A setting's name and value in the go-live runbook (ALYR_PADDLE_ENVIRONMENT=live), not a key.
 6e9101952051a737c3cc635619eedebced70336c:docs/runbooks/go-live-checklist.md:generic-api-key:41
+# A made-up token in the sales link's QR test (ALY-216): the right shape, signed by the public developer key for a fictional client, so it opens nothing. The test now builds its token from a pattern.
+1a47774ef671457f22a56ea0bd66e4c5b0c28fd2:apps/web/app/(product)/ops/salesLink.test.mjs:generic-api-key:13

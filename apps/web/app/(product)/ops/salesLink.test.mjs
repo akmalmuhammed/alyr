@@ -9,8 +9,9 @@ import { color } from "../../_tokens/tokens.ts";
 import { ascii, pixels } from "../_workspace/qr.ts";
 
 const colours = { dark: color.brand.carbon, light: color.ink.white };
-// A token is 30 characters of payload, a dot and 22 of signature (core/links.py).
-const TOKEN = `AgcRE0J8O8RBIKT6FDekqvZJau3W3w.mayg3UyFihwFy_goPFPEBg`;
+// A token is 30 characters of payload, a dot and 22 of signature (core/links.py). This one is
+// built from a pattern, so it is the right shape and is not a real token.
+const TOKEN = `${"AgcRE0J8".repeat(4).slice(0, 30)}.${"mayg3UyF".repeat(3).slice(0, 22)}`;
 const links = [
   `https://app.alyr.qa/join#${TOKEN}`,
   `http://localhost:3216/join#${TOKEN}`,

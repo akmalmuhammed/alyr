@@ -108,8 +108,14 @@ export default function Join() {
 
   const ended = (data: Fault, status: number) => {
     // A link that ended while the owner was here (revoked, run out): say so, not "wrong code".
-    const reason = codeOf(data) as keyof typeof COPY.en.gone | undefined;
-    if (status === 404 || status === 410) { setGone(reason && reason in COPY.en.gone ? reason : "unknown"); setPhase("gone"); return true; }
+    const reason = codeOf(data);
+    // "The price changed" is not the end of the link: the owner asks for a new code to see it.
+    if (reason === "changed") return false;
+    if (status === 404 || status === 410) {
+      setGone(reason && reason in COPY.en.gone ? (reason as keyof typeof COPY.en.gone) : "unknown");
+      setPhase("gone");
+      return true;
+    }
     return false;
   };
 
