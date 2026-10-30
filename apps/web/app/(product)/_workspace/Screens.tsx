@@ -7,6 +7,7 @@ import { formatPrice } from "../_customer/price";
 import { OrderMargin, useOrderMargins } from "./Margin";
 import { OrderSum } from "./OrderSum";
 import { MarkPaid, PayWays } from "./OrderPay";
+import { BookingsDay } from "./BookingsDay";
 import { ForgetCustomer } from "./Forget";
 import { FulfilDetails, FulfilFilters, FulfilPill, matchesFilter, type FulfilFilter } from "./OrderFulfil";
 import type { Fulfilment } from "../_customer/fulfil";
@@ -128,7 +129,7 @@ const T = {
     windowOpen: (h: number) => (h < 1 ? "Free replies allowed for less than an hour" : `Free replies allowed for ${h} more hours`),
     windowClosed: "More than 24 hours since their last message. WhatsApp only allows an approved template now; typed replies are refused.",
     notSent: "Not sent",
-    tabBookings: "Bookings", bookingsSub: "Today and the next seven days, booked from the chat",
+    tabBookings: "Bookings", bookingsSub: "The day by person or chair: booked from the chat, by phone or at the counter",
     noBookings: "No bookings in the next week. In the chat, send \"book\" as a customer.",
     when: "When", service: "Service", came: "Came", noShow: "No-show", cancel: "Cancel",
     bk: { booked: "Booked", completed: "Came", cancelled: "Cancelled", no_show: "No-show" } as Record<string, string>,
@@ -203,7 +204,7 @@ const T = {
     windowOpen: (h: number) => (h < 1 ? "الرد الحر متاح لأقل من ساعة" : `الرد الحر متاح لمدة ${h} ساعة`),
     windowClosed: "مضى أكثر من ٢٤ ساعة على آخر رسالة من العميل. واتساب يسمح الآن بالقوالب المعتمدة فقط، والردود المكتوبة مرفوضة.",
     notSent: "لم تُرسل",
-    tabBookings: "الحجوزات", bookingsSub: "اليوم والأيام السبعة القادمة، من المحادثة",
+    tabBookings: "الحجوزات", bookingsSub: "اليوم حسب الموظفة أو الكرسي: من المحادثة أو الهاتف أو في المحل",
     noBookings: "لا توجد حجوزات خلال الأسبوع القادم. أرسل \"book\" كعميل في المحادثة.",
     when: "الموعد", service: "الخدمة", came: "حضر", noShow: "لم يحضر", cancel: "إلغاء",
     bk: { booked: "محجوز", completed: "حضر", cancelled: "ملغي", no_show: "لم يحضر" } as Record<string, string>,
@@ -1064,7 +1065,10 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
           )}
 
           {tab === "bookings" && filterLine}
-          {tab === "bookings" && (
+          {/* The day by person or chair (ALY-27, D-084). A link from the Agent opens the
+              filtered list below instead, with exactly the visits it counted. */}
+          {tab === "bookings" && !filter && <BookingsDay lang={lang} canManage={canManage} />}
+          {tab === "bookings" && filter && (
             shownBookings.length === 0 ? (
               <p className="empty-note">{t.noBookings}</p>
             ) : (

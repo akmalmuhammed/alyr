@@ -366,13 +366,25 @@ def _say_repeat_no_show(x: Finding, f: Facts, lang: str):
     name = B(first.label)
     when = when_text(first.detail["next"].astimezone(f.zone), f.local, lang)
     who = count(x.n, x.noun, lang)
+    # Who the visit is with, in a shop with chairs or staff (D-084): "with Reem".
+    person = first.detail.get("with")
     if lang == "ar":
         verb = agree(x.n, "تغيّب مرتين ولديه حجز جديد", "تغيّبا مرتين ولديهما حجز جديد",
                      "تغيّبوا مرتين ولديهم حجز جديد")
+        if person:
+            return rich("{who} " + verb, who=who), rich(
+                "موعد {name} {w} مع {p}." if person["kind"] != "place" else
+                "موعد {name} {w}، {p}.",
+                name=name, w=when, p=B(person["name_ar"] or person["name"]))
         return rich("{who} " + verb, who=who), rich("موعد {name} {w}.", name=name, w=when)
-    return (rich("{who} who missed twice {verb} booked again", who=who,
-                 verb="is" if x.n == 1 else "are"),
-            rich("{name} is booked {w}.", name=name, w=when))
+    head = rich("{who} who missed twice {verb} booked again", who=who,
+                verb="is" if x.n == 1 else "are")
+    if person:
+        return head, rich(
+            "{name} is booked {w} with {p}." if person["kind"] != "place" else
+            "{name} is booked {w}, {p}.",
+            name=name, w=when, p=B(person["name"]))
+    return head, rich("{name} is booked {w}.", name=name, w=when)
 
 
 def _find_slow_answers(f: Facts) -> Finding | None:

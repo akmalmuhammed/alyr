@@ -57,6 +57,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-061 | Company mail moves to Zoho Mail (free plan): hello@ with akmal@ and security@ as aliases, and a mailbox for Beevi Jinan, the registered owner; Resend still sends the product's email | Accepted |
 | D-069 | A shop's bookings are held to one customer at a time per resource (chair, person, room), not per shop; a shop with no resources is unchanged | Accepted |
 | D-081 | A person's own account screen: they switch between the businesses they work for (signing in opens the one they used last), change their sign-in email by a code sent to the new address (the old one is told), and an owner downloads everything the business keeps as one ZIP (every owner is emailed each time) | Accepted |
+
 | D-063 | Order businesses get a self-serve onboarding path (a third way, `orders`) made of thin screens over the Catalog's own APIs; one flow for both doors, automatic first, money later | Accepted |
 | D-077 | The worker runs several jobs at once (5 per process), one customer's jobs one after another in the order they were queued; one HTTP connection to Meta is kept open; on SIGTERM the worker finishes what started and puts the rest back | Accepted |
 | D-078 | Customers' jobs are claimed before background work (weekly reports, photos for the store, events to a shop's own system); PDFs and report cards are drawn in a process of their own; a sent document's PDF is stored once; the order page reads in one transaction | Accepted |
@@ -70,6 +71,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-070 | Product analytics with PostHog (EU), at two levels the visitor chooses: cookieless counting by default, cookies and masked recordings with consent; never customer pages, the inbox or names | Accepted |
 | D-075 | A customer's data: an owner or admin gives a customer a copy or forgets them from the conversation; the sales records stay without the person, issued documents unchanged; working copies (finished jobs, handled message IDs) are purged after 30 days, failed jobs after 90 | Accepted |
 | D-071 | The homepage plays like a video: the film starts at load and moves at once; its Pause controls are not on show (only on hover, keyboard focus or while paused); a click on the film pauses it | Accepted |
+| D-084 | Bookings: each chair or person has its own hours and the customer may pick one; staff run the day from the screen; a service may ask a deposit by pay link, held like the Catalog's and kept or refunded by the shop's own rule shown before paying; a review request goes to every customer the same way, never only to happy ones | Accepted |
 | D-083 | The per-address rate limits count the address the edge Worker signs (HMAC with a key only the Worker and the API hold); an address without a good signature is counted in one shared bucket, so a caller who skips the edge can neither pick nor borrow an address | Proposed (the founder approves the production steps in ALY-265's pull request) |
 | D-074 | Clients can pay ALYR by card through Paddle, in US dollars, recorded only from Paddle's signed webhook after reading the payment back | Accepted |
 | D-082 | A client who stops paying keeps everything for 14 days with reminders; then ALYR's automatic WhatsApp sending pauses until they pay, never their workspace or data; cancelling takes seven days | Proposed (built on the recommended option while the founder decides) |
@@ -1380,6 +1382,7 @@ Go-live checklist items 40 and 41 (tracked under ALY-266), spec 040.
 
 ---
 
+
 ## D-069 · One customer at a time per resource, not per shop
 **Date** 28 Oct 2026 · **Status** Accepted (the founder's 28 Oct instruction to build the open items of ALY-27) · Linear ALY-258, step 2 of ALY-27 · Spec `specs/026-bookable-resources/spec.md`
 
@@ -1672,6 +1675,29 @@ Without it, analytics is off everywhere.
 **Cost.** The film's canvas is drawn inside the window Lighthouse measures: on the mobile run LCP is unchanged (2.41 s), Total Blocking Time rises (about 300 to 700 ms against 100 to 200 ms) and Speed Index too (the film moves), so the lowest Performance score of three runs falls from about 95 to between 80 and 95 (/ 80, /ar 95 on the last check; axe clean on both at 1440 and 390, light and dark). It changes D-062's condition "the homepage's Lighthouse no worse than before": the founder put the motion first. The re-styling cost of the homepage's `:root:has(...)` rules (task "Remove :root:has() style recalc cost on the site") is most of that blocking time.
 
 **Revisit when** the `:root:has()` work lands (measure again), or the founder finds the hidden control hard to find.
+
+## D-084 · Chairs and people with their own hours, the day from the screen, deposits by the shop's rule, and a review request with no gating
+**Date** 29 Oct 2026 · **Status** Accepted (the founder's decision of 29 Oct to build ALY-27 before the salon sales demo, ALY-264; the review request added the same day by the product lead, with the instruction that there is no gating) · Linear ALY-27 · Spec `specs/033-bookings-chairs-deposits/spec.md` · Builds on D-069
+
+**Where we were.** D-069 let a shop list resources and held one customer at a time per resource, in the engine only. A resource had no hours of its own, the customer could not choose one, staff could not add a walk-in or move a booking from the screen, nothing asked a deposit, and nothing asked for a review.
+
+**The decision.**
+- **A resource is a person or a place, with its own working hours** (none set: the shop's). Free times are computed per resource. The customer picks **"Anyone"** or one of the people or places that do the service. This reverses D-069's "no customer choice yet": the salon demo and every salon we spoke about book a stylist by name.
+- **Staff run the day from the Bookings screen:** a day view by resource; add a walk-in or a booking taken by phone, at any minute; move to another time or resource; cancel; came or didn't come. Every action is on the activity record. Staff never double-book either: the same shop lock and the same database guard.
+- **Deposits per service, optional,** a fixed amount or a percentage of the price, asked by **pay link**. The booking holds the time for the shop's pay-link hold (`hold_minutes`, 30 by default, the Catalog's); unpaid at the end, the time is released and the customer told. A paid deposit confirms the booking, makes a **deposit receipt** (Documents, where it is on) and **counts against the final bill**.
+- **The shop's own rule** decides a paid deposit on a no-show and on a late cancel (keep or refund), with the hours that make a cancel late. **The customer is shown the rule before paying,** and the booking keeps the rule it was made under. ALYR never moves money (hard rule 3): "refund due" is a note to the shop, which refunds from its own account and marks it done.
+- **The payment link is ALYR's stand-in until the shop's payment provider is connected,** and every place that shows it says so.
+- **The review request:** per shop, off until the owner turns it on and gives the Google review link. One WhatsApp message when a booking is marked "came" or an order is done, in the customer's language, at most one per customer every 30 days, through the outbound layer (consent, stop, the 24-hour window or a utility template that names the visit). **Everyone is asked the same way: no gating.** ALYR does not first ask whether the customer was happy and send only the happy ones to Google, although ALY-27's first description said so: Google's review policy forbids selectively asking for positive reviews, and a shop caught doing it can lose its reviews. Anyone can reply in the chat, and the owner reads the reply in the inbox.
+- **New templates are written, not submitted** to Meta (`booking_deposit_due`, `booking_deposit_paid`, `booking_released`, `booking_cancelled_deposit`, `review_request`): submitting is the founder's go. The resource rides inside the existing templates' blanks, so their approved wording does not change.
+
+**Rejected.**
+- *A booking that waits for the deposit before it holds the time.* Two customers could pay for the same slot; the hold is the Catalog's tested pattern.
+- *Confirming the booking only when the deposit is paid, with no hold.* The same race, and a customer who has paid would find the time gone.
+- *Asking "were you happy?" first, and sending only the happy ones to Google.* Review gating, against Google's policy (above).
+- *Letting staff place bookings only on the 30-minute grid.* A walk-in arrives at 4:10.
+- *Deposits for bookings staff make.* Staff can record a payment by hand (Documents); a link for a customer standing at the counter is not needed for the demo, and can follow.
+
+**Revisit when.** A shop connects its own payment provider (the stand-in goes); a shop needs days off by date or buffers between visits; a stylist needs a login of her own; Meta refuses a template's category; or a shop asks for assignment by least busy rather than first free.
 
 ## D-083 · The per-address rate limits count the address the edge signs
 **Date** 29 Oct 2026 · **Status** Proposed (built; the founder approves the production steps in the pull request) · Linear ALY-265, follow-up to ALY-116 · Runbook `docs/runbooks/client-address.md`

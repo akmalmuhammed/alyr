@@ -2,23 +2,39 @@
 
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { STAND_IN, termsSentence, type DepositTerms } from "../../_customer/deposit";
 import { Done, Empty, Frame, Glyph, Who, type Lang } from "../../_customer/Frame";
+import { formatPrice } from "../../_customer/price";
 
 // The booking page (`/b/<shop>`). A customer's own link carries a signed token made for
 // booking (`?t=`, ALY-133); the page sends it to the API in the header `X-Order-Link`, never
 // in the address of a request, and the API says who it is. A public link (no token) shows the
 // services and the free times and cannot book. The old `?c=<contact id>` identifies nobody:
 // it is treated as a link that is not valid.
+//
+// D-084: the customer chooses "Anyone" or one of the people or chairs that do the service, and
+// a service may ask a deposit. The deposit and the shop's rule for it are shown before the
+// customer confirms; the deposit is paid by link, which opens a test page until the shop's
+// payment provider is connected (the page says so).
 
-type Service = { id: string; name: string; name_ar: string; duration_minutes: number; price_text: string };
+type Service = {
+  id: string; name: string; name_ar: string; duration_minutes: number; price: number;
+  deposit: number;
+};
+type Person = { id: string; name: string; name_ar: string; kind: "person" | "place"; services: string[] };
 type LinkState = { state: "none" | "ok" | "invalid" | "expired"; message: string; message_ar: string };
 type BookingPage = {
   shop: { name: string; name_ar: string; timezone: string; whatsapp: string };
   services: Service[];
+  resources: Person[];
+  deposit_terms: DepositTerms;
   customer: { name: string; lang: Lang } | null;
   link: LinkState;
 };
-type Booked = { number: number; when_text: string; service: string };
+type Booked = {
+  number: number; when_text: string; service: string; resource: string | null; resource_ar: string | null;
+  deposit: { amount: number; pay_path: string; hold_until: string; terms: DepositTerms } | null;
+};
 
 const DAYS_AHEAD = 14;
 
@@ -30,6 +46,14 @@ const T = {
     startOnWhatsApp: (shop: string) => `To book, start on WhatsApp with ${shop}. They will send you your own booking link.`,
     askShop: "Message the shop on WhatsApp", prefill: "Book",
     service: "Choose a service", day: "Choose a day", time: "Choose a time", minutes: (n: number) => `${n} min`,
+    who: "Choose who", anyone: "Anyone", anyoneHint: "The first one free",
+    depositTag: (a: string) => `Deposit ${a}`,
+    depositAsk: (a: string, m: number) => `A deposit of ${a} holds this time for ${m} minutes while you pay it by link.`,
+    confirmPay: "Book and pay the deposit",
+    held: (n: number) => `Booking ${n} is held for you`,
+    heldText: (a: string, m: number) => `Pay the deposit of ${a} within ${m} minutes to confirm it. The link is in your chat too.`,
+    payDeposit: "Pay the deposit",
+    withWhom: (name: string, place: boolean) => (place ? `, ${name}` : ` with ${name}`),
     noTimes: "No free times on this day. Try another day.",
     note: "Anything we should know? (optional)", confirm: "Confirm booking",
     booked: (n: number) => `Booking ${n} confirmed`,
@@ -44,6 +68,14 @@ const T = {
     startOnWhatsApp: (shop: string) => `للحجز، ابدأ من واتساب مع ${shop} وسيرسلون لك رابط الحجز الخاص بك.`,
     askShop: "راسل المتجر على واتساب", prefill: "حجز",
     service: "اختر الخدمة", day: "اختر اليوم", time: "اختر الوقت", minutes: (n: number) => `${n} دقيقة`,
+    who: "اختر من يخدمك", anyone: "أي أحد", anyoneHint: "أول من يكون متاحاً",
+    depositTag: (a: string) => `العربون ${a}`,
+    depositAsk: (a: string, m: number) => `عربون ${a} يحجز لك هذا الموعد لمدة ${m} دقيقة حتى تدفعه عبر الرابط.`,
+    confirmPay: "احجز وادفع العربون",
+    held: (n: number) => `الحجز رقم ${n} محجوز لك`,
+    heldText: (a: string, m: number) => `ادفع العربون ${a} خلال ${m} دقيقة لتأكيده. الرابط في محادثتك أيضاً.`,
+    payDeposit: "ادفع العربون",
+    withWhom: (name: string, place: boolean) => (place ? `، ${name}` : ` مع ${name}`),
     noTimes: "لا توجد أوقات متاحة في هذا اليوم. جرّب يوماً آخر.",
     note: "هل من ملاحظة؟ (اختياري)", confirm: "تأكيد الحجز",
     booked: (n: number) => `تم تأكيد الحجز رقم ${n}`,
@@ -80,6 +112,8 @@ function BookingForm() {
   const [missing, setMissing] = useState(false);
   const [chosen, setChosen] = useState<Lang | null>(null);
   const [serviceId, setServiceId] = useState("");
+  // "" is anyone; otherwise one person or chair the customer chose.
+  const [resourceId, setResourceId] = useState("");
   const [day, setDay] = useState("");
   const [times, setTimes] = useState<string[] | null>(null);
   const [start, setStart] = useState("");
@@ -91,7 +125,7 @@ function BookingForm() {
   const [booked, setBooked] = useState<Booked | null>(null);
   const lang: Lang = chosen ?? "en";
   const t = T[lang];
-  const locale = lang === "ar" ? "ar-QA" : "en-GB";
+  const locale = lang === "ar" ? "ar-QA-u-nu-latn" : "en-GB";
 
   useEffect(() => {
     fetch(`/api/book/${slug}`, { cache: "no-store", headers: token ? { "x-order-link": token } : undefined })
@@ -109,12 +143,12 @@ function BookingForm() {
   useEffect(() => {
     if (!serviceId || !day) return;
     let current = true;
-    fetch(`/api/book/${slug}/times?service_id=${serviceId}&day=${day}`, { cache: "no-store" })
+    fetch(`/api/book/${slug}/times?service_id=${serviceId}&day=${day}${resourceId ? `&resource_id=${resourceId}` : ""}`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((data: { times: string[] }) => { if (current) setTimes(data.times); })
       .catch(() => { if (current) setTimes([]); });
     return () => { current = false; };
-  }, [slug, serviceId, day]);
+  }, [slug, serviceId, day, resourceId]);
 
   const days = useMemo(() => (page ? upcomingDays(page.shop.timezone) : []), [page]);
   const zone = page?.shop.timezone ?? "Asia/Qatar";
@@ -137,7 +171,7 @@ function BookingForm() {
     const response = await fetch(`/api/book/${slug}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ token, service_id: serviceId, starts_at: start, note }),
+      body: JSON.stringify({ token, service_id: serviceId, starts_at: start, note, resource_id: resourceId || null }),
     });
     const data = await response.json().catch(() => ({}));
     setBusy(false);
@@ -161,6 +195,12 @@ function BookingForm() {
   const shop = lang === "ar" && page.shop.name_ar ? page.shop.name_ar : page.shop.name;
   const toggle = () => setChosen(lang === "en" ? "ar" : "en");
   const chosenService = page.services.find((s) => s.id === serviceId);
+  // The people or chairs that do the chosen service: a choice only when there is more than one.
+  const doers = page.resources.filter((r) => r.services.length === 0 || r.services.includes(serviceId));
+  const choosing = Boolean(serviceId) && doers.length > 1;
+  const step = (n: number) => (choosing ? n + 1 : n);
+  const nameOf = (r: { name: string; name_ar: string }) => (lang === "ar" && r.name_ar ? r.name_ar : r.name);
+  const holdMinutes = page.deposit_terms.hold_minutes ?? 30;
   const whatsapp = page.shop.whatsapp ? `https://wa.me/${page.shop.whatsapp}?text=${encodeURIComponent(t.prefill)}` : "";
 
   // A link that has expired or is not valid (an edited one, one from another shop, an order
@@ -187,10 +227,30 @@ function BookingForm() {
   }
 
   if (booked) {
+    const person = lang === "ar" ? booked.resource_ar ?? booked.resource : booked.resource;
+    const place = page.resources.find((r) => r.name === booked.resource)?.kind === "place";
+    const what = (
+      <p><b><bdi>{booked.service}{person ? t.withWhom(person, place) : ""}</bdi></b> · <span className="num" dir="ltr">{booked.when_text}</span></p>
+    );
+    if (booked.deposit) {
+      const money = formatPrice(booked.deposit.amount, lang);
+      return (
+        <Frame lang={lang} onLang={toggle} shop={shop} context={t.context} short>
+          <section className="cx-done" role="status">
+            <h1>{t.held(booked.number)}</h1>
+            {what}
+            <p>{t.heldText(money, holdMinutes)}</p>
+            <p className="cx-note">{termsSentence(booked.deposit.terms, lang)}</p>
+          </section>
+          <a className="cx-btn" href={booked.deposit.pay_path}><Glyph name="card" />{t.payDeposit} · <bdi>{money}</bdi></a>
+          <p className="cx-note">{STAND_IN[lang]}</p>
+        </Frame>
+      );
+    }
     return (
       <Frame lang={lang} onLang={toggle} shop={shop} context={t.context} short>
         <Done title={t.booked(booked.number)}>
-          <p><b>{booked.service}</b> · <span className="num" dir="ltr">{booked.when_text}</span></p>
+          {what}
           <p>{t.backToChat}</p>
         </Done>
       </Frame>
@@ -218,10 +278,28 @@ function BookingForm() {
           <div className="cx-card" role="radiogroup" aria-label={t.service}>
             {page.services.map((s) => (
               <button key={s.id} role="radio" aria-checked={serviceId === s.id} className="cx-choice"
-                onClick={() => pick(setServiceId, s.id)}>
+                onClick={() => { setResourceId(""); pick(setServiceId, s.id); }}>
                 <span className="cx-row-text">
                   <b>{lang === "ar" && s.name_ar ? s.name_ar : s.name}</b>
-                  <span className="num">{t.minutes(s.duration_minutes)}{s.price_text ? ` · ${s.price_text}` : ""}</span>
+                  <span className="num">{t.minutes(s.duration_minutes)}{s.price ? <> · <bdi>{formatPrice(s.price, lang)}</bdi></> : null}{s.deposit ? <> · <bdi>{t.depositTag(formatPrice(s.deposit, lang))}</bdi></> : null}</span>
+                </span>
+                <span className="cx-radio"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {choosing && (
+        <section className="cx-section">
+          <h2><span className="cx-step done">2</span>{t.who}</h2>
+          <div className="cx-card" role="radiogroup" aria-label={t.who}>
+            {[{ id: "", label: t.anyone, sub: t.anyoneHint }, ...doers.map((r) => ({ id: r.id, label: nameOf(r), sub: "" }))].map((o) => (
+              <button key={o.id || "anyone"} role="radio" aria-checked={resourceId === o.id} className="cx-choice"
+                onClick={() => pick(setResourceId, o.id)}>
+                <span className="cx-row-text">
+                  <b><bdi>{o.label}</bdi></b>
+                  {o.sub && <span>{o.sub}</span>}
                 </span>
                 <span className="cx-radio"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
               </button>
@@ -232,7 +310,7 @@ function BookingForm() {
 
       {serviceId && (
         <section className="cx-section">
-          <h2><span className={`cx-step ${day ? "done" : ""}`}>2</span>{t.day}</h2>
+          <h2><span className={`cx-step ${day ? "done" : ""}`}>{step(2)}</span>{t.day}</h2>
           <div className="cx-days" role="radiogroup" aria-label={t.day}>
             {days.map((value, index) => (
               <button key={value} role="radio" aria-checked={day === value} className="cx-day" onClick={() => pick(setDay, value)}>
@@ -247,7 +325,7 @@ function BookingForm() {
 
       {serviceId && (
         <section className="cx-section">
-          <h2><span className={`cx-step ${start ? "done" : ""}`}>3</span>{t.time}</h2>
+          <h2><span className={`cx-step ${start ? "done" : ""}`}>{step(3)}</span>{t.time}</h2>
           {times === null && <div className="cx-times" aria-hidden="true">{[0, 1, 2, 3, 4, 5].map((i) => <span key={i} className="cx-skel" />)}</div>}
           {times?.length === 0 && <p className="cx-note">{t.noTimes}</p>}
           {times && times.length > 0 && (
@@ -260,6 +338,17 @@ function BookingForm() {
               ))}
             </div>
           )}
+        </section>
+      )}
+
+      {start && chosenService && chosenService.deposit > 0 && (
+        <section className="cx-section cx-deposit" aria-labelledby="cx-deposit-h">
+          <h2 id="cx-deposit-h"><span className="cx-step done">{step(4)}</span>{t.depositTag(formatPrice(chosenService.deposit, lang))}</h2>
+          <div className="cx-card cx-terms">
+            <p>{t.depositAsk(formatPrice(chosenService.deposit, lang), holdMinutes)}</p>
+            <p>{termsSentence(page.deposit_terms, lang)}</p>
+            <p className="cx-note">{STAND_IN[lang]}</p>
+          </div>
         </section>
       )}
 
@@ -276,7 +365,7 @@ function BookingForm() {
             <input className="cx-input" value={note} maxLength={500} placeholder={t.note} aria-label={t.note}
               onChange={(e) => setNote(e.target.value)} dir="auto" />
             <button className="cx-btn" disabled={busy || !page.customer} onClick={confirm}>
-              <Glyph name="check" />{t.confirm}
+              <Glyph name="check" />{chosenService.deposit > 0 ? t.confirmPay : t.confirm}
             </button>
           </div>
         </div>
