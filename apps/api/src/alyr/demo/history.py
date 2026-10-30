@@ -289,6 +289,12 @@ class Fortnight:
     def stock_move(self, var: Var, kind: str, delta: int, at: datetime, reason: str, staff: str,
                    day: date | None = None) -> None:
         """A change by a person: a delivery, waste, a count, a counter sale."""
+        # The log refuses a change of nothing unless it is a count (check on stock_movements):
+        # a variant that sold nothing in the fortnight and opened at or below the low-stock
+        # number would otherwise be "received" zero, and the seed failed on days when the
+        # fortnight's random orders left one like that (31 Oct 2026, 00:21 in Doha).
+        if delta == 0 and kind != "counted":
+            return
         user, name = self.actor(staff)
         if var.item.rule == "count":
             var.on_hand += delta
