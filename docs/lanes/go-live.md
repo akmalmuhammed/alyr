@@ -23,7 +23,18 @@ Anything else belongs to another lane. If a task needs it, keep the change small
 
 ## Now (update this section in the same pull request as the work)
 
-Last updated 30 Oct 2026 (the production database's backups, restore and secrets audited, ALY-34, branch `claude/aly-34-backups-restore-2b913c`), on top of 29 Oct 2026 (the visitor's address for the rate limits, ALY-265, branch `aly-ratelimit-trusted-client-ip`), on top of 24 Oct 2026 (site tooling, branch `aly-site-tooling`, `docs/site-audit/05-tooling-log.md`).
+Last updated 30 Oct 2026 (Cloudflare edge and DNS hardening, ALY-116 first layer, branch `claude/cf-edge-dns-hardening-ae84c8`; and the production database's backups, restore and secrets audited, ALY-34, branch `claude/aly-34-backups-restore-2b913c`), on top of 29 Oct 2026 (the visitor's address for the rate limits, ALY-265, branch `aly-ratelimit-trusted-client-ip`) and 24 Oct 2026 (site tooling, branch `aly-site-tooling`, `docs/site-audit/05-tooling-log.md`).
+
+- **Cloudflare edge and DNS of alyr.qa hardened (ALY-116 first layer, CLD-7, CLD-18, D-113), live since 30 Oct,
+  recorded in a pull request.** Always Use HTTPS, minimum TLS 1.2, SSL Full (strict), CAA for the three CAs
+  Cloudflare issues from, SPF without the retired Email Routing include, and response-header rules that give the
+  API and the media host their security headers. Nothing else moved: the Worker `alyr-edge` was not touched, MX
+  and DMARC are as they were (`p=none`, review 13 Nov). Every step was checked from outside with
+  `scripts/check-edge.sh`. `alyr.online`, which sends no mail, got SPF `-all` and DMARC `quarantine` after the
+  founder's yes. **Waiting on the founder (Needs Akmal):** the three answers in
+  `docs/runbooks/cloudflare-edge.md`, section 4 (the Block-only rate-limit rule, Zero Trust for the back
+  office, the old tunnel). Not done: Access and `ops.alyr.qa` (ALY-219), the edge
+  rate-limit rule, DNSSEC (`.qa` is not signed), MTA-STS.
 
 - **Backups, restore and secrets audited (ALY-34, 30 Oct 2026), in a pull request.** Read-only audit of `alyr-prod`
   (`docs/audit/hardening-2026-10-30.md`; repeat with `infra/gcp/audit.sh`, which reports no FAIL today). A nightly
@@ -36,6 +47,7 @@ Last updated 30 Oct 2026 (the production database's backups, restore and secrets
   the phone channel, the on-call blanks, the status page's yes). Not done: the export restore on production data, the
   apps running on a restored copy, a restore with real data volume.
 
+
 - **Per-address rate limits in production (ALY-265, D-083), in a pull request, nothing applied
   to production.** The edge Worker (`infra/cloudflare/edge`) writes the visitor's address from
   `CF-Connecting-IP` and signs it; the web app passes it on; the API counts only a signed
@@ -44,7 +56,7 @@ Last updated 30 Oct 2026 (the production database's backups, restore and secrets
   `scripts/check-client-address.sh` checks the whole path from outside. **Waiting on the
   founder (Needs Akmal):** approve the five steps in `docs/runbooks/client-address.md`, in order.
   Not done: a CI job for the edge Worker's tests (`pnpm test` in `infra/cloudflare/edge`; CI cannot
-  be edited while PR #164 is open), IPv6 `/64` counting, Cloudflare rate-limit rules.
+  be edited while PR #164 is open), IPv6 `/64` counting, Cloudflare rate-limit rules (prepared, Block only on Free: `docs/runbooks/cloudflare-edge.md`).
 
 - **Site tooling, in a pull request, not merged or run on GitHub** (Actions is blocked by
   billing).

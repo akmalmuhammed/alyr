@@ -29,7 +29,7 @@ Checked 7 October 2026. Free tiers change often; re-check a row before relying o
 | Second copy of the database | Cloud SQL's nightly export to a Cloud Storage bucket in Doha, kept 35 days (D-060) | As above | Cents a month | — | — | Building (ALY-10) |
 | Interim hosting on Cloudflare Containers and Neon (D-052) | Not used: Google Cloud in Doha replaces it (D-060) | — | — | — | — | Superseded 28 Oct |
 | Tunnel, Vercel and Neon command-line tools | cloudflared, vercel, neonctl | Free | None | — | — | Installed 7 Oct |
-| DNS and TLS | Cloudflare Free | Unlimited DNS, free certificates | None that matter | — | — | Planned |
+| DNS and TLS | Cloudflare Free | Unlimited DNS, free certificates; one rate-limit rule, Block only, counted over 10 s; the Free managed WAF ruleset is always on (checked 30 Oct) | Bot Fight Mode cannot be skipped for webhooks; no log or challenge action in rate limits; Zero Trust (Access) asks for payment details even on its Free plan | Cloudflare Pro (paid) | We want log or challenge modes, more rate-limit rules or the managed WAF rulesets | Live; hardened 30 Oct (`docs/runbooks/cloudflare-edge.md`) |
 | Domain name | Any registrar | **Not free**: about USD 10 to 15 a year for .com, more for .qa | — | — | — | Needed before Meta app review |
 | Error tracking | Our own scrubbed `error_events` table, shown in `/ops` (slice 2 of ALY-121) | Free | We build it | Sentry Team (USD 26 to 29 a month) | A second developer, or over 5,000 errors a month | Planned |
 | Product analytics | PostHog Free | 1 million events a month | None at our size | — | — | Planned |

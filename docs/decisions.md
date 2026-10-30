@@ -82,6 +82,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-116 | A stopped client's data is deleted 60 days after its cancellation takes effect (never earlier than 31); until then nothing is deleted and the workspace stays open; coming back inside the 60 days keeps everything; the deletion only reports until the founder switches it on | Proposed (built and tested; switched off; the founder switches it on once the lawyer has read D-118) |
 | D-117 | The deletion is a daily Cloud Run job under the database owner: one business per transaction, through one door in the guards of issued documents, the business's row really deleted, photos emptied by the worker from a list the job leaves, a receipt of counts only | Proposed |
 | D-118 | What ALYR keeps when it erases a client is data in one file (`core/erase_rules.py`), with ALYR's reading of the law: its own billing records and audit log stay, the shop's receipts to its customers go; every line the lawyer may change is marked | Proposed (pending the lawyer, ALY-51) |
+| D-113 | The Cloudflare zone is hardened with what the Free plan offers and the state is written down: HTTPS only, minimum TLS 1.2, strict SSL, CAA, a trimmed SPF and response-header rules for the API and media host are live; the edge rate-limit rule waits because Free has only Block; no Access until Zero Trust is onboarded; DMARC stays `none` until the reports are read, never `reject` | Proposed |
 
 ---
 
@@ -1973,3 +1974,25 @@ Without it, analytics is off everywhere.
 **Why this, and what makes it provisional.** It keeps the smallest set that supports ALYR's own accounts and its defence in a dispute, and deletes the most that is plausibly not required. If the lawyer says ALYR must hold the shop's receipts too, that is one line in the file (and the door in migration 0083 for them stops being used); if the lawyer says a name on the quote is not needed, another. **16 rules are marked `lawyer=True`.** Questions for ALY-51: the retention period for ALYR's own records and when it starts; the accepter's name; whether a processor must keep a controller's issued invoices after the contract ends; whether a set-up that never went live is "a business that stops"; whether the 35-day backup tail needs more than the notice says.
 
 **Revisit when** the lawyer answers.
+
+---
+
+## D-113 · The zone's edge layer on the Free plan: what is set, and what waits
+**Date** 30 Oct 2026 · **Status** Proposed (written by Claude in the ALY-116 edge work for the founder to accept or change; the changes are live and each can be undone) · Linear ALY-116, ALY-219, ALY-266 (CLD-7, CLD-18)
+
+**The decision.**
+- **Set now:** SSL mode Full (strict); minimum TLS 1.2; Always Use HTTPS; CAA for the CAs Cloudflare issues from; an SPF without Email Routing's retired include; response-header rules that give the API and the media host the headers the web app already sends, and drop `x-powered-by`. The second domain, `alyr.online`, which sends no mail, gets SPF `-all` and DMARC `quarantine` (the founder said yes by name on 30 Oct).
+- **HSTS stays out of the zone setting.** The site and the web app send their own one-year header; a zone-wide setting would overwrite both with one value for every host. A rule per host instead.
+- **Not set:** an edge rate-limit rule (the Free plan has only Block, so "log or challenge first" cannot run; it waits for the founder's yes or a paid plan); Bot Fight Mode (it cannot be skipped for webhooks); DNSSEC (`.qa` is not signed); Access (Zero Trust asks for payment details and `ops.alyr.qa` is not built); `p=quarantine` or `p=reject` for DMARC until the reports are read (review 13 Nov 2026; `reject` is not planned).
+- **The state is written down, not remembered:** rule definitions in `infra/cloudflare/zone/`, the numbers and the undo steps in `docs/runbooks/cloudflare-edge.md`, a check from outside in `scripts/check-edge.sh`.
+
+**Why.**
+- The audit (ALY-266) found plain HTTP on `app` and `api`, TLS 1.0 and 1.1 accepted, no CAA, a retired SPF include and an API with no security headers. Each of these is a setting, free, and reversible.
+- Every change was one step with a check from outside before the next (`scripts/check-edge.sh`), and nothing changes what a customer sees except that a device speaking only TLS 1.1 or older can no longer connect.
+- A rate limit that only blocks, on shared mobile addresses, is a decision about real customers; it is better asked than assumed.
+
+**Costs and risks, said plainly.** Free. A CAA list that misses a CA Cloudflare switches to would stop a certificate renewal: Cloudflare published its own hidden records for the CAs we did not list, and the first renewals start about 27 Dec 2026, so check then. The changes were made in the dashboard's session, not by a token, so their history is in Cloudflare's audit log and the runbook, not in git.
+
+**Chosen over** a zone-wide HSTS (it would weaken the site's header); applying a Block rate-limit rule without a yes (the brief said not to block first); `p=reject` for DMARC (a missed sender would be lost mail).
+
+**Revisit when** the first paying client signs (a paid plan for log mode and the managed rules), `.qa` is signed (DNSSEC), or Zero Trust is onboarded (the back office behind Access, ALY-219).
