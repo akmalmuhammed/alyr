@@ -72,7 +72,7 @@ The workspace (`/app`) and sign-in answer 404 from outside the laptop; sign-in c
 | What the owner gets | Where it appears | State |
 |---|---|---|
 | Every order message inside the 24-hour window carries "Track your order: …" | `modules/orders/service.py` (`_track_line`) | **Built (simulator)** (ALY-73, after the 12 Oct live test). Templates cannot carry the link, so a notice sent after the window arrives without it |
-| A tracking page: the order number, a status chip, four steps with times, who is looking after it (first name only), the items, the total, *Pay now* if unpaid, "This page updates by itself" | `apps/web/app/(product)/t/[tenant]/[order]/page.tsx`, `routes/track.py` | **Built (simulator)** |
+| A tracking page: the order number, a status chip, four steps with times, who is looking after it (first name only), the items, the total, *Pay now* if unpaid, "This page updates by itself" | `apps/web/app/(product)/t/[slug]/page.tsx`, `routes/track.py` | **Built (simulator)** |
 | Delivery, drivers, maps, live location | none | **Not built.** The steps end at "Ready for collection" and "Complete" |
 
 ### 1.5 Credit accounts (a separate product in the catalogue)
@@ -346,7 +346,7 @@ There is no `app/layout.tsx`. `apps/web/app/` has **three root layouts**, one pe
 |---|---|---|---|
 | `(site)` | `app/(site)/layout.tsx` → `SiteDocument locale="en"` (`<html lang="en" dir="ltr">`) | `/` (`(site)/page.tsx` → `HomePage`), `/chat` (`(site)/chat/page.tsx` → `ProductPage`) | `_site/site.css` only |
 | `(site-ar)` | `app/(site-ar)/layout.tsx` → `SiteDocument locale="ar"` (`lang="ar" dir="rtl"`) | `/ar`, `/ar/chat` | `_site/site.css` only |
-| `(product)` | `app/(product)/layout.tsx` (own fonts, `noindex`) | `/app/[[...section]]`, `/ops`, `/login`, `/whatsapp`, `/s/[slug]`, `/b/[slug]`, `/pay/[tenant]/[payment]`, `/t/[tenant]/[order]` | `globals.css`, plus `_workspace/shell.css` or `_customer/customer.css` |
+| `(product)` | `app/(product)/layout.tsx` (own fonts, `noindex`) | `/app/[[...section]]`, `/ops`, `/login`, `/whatsapp`, `/s/[slug]`, `/b/[slug]`, `/pay/[tenant]/[payment]`, `/t/[slug]` | `globals.css`, plus `_workspace/shell.css` or `_customer/customer.css` |
 
 App-level files: `icon.svg`, `opengraph-image.tsx` (generated at build), `robots.ts`, `sitemap.ts` (from `PATHS`). `next.config.ts` sets `distDir` from `ALYR_DIST_DIR` and rewrites `/api` and `/sim` to FastAPI; there is no `output: "export"`.
 

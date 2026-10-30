@@ -18,6 +18,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Done, Frame, Glyph, Who } from "../Frame";
 import { formatPrice, type Lang } from "../price";
 import { matches, searchWords } from "../fold";
+import { sitePath } from "../link";
 import { addQty, fmtQtyUnit, minQty, unitFor } from "../qty";
 import { ApiError, loadItem, loadLive, loadStore, orderAgain } from "./api";
 import { count, keyOf, most, total as totalOf, unitPrice, type Line } from "./cart";
@@ -417,7 +418,7 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
   const offerList = store.pricing?.discounts?.offers ?? [];
 
   if (placed) {
-    const link = placed.payment === "link" && placed.pay_url ? new URL(placed.pay_url).pathname : null;
+    const link = placed.payment === "link" && placed.pay_url ? sitePath(placed.pay_url) : null;
     return (
       <Frame lang={lang} onLang={toggle} shop={shopName} context={t.context} short>
         <Done title={t.placed(placed.number)}>
@@ -453,7 +454,7 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
           </section>
         )}
         {link && <a className="cx-btn" href={link}><Glyph name="card" />{t.payNow(formatPrice(placed.total, lang))}</a>}
-        {placed.track_url && <a className="cx-btn ink" href={new URL(placed.track_url).pathname}>{t.track}<Glyph name="arrow" className="flip" /></a>}
+        {placed.track_url && <a className="cx-btn ink" href={sitePath(placed.track_url)}>{t.track}<Glyph name="arrow" className="flip" /></a>}
       </Frame>
     );
   }
@@ -636,7 +637,7 @@ export default function Order({ slug, token, table, initial, lang: first, focusI
           onPlaced={(p) => {
             setReview(false); setCart([]); setFlagged(new Set());
             try { sessionStorage.removeItem(storageKey); } catch { /* nothing kept */ }
-            if (p.pay_url) window.location.href = new URL(p.pay_url).pathname;
+            if (p.pay_url) window.location.href = sitePath(p.pay_url);
             else setPlaced(p);
           }}
           onClose={() => setReview(false)} />

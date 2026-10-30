@@ -1,10 +1,12 @@
-"""The pay page and the tracking page (ALY-133): why an ID in their link may stay.
+"""The pay page and the tracking page (ALY-133): what holding their link can and cannot do.
 
-Both pages open by two IDs in the address, the shop's and one payment's or one order's, and
-no token. That is safe only because the second one is an unguessable value of its own: made
-at random, not derived from the customer's ID or from anything a link or a chat shows, and
-good for exactly one payment or order. These tests pin what holding that ID can and cannot
-do. The customer's contact ID, which is what the booking page used to take, opens neither."""
+The pay page opens by two IDs in the address, the shop's and one payment's, and no token. That
+holds only because the payment's ID is an unguessable value of its own: made at random, not
+derived from the customer's ID or from anything a link or a chat shows, and good for exactly one
+payment. Until SEC-8 (D-080) the tracking page opened the same way, by the order's ID; it now
+takes a signed link that runs out (`test_track.py`), and the ID alone opens nothing. SEC-8's
+second part does the same for the pay page, after the payment adapters (ALY-17). The customer's
+contact ID, which is what the booking page used to take, opens neither."""
 
 import re
 from uuid import UUID, uuid4
@@ -14,7 +16,7 @@ from order_links import booking_token
 from order_links import token as order_token
 from test_consent import ahmed, owner_sql
 from test_sign_in import other_shop_with_owner
-from test_track import an_order, track
+from test_track import an_order, mint, token_of, track
 
 PAY_KEYS = {
     "amount", "status", "provider", "customer", "lang", "shop", "shop_ar", "slug",
@@ -52,10 +54,10 @@ def test_holding_a_payment_id_shows_that_payment_and_nothing_about_the_customer_
     assert shown.headers["cache-control"] == "private, no-store"
 
 
-def test_holding_an_order_id_shows_that_order_and_not_who_ordered_it(client):
+def test_holding_the_tracking_link_shows_that_order_and_not_who_ordered_it(client):
     customer = ahmed(client)
     order, _ = a_payment(client)
-    shown = track(client, order["order_id"])
+    shown = track(client, token_of(order["track_url"]))
     assert shown.status_code == 200
     text = shown.text
     assert customer["id"] not in text and AHMED_PHONE not in text
@@ -71,30 +73,32 @@ def test_a_contact_id_opens_neither_page(client):
     order, payment = a_payment(client)
     for wrong in (customer["id"], str(uuid4())):
         assert pay_page(client, wrong).status_code == 404
-        assert track(client, wrong).status_code == 404
+        assert track(client, mint(wrong)).json()["order"] is None
         assert client.post(f"/api/pay/{DEMO_TENANT_ID}/{wrong}/complete").status_code == 404
     # One kind of ID is not another: an order's is not a payment's, nor the reverse.
     assert pay_page(client, order["order_id"]).status_code == 404
-    assert track(client, payment).status_code == 404
+    assert track(client, mint(payment)).json()["order"] is None
 
 
 def test_a_link_token_opens_neither_page(client):
     customer = ahmed(client)
     for token in (order_token(customer["id"]), booking_token(customer["id"])):
         assert pay_page(client, token).status_code == 422
-        assert track(client, token).status_code == 422
+        assert track(client, token).json()["link"]["state"] == "invalid"
 
 
 def test_a_payment_or_order_of_one_shop_opens_nothing_under_another_shop(client):
     order, payment = a_payment(client)
     other = other_shop_with_owner("pay-and-track@other.example")
+    owner_sql("update tenants set slug = 'pay-and-track' where id = $1", other)
     owner_sql("insert into tenant_modules (tenant_id, module_key) values ($1, 'orders')", other)
     assert pay_page(client, payment, tenant=other).status_code == 404
-    assert track(client, order["order_id"], tenant=other).status_code == 404
+    elsewhere = track(client, token_of(order["track_url"]), slug="pay-and-track").json()
+    assert elsewhere["order"] is None and elsewhere["link"]["state"] == "invalid"
     assert client.post(f"/api/pay/{other}/{payment}/complete").status_code == 404
-    # Under its own shop they still open, so the 404s above are the other shop's, not a typo.
+    # Under its own shop they still open, so the refusals above are the other shop's.
     assert pay_page(client, payment).status_code == 200
-    assert track(client, order["order_id"]).status_code == 200
+    assert track(client, token_of(order["track_url"])).json()["order"] is not None
 
 
 def test_the_ids_are_random_and_not_made_from_the_customer(client):

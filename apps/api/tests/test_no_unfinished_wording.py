@@ -57,7 +57,7 @@ ALLOWED = (
     ("modules/router.py", "سنرد عليك قريباً", "an automatic acknowledgement: we will reply soon"),
     ("modules/ledger/chat.py", "سيتواصل معك أحد الموظفين قريباً", "a person will contact you soon"),
     ("core/templates.py", "See you soon", "the end of a reminder to a customer"),
-    ("(product)/t/[tenant]/[order]/page.tsx", "طلبك قريباً", "the shop will handle your order soon"),
+    ("(product)/t/[slug]/page.tsx", "طلبك قريباً", "the shop will handle your order soon"),
 )
 
 

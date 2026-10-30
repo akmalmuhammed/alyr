@@ -28,7 +28,7 @@
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { launch } from "./browser-kit.mjs";
+import { launch, trackPath } from "./browser-kit.mjs";
 import { COPY } from "../apps/web/app/(product)/_workspace/catalogCopy.ts";
 import { T } from "../apps/web/app/(product)/_customer/order/copy.ts";
 
@@ -302,11 +302,10 @@ async function main() {
   await call("/api/items/settings", { method: "PUT", body: { wholesale_layout: false } });
 
   // ── 5. tracking page ──
-  const track = placed ? `${BASE}/t/${placed.track_tenant ?? ""}` : "";
   if (placed?.id) {
     const tenant = (await call("/api/workspace")).data?.tenant_id ?? "";
     if (tenant) {
-      await b.go(`${BASE}/t/${tenant}/${placed.id}${AR ? "?lang=ar" : ""}`, 1200);
+      await b.go(`${BASE}${trackPath(tenant, shop.slug, placed.id)}${AR ? "&lang=ar" : ""}`, 1200);
       const t = await body();
       check(t.includes(pick("1 kg", "1 كغ")) && t.includes(pick("250 ml", "250 مل")), "the tracking page reads 1 kg and 250 ml");
       await shot("11-tracking");

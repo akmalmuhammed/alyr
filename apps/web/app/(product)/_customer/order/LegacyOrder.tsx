@@ -9,6 +9,7 @@
 
 import { useMemo, useState } from "react";
 import { Done, Frame, Glyph, Who } from "../Frame";
+import { sitePath } from "../link";
 import { formatPrice, type Lang } from "../price";
 import type { Item, Placed, Store } from "./types";
 
@@ -104,7 +105,7 @@ export default function LegacyOrder({ slug, token, initial, lang: first }: Props
           <p>{t.backToChat}</p>
         </Done>
         {placed.track_url && (
-          <a className="cx-btn ink" href={new URL(placed.track_url).pathname}>{t.track}<Glyph name="arrow" className="flip" /></a>
+          <a className="cx-btn ink" href={sitePath(placed.track_url)}>{t.track}<Glyph name="arrow" className="flip" /></a>
         )}
       </Frame>
     );

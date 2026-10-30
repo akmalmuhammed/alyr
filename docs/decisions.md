@@ -59,6 +59,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-077 | The worker runs several jobs at once (5 per process), one customer's jobs one after another in the order they were queued; one HTTP connection to Meta is kept open; on SIGTERM the worker finishes what started and puts the rest back | Accepted |
 | D-064 | The owner's test order is marked in the database (a trigger sets `orders.is_test`), counted nowhere (a guard test reads every query), and cancelled with its stock returned when the test ends | Accepted |
 | D-067 | Terms and the privacy notice are versions ALYR publishes; an owner accepts them at sign-up and again when a new one is published, in an append-only record | Accepted |
+| D-080 | The order tracking page opens by a signed link that runs out (`/t/<shop>?t=<token>`, purpose `track`, `ALYR_LINK_DAYS`); the order's ID alone opens nothing. The pay page follows after the payment adapters | Accepted |
 | D-068 | An owner who stops partway through setup gets two emails to come back, then none, and can stop them from the link; the funnel counts them | Accepted |
 | D-062 | The homepage hero is the explainer film (one afternoon at Qirfa Bakery in the product's own screens, three lanes at once, ending on the ALYR Agent home): "the product is the illustration" in motion; the hero's live ALYR Agent figure leaves the hero | Accepted |
 | D-070 | Product analytics with PostHog (EU), at two levels the visitor chooses: cookieless counting by default, cookies and masked recordings with consent; never customer pages, the inbox or names | Accepted |
@@ -1555,6 +1556,29 @@ Without it, analytics is off everywhere.
 **Revisit when** the `:root:has()` work lands (measure again), or the founder finds the hidden control hard to find.
 
 ---
+
+## D-080 · The order tracking page opens by a signed link that runs out; the order's ID alone opens nothing
+**Date** 29 Oct 2026 · **Status** Accepted (go-live audit finding SEC-8, in ALY-271; Claude's scope under the founder's instruction of 29 Oct to finish the go-live items) · Changes spec 005's "The IDs that stay" for the tracking page · Builds on D-039 (a customer's signed links)
+
+**Where we were.** The tracking page opened at `/t/<shop's ID>/<order's ID>`: two IDs and no token. ALY-133 kept that because the order's ID is random (122 bits) and cannot be guessed. But it does not have to be guessed. The order's ID is also in the workspace's addresses and in every request log that records them, and it can be forwarded with the link. A link made of it never ran out and could not be ended, so whoever held it saw the order's items, delivery address and staff member for good.
+
+**The decision.**
+- **A fifth purpose for signed links, `track`** (`core/links.py`).
+  - The token names the order and the shop, and is signed over both.
+  - It opens the tracking page only. An order, booking or document link opens nothing there, and a tracking link opens nothing on those pages.
+  - It runs out after `ALYR_LINK_DAYS` (60 days). Each message about the order carries a fresh one.
+- **The address is `/t/<shop's address name>?t=<token>`**, the shape of the other customer pages.
+  - The page sends the token in the `X-Order-Link` header, so no request log of ours holds it. The API answers at `/api/track/<shop>`.
+  - The old route by two IDs is gone.
+- **A link that has run out, was edited, or belongs to another shop or page** opens a calm page that says what to do in both languages. Nothing in it names an order.
+- **Nothing is kept for anyone else:** answers are `private, no-store` and `noindex`, and the page sends no referrer.
+- **The pay page keeps its two IDs** until SEC-8's second part, after the payment adapters (ALY-17, PR #169) merge. Its link then gets the same treatment, and it gets its "Track this order" button back with a signed link. Until then the pay page shows no tracking button; the customer's chat holds the link.
+
+**Chosen over:**
+- *Keeping the old address beside the new one for links already sent.* Production has sent none (no WhatsApp traffic yet), and keeping it would keep the hole.
+- *A token in the path* (`/t/<shop>/<token>`). The query keeps the shape, the header and the checks of the other customer pages.
+
+**Revisit when** a shop prepares orders further ahead than 60 days and its customers find the link has run out, or the pay page is signed (SEC-8's second part).
 
 ## D-065 · Owners and staff manage the shop from WhatsApp as well as the portal, through one shared action layer
 **Date** 18 Oct 2026 (numbered D-040 until 28 Oct, when it was renumbered: D-040 is ALYR's look) · **Status** Accepted (founder, 18 Oct, in chat: "implement this", after the plan was drawn in Figma https://www.figma.com/design/FymEODsZGzeQTXciYIvYWI) · Linear ALY-130 · Spec `specs/029-owner-actions/spec.md`
