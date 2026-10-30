@@ -10,6 +10,7 @@ import { color } from "../../_tokens/tokens";
 import { useEffect, useState } from "react";
 import "../_workspace/shell.css";
 import "./ops.css";
+import { loginUrl } from "../login/next";
 import { api } from "./api";
 
 type NavItem = { href: string; label: string; icon: string };
@@ -93,8 +94,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
   if (denied) {
     return (
       <div className="sh-empty ops-denied">
+        <h1>ALYR console</h1>
         <p>{denied}</p>
-        <a className="btn primary" href="/login">Sign in</a>
+        <a className="btn primary" href={loginUrl(path)}>Sign in</a>
       </div>
     );
   }

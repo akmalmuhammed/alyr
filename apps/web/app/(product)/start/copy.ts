@@ -19,7 +19,13 @@ const en = {
   },
   stepOf: (n: number, total: number) => `Step ${n} of ${total}`,
   help: "Need a hand?",
-  helpSub: "Message ALYR. A person answers.",
+  helpSub: "Write to us. A person answers.",
+  helpMail: "hello@alyr.qa",
+  // The words inside the drawn WhatsApp chat (the preview and the test line), which has no
+  // language of its own: it follows the screen's.
+  chat: { account: "Business account", fallback: "Your business", initials: "AL", now: "now" },
+  // The areas offered on the basics step. The English name is what is stored; Arabic shows its own.
+  areas: {} as Record<string, string>,
   lang: "العربية",
   back: "Back",
   continue: "Continue",
@@ -44,9 +50,10 @@ const en = {
     verify: "Continue",
     other: "Use a different email",
     tooMany: "Too many codes requested. Try again in an hour.",
+    tooManyTries: "Too many wrong codes. Try again in an hour.",
     wrong: "That code is wrong or has expired. Check it, or ask for a new one.",
     cannotSend: "The code could not be sent. Try again in a minute.",
-    closedNew: "New businesses are set up with an ALYR advisor. Message us and we'll arrange it.",
+    closedNew: "New businesses are set up with an ALYR advisor. Write to us and we'll arrange it.",
   },
   type: {
     title: "What kind of business is it?",
@@ -65,6 +72,7 @@ const en = {
     otherArea: "Other area",
     create: "Create my business",
     expired: "This sign-up has expired. Ask for a new code.",
+    tooMany: "Too many businesses were created from this connection. Try again in an hour.",
   },
   // What an owner accepts before the business is made, and again when ALYR publishes a new
   // version (ALY-167). The titles and the pages come from the API, in both languages.
@@ -341,7 +349,13 @@ const ar: typeof en = {
   },
   stepOf: (n, total) => `الخطوة ${n} من ${total}`,
   help: "تحتاج مساعدة؟",
-  helpSub: "راسل ALYR. يرد عليك شخص.",
+  helpSub: "راسلنا. يرد عليك شخص.",
+  helpMail: "hello@alyr.qa",
+  chat: { account: "حساب تجاري", fallback: "نشاطك", initials: "ن", now: "الآن" },
+  areas: {
+    "Al Sadd": "السد", "West Bay": "الخليج الغربي", "Bin Mahmoud": "بن محمود", "Al Wakra": "الوكرة",
+    Lusail: "لوسيل", "The Pearl": "اللؤلؤة", "Al Rayyan": "الريان", "Old Airport": "المطار القديم", "Al Khor": "الخور",
+  } as Record<string, string>,
   lang: "English",
   back: "رجوع",
   continue: "متابعة",
@@ -366,6 +380,7 @@ const ar: typeof en = {
     verify: "متابعة",
     other: "استخدم بريداً آخر",
     tooMany: "طلبت رموزاً كثيرة. حاول بعد ساعة.",
+    tooManyTries: "رموز خاطئة كثيرة. حاول بعد ساعة.",
     wrong: "الرمز غير صحيح أو انتهت صلاحيته. تحقق منه أو اطلب رمزاً جديداً.",
     cannotSend: "تعذّر إرسال الرمز. حاول بعد دقيقة.",
     closedNew: "يتم إعداد الأعمال الجديدة مع مستشار من ALYR. راسلنا وسنرتب ذلك.",
@@ -387,6 +402,7 @@ const ar: typeof en = {
     otherArea: "منطقة أخرى",
     create: "أنشئ نشاطي",
     expired: "انتهت صلاحية التسجيل. اطلب رمزاً جديداً.",
+    tooMany: "أُنشئت أنشطة كثيرة من هذا الاتصال. حاول بعد ساعة.",
   },
   billing: {
     title: "ادفع لـ ALYR بالبطاقة",

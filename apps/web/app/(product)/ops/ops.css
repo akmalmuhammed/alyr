@@ -61,7 +61,10 @@
 /* ── the console shell (D-033): sidebar on a laptop, tab bar on a phone ── */
 .sh.ops { grid-template-columns: 15rem minmax(0, 1fr); }
 .ops .sh-sheet { margin: 8px 8px 8px 0; }
-.ops-denied { display: grid; gap: 14px; justify-items: center; }
+.ops-denied { display: grid; gap: 14px; justify-items: center; align-content: center; text-align: center; padding: 0 16px; }
+.ops-denied h1 { margin: 0; font-size: var(--ui-heading); font-weight: var(--weight-semibold); color: var(--ink); }
+.ops-denied p { margin: 0; max-width: 32rem; }
+.ops-denied a.btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 22px; text-decoration: none; }
 .ops-head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .ops-link { font-size: var(--ui-small); color: var(--ink-2); }
 .ops-detail-cell { max-width: 34rem; font-size: var(--ui-small); color: var(--ink-2); overflow-wrap: anywhere; }

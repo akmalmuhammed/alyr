@@ -15,6 +15,7 @@ import { track } from "../../_analytics/posthog";
 import { Chat, initialsOf, type ChatMessage, type Choice } from "./Chat";
 import { codeDigits } from "../login/code";
 import { COPY, type Lang } from "./copy";
+import { areaName, bookingWhat } from "./format";
 import { HandoverView, ProductsView, moneyText, useHandover, useProducts } from "./OrderSteps";
 import "./start.css";
 
@@ -76,7 +77,7 @@ type Payment = {
   card: { provider: "paddle"; amount_text: string; period_text: string } | null;
 };
 type CardCheckout = { id: string; status: "creating" | "open" | "paid" | "failed" | "mismatch"; transaction: string | null };
-type Booking = { customer: string; service: string; when_text: string; status: string };
+type Booking = { customer: string; service: string; service_ar?: string; when_text: string; starts_at?: string; status: string };
 // A version of the customer agreement or the privacy notice (ALY-167).
 type TermsVersion = {
   id: string; kind: "agreement" | "privacy"; version: string; title: string; title_ar: string;
@@ -297,6 +298,7 @@ export default function Start() {
   const verify = () => guard(async () => {
     const answer = await call<{ status: string; signup_token?: string }>("/api/onboarding/verify", "POST", { email, code });
     if (answer.status === 403) return setError(t.account.closedNew);
+    if (answer.status === 429) return setError(t.account.tooManyTries);
     if (!answer.ok) return setError(t.account.wrong);
     if (answer.data.status === "signed_in") {
       await identifyFromSession();
@@ -317,6 +319,7 @@ export default function Start() {
       accepted_terms: termsList.map((v) => v.id), lang,
     });
     if (answer.status === 401) { setStep("account"); return setError(t.basics.expired); }
+    if (answer.status === 429) return setError(t.basics.tooMany);
     if (answer.status === 422) {
       // The terms may have changed while the owner filled this in: show the new ones, untick.
       setTicked([]);
@@ -548,6 +551,8 @@ export default function Start() {
   const preview = useMemo((): ChatMessage[] => {
     const name = shopShown || t.yourBusiness;
     const ar = lang === "ar";
+    // An amount typed as "30" in the product's own form: "QAR 30" in English, «30 ر.ق» in Arabic.
+    const money = (amount: string) => (ar ? `${amount} ر.ق` : `QAR ${amount}`);
     // A shop that takes orders greets with its order link and the menu button (modules/orders/chat.py),
     // not the booking menu.
     const greeting: ChatMessage = takesOrders ? {
@@ -561,7 +566,7 @@ export default function Start() {
       payload: { choices: (ar ? ["احجز موعداً", "حجزي", "الأسعار"] : ["Book a visit", "My booking", "Prices"]).map((title, i) => ({ id: `p${i}`, title })) },
     };
     if (step === "services") {
-      const lines = rows.slice(0, 4).map((s) => `${ar && s.name_ar ? s.name_ar : s.name}${s.price ? `: QAR ${qar(s.price)}` : ""} (${s.duration_minutes} ${ar ? "دقيقة" : "min"})`);
+      const lines = rows.slice(0, 4).map((s) => `${ar && s.name_ar ? s.name_ar : s.name}${s.price ? `: ${money(qar(s.price))}` : ""} (${s.duration_minutes} ${ar ? "دقيقة" : "min"})`);
       return [
         { direction: "in", body: ar ? "الأسعار" : "Prices" },
         { direction: "out", body: [ar ? "خدماتنا:" : "Our services:", ...lines].join("\n"), payload: { choices: [{ id: "b", title: ar ? "احجز موعداً" : "Book a visit" }] } },
@@ -579,7 +584,7 @@ export default function Start() {
       const lines = products.rows
         .filter((r) => (r.sample ? r.keep : r.status === "live"))
         .slice(0, 4)
-        .map((r) => `${ar && r.name_ar ? r.name_ar : r.name}${r.priceText ? `: QAR ${r.priceText}` : ""}`);
+        .map((r) => `${ar && r.name_ar ? r.name_ar : r.name}${r.priceText ? `: ${money(r.priceText)}` : ""}`);
       return [
         { direction: "in", body: ar ? "القائمة" : "Menu" },
         { direction: "out", body: [ar ? "قائمتنا:" : "Our menu:", ...lines].join("\n"), payload: { choices: [{ id: "o", title: ar ? "اطلب الآن" : "Order now" }] } },
@@ -616,7 +621,7 @@ export default function Start() {
   );
   const testChat = (
     <Chat
-      name={shopShown} initials={initialsOf(shopName)} messages={chat} live
+      name={shopShown} initials={initialsOf(shopName, t.chat.initials)} labels={t.chat} messages={chat} live
       onChoice={(c) => say("", c)}
       footer={
         <form className="ob-compose" onSubmit={(e) => { e.preventDefault(); say(draft); }}>
@@ -692,7 +697,7 @@ export default function Start() {
             <legend>{t.basics.area}</legend>
             <div className="ob-chips">
               {(state?.areas ?? ["Al Sadd", "West Bay", "Bin Mahmoud", "Al Wakra", "Lusail", "The Pearl", "Al Rayyan"]).map((a) => (
-                <button key={a} type="button" className={`ob-chip ${form.area === a ? "on" : ""}`} aria-pressed={form.area === a} onClick={() => setForm({ ...form, area: a })}>{a}</button>
+                <button key={a} type="button" className={`ob-chip ${form.area === a ? "on" : ""}`} aria-pressed={form.area === a} onClick={() => setForm({ ...form, area: a })}>{areaName(t.areas, a, lang)}</button>
               ))}
             </div>
           </fieldset>
@@ -713,7 +718,7 @@ export default function Start() {
             </fieldset>
           )}
         </form>
-        <div className="ob-inline-preview"><p className="ob-kicker">{t.previewLabel}</p><Chat name={shopShown} initials={initialsOf(shopName)} messages={preview} /></div>
+        <div className="ob-inline-preview"><p className="ob-kicker">{t.previewLabel}</p><Chat name={shopShown} initials={initialsOf(shopName, t.chat.initials)} labels={t.chat} messages={preview} /></div>
       </>
     );
     actions = (
@@ -840,7 +845,7 @@ export default function Start() {
     const c = orders ? t.tryOrder : t.try;
     const worked = orders
       ? (testedOrder ? t.tryOrder.worked(testedOrder.number, moneyText(testedOrder.total, lang)) : null)
-      : (tested ? t.try.worked(`${tested.service}, ${tested.when_text}`) : null);
+      : (tested ? t.try.worked(bookingWhat(tested, lang)) : null);
     main = (
       <>
         <p className="ob-kicker volt">{t.try.test}</p>
@@ -1125,13 +1130,13 @@ export default function Start() {
     : step === "plan" || step === "golive"
       ? (
         <div className="ob-summary">
-          <span className="ob-avatar big">{initialsOf(shopName)}</span>
+          <span className="ob-avatar big">{initialsOf(shopName, t.chat.initials)}</span>
           <b>{shopShown}</b>
-          <small>{[chosen?.name[lang], state?.business.area].filter(Boolean).join(" · ")}</small>
+          <small>{[chosen?.name[lang], areaName(t.areas, state?.business.area ?? "", lang)].filter(Boolean).join(" · ")}</small>
           {way === "appointments" && <small>{t.summary(rows.length, state?.business.reminders ?? true)}</small>}
         </div>
       )
-      : <Chat name={shopShown} initials={initialsOf(shopName)} messages={preview} />;
+      : <Chat name={shopShown} initials={initialsOf(shopName, t.chat.initials)} labels={t.chat} messages={preview} />;
 
   return (
     <div className={`ob${showPreview ? "" : " ob-solo"}`} dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
@@ -1145,7 +1150,9 @@ export default function Start() {
             </li>
           ))}
         </ol>
-        <div className="ob-help"><b><Ico name="chat" size={16} />{t.help}</b><small>{t.helpSub}</small></div>
+        <a className="ob-help" href={`mailto:${t.helpMail}`}>
+          <b><Ico name="chat" size={16} />{t.help}</b><small>{t.helpSub}</small><small><bdi dir="ltr">{t.helpMail}</bdi></small>
+        </a>
         <button className="ob-lang" type="button" onClick={switchLang}>{t.lang}</button>
       </aside>
 
@@ -1156,7 +1163,11 @@ export default function Start() {
       </header>
 
       <main className="ob-main">
-        <div className="ob-content">{main}</div>
+        <div className="ob-content">
+          {main}
+          {/* The side rail, where the help box lives, is only there on a laptop. */}
+          <p className="ob-help-line"><a className="ob-link" href={`mailto:${t.helpMail}`}>{t.help}</a> <bdi dir="ltr">{t.helpMail}</bdi></p>
+        </div>
         {error && <p className="ob-error" role="alert">{error}</p>}
         <div className="ob-actions">{actions}</div>
       </main>
