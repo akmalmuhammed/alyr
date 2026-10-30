@@ -320,9 +320,9 @@ function Minutes() {
 }
 
 export default function FilmCanvas({ words }: { words: FilmWords }) {
-  // All in one commit: on this page every insertion re-styles the whole document (its
-  // `:root:has(...)` rules), so one insertion costs least. The windows are not laid out until
-  // film.ts starts them (film.css, `content-visibility`).
+  // All in one commit, so the page re-styles once (an insertion cost a whole-page re-style
+  // until the Agent figure's `:has()` rules were rewritten; agentfig.css). The windows are not
+  // laid out until film.ts starts them (film.css, `content-visibility`).
   useEffect(() => {
     window.dispatchEvent(new Event(FILM_READY));
   }, []);
