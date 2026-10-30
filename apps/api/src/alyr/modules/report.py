@@ -29,7 +29,7 @@ import asyncpg
 from alyr import brand
 from alyr.channels.base import InboundMessage, OutboundMessage
 from alyr.config import get_settings
-from alyr.core import consent, jobs, mail, templates
+from alyr.core import consent, drawing, jobs, mail, templates
 from alyr.core.normalise import has_arabic
 from alyr.core.outbound import Outbound
 from alyr.db import Database
@@ -263,14 +263,15 @@ async def _owner_emails(conn: asyncpg.Connection) -> list[str]:
 
 # ------------------------------------------------------------------ sending it
 
-def _draw(read, lang: str) -> tuple[bytes, dict]:
-    """The card (PNG) and the text under it in one language. A card that cannot be drawn
-    is logged and comes back empty, so the text still goes."""
+async def _draw(read, lang: str) -> tuple[bytes, dict]:
+    """The card (PNG) and the text under it in one language. The card is drawn in the
+    drawing process, so the worker's other jobs carry on meanwhile (ALY-276). A card that
+    cannot be drawn is logged and comes back empty, so the text still goes."""
     from alyr.modules.agent import card, week  # the Agent's engine reads this module
 
     text = week.message(read, lang)
     try:
-        image = card.render(week.card(read, lang))
+        image = await drawing.run(card.render, week.card(read, lang))
     except Exception:  # noqa: BLE001 - a missing picture must not stop the report
         log.exception("weekly report card not drawn")
         image = b""
@@ -287,7 +288,7 @@ async def card_and_text(
     from alyr.modules.agent import week
 
     read = await week.read(conn, week_start, now)
-    return {lang: _draw(read, lang) for lang in sorted(set(langs))}
+    return {lang: await _draw(read, lang) for lang in sorted(set(langs))}
 
 
 async def deliver(conn: asyncpg.Connection, outbound: Outbound, report: dict) -> int:

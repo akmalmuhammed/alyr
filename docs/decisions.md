@@ -57,6 +57,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-061 | Company mail moves to Zoho Mail (free plan): hello@ with akmal@ and security@ as aliases, and a mailbox for Beevi Jinan, the registered owner; Resend still sends the product's email | Accepted |
 | D-063 | Order businesses get a self-serve onboarding path (a third way, `orders`) made of thin screens over the Catalog's own APIs; one flow for both doors, automatic first, money later | Accepted |
 | D-077 | The worker runs several jobs at once (5 per process), one customer's jobs one after another in the order they were queued; one HTTP connection to Meta is kept open; on SIGTERM the worker finishes what started and puts the rest back | Accepted |
+| D-078 | Customers' jobs are claimed before background work (weekly reports, photos for the store, events to a shop's own system); PDFs and report cards are drawn in a process of their own; a sent document's PDF is stored once; the order page reads in one transaction | Accepted |
 | D-064 | The owner's test order is marked in the database (a trigger sets `orders.is_test`), counted nowhere (a guard test reads every query), and cancelled with its stock returned when the test ends | Accepted |
 | D-067 | Terms and the privacy notice are versions ALYR publishes; an owner accepts them at sign-up and again when a new one is published, in an append-only record | Accepted |
 | D-080 | The order tracking page opens by a signed link that runs out (`/t/<shop>?t=<token>`, purpose `track`, `ALYR_LINK_DAYS`); the order's ID alone opens nothing. The pay page follows after the payment adapters | Accepted |
@@ -1393,6 +1394,27 @@ Nothing claims more than the page, as before.
 **Chosen over** one worker process per job (more connections, which the database tier cannot spare: ALY-276 PERF-9), running a whole batch at once without lanes (two messages to one customer could arrive the wrong way round), and a lane column in the queue (the payload already says who a job is about).
 
 **Revisit when** one worker is not enough at peak (then a second instance: lanes keep order within a process, not across two), or the database tier grows (then more at once).
+
+## D-078 · Heavy work stays off the customer's path
+**Date** 29 Oct 2026 · **Status** Accepted (go-live checklist item 35 is Claude's, and the founder's instruction of 29 Oct was to finish the items in Claude's scope) · Linear ALY-276 (PERF-5, PERF-6, PERF-8, PERF-12) · Builds on D-077 (several jobs at once) and D-076 (the read-only order page)
+
+**Where we were.** The go-live audit found four ways heavy work got in a customer's way.
+- At nine on Sunday every shop's weekly report is due at once, and the queue took jobs in the order they were due: 300 reports stood in front of a customer's message (p50 89 s, p95 166 s).
+- A PDF was drawn in a thread of the API's own process, and the weekly card in the worker's event loop itself. Drawing holds the interpreter while it runs, so every request and job of that process waited (webhooks from Meta at p95 16 s during a burst).
+- A document sent on WhatsApp was stored twice, in `document_files` and beside its message, and kept for good (at 300 shops the 10 GB disk filled in about six weeks).
+- The order page took six connections from the pool and ran 46 statements for one page, and made every item's row to send 48.
+
+**The decision.**
+- **Customers first.** A job kind is registered as `background` when no customer waits for it: the weekly report, a photo for the store, photos from an import, an event for a shop's own system. The claim takes every customer's job that is due first, then no more background jobs than the runner runs at once. A background job that has waited 15 minutes takes its turn like any other, so a steady stream of messages delays a report and never stops it. The reports keep their time (nine on Sunday, as the site promises) rather than being spread over the hour: with this order and five jobs at once they no longer hold anyone up.
+- **Drawing in a process of its own** (`core/drawing.py`): one process beside the API or the worker, started the first time something is drawn, and started again if it dies. Measured on one CPU, 24 receipts drawn four at a time: the event loop's delay was 65 ms at p95 with threads and 1 ms with the process, in the same total time. It costs about 60 MB.
+- **A sent document's PDF is stored once.** The message points at the document whose file it carries (`message_media.document_id`, migration 0070); a picture with no other copy is still kept beside its message.
+- **The order page in one transaction.** The router's module check keeps the shop it looked up, and the page reads the shop's features once and makes only the rows it sends (all of them for a search, which reads every item's words). 200 items, 48 on the page: 6 connections and 46 statements became 3 and 30; 32.8 ms became 23.9 ms (median, on a laptop).
+
+**Still drawn while the number is held.** A document's PDF is drawn inside the transaction that takes its number, so the series stays locked (and a connection held) for the drawing, about 0.2 s. Drawing it after the commit would need the paper's look (the shop's colours, logo and stamp) copied onto each document, or a document could be drawn later with a newer logo. Documents are off for every shop until the product lead switches them on (`catalog.py`); this is to do before many shops use them.
+
+**Chosen over** a priority column in the queue (the kind already says it, and a column would need every enqueue to set it), spreading the reports over the hour (the site says nine), more drawing processes (each instance has one CPU), and, for the order page, paging in SQL and a short cache of the catalog (the bigger change, measured against today's sizes first: the page now makes only the rows it sends; a shop's whole catalog is still read for each page).
+
+**Revisit when** a shop's catalog passes about a thousand items or the load test before the fiftieth shop (go-live gate 3) shows the page as the limit (then paging in SQL, or a cache of a few seconds), or documents are switched on for many shops (then drawing after the commit, above).
 
 ## D-064 · The owner's test order is marked in the database, counted nowhere, and cancelled when the test ends
 **Date** 28 Oct 2026 · **Status** Accepted (built under the founder's go-ahead for the order path, 28 Oct: "Start part 3"; the rules are the issue's own: test orders never count in reports, the Agent or the money-back result) · Linear ALY-168, epic ALY-163 · Spec `specs/028-order-test/spec.md` · Builds on D-031 (the private test line) and D-063 (the order path)

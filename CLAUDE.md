@@ -57,9 +57,10 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               ALYR's own billing by card (paddle.py is Paddle's API and webhook signature,
                               card_billing.py the checkout, the webhook's job and renewals; D-074),
                               actions (one set of actions behind the workspace and WhatsApp, D-065),
-                              staff_link (links a staff number to a person by a one-time code) and
+                              staff_link (links a staff number to a person by a one-time code),
                               not_sent (the messages that did not reach a customer, and sending one
-                              again through the same consent checks; specs/036)
+                              again through the same consent checks; specs/036) and
+                              drawing (PDFs and report cards drawn in a process of their own, D-078)
   src/alyr/modules/           What answers customers: ledger, orders, bookings, inbox, agent (the owner's
                               weekly view), report.py (weekly report card); router.py picks the module.
                               items/ is the Catalog's engine (what a shop sells: variants, availability,
@@ -163,7 +164,8 @@ scripts/api-in-docker.sh uv run pytest -q # where Windows blocks the compiled da
 ## Conventions
 
 - Modules receive `InboundMessage` and return `OutboundMessage` objects. They do not know which channel is in use, so everything works against the simulator first.
-- Every outgoing message goes through `core/outbound.py`, which records it and queues a job; `core/jobs.py` delivers it with retries. Never call a channel or a slow outside service directly from a request: enqueue a job. Jobs run several at a time; a job about one customer names them in its payload (`contact_id`, or the sender's number) so it runs after that customer's earlier jobs, in order (D-077).
+- Every outgoing message goes through `core/outbound.py`, which records it and queues a job; `core/jobs.py` delivers it with retries. Never call a channel or a slow outside service directly from a request: enqueue a job. Jobs run several at a time; a job about one customer names them in its payload (`contact_id`, or the sender's number) so it runs after that customer's earlier jobs, in order (D-077). Work no customer waits for (a weekly report, photos, events out) is registered `background=True` and runs after theirs (D-078).
+- Drawing (a PDF, a report card, anything CPU-heavy) goes through `core/drawing.py`, a process of its own: in the API's or the worker's own process, even in a thread, it holds up every request while it draws (D-078).
 - Compliance outputs (SIF files, UBL invoices), when they exist, are tested against golden files in `fixtures/` (to be created with them), byte for byte.
 - User-facing text exists in Arabic and English. No hard-coded strings in UI code.
 - Amounts are integers in dirhams (1 QAR = 100 dirhams). Never floats.

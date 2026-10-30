@@ -363,7 +363,7 @@ def render(name: str, lang: str, params: list[str] | tuple[str, ...]) -> str | N
 
 def notice(
     to: UUID, name: str, lang: str, body: str, *params: object, image: bytes = b"",
-    document: bytes = b"", filename: str = "",
+    document: bytes = b"", filename: str = "", document_id: UUID | None = None,
 ) -> OutboundMessage:
     """A notice to a customer who may have last written more than 24 hours ago.
 
@@ -372,7 +372,8 @@ def notice(
     window is that image with `body` under it; outside it, the image fills the
     template's image header, and is left out if the template has none. A `document` (a PDF
     with its `filename`) goes the same way: a document message with `body` as its caption
-    inside the window, the template's document header outside it."""
+    inside the window, the template's document header outside it. `document_id` names the
+    issued document the PDF is, so it is not stored a second time."""
     template = CATALOGUE[name]
     if len(params) != len(template.samples):
         raise ValueError(f"{name} takes {len(template.samples)} values, got {len(params)}")
@@ -381,4 +382,5 @@ def notice(
         template_category=template.category,  # type: ignore[arg-type]
         template_params=tuple(clean(value) for value in params),
         lang="ar" if lang == "ar" else "en", image=image, document=document, filename=filename,
+        document_id=document_id,
     )

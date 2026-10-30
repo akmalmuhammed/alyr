@@ -13,6 +13,12 @@ us no way to make a send idempotent, so that small window is accepted.
 A runner works on several jobs at once (`concurrency`), because a send mostly waits for
 Meta. The jobs about one customer still run one after another, in the order they were
 queued, so a customer's messages arrive in the order they were written (ALY-276).
+
+Customers come first. A kind registered as `background` (a weekly report, a photo for the
+store, an event for a shop's other system) is claimed only after every customer's job that
+is due, and a batch holds no more of them than the runner runs at once. So the shops' weekly
+reports, all due at nine on Sunday, never stand in front of a customer's message. A
+background job that has waited `BACKGROUND_WAITS_AT_MOST` takes its turn like any other.
 """
 
 import asyncio
@@ -36,6 +42,9 @@ STUCK_AFTER_SECONDS = 300
 # database's time in a burst of messages (ALY-275).
 RECLAIM_EVERY_SECONDS = 60
 BATCH = 20
+# A background job waits behind customers' jobs for this long at most, then queues like any
+# other: a steady stream of messages can delay a weekly report, never stop it.
+BACKGROUND_WAITS_AT_MOST = 900
 # The shop in scope, said in a query on `jobs`. The table's row-level policy also lets the
 # worker see every shop, and that "or" keeps PostgreSQL from using an index on tenant_id on
 # its own: a query that names the shop as well uses `jobs_waiting` (ALY-275).
@@ -61,6 +70,14 @@ async def enqueue(
     )
 
 
+_CLAIM = (
+    "update jobs set status = 'running', locked_at = now(), attempts = attempts + 1 "
+    "where id in (select id from jobs where status = 'queued' and run_at <= now() and {which} "
+    "             order by run_at for update skip locked limit $1) "
+    "returning id, tenant_id, kind, payload, attempts, max_attempts, run_at"
+)
+
+
 def lane(job: asyncpg.Record) -> str:
     """Jobs in one lane run one after another. A job about a customer (a message to send
     names the contact, a message received names the sender) shares its lane with that
@@ -80,15 +97,22 @@ class JobRunner:
         self._stopping = False
         self._handlers: dict[str, Handler] = {}
         self._on_dead: dict[str, Handler] = {}
+        self._background: set[str] = set()
         self._draining = False
         self._again = False
         self._reclaimed_at = float("-inf")
 
-    def register(self, kind: str, handler: Handler, on_dead: Handler | None = None) -> None:
-        """`handler` does the work. `on_dead` runs once when the job has failed for good."""
+    def register(
+        self, kind: str, handler: Handler, on_dead: Handler | None = None, *,
+        background: bool = False,
+    ) -> None:
+        """`handler` does the work. `on_dead` runs once when the job has failed for good.
+        A `background` kind is work no customer is waiting for: it runs after theirs."""
         self._handlers[kind] = handler
         if on_dead:
             self._on_dead[kind] = on_dead
+        if background:
+            self._background.add(kind)
 
     async def drain(self) -> int:
         """Run every job that is due, including jobs those jobs create. Safe to call
@@ -188,13 +212,19 @@ class JobRunner:
                     "where status = 'running' and locked_at < now() - make_interval(secs => $1)",
                     STUCK_AFTER_SECONDS,
                 )
-            return await conn.fetch(
-                "update jobs set status = 'running', locked_at = now(), attempts = attempts + 1 "
-                "where id in (select id from jobs where status = 'queued' and run_at <= now() "
-                "             order by run_at for update skip locked limit $1) "
-                "returning id, tenant_id, kind, payload, attempts, max_attempts, run_at",
-                BATCH,
+            background = sorted(self._background)
+            # Customers' jobs first, with any background job that has waited long enough.
+            claimed = await conn.fetch(
+                _CLAIM.format(which="(kind <> all($2::text[]) "
+                                    "or run_at < now() - make_interval(secs => $3))"),
+                BATCH, background, BACKGROUND_WAITS_AT_MOST,
             )
+            room = min(BATCH - len(claimed), self._concurrency)
+            if room > 0 and background:
+                claimed += await conn.fetch(
+                    _CLAIM.format(which="kind = any($2::text[])"), room, background
+                )
+            return claimed
 
     async def _run(self, job: asyncpg.Record) -> None:
         handler = self._handlers.get(job["kind"])
