@@ -205,8 +205,8 @@ def populate(world: Stopped, tenant: UUID, *, first: bool) -> None:
         "values ($1, 'Till', $2, $3, '{sales:write}')", uuid4().hex[:8], uuid4().hex + uuid4().hex)
     endpoint = owner_row(
         "insert into webhook_endpoints (tenant_id, name, url, events, secret) values ($1, 'Books', "
-        "'https://books.example/hook', '{document.issued}', "
-        "'whsec_0123456789abcdef0123456789abcdef') returning id")
+        "'https://books.example/hook', '{document.issued}', $2) returning id",
+        "whsec_" + "ab" * 16)
     sql("insert into webhook_deliveries (tenant_id, endpoint_id, event, payload) "
         "values ($1, $2, 'document.issued', '{}'::jsonb)", endpoint)
     sql("insert into onboarding_steps (tenant_id, step_key) values ($1, 'products')")
