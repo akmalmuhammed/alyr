@@ -28,7 +28,7 @@ customers use ALYR. From the 17 Oct 2026 audit (`docs/audit/2026-10-17.md`).
 - [ ] A rollback by traffic split has been rehearsed on the API, the web app and the worker, and a deploy afterwards served the new revision (`rollback.md`, "Rehearsal")
 
 ## Application
-- [ ] Rate limits on sign-in codes, sign-up and public pages (ALY-116, built; the per-address part is on only once the edge signs the visitor's address and the API is told to read it: ALY-265, steps and check in `client-address.md`; Cloudflare in front: HTTPS only, TLS 1.2 and header rules are live since 30 Oct, the rate-limit rule is prepared and waits for a yes: `cloudflare-edge.md`)
+- [ ] Rate limits on sign-in codes, sign-up and public pages (ALY-116, built; the per-address part is on only once the edge signs the visitor's address and the API is told to read it: ALY-265, steps and check in `client-address.md`; Cloudflare in front: HTTPS only, TLS 1.2, header rules and a Block-only rate-limit rule are live since 30 Oct: `cloudflare-edge.md`)
 - [ ] Staff roles: agents cannot change prices, services, hours or send bulk reminders (audit issue)
 - [ ] Contact merge keeps consent records (audit issue)
 - [x] Security headers on the web app (CSP, HSTS, frame-ancestors, nosniff) and an Origin check on signed-in changes (ALY-118); on the public site: `_headers` has HSTS, nosniff, frame-ancestors, base-uri, object-src; Cloudflare's header rules for `api` and `media` are live (`cloudflare-edge.md`)

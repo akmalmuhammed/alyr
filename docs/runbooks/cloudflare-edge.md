@@ -42,11 +42,23 @@ Every name below (`app`, `api`, `media`, `www`) is in the zone `alyr.qa` of the 
 |---|---|---|---|
 | Cloudflare Free Managed Ruleset | "Always active" in the dashboard (Security, Settings), cannot be switched | Same | The full Cloudflare Managed Ruleset and the OWASP ruleset need the Pro plan |
 | Custom WAF rules | none | none | None needed yet: unknown paths already answer 404 |
-| Rate limiting rules | none | **none: prepared, waiting for a yes** (section 3) | Free allows one rule, counted over 10 seconds, and **only the Block action** (Cloudflare refused `log` and `managed_challenge` with "not entitled") |
+| Rate limiting rules | none | **one rule, live since 30 Oct** (step 9) | Free allows one rule, counted over 10 seconds, and **only the Block action** (Cloudflare refused `log` and `managed_challenge` with "not entitled"), so there was no gentler start; it went live with the founder's yes |
 | Bot Fight Mode, Super Bot Fight Mode | off | off, on purpose | Bot Fight Mode cannot be skipped for a path with a WAF rule and may challenge API calls (Cloudflare's documentation); a webhook from Meta or Paddle is such a call |
 | Security level, Browser Integrity Check, challenge lifetime | medium, on, 30 min | Same | |
 | Page rules, IP access rules, cache rules, configuration rules | none | none | |
 | Response header Transform Rules | none | **3 rules** (below) | |
+
+### Web Analytics (seen 30 Oct 2026, read only, not changed)
+
+| Item | State |
+|---|---|
+| Setting | **On, with automatic setup.** One Web Analytics site, `alyr.qa`, made on 28 Oct 2026, covers the whole zone (the zone setting `rum` reads `on` and is editable). The dashboard showed 19 page views and 17 visits in the last 24 hours |
+| What it does | Cloudflare adds a `<script src="https://static.cloudflareinsights.com/beacon.min.js/...">` tag to HTML pages, only for a browser's request (`curl` sees no tag) |
+| On `alyr.qa` | The script loads (200) and reports to `/cdn-cgi/rum` (204): the site's policy has no `script-src`, so nothing stops it |
+| On `app.alyr.qa` | The tag is injected but the app's policy (`script-src 'self' 'unsafe-inline'`) blocks the request (status 0, no bytes), so the browser logs a policy error on every page |
+| Documented | Not in `docs/stack.md` or `docs/data-residency.md` |
+| To turn it off (not done: the founder decides) | Dashboard, Observability, Analytics, Web analytics, the site `alyr.qa`, Manage site: switch off Automatic setup, or delete the site (the page shows "Manage site" and a ticked "Automatic setup"; the switch itself was not opened). By API: set the zone setting `rum` to `off`. Either removes the script and the console error; the same switch puts it back |
+| To keep it | Add a row to `docs/stack.md` and `docs/data-residency.md`, and leave the app's policy as it is: customer links carry a token in the address (`?t=`) and the policy keeps the beacon away from those pages (whether the beacon sends the query string was not checked). The product has its own analytics already (D-070), so the page-speed counter is not needed for it |
 
 ### Security headers a visitor gets
 
@@ -85,7 +97,8 @@ so it was left; adding them there is a product change in `apps/web/next.config.t
 
 Each step was one change, then a check from outside before the next. Steps 1 to 6 are on `alyr.qa`; steps 7 and 8 are on
 the second zone, `alyr.online`, and were made after the founder said yes to that domain by name (30 Oct, relayed by the
-session that runs the rollout). The last full run of `scripts/check-edge.sh` is after step 8.
+session that runs the rollout). Step 9 is on `alyr.qa` again and was made after the founder's yes to the rate-limit rule
+(same day, same way). The last full run of `scripts/check-edge.sh` is after step 9.
 
 | # | Change | Before | After | Verified | Undo |
 |---|---|---|---|---|---|
@@ -97,30 +110,52 @@ session that runs the rollout). The last full run of `scripts/check-edge.sh` is 
 | 6 | Response header Transform Rules (`infra/cloudflare/zone/response-header-rules.json`) | none | API and media get the headers above; `x-powered-by` removed on `app` | Headers read on every host; webhook, sign-in code, sign-up code and Paddle paths still answered by the API | Rules, Transform Rules, Modify Response Header: disable or delete the three rules |
 | 7 | SPF on `alyr.online` (a new TXT record, comment `CLD-18 30 Oct 2026: ...`) | none | `v=spf1 -all` (no sender is allowed) | The zone's own nameserver and Google's resolver answer it; `https://alyr.online/` and `www` still 301 to `alyr.qa` | DNS, Records, delete that TXT record |
 | 8 | DMARC on `alyr.online` (`_dmarc` TXT) | none | `v=DMARC1; p=quarantine;` (no `rua`: a report address on another domain needs an authorisation record, and there is nothing to report) | The same | DNS, Records, delete that TXT record |
+| 9 | Edge rate-limit rule "ALY-116 first layer" (`infra/cloudflare/zone/rate-limit-rule.json`, details below) | none: the `http_ratelimit` phase had no entrypoint | **Block**: 30 requests per 10 seconds per address and data centre on the paths below; the answer is 429 with a JSON message for 10 seconds | A burst of 40 empty POSTs to the sign-in code path: 30 answered 422 and 10 answered 429; one request right after: 429; a single request passed again about 11 seconds later. Outside the rule: 40 GETs to `/health/ready` all 200, 40 POSTs to the WhatsApp webhook all reached the API (401) | Delete the rule (Security, Security rules), or PUT `{"rules":[]}` to the `http_ratelimit` entrypoint |
 
-**Checked after the eight changes** (`scripts/check-edge.sh`, 30 Oct 2026, 43 checks, all passing): HTTPS redirects, site, sign-in page and
+**Checked after the nine changes** (`scripts/check-edge.sh`, 30 Oct 2026, 43 checks, all passing, run again after step 9): HTTPS redirects, site, sign-in page and
 `/health/ready` answer; an empty POST to the WhatsApp webhook, a wrong verify token and an unsigned Paddle post are
 each refused **by the API** (`bad signature`, `verification failed`, `not signed by Paddle`), so Cloudflare lets
 them through; the sign-in code route answers 422 to an empty body (no email sent); the headers above; TLS 1.0 and
 1.1 refused and 1.2 accepted; CAA, SPF, DKIM, MX and DMARC as in the table.
 
+**The rate-limit rule in detail (step 9).** Applied on 30 Oct 2026 in the business dashboard (the Chrome profile
+named "work"), after the founder's yes, relayed by the session that runs the rollout.
+
+- **Expression** (paths only: Cloudflare's documentation lists only the URI path and "verified bot" as fields on Free):
+  `(http.request.uri.path in {"/api/auth/code" "/api/auth/verify" "/api/onboarding/code" "/api/onboarding/verify" "/api/onboarding/business" "/api/onboarding/resume/stop" "/api/account/email/code"}) or (starts_with(http.request.uri.path, "/api/store/") and (ends_with(http.request.uri.path, "/orders") or ends_with(http.request.uri.path, "/orders/repeat")))`
+- **Counting and action:** per address and data centre (Cloudflare requires `cf.colo.id` in the count), 30 requests in 10
+  seconds, then Block for 10 seconds, answered `429` as `application/json` with
+  `{"detail":"Too many requests. Please wait a few seconds and try again."}` (Cloudflare accepted the custom answer on Free).
+- **Why 30:** it is a coarse flood guard above the API's own per-address limits, which are on since the Worker rollout
+  (ALY-265: 20 sign-in or sign-up codes, 30 code guesses and 10 sign-ups an hour, 30 orders or bookings in 10 minutes,
+  per address). In the 24 hours before, each of these paths saw one or two POSTs (founder tests); the largest POST burst
+  in the whole zone was 45 in a minute (about 7 in 10 seconds), all scanners posting to `/signup`, `/login`, `/signin`,
+  `/register` and `/api/auth/signin` on the static site, which already answers 403.
+- **Why Block and not log or challenge first:** the Free plan offers only Block for rate limiting, so there was no gentler
+  start. The number is high and the block is 10 seconds, so a wrong block costs a customer ten seconds.
+- **Booking is not covered:** `/api/book/<slug>`'s POST and GET share one path and the method cannot be told apart on Free;
+  a booking page opened by many people behind one shared address (a mall's wifi, a mobile carrier) could trip a limit set
+  for POSTs. The app's own booking limit covers it.
+- **Who it could catch:** a person (or a shop's whole office on one address) would need to post to these paths more than
+  three times a second. Nobody real has been seen to; the rule has not yet met a busy day.
+- **To watch it:** Security, Events, filter by the rule's action; see "Dates".
+
 **Not proven:** a real WhatsApp message and a real sign-in code email (no message was sent for this work); that
 no webhook is registered with a plain `http://` address at Meta or Paddle (neither dashboard was opened; such a
 caller would now be redirected instead of answered); a
 certificate renewal under the new CAA records (the first renewals start about a month before 26 Jan 2027, see
-"Dates"); a visitor on a device that speaks only TLS 1.1 or older (it now cannot connect, as intended).
+"Dates"); a visitor on a device that speaks only TLS 1.1 or older (it now cannot connect, as intended); the rate-limit rule on a busy day with real customers behind shared addresses.
 
 ## 3. Prepared, not applied
 
 | What | Why not applied | What is needed |
 |---|---|---|
-| **The edge rate-limit rule** (`infra/cloudflare/zone/rate-limit-rule.json`). The sign-in code and verify, the sign-up code, verify and business, the account email code and the order placement paths: 30 requests per 10 seconds per address and data centre, then 429 for 10 seconds. It is only a coarse flood guard above the API's own per-address limits, which are on since the Worker rollout of 30 Oct (ALY-265: 20 sign-in or sign-up codes, 30 code guesses and 10 sign-ups an hour, 30 orders or bookings in 10 minutes, per address; `apps/api/src/alyr/core/ratelimit.py`) | The brief was "log or challenge first, not block". The Free plan offers **only Block** for rate limiting (a paid plan is needed for Log and the challenges) | The founder's or the parent's yes to a Block rule at these numbers, or a paid plan. Numbers seen in the last 24 hours: the five sign-in and sign-up paths and the order path saw one or two POSTs each (founder tests); the largest POST burst anywhere in the zone was 45 in a minute (about 7 in 10 seconds), all scanners posting to `/signup`, `/login`, `/signin`, `/register` and `/api/auth/signin` on the static site, which already answers 403. So 30 in 10 seconds would not have touched a real visitor. Booking is left out because a booking page's POST and GET share one path, and Cloudflare's documentation lists only the URI path and "verified bot" as fields on Free (so the method cannot be told apart); the app's own limit covers it |
-| **Access for the back office** (ALY-219) | Needs four things this work cannot do: the Zero Trust account (below), a new name `ops.alyr.qa` on the Worker `alyr-edge` (off limits here, the parent is changing it), the web app serving the console on that name and answering 404 for `/ops` on `app` (product), and the API checking the `Cf-Access-Jwt-Assertion` header. Without that last part Access is only a front door: the API's public `run.app` address skips Cloudflare entirely (CLD-3) | See "Needs the founder", item 3 |
+| **Access for the back office** (ALY-219) | Needs four things this work cannot do: the Zero Trust account (below), a new name `ops.alyr.qa` on the Worker `alyr-edge` (the Worker was off limits for this work), the web app serving the console on that name and answering 404 for `/ops` on `app` (product), and the API checking the `Cf-Access-Jwt-Assertion` header. Without that last part Access is only a front door: the API's public `run.app` address skips Cloudflare entirely (CLD-3) | See "Needs the founder", item 3 |
 | **HSTS with `includeSubDomains`** on `alyr.qa` (CLD-7's last point) | Every web name is HTTPS today, but it commits every future subdomain for a year | A yes, then one Transform Rule on the apex; preload is a separate, near-permanent step |
 
 ## 4. Needs the founder
 
-1. **Say whether to apply the rate-limit rule** (section 3), or whether a paid plan is wanted for log and challenge modes. One call applies it; no token is needed if it is done in the dashboard session again.
+1. ~~Say whether to apply the rate-limit rule~~ **Done 30 Oct** (the founder said yes; step 9). The item stays so the numbers below do not move. Whether to pay for log and challenge modes is still open, and not urgent.
 2. ~~A yes that names `alyr.online`~~ **Done 30 Oct** (the founder said yes by name; steps 7 and 8). The item stays so the numbers below do not move.
 3. **Zero Trust (Cloudflare Access).** The founder onboards the account: Cloudflare One, Get started, a team name, the Free plan. **Cloudflare asks for payment details even for the Free plan (nothing is charged)**, which an agent must not enter. After that, an Access application for the back office with the sign-in method "one-time PIN to `akmal@alyr.qa`", and the three code changes of section 3. Decide whether the console moves to `ops.alyr.qa` (ALY-219) or stays on a path of `app.alyr.qa` behind Access.
 4. **The tunnel `alyr-dev`** (CLD-18) is not in the business account (it has none), so it is in the personal one: the founder deletes it there (`cloudflared tunnel delete alyr-dev`, signed in to that account) and removes its credentials file under `~/.cloudflared`. An agent must not act in the personal account.
@@ -131,6 +166,7 @@ certificate renewal under the new CAA records (the first renewals start about a 
 
 | Date | What |
 |---|---|
+| **6 Nov 2026** | A week of the rate-limit rule: open Security, Events and look at what the rule blocked (an answer `429` with the JSON message). If a real customer was blocked, raise the number or take the rule off (step 9's undo); if nothing real was, leave it |
 | **13 Nov 2026** | Read two weeks of DMARC reports. If Resend and Zoho Mail both pass and nothing unknown sends as `alyr.qa`, change `_dmarc.alyr.qa` to `p=quarantine` (keep the `rua`). `reject` is not planned |
 | **27 Dec 2026** | Cloudflare starts renewing the certificates (they end 26 and 27 Jan 2027). Afterwards open SSL/TLS, Edge Certificates (all "Active") and run `scripts/check-edge.sh`. If a renewal failed, delete the CAA records first (change 4), then ask Cloudflare to retry |
 | Each quarter | `dig DS qa. +dnssec`: if the registry signs `.qa`, turn DNSSEC on (the DS record at the registry is the founder's) |

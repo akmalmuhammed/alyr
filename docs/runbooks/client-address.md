@@ -148,7 +148,9 @@ dropped). After a leak, drop the old key at once instead of keeping it: `finish`
 
 - **IPv6.** An address is counted whole. A visitor with a whole `/64` can rotate within it, which
   the usual practice of counting the `/64` would stop. Follow-up.
-- **Cloudflare rate-limit rules in front** (the first layer in `ALY-116`) are not set.
+- **Cloudflare rate-limit rules in front** (the first layer in `ALY-116`) are one rule since 30 Oct: 30 requests per 10 seconds
+  per address on the sign-in, sign-up and order POSTs, Block only (the Free plan has no log or challenge mode), booking not in
+  it. See `cloudflare-edge.md`.
 - **Where the web app's own server calls the API** (the order page): not limited today, so the
   headers are not observable in production; the unit test and the structure test cover them.
 - **Another host.** The interim Cloudflare and Neon host (`cloudflare-neon-hosting.md`, never

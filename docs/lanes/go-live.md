@@ -31,10 +31,11 @@ Last updated 30 Oct 2026 (Cloudflare edge and DNS hardening, ALY-116 first layer
   API and the media host their security headers. Nothing else moved: the Worker `alyr-edge` was not touched, MX
   and DMARC are as they were (`p=none`, review 13 Nov). Every step was checked from outside with
   `scripts/check-edge.sh`. `alyr.online`, which sends no mail, got SPF `-all` and DMARC `quarantine` after the
-  founder's yes. **Waiting on the founder (Needs Akmal):** the three answers in
-  `docs/runbooks/cloudflare-edge.md`, section 4 (the Block-only rate-limit rule, Zero Trust for the back
-  office, the old tunnel). Not done: Access and `ops.alyr.qa` (ALY-219), the edge
-  rate-limit rule, DNSSEC (`.qa` is not signed), MTA-STS.
+  founder's yes. The edge rate-limit rule (Block only on Free: 30 requests per 10 seconds per address on the sign-in,
+  sign-up and order POSTs) went live the same day after his yes, tested with a burst from the laptop.
+  **Waiting on the founder (Needs Akmal):** the answers in `docs/runbooks/cloudflare-edge.md`, section 4 (Zero Trust
+  for the back office, the old tunnel) and whether Cloudflare Web Analytics stays on (section 1). Not done: Access and
+  `ops.alyr.qa` (ALY-219), booking in the rate-limit rule, DNSSEC (`.qa` is not signed), MTA-STS.
 
 - **Backups, restore and secrets audited (ALY-34, 30 Oct 2026), in a pull request.** Read-only audit of `alyr-prod`
   (`docs/audit/hardening-2026-10-30.md`; repeat with `infra/gcp/audit.sh`, which reports no FAIL today). A nightly
@@ -56,7 +57,7 @@ Last updated 30 Oct 2026 (Cloudflare edge and DNS hardening, ALY-116 first layer
   `scripts/check-client-address.sh` checks the whole path from outside. **Waiting on the
   founder (Needs Akmal):** approve the five steps in `docs/runbooks/client-address.md`, in order.
   Not done: a CI job for the edge Worker's tests (`pnpm test` in `infra/cloudflare/edge`; CI cannot
-  be edited while PR #164 is open), IPv6 `/64` counting, Cloudflare rate-limit rules (prepared, Block only on Free: `docs/runbooks/cloudflare-edge.md`).
+  be edited while PR #164 is open), IPv6 `/64` counting. Cloudflare's first-layer rate-limit rule is live since 30 Oct (`docs/runbooks/cloudflare-edge.md`).
 
 - **Site tooling, in a pull request, not merged or run on GitHub** (Actions is blocked by
   billing).
