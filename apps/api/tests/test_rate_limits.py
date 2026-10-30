@@ -102,9 +102,12 @@ def test_the_address_is_read_only_where_the_settings_say_so():
             client=SimpleNamespace(host=peer),
         )
 
-    off = SimpleNamespace(client_ip_header="", client_ip_proxies=1)
-    on = SimpleNamespace(client_ip_header="X-Forwarded-For", client_ip_proxies=1)
-    two = SimpleNamespace(client_ip_header="x-forwarded-for", client_ip_proxies=2)
+    def named(header, proxies=1):
+        return SimpleNamespace(
+            client_ip_header=header, client_ip_proxies=proxies, client_ip_keys=""
+        )
+
+    off, on, two = named(""), named("X-Forwarded-For"), named("x-forwarded-for", 2)
     spoofed = request("1.1.1.1, 203.0.113.7")
     # Nothing is read from a header nobody named: a visitor cannot pick their own address.
     assert ratelimit.client_address(spoofed, off) == "10.0.0.5"

@@ -79,6 +79,9 @@ class OutboundMessage:
     # image. `filename` is what the customer's phone shows, with its extension.
     document: bytes = b""
     filename: str = ""
+    # Someone typed this in the inbox; it is not an automatic reply. It still goes while
+    # ALYR has paused a client's sending for billing (ALY-218).
+    typed: bool = False
     # The issued document that file is, when it is one: the outbound layer then keeps a pointer
     # to the document's own stored PDF, not a second copy (ALY-276).
     document_id: UUID | None = None

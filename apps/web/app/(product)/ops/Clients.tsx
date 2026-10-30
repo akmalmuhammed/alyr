@@ -34,6 +34,9 @@ function progress(b: ClientSummary["businesses"][number]) {
   );
 }
 
+// A client whose plan needs a look, as the hourly check left it (ALY-218).
+const LATE: Record<string, string> = { past_due: "Past due", suspended: "Paused: overdue", cancelled: "Cancelled" };
+
 export function Clients({ pricing, onChange, initialClient }: { pricing: Pricing | null; onChange: () => void; initialClient?: string }) {
   const [list, setList] = useState<ClientSummary[]>([]);
   const [openId, setOpenId] = useState("");
@@ -168,6 +171,8 @@ export function Clients({ pricing, onChange, initialClient }: { pricing: Pricing
                       </span>
                     </>
                   ) : <small>no price yet</small>}
+                  {c.billing_state && LATE[c.billing_state] && <><br /><span className="sh-pill wait">{LATE[c.billing_state]}</span></>}
+                  {c.cancels_on && c.billing_state !== "cancelled" && <><br /><small>Cancels on {c.cancels_on}</small></>}
                 </td>
               </tr>
             ))}

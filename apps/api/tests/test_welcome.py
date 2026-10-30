@@ -53,7 +53,9 @@ def address(who="person"):
 def sign_up(client, lang="en", email=None):
     """A new owner makes a business at /start; the client is left signed in as them."""
     email = email or address("owner")
-    name = f"Barbers {uuid4().hex[:6]}"
+    # A letter ends the hex, so the name never holds six digits in a row, which the welcome
+    # email is checked not to carry (a sign-in code is six digits).
+    name = f"Barbers {uuid4().hex[:6]}b"
     body = {"signup_token": signup_token(client, email), "owner_name": "Hamad Al-Kuwari",
             "name": name, "name_ar": "حلاق السد", "type": "salon", "area": "Al Sadd",
             "accepted_terms": accepted_terms(client), "lang": lang}

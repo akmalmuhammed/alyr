@@ -32,7 +32,7 @@ async def details(
             "select p.amount, p.status, p.provider, c.name as customer, "
             "c.lang, t.name as shop, "
             "t.name_ar as shop_ar, t.slug, "
-            "o.number as order_number, p.order_id, p.account_id, p.checkout_url, "
+            "o.number as order_number, p.order_id, p.booking_id, p.account_id, p.checkout_url, "
             "p.gateway_status, a.status as account_status "
             "from payment_requests p join contacts c on c.id = p.contact_id "
             "join tenants t on t.id = p.tenant_id left join orders o on o.id = p.order_id "
@@ -40,9 +40,22 @@ async def details(
             "where p.id = $1",
             payment_id,
         )
+        # A booking's deposit (D-084): which visit, and the shop's rule the customer agreed to,
+        # shown again before paying. No other booking, no phone number.
+        booking = await conn.fetchrow(
+            "select b.number, b.service_name, s.name_ar as service_name_ar, b.deposit_terms, "
+            "r.name as resource, r.name_ar as resource_ar, r.kind as resource_kind, "
+            "to_char(b.starts_at at time zone t.timezone, 'FMDy FMDD Mon, FMHH12:MI AM') "
+            "  as when_text, "
+            "to_char(b.starts_at at time zone t.timezone, 'DD/MM HH24:MI') as when_text_ar "
+            "from bookings b join tenants t on t.id = b.tenant_id "
+            "left join services s on s.id = b.service_id "
+            "left join booking_resources r on r.id = b.resource_id where b.id = $1",
+            row["booking_id"],
+        ) if row is not None and row["booking_id"] else None
     if row is None:
         raise HTTPException(status_code=404, detail="payment not found")
-    found = dict(row)
+    found = {k: v for k, v in dict(row).items() if k != "booking_id"}
     account_id = found.pop("account_id")
     gateway_status = found.pop("gateway_status")
     account_status = found.pop("account_status")
@@ -55,6 +68,7 @@ async def details(
         **found, "customer": shown_name(row["customer"]).split(" ")[0],
         "amount_text": fmt_qar(row["amount"]),
         "order_id": str(row["order_id"]) if row["order_id"] else None,
+        "booking": dict(booking) if booking else None,
         "stand_in": account_id is None,
         "preparing": account_id is not None and not row["checkout_url"] and not stuck,
         "unavailable": row["status"] == "pending" and stuck,

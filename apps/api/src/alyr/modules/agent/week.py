@@ -26,7 +26,7 @@ import asyncpg
 from alyr import catalog
 from alyr.channels.base import MAX_CAPTION
 from alyr.core.auth import Staff
-from alyr.core.words import MESSAGES, ORDERS, REMINDERS, counted
+from alyr.core.words import MESSAGES, ORDERS, REMINDERS, REQUESTS, counted
 from alyr.modules.agent import facts as facts_
 from alyr.modules.agent import view
 from alyr.modules.agent.facts import Facts
@@ -444,6 +444,7 @@ def _done(w: Week, lang: str) -> str | None:
     rows = [
         (f.sent_for_you, MESSAGES, "", "رسائل أرسلتها نيابة عنك"),
         (f.booking_reminders_sent, REMINDERS, "booking ", "تذكيرات بالمواعيد"),
+        (f.review_requests_sent, REQUESTS, "review ", "طلبات تقييم"),
         (f.payment_reminders_sent, REMINDERS, "payment ", "تذكيرات بالدفع"),
     ]
     rows = [r for r in rows if r[0]]

@@ -125,6 +125,7 @@ class Facts:
     # Done for the business this week
     sent_for_you: int = 0
     booking_reminders_sent: int = 0
+    review_requests_sent: int = 0
     payment_reminders_sent: int = 0
     paid_by_link_week: int = 0
     # The team and the report
@@ -529,15 +530,24 @@ async def _bookings(conn, f: Facts, span, last, chart) -> None:
         )
     ]
     f.repeat_no_shows = [
-        Row(str(r["id"]), r["name"], {"no_shows": r["no_shows"], "next": r["next"]})
+        Row(str(r["id"]), r["name"], {
+            "no_shows": r["no_shows"], "next": r["next"],
+            # Who the next visit is with, for a shop with chairs or staff (D-084).
+            "with": {"name": r["with_name"], "name_ar": r["with_name_ar"],
+                     "kind": r["with_kind"]} if r["with_name"] else None,
+        })
         for r in await conn.fetch(
-            "select c.id, c.name, n.no_shows, min(b.starts_at) as next from contacts c "
+            "select c.id, c.name, n.no_shows, min(b.starts_at) as next, "
+            "(array_agg(res.name order by b.starts_at))[1] as with_name, "
+            "(array_agg(res.name_ar order by b.starts_at))[1] as with_name_ar, "
+            "(array_agg(res.kind order by b.starts_at))[1] as with_kind from contacts c "
             "join (select contact_id, count(*)::int as no_shows from bookings "
             "      where status = 'no_show' and starts_at >= $1::timestamptz - interval '90 days' "
             "      and starts_at < $1 group by contact_id having count(*) >= 2) n "
             "  on n.contact_id = c.id "
             "join bookings b on b.contact_id = c.id and b.status = 'booked' "
             "  and b.starts_at >= $1 and b.starts_at < $1::timestamptz + interval '7 days' "
+            "left join booking_resources res on res.id = b.resource_id "
             "group by c.id, c.name, n.no_shows order by next",
             now,
         )
@@ -719,6 +729,11 @@ async def _done(conn, f: Facts, span) -> None:
         f.booking_reminders_sent = await conn.fetchval(
             "select count(*) from bookings where reminded_at >= $1 and reminded_at < $2", *span
         )
+    # Review requests the shop asked ALYR to send (D-084); refused ones are not counted.
+    f.review_requests_sent = await conn.fetchval(
+        "select count(*) from review_requests where blocked is null "
+        "and sent_at >= $1 and sent_at < $2", *span
+    )
     if "ledger" in f.modules:
         f.payment_reminders_sent = await conn.fetchval(
             "select count(*) from messages where direction = 'out' "

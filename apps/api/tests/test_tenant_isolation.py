@@ -33,6 +33,9 @@ GLOBAL_TABLES = {
     # A client's card checkouts with ALYR's card provider (ALY-180): the owner reads their own
     # client's and may start one with nothing filled in; the back office does the rest.
     "card_checkouts",
+    # The emails ALYR sent a client about their plan (ALY-218): only the back office reads or
+    # writes them. Forced row-level security.
+    "billing_notices",
     # Which alerts are firing (ALY-121, D-073): a platform record with no customer data.
     "alert_state",
     # What owners are asked to accept: every shop may read it, only the back office adds to it

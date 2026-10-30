@@ -19,8 +19,6 @@ so go-live (the readiness check `paid`) needs nothing new.
 
 import json
 import logging
-from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
@@ -29,6 +27,7 @@ import asyncpg
 
 from alyr.config import Settings
 from alyr.core import access, jobs, paddle
+from alyr.core import subscription as plans
 from alyr.core.normalise import fmt_qar
 from alyr.db import Database
 
@@ -36,6 +35,8 @@ log = logging.getLogger("alyr.card_billing")
 
 CHECKOUT_JOB = "billing.card_checkout"
 SYNC_JOB = "billing.card_sync"
+# A client's cancellation took effect: its card subscription renews no more (ALY-218).
+CANCEL_JOB = plans.CANCEL_JOB
 # An open checkout is offered again for this long, for the same accepted quote, instead of
 # making a new one each time the owner presses Pay.
 REUSE_FOR = timedelta(hours=12)
@@ -117,12 +118,13 @@ class CardBilling:
     def register(self, runner: jobs.JobRunner) -> None:
         runner.register(CHECKOUT_JOB, self.checkout, self.checkout_gave_up)
         runner.register(SYNC_JOB, self.sync)
+        runner.register(CANCEL_JOB, self.cancel, self.cancel_gave_up)
 
     # ── making the checkout ────────────────────────────────
 
     async def checkout(self, _tenant_id: UUID, payload: dict) -> None:
         checkout_id = UUID(payload["checkout_id"])
-        async with _office(self._db) as conn:
+        async with access.office(self._db) as conn:
             row = await conn.fetchrow(
                 "select * from card_checkouts where id = $1 for update", checkout_id
             )
@@ -159,13 +161,13 @@ class CardBilling:
         try:
             data = await paddle.Paddle(self._settings).create_transaction(body)
         except paddle.Refused as error:
-            async with _office(self._db) as conn:
+            async with access.office(self._db) as conn:
                 await _fail(conn, checkout_id, str(error))
             return
         # paddle.Unavailable goes up: the job runner tries again later.
         transaction = str(data.get("id", ""))
         url = str((data.get("checkout") or {}).get("url") or "")
-        async with _office(self._db) as conn:
+        async with access.office(self._db) as conn:
             if not transaction.startswith("txn_"):
                 await _fail(conn, checkout_id, "Paddle answered without a transaction")
                 return
@@ -177,10 +179,47 @@ class CardBilling:
             )
 
     async def checkout_gave_up(self, _tenant_id: UUID, payload: dict) -> None:
-        async with _office(self._db) as conn:
+        async with access.office(self._db) as conn:
             await conn.execute(
                 "update card_checkouts set status = 'failed', problem = 'Paddle could not be "
                 "reached', updated_at = now() where id = $1 and status = 'creating'",
+                UUID(payload["checkout_id"]),
+            )
+
+    # ── cancelling (ALY-218) ───────────────────────────────
+
+    async def cancel(self, _tenant_id: UUID, payload: dict) -> None:
+        """Cancel the checkout's subscription at Paddle, now. Queued by the subscription
+        sweep (core/subscription.py) once a client's cancellation has taken effect."""
+        checkout_id = UUID(payload["checkout_id"])
+        async with access.office(self._db) as conn:
+            ref = await conn.fetchval(
+                "select subscription_ref from card_checkouts "
+                "where id = $1 and subscription_status = 'canceling'",
+                checkout_id,
+            )
+        if ref is None:
+            return
+        try:
+            data = await paddle.Paddle(self._settings).cancel_subscription(ref)
+            status = str(data.get("status", "canceled"))[:40]
+        except paddle.Refused as error:
+            # Already cancelled at Paddle, most likely: read it back to be sure.
+            log.warning("Paddle refused to cancel %s: %s", ref, error)
+            status = str((await paddle.Paddle(self._settings).subscription(ref)).get("status"))
+        async with access.office(self._db) as conn:
+            await conn.execute(
+                "update card_checkouts set subscription_status = $2, updated_at = now() "
+                "where id = $1",
+                checkout_id, status[:40],
+            )
+
+    async def cancel_gave_up(self, _tenant_id: UUID, payload: dict) -> None:
+        async with access.office(self._db) as conn:
+            await conn.execute(
+                "update card_checkouts set subscription_status = 'cancel_failed', "
+                "problem = 'Paddle could not cancel the subscription: cancel it in Paddle', "
+                "updated_at = now() where id = $1",
                 UUID(payload["checkout_id"]),
             )
 
@@ -206,7 +245,7 @@ class CardBilling:
             return False
         mine = (data.get("custom_data") or {}).get("alyr_checkout")
         subscription = data.get("subscription_id") if what == "transaction" else ref
-        async with _office(self._db) as conn:
+        async with access.office(self._db) as conn:
             row = await conn.fetchrow(
                 "select id, business_id from card_checkouts "
                 "where id = $1::uuid or provider_ref = $2 or subscription_ref = $3 "
@@ -230,7 +269,7 @@ class CardBilling:
         if payload["kind"] == "subscription":
             data = await api.subscription(ref)
             ours = (data.get("custom_data") or {}).get("alyr_checkout") == str(checkout_id)
-            async with _office(self._db) as conn:
+            async with access.office(self._db) as conn:
                 # Only the subscription made from this checkout, read from Paddle itself.
                 await conn.execute(
                     "update card_checkouts set subscription_ref = $2, subscription_status = $3, "
@@ -242,7 +281,7 @@ class CardBilling:
         data = await api.transaction(ref)
         if data.get("status") not in paddle.PAID:
             return
-        async with _office(self._db) as conn:
+        async with access.office(self._db) as conn:
             row = await conn.fetchrow(
                 "select * from card_checkouts where id = $1 for update", checkout_id
             )
@@ -285,6 +324,8 @@ class CardBilling:
             row["client_id"], row["quote_id"], covers, ref[:80], _day(data),
             f"{note}, by card ({paddle.usd_text(taken)} with tax)", currency, taken,
         )
+        # A renewal ends a pause at once (ALY-218).
+        await plans.refresh(conn, row["client_id"], self._settings)
         if first:
             await conn.execute(
                 "update card_checkouts set status = 'paid', problem = '', "
@@ -292,15 +333,6 @@ class CardBilling:
                 "where id = $1",
                 row["id"], subscription,
             )
-
-
-@asynccontextmanager
-async def _office(db: Database) -> AsyncIterator[asyncpg.Connection]:
-    """One transaction on which the API declares it is ALYR itself, as `routes/admin.py`
-    does for its staff: a client's billing is ALYR's own data, not a shop's."""
-    async with db.unscoped() as conn, conn.transaction():
-        await conn.execute("select set_config('app.platform_admin', 'on', true)")
-        yield conn
 
 
 async def _fail(

@@ -27,6 +27,7 @@ from alyr.core import (
     card_billing,
     pricing,
     readiness,
+    subscription,
     terms,
     welcome,
     whatsapp_attach,
@@ -161,6 +162,11 @@ class Payment(BaseModel):
 class CardBillingChange(BaseModel):
     # Null: the platform's setting (ALYR_CARD_BILLING). "off": this client pays by transfer.
     card_billing: Literal["off", "paddle"] | None
+
+
+class Cancellation(BaseModel):
+    # How the client asked: "email from the owner, 29 Oct", "call with Fatima".
+    note: str = Field(min_length=1, max_length=500)
 
 
 class OpenWithout(BaseModel):
@@ -859,6 +865,8 @@ async def record_payment(
                 reference=body.reference, received_on=body.received_on, note=body.note,
                 by=_by(staff),
             )
+            # A payment can end a pause at once (ALY-218).
+            await subscription.refresh(conn, client_id)
             await backoffice.audit(
                 conn, staff, "client.payment", "client", client_id, client_id=client_id,
                 detail={"amount": body.amount, "method": body.method,
@@ -897,10 +905,59 @@ async def change_card_billing(
 
 
 async def _access(conn, client_id: UUID) -> dict:
-    """What the client owes and paid, and their latest card checkout."""
+    """What the client owes and paid, their latest card checkout, and where their plan
+    stands (ALY-218)."""
+    now = await subscription.current(conn, client_id)
+    note = await conn.fetchrow(
+        "select cancel_note, cancel_requested_at, sending_paused_at from clients where id = $1",
+        client_id,
+    )
     return await access.summary(conn, client_id) | {
-        "checkout": await card_billing.latest(conn, client_id)
+        "checkout": await card_billing.latest(conn, client_id),
+        "subscription": subscription.view(now) | {
+            "cancel_note": note["cancel_note"] if note else "",
+            "paused_since": note["sending_paused_at"].isoformat()
+            if note and note["sending_paused_at"] else None,
+        },
     }
+
+
+@router.post("/clients/{client_id}/cancel")
+async def cancel_client(
+    client_id: UUID, body: Cancellation, request: Request, staff: Staff = Depends(platform_admin)
+) -> dict:
+    """The client asked to cancel. It takes effect in seven days (D-034): from that day ALYR
+    sends nothing more for its businesses and its card subscription is cancelled. Nothing is
+    deleted and the workspace stays open (D-033)."""
+    try:
+        async with _back_office(request) as conn:
+            day = await subscription.cancel(conn, client_id, body.note)
+            await backoffice.audit(
+                conn, staff, "client.cancel", "client", client_id, client_id=client_id,
+                detail={"cancels_on": day.isoformat(), "note": body.note.strip()},
+            )
+            return await _access(conn, client_id)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except subscription.CancelError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.delete("/clients/{client_id}/cancel")
+async def undo_cancel(
+    client_id: UUID, request: Request, staff: Staff = Depends(platform_admin)
+) -> dict:
+    """The client stays after all."""
+    try:
+        async with _back_office(request) as conn:
+            if await subscription.undo_cancel(conn, client_id):
+                await backoffice.audit(
+                    conn, staff, "client.cancel_undone", "client", client_id,
+                    client_id=client_id,
+                )
+            return await _access(conn, client_id)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
 
 
 @router.post("/clients/{client_id}/waive")
@@ -911,6 +968,7 @@ async def waive_payment(
     try:
         async with _back_office(request) as conn:
             if await access.waive(conn, client_id, body.reason):
+                await subscription.refresh(conn, client_id)
                 await backoffice.audit(
                     conn, staff, "client.payment_waived", "client", client_id, client_id=client_id,
                     detail={"reason": body.reason.strip()},

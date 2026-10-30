@@ -149,7 +149,7 @@ async def reply(
         raise LookupError("no such customer")
     if await team.sign_replies(conn):
         text = team.signed(text, sent_by)
-    result = await outbound.send(conn, OutboundMessage(to=contact_id, body=text))
+    result = await outbound.send(conn, OutboundMessage(to=contact_id, body=text, typed=True))
     await conn.execute(
         "update messages set sent_by = $2, sent_by_user = $3 where id = $1",
         result.message_id, sent_by, sender_id,

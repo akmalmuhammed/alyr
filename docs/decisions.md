@@ -55,7 +55,9 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-059 | Motion is always on: the site's figures (How we work, the products frame, the signature figures, with the flows, demos and the live Agent) keep playing, each with a Pause control; text arrives once | Accepted |
 | D-060 | ALYR runs on Google Cloud in Doha (Cloud Run, Cloud SQL, Secret Manager); replaces Azure (D-036) and the interim Cloudflare and Neon host (D-052); backups stay in Doha | Accepted |
 | D-061 | Company mail moves to Zoho Mail (free plan): hello@ with akmal@ and security@ as aliases, and a mailbox for Beevi Jinan, the registered owner; Resend still sends the product's email | Accepted |
+| D-069 | A shop's bookings are held to one customer at a time per resource (chair, person, room), not per shop; a shop with no resources is unchanged | Accepted |
 | D-081 | A person's own account screen: they switch between the businesses they work for (signing in opens the one they used last), change their sign-in email by a code sent to the new address (the old one is told), and an owner downloads everything the business keeps as one ZIP (every owner is emailed each time) | Accepted |
+
 | D-063 | Order businesses get a self-serve onboarding path (a third way, `orders`) made of thin screens over the Catalog's own APIs; one flow for both doors, automatic first, money later | Accepted |
 | D-077 | The worker runs several jobs at once (5 per process), one customer's jobs one after another in the order they were queued; one HTTP connection to Meta is kept open; on SIGTERM the worker finishes what started and puts the rest back | Accepted |
 | D-078 | Customers' jobs are claimed before background work (weekly reports, photos for the store, events to a shop's own system); PDFs and report cards are drawn in a process of their own; a sent document's PDF is stored once; the order page reads in one transaction | Accepted |
@@ -69,6 +71,10 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-070 | Product analytics with PostHog (EU), at two levels the visitor chooses: cookieless counting by default, cookies and masked recordings with consent; never customer pages, the inbox or names | Accepted |
 | D-075 | A customer's data: an owner or admin gives a customer a copy or forgets them from the conversation; the sales records stay without the person, issued documents unchanged; working copies (finished jobs, handled message IDs) are purged after 30 days, failed jobs after 90 | Accepted |
 | D-071 | The homepage plays like a video: the film starts at load and moves at once; its Pause controls are not on show (only on hover, keyboard focus or while paused); a click on the film pauses it | Accepted |
+| D-084 | Bookings: each chair or person has its own hours and the customer may pick one; staff run the day from the screen; a service may ask a deposit by pay link, held like the Catalog's and kept or refunded by the shop's own rule shown before paying; a review request goes to every customer the same way, never only to happy ones | Accepted |
+| D-083 | The per-address rate limits count the address the edge Worker signs (HMAC with a key only the Worker and the API hold); an address without a good signature is counted in one shared bucket, so a caller who skips the edge can neither pick nor borrow an address | Proposed (the founder approves the production steps in ALY-265's pull request) |
+| D-074 | Clients can pay ALYR by card through Paddle, in US dollars, recorded only from Paddle's signed webhook after reading the payment back | Accepted |
+| D-082 | A client who stops paying keeps everything for 14 days with reminders; then ALYR's automatic WhatsApp sending pauses until they pay, never their workspace or data; cancelling takes seven days | Proposed (built on the recommended option while the founder decides) |
 | D-065 | Owners and staff manage the shop from WhatsApp as well as the portal, through one shared action layer; phases 0 and 1 (link a number, read-only commands) are built first | Accepted (written as D-040 on 18 Oct; renumbered 28 Oct, D-040 is the look) |
 | D-072 | Shops get paid online through three doors, each ending in an account in the shop's own name: connect your own account (built first), ALYR-assisted sign-up with a partner (Noqoody, then SADAD), and opening by API only once a provider proves it; apply to Noqoody, SADAD and Tap. Updates D-044 | Accepted |
 
@@ -1376,6 +1382,28 @@ Go-live checklist items 40 and 41 (tracked under ALY-266), spec 040.
 
 ---
 
+
+## D-069 · One customer at a time per resource, not per shop
+**Date** 28 Oct 2026 · **Status** Accepted (the founder's 28 Oct instruction to build the open items of ALY-27) · Linear ALY-258, step 2 of ALY-27 · Spec `specs/026-bookable-resources/spec.md`
+
+**Where we were.** Since migration 0010 the database refused any two overlapping bookings of one shop. A salon with two chairs, a clinic with two doctors or a workshop with two technicians could take one customer at a time, and onboarding already offers these businesses a self-serve path (D-031).
+
+**The decision.**
+- A shop may list **resources** (a chair, a person, a room). The rule becomes one customer at a time **per resource**.
+- A shop with **no resources behaves exactly as before**. Nothing was migrated; a shop opts in by adding its first resource, which takes over the bookings still to come so they keep blocking it.
+- A time is free when at least one resource that does the service is free; a booking takes the first free one in the shop's order (or the one asked for), under the shop's lock; a move keeps its resource when it can.
+- A service can be narrowed to some resources; none narrowed means all.
+- A resource is switched off, not deleted (a booking points at it), and the last active one cannot be switched off.
+- The database stays the last guard: `bookings_no_overlap` now holds per `coalesce(resource_id, tenant_id)`.
+- Owners and admins change resources; agents can read them.
+
+**Rejected.**
+- *A capacity number per shop* ("2 at a time"). It cannot say which chair, whose calendar or which service needs which, and it would have to be thrown away for the first shop that needs a person's own diary.
+- *Migrating every existing shop into one default resource.* Nothing to gain, and it would change what every existing shop's database rule means for a feature they did not ask for.
+- *Letting customers choose the resource from day one.* The engine accepts a choice; the booking page offers none until a shop asks for it.
+
+**Revisit when.** A shop needs a resource's own hours, days off or a login (a stylist's own calendar), or assignment by least busy instead of first free, which concentrates the day on the first chair.
+
 ## D-063 · Order businesses get a self-serve onboarding path, over the Catalog's own APIs
 **Date** 28 Oct 2026 · **Status** Accepted (the founder, 28 Oct, in chat after the onboarding review: "it can be both in-person and auto, also focus on auto onboarding, in person I can just add through my admin console"; "ignore the money part, we will add it once our bank and payment stuff is done") · Linear ALY-164, ALY-168, epic ALY-163 · Spec `specs/027-order-onboarding/spec.md` · Builds on D-049 (one engine, three doors), D-053 (nothing is paid first) and D-055 (pay on collection)
 
@@ -1648,6 +1676,50 @@ Without it, analytics is off everywhere.
 
 **Revisit when** the `:root:has()` work lands (measure again), or the founder finds the hidden control hard to find.
 
+## D-084 · Chairs and people with their own hours, the day from the screen, deposits by the shop's rule, and a review request with no gating
+**Date** 29 Oct 2026 · **Status** Accepted (the founder's decision of 29 Oct to build ALY-27 before the salon sales demo, ALY-264; the review request added the same day by the product lead, with the instruction that there is no gating) · Linear ALY-27 · Spec `specs/033-bookings-chairs-deposits/spec.md` · Builds on D-069
+
+**Where we were.** D-069 let a shop list resources and held one customer at a time per resource, in the engine only. A resource had no hours of its own, the customer could not choose one, staff could not add a walk-in or move a booking from the screen, nothing asked a deposit, and nothing asked for a review.
+
+**The decision.**
+- **A resource is a person or a place, with its own working hours** (none set: the shop's). Free times are computed per resource. The customer picks **"Anyone"** or one of the people or places that do the service. This reverses D-069's "no customer choice yet": the salon demo and every salon we spoke about book a stylist by name.
+- **Staff run the day from the Bookings screen:** a day view by resource; add a walk-in or a booking taken by phone, at any minute; move to another time or resource; cancel; came or didn't come. Every action is on the activity record. Staff never double-book either: the same shop lock and the same database guard.
+- **Deposits per service, optional,** a fixed amount or a percentage of the price, asked by **pay link**. The booking holds the time for the shop's pay-link hold (`hold_minutes`, 30 by default, the Catalog's); unpaid at the end, the time is released and the customer told. A paid deposit confirms the booking, makes a **deposit receipt** (Documents, where it is on) and **counts against the final bill**.
+- **The shop's own rule** decides a paid deposit on a no-show and on a late cancel (keep or refund), with the hours that make a cancel late. **The customer is shown the rule before paying,** and the booking keeps the rule it was made under. ALYR never moves money (hard rule 3): "refund due" is a note to the shop, which refunds from its own account and marks it done.
+- **The payment link is ALYR's stand-in until the shop's payment provider is connected,** and every place that shows it says so.
+- **The review request:** per shop, off until the owner turns it on and gives the Google review link. One WhatsApp message when a booking is marked "came" or an order is done, in the customer's language, at most one per customer every 30 days, through the outbound layer (consent, stop, the 24-hour window or a utility template that names the visit). **Everyone is asked the same way: no gating.** ALYR does not first ask whether the customer was happy and send only the happy ones to Google, although ALY-27's first description said so: Google's review policy forbids selectively asking for positive reviews, and a shop caught doing it can lose its reviews. Anyone can reply in the chat, and the owner reads the reply in the inbox.
+- **New templates are written, not submitted** to Meta (`booking_deposit_due`, `booking_deposit_paid`, `booking_released`, `booking_cancelled_deposit`, `review_request`): submitting is the founder's go. The resource rides inside the existing templates' blanks, so their approved wording does not change.
+
+**Rejected.**
+- *A booking that waits for the deposit before it holds the time.* Two customers could pay for the same slot; the hold is the Catalog's tested pattern.
+- *Confirming the booking only when the deposit is paid, with no hold.* The same race, and a customer who has paid would find the time gone.
+- *Asking "were you happy?" first, and sending only the happy ones to Google.* Review gating, against Google's policy (above).
+- *Letting staff place bookings only on the 30-minute grid.* A walk-in arrives at 4:10.
+- *Deposits for bookings staff make.* Staff can record a payment by hand (Documents); a link for a customer standing at the counter is not needed for the demo, and can follow.
+
+**Revisit when.** A shop connects its own payment provider (the stand-in goes); a shop needs days off by date or buffers between visits; a stylist needs a login of her own; Meta refuses a template's category; or a shop asks for assignment by least busy rather than first free.
+
+## D-083 · The per-address rate limits count the address the edge signs
+**Date** 29 Oct 2026 · **Status** Proposed (built; the founder approves the production steps in the pull request) · Linear ALY-265, follow-up to ALY-116 · Runbook `docs/runbooks/client-address.md`
+
+**Where we were.** ALY-116's per-address limits count only when `ALYR_CLIENT_IP_HEADER` names where the visitor's address is read from. In production on Google Cloud it names nothing, so they are off. The path is visitor, Cloudflare (`alyr-edge`), Cloud Run (`alyr-web`, which forwards `/api/*` and also calls the API from its server, and `alyr-api`), and the two `run.app` addresses are public.
+
+**The decision.**
+- **The edge Worker writes the address and signs it.** `x-alyr-client-ip` from `CF-Connecting-IP` (Cloudflare sets it; a visitor cannot), `x-alyr-client-ip-sig` the HMAC-SHA256 of the address with a key only the Worker and the API hold. Whatever a visitor sent in those two headers, `X-Forwarded-For` or `X-Real-IP` is dropped first.
+- **The API believes an address only with a matching signature** (`ALYR_CLIENT_IP_KEYS`, a list so a key can be replaced with no gap). Every other request, with a made-up address, a wrong signature or none, is counted in **one shared bucket** (`unvouched`). A caller who skips the edge therefore cannot pick an address of their own (no fresh allowance per request) and cannot use anybody else's (no visitor who came through the edge is held up by them); the price is that such callers share 20 sign-in codes an hour between them, which is the point.
+- **The web app holds no key and checks nothing.** It passes the two headers on: Next's `/api/*` rewrite carries every request header, and its own server-side calls (the order page) copy them from the request they answer, with a test that fails if a new server-side caller does not.
+- **The connection's address is never the fallback once a header is named.** The API runs `uvicorn --forwarded-allow-ips '*'`, which makes `request.client` the first `X-Forwarded-For` entry, that is, what the caller wrote.
+- **A read-only `GET /api/client-address`** says what the API sees (the address, where it came from, whether the limits are counting), so one script checks the whole path from outside, and a wrong key shows at once.
+- **The per-email limits stay as they are** and do not depend on any of this.
+
+**Chosen over** a plain shared-secret header (the secret itself would travel through the web app on every request; a signature is good for one address only), reading Cloud Run's `X-Forwarded-For` by position (Google does not document how it is built, it grows with every hop, and the API's uvicorn setting makes the first entry the caller's), allowing only Cloudflare's published addresses (anyone's Worker comes from them), Google's load balancer with Cloud Armor (about USD 18 a month, D-060), and falling back to the connection's address for unsigned requests (spoofable, above).
+
+**Cost and risk.** One secret in Secret Manager (a few cents a month) and one in the Worker. If the two keys ever differ, every visitor is counted together until fixed, so the check runs the moment the API is switched on and switching off is one command. An API with a header and no keys still believes the header, as ALY-116 shipped (the interim Cloudflare host needs that), and says so when it starts.
+
+**Not covered.** IPv6 is counted per full address, not per `/64`. Cloudflare's own rate-limit rules in front are not set.
+
+**Revisit when** IPv6 visitors are common in the logs, when the interim Cloudflare host is retired for good (then a header without keys can be refused at start-up), or when the API leaves Cloud Run's public addresses for a private path.
+
 ---
 
 ## D-080 · The order tracking page opens by a signed link that runs out; the order's ID alone opens nothing
@@ -1721,6 +1793,28 @@ Without it, analytics is off everywhere.
 - *Letting staff record card payments by hand.* Only the webhook writes the `card` method, so a card payment in the list always has Paddle's own record behind it.
 
 **Revisit when** a Qatari card provider is added for clients in Qatar, the founder gives the setup fee a dollar price, or Paddle adds the riyal.
+
+
+---
+
+## D-082 · A client who stops paying keeps everything for 14 days with reminders; then ALYR pauses its automatic WhatsApp sending until they pay, never the workspace or the data; cancelling takes seven days
+**Date** 29 Oct 2026 · **Status** Proposed: built on the recommended option of the founder's decision card while he decides · Linear ALY-218 (go-live item 39) · Spec `specs/040-subscription-states/spec.md` · Branch `aly-218-subscription-states`
+
+**Where we were.** The setup fee and the first period are paid at go-live (D-053); card renewals arrive by themselves (D-074). Nothing said what happens when a later period is not paid, and D-053 says nothing closes a workspace.
+
+**The decision.**
+- **The plan's clock starts at go-live**, and periods are paid in advance. What was paid, less the setup fee, buys whole periods from the go-live day.
+- **14 days of grace** after a missed period, with an email the day after the due date and three days before the pause. Everything works meanwhile.
+- **Then ALYR pauses its own sending for the client's businesses**: automatic replies, notices and templates. A reply typed in the inbox still goes inside the 24-hour window. Sign-in, the workspace, the data and paying all stay. Nothing is deleted (D-033). Recording the payment lifts the pause at once.
+- **Cancelling takes seven days** (D-034), recorded by staff with how the client asked. On the day, sending pauses the same way and a card subscription is cancelled at Paddle. It can be undone.
+- Both values are settings (`ALYR_BILLING_GRACE_DAYS`, `ALYR_BILLING_PAUSE_SENDING`), so the founder's answer changes a number, not the code.
+
+**Rejected.**
+- *Closing the workspace or the sign-in.* Against D-053, and an owner who cannot sign in cannot pay or take their data.
+- *Pausing typed replies too.* The shop's customers would be left unanswered for ALYR's dispute with the shop; with Meta coexistence the owner can answer from their phone anyway.
+- *Deciding the state by hand in `/ops`.* The rules are a pure function of the price, the payments and the dates, checked every hour, so every client is treated the same.
+
+**Revisit when** the founder answers the decision card (a different grace length, or nothing paused), a Qatari card provider is added, or refunds through ALYR are built.
 
 ## D-073 · Alert rules live in the worker; health checks and uptime stay with the Google Cloud setup
 **Date** 28 Oct 2026 (renumbered 29 Oct from D-062) · **Status** Accepted for review (the founder, 24 Oct 2026: "i wanna start free then pay once we scale"; ntfy parked, alert email later at ops@alyr.qa, he is on call) · Linear ALY-121 · Spec `specs/034-alert-rules/spec.md` · Runbook `docs/runbooks/monitoring.md` · Builds on D-060

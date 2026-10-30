@@ -29,6 +29,8 @@ export type Quote = {
 export type ClientSummary = {
   id: string; name: string; contact_name: string; contact_email: string; contact_phone: string;
   note: string; price_mode: "automatic" | "prepared" | null; created_at: string;
+  // Where the plan stood at the last hourly check (ALY-218); '' before the first.
+  billing_state?: string; cancels_on?: string | null;
   businesses: Business[];
   quote: { id: string; number: number; status: Quote["status"]; totals: Totals } | null;
 };

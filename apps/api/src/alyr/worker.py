@@ -14,12 +14,13 @@ import signal
 import socket
 
 from alyr.config import get_settings
-from alyr.core import alerts, resume
+from alyr.core import alerts, resume, subscription
 from alyr.core.links import check_secret as check_link_secret
 from alyr.core.retention import purge as purge_old_copies
 from alyr.core.storage import check_store
 from alyr.main import close_channels, create_app
 from alyr.modules import report
+from alyr.modules.bookings import deposits as booking_deposits
 from alyr.modules.orders import holds as order_holds
 
 log = logging.getLogger("alyr.worker")
@@ -69,6 +70,10 @@ async def keep_holds_swept(db, outbound) -> None:
             cancelled = await order_holds.sweep_all(db, outbound)
             if cancelled:
                 log.info("released the holds of %s unpaid orders", cancelled)
+            # Bookings whose deposit was not paid in time (D-084), the same way.
+            released = await booking_deposits.sweep_all(db, outbound)
+            if released:
+                log.info("released %s bookings whose deposit was not paid", released)
         except Exception:  # never let a sweep stop the worker
             log.exception("could not sweep expired holds")
         await asyncio.sleep(300)
@@ -85,6 +90,20 @@ async def keep_owners_reminded(db) -> None:
                 log.info("emailed %s owners to finish setting up", sent)
         except Exception:  # never let a reminder stop the worker
             log.exception("could not send the setup reminders")
+        await asyncio.sleep(3600)
+
+
+async def keep_billing_checked(db) -> None:
+    """Where each client's plan stands (ALY-218, D-082): pause or resume what ALYR sends for
+    an overdue client, cancel at Paddle a plan whose cancellation took effect, and email the
+    owners what is due. Every hour; each email is recorded before it is sent."""
+    while True:
+        try:
+            sent = await subscription.sweep(db)
+            if sent:
+                log.info("emailed %s clients about their plan", sent)
+        except Exception:  # never let billing stop the worker
+            log.exception("could not check the clients' plans")
         await asyncio.sleep(3600)
 
 
@@ -133,6 +152,7 @@ async def main() -> None:
     meters = asyncio.create_task(keep_meters_fresh(app.state.media))
     watching = asyncio.create_task(alerts.keep_watching(app.state.db))
     reminders = asyncio.create_task(keep_owners_reminded(app.state.db))
+    billing = asyncio.create_task(keep_billing_checked(app.state.db))
     purger = asyncio.create_task(keep_old_copies_purged(app.state.db))
     try:
         await app.state.jobs.run_forever(heartbeat=heartbeat(app.state.db))
@@ -143,6 +163,7 @@ async def main() -> None:
         meters.cancel()
         watching.cancel()
         reminders.cancel()
+        billing.cancel()
         purger.cancel()
         await app.state.db.close()
         await close_channels(app)
