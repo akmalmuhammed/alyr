@@ -71,6 +71,7 @@
 .ob-sub { margin: -6px 0 0; font-size: var(--ui-input); line-height: 1.55; color: var(--ink-2); max-width: 38rem; text-wrap: pretty; }
 .ob-note { display: flex; align-items: center; gap: 10px; margin: 0; padding: 14px 16px; border-radius: 14px; background: var(--raise); color: var(--ink-2); font-size: var(--ui-body); box-shadow: var(--lift); }
 .ob-muted { color: var(--ink-3); font-size: var(--ui-body-sm); }
+.ob-error a { color: inherit; text-decoration: underline; }
 .ob-error { margin: 12px 0 0; padding: 10px 14px; border-radius: 12px; background: color-mix(in srgb, var(--bad) 10%, transparent); color: var(--bad); font-size: var(--ui-body-sm); max-width: 46rem; }
 
 .ob-actions {
