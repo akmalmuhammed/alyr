@@ -6,6 +6,11 @@
 import { useEffect, useRef } from "react";
 
 export type Choice = { id: string; title: string };
+// The few words the drawing itself says. The chat has no language of its own: it follows the
+// screen's, so an Arabic screen never shows "Business account" or "now".
+export type ChatLabels = { account: string; fallback: string; now: string };
+const ENGLISH: ChatLabels = { account: "Business account", fallback: "Your business", now: "now" };
+
 export type ChatMessage = {
   direction: "in" | "out";
   body: string;
@@ -28,13 +33,13 @@ function Linked({ text }: { text: string }) {
   );
 }
 
-function time(iso?: string) {
-  if (!iso) return "now";
+function time(iso: string | undefined, now: string) {
+  if (!iso) return now;
   return new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 }
 
 export function Chat({
-  name, initials, messages, onChoice, footer, live,
+  name, initials, messages, onChoice, footer, live, labels = ENGLISH,
 }: {
   name: string;
   initials: string;
@@ -42,6 +47,7 @@ export function Chat({
   onChoice?: (choice: Choice) => void;
   footer?: React.ReactNode;
   live?: boolean;
+  labels?: ChatLabels;
 }) {
   // Like WhatsApp, the newest message is always in view.
   const body = useRef<HTMLDivElement>(null);
@@ -53,8 +59,8 @@ export function Chat({
       <div className="ob-chat-head">
         <span className="ob-avatar" aria-hidden>{initials}</span>
         <span className="ob-chat-name">
-          <b>{name || "Your business"}</b>
-          <small>Business account</small>
+          <b>{name || labels.fallback}</b>
+          <small>{labels.account}</small>
         </span>
         {live && <span className="ob-live" aria-hidden />}
       </div>
@@ -64,7 +70,7 @@ export function Chat({
             <div className="ob-group">
               <div className="ob-bubble" dir="auto">
                 <Linked text={m.body} />
-                <time>{time(m.created_at)}</time>
+                <time>{time(m.created_at, labels.now)}</time>
               </div>
               {m.direction === "out" && m.payload?.choices?.map((c) => (
                 <button
@@ -83,8 +89,8 @@ export function Chat({
   );
 }
 
-export function initialsOf(name: string) {
+export function initialsOf(name: string, fallback = "AL") {
   const words = name.trim().split(/\s+/).filter(Boolean);
-  if (!words.length) return "AL";
+  if (!words.length) return fallback;
   return (words[0][0] + (words[1]?.[0] ?? "")).toUpperCase();
 }

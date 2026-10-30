@@ -17,6 +17,8 @@ type Words = {
   code: string;
   signIn: string;
   other: string;
+  /** Under the form: a code goes only to an address that has an account. */
+  noCode: string;
   tooMany: string;
   cannotSend: string;
   wrong: string;
@@ -36,6 +38,7 @@ export const COPY: Record<Lang, Words> = {
     code: "Code",
     signIn: "Sign in",
     other: "Use a different email",
+    noCode: "No code? Use the email address you signed up with, or the one ALYR set up for you.",
     tooMany: "Too many codes requested. Try again in an hour.",
     cannotSend: "Codes cannot be sent right now. Try again shortly.",
     wrong: "That code is wrong or has expired. Check it, or request a new one.",
@@ -53,6 +56,7 @@ export const COPY: Record<Lang, Words> = {
     code: "الرمز",
     signIn: "سجّل الدخول",
     other: "استخدم بريداً آخر",
+    noCode: "لم يصلك رمز؟ استخدم البريد الذي سجّلت به، أو الذي جهّزته ALYR لك.",
     tooMany: "طلبت رموزاً كثيرة. حاول بعد ساعة.",
     cannotSend: "تعذّر إرسال الرموز الآن. حاول بعد قليل.",
     wrong: "الرمز غير صحيح أو انتهت صلاحيته. تحقق منه أو اطلب رمزاً جديداً.",

@@ -51,6 +51,7 @@ const T = {
   en: {
     loading: "Loading your workspace…", offline: "Cannot reach ALYR right now. This page will try again by itself.",
     signIn: "Sign in", signOut: "Sign out", demo: "Demo, not signed in",
+    roles: { owner: "Owner", admin: "Admin", agent: "Agent" } as Record<string, string>,
     yourProducts: "Your products", account: "Account", add: "Add a product", lang: "ع",
     langName: "Switch to Arabic", search: "Search or jump to", searchFull: "Search screens and actions…",
     greet: (h: number) => (h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening"),
@@ -90,6 +91,7 @@ const T = {
   ar: {
     loading: "جارٍ تحميل مساحة العمل…", offline: "تعذّر الوصول إلى ALYR الآن. ستحاول الصفحة مجدداً تلقائياً.",
     signIn: "تسجيل الدخول", signOut: "تسجيل الخروج", demo: "عرض تجريبي",
+    roles: { owner: "مالك", admin: "مدير", agent: "موظف" } as Record<string, string>,
     yourProducts: "منتجاتك", account: "الحساب", add: "أضف منتجاً", lang: "EN",
     langName: "التبديل إلى الإنجليزية", search: "ابحث أو انتقل إلى", searchFull: "ابحث في الشاشات والإجراءات…",
     greet: (h: number) => (h < 12 ? "صباح الخير" : "مساء الخير"),
@@ -408,7 +410,7 @@ export default function WorkspaceShell() {
     ?? (section === "connect" ? allNav.find((n) => n.key === "connections") : undefined);
   const documentsOn = state.modules.includes("documents");
   const activeProducts = state.products.filter((p) => p.status === "active");
-  const roleLabel = state.me.signed_in ? state.me.role.charAt(0).toUpperCase() + state.me.role.slice(1) : t.demo;
+  const roleLabel = state.me.signed_in ? t.roles[state.me.role] ?? state.me.role.charAt(0).toUpperCase() + state.me.role.slice(1) : t.demo;
 
   const navLink = (item: NavItem) => {
     const count = item.key === "inbox" ? cards.find((c) => c.key === "unanswered")?.value ?? 0 : 0;
