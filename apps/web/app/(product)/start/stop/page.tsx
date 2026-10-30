@@ -47,7 +47,14 @@ export default function StopReminders() {
               <Link className="ob-btn primary" href="/start">{t.open}</Link>
             </>
           )}
-          {phase === "failed" && <p className="ob-error" role="alert">{t.failed}</p>}
+          {phase === "failed" && (
+            <>
+              <h1>{t.failedTitle}</h1>
+              <p className="ob-error" role="alert">{t.failed}</p>
+              <a className="ob-link" href={`mailto:${COPY[lang].helpMail}`}><bdi dir="ltr">{COPY[lang].helpMail}</bdi></a>
+              <Link className="ob-btn primary" href="/start">{t.open}</Link>
+            </>
+          )}
         </div>
       </main>
     </div>

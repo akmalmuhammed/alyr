@@ -5,6 +5,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { STAND_IN, termsSentence, type DepositTerms } from "../../_customer/deposit";
 import { Done, Empty, Frame, Glyph, Who, type Lang } from "../../_customer/Frame";
 import { formatPrice } from "../../_customer/price";
+import { customerName } from "../../_customer/testName";
 
 // The booking page (`/b/<shop>`). A customer's own link carries a signed token made for
 // booking (`?t=`, ALY-133); the page sends it to the API in the header `X-Order-Link`, never
@@ -262,7 +263,7 @@ function BookingForm() {
       <section className="cx-hero" style={{ "--i": 0 } as React.CSSProperties}>
         <span className="cx-eyebrow">{t.eyebrow}</span>
         <h1>{t.title}</h1>
-        {page.customer ? <Who label={t.hello(page.customer.name)} /> : (
+        {page.customer ? <Who label={t.hello(customerName(page.customer.name, lang))} /> : (
           <p className="cx-warn">{whatsapp ? t.startOnWhatsApp(shop) : t.noCustomer}</p>
         )}
         {!page.customer && whatsapp && (

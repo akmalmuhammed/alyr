@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { keepLang, savedLang, type Lang } from "../_workspace/lang";
 import { codeDigits } from "./code";
 import { COPY } from "./copy";
+import { landing } from "./next";
 
 type CodeAnswer = { sent: boolean; dev_code?: string | null };
 type Problem = "tooMany" | "cannotSend" | "wrong" | "offline";
@@ -70,7 +71,9 @@ export default function Login() {
       if (!answer.ok) return setError("wrong");
       // The workspace opens in the language the person signed in with.
       keepLang(lang);
-      router.push("/app");
+      // Back to the page that sent them here (`?next=`), when it is a safe path of this site.
+      const next = new URLSearchParams(window.location.search).get("next");
+      router.push(await landing(next, async () => (await fetch("/api/admin/staff", { cache: "no-store" })).ok));
     } catch {
       setError("offline");
     } finally {
@@ -113,6 +116,7 @@ export default function Login() {
         </form>
       )}
       {error && <p className="error" role="alert">{t[error]}</p>}
+      <p className="hint">{t.noCode}</p>
     </main>
   );
 }
