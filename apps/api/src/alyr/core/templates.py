@@ -160,8 +160,8 @@ CATALOGUE: dict[str, Template] = {
     # The same moment for an order the shop delivers: nobody comes to collect it.
     "order_ready_delivery": Template(
         "utility",
-        "Your order {{1}} is ready for delivery. It will be on its way to you soon.",
-        "طلبك رقم {{1}} جاهز للتوصيل، وسيكون في طريقه إليك قريباً.",
+        "Your order {{1}} is ready for delivery. Thank you.",
+        "طلبك رقم {{1}} جاهز للتوصيل. شكراً لك.",
         ("1001",),
     ),
     "order_done": Template(
