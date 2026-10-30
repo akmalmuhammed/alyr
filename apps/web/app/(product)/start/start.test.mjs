@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { COPY } from "./copy.ts";
 import { areaName, bookingWhat } from "./format.ts";
+import { loginUrl } from "../login/next.ts";
 
 const HERE = import.meta.dirname;
 const page = readFileSync(join(HERE, "page.tsx"), "utf8");
@@ -107,5 +108,23 @@ test("the reminder's stop page names the right address and always has a way on",
   assert.match(failed, /<h1>/, "a link that does not work still has a heading");
   assert.match(failed, /href="\/start"/, "and a way into setup");
   assert.match(failed, /mailto:/, "and a way to write to ALYR");
+});
+
+test("a closed sign-up has no email form: a way to write to ALYR, and a way in for owners who already use it", () => {
+  const closed = page.slice(page.indexOf('step === "account" && !signupOpen'), page.indexOf('} else if (step === "account") {'));
+  assert.ok(closed.length > 200, "the closed branch is there");
+  // No form, no field and no "Send code" in it: a new address would be told "code sent" and no code would come.
+  assert.doesNotMatch(closed, /<form|<input|sendCode|ob-form/);
+  assert.match(closed, /href=\{`mailto:\$\{t\.helpMail\}`\}/);
+  assert.match(closed, /href=\{loginUrl\("\/start"\)\}/);
+  assert.equal(loginUrl("/start"), "/login?next=/start");
+  assert.match(page, /typesAnswer\.ok && typesAnswer\.data\.signup_open === false/, "a failed answer is not a closed door");
+  for (const lang of ["en", "ar"]) {
+    const a = COPY[lang].account;
+    assert.ok(a.closed.trim() && a.closedWrite.trim() && a.closedSignIn.trim());
+    assert.doesNotMatch(a.closed, /sign in here|سجّل الدخول هنا/, "the line no longer points at a form that is gone");
+  }
+  const arabic = (COPY.ar.account.closed + COPY.ar.account.closedWrite + COPY.ar.account.closedSignIn).replace(/ALYR/g, "");
+  assert.doesNotMatch(arabic, /[A-Za-z]/, "the closed state's Arabic has English in it");
 });
 

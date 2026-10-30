@@ -12,6 +12,7 @@ import "../_workspace/shell.css";
 import "./ops.css";
 import { loginUrl } from "../login/next";
 import { api } from "./api";
+import { denial, type Denial } from "./denied";
 
 type NavItem = { href: string; label: string; icon: string };
 const MAIN: NavItem[] = [
@@ -67,14 +68,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const router = useRouter();
   const [me, setMe] = useState("");
-  const [denied, setDenied] = useState("");
+  const [denied, setDenied] = useState<Denial | null>(null);
   const [more, setMore] = useState(false);
 
   useEffect(() => {
     const first = setTimeout(async () => {
       const answer = await api<{ me: string }>("/api/admin/staff");
-      if (answer.ok) { setMe(answer.data.me); setDenied(""); return; }
-      setDenied(answer.status === 403 ? "This console is for ALYR staff only." : answer.error || "Sign in as ALYR staff to use the console.");
+      if (answer.ok) { setMe(answer.data.me); setDenied(null); return; }
+      setDenied(denial(answer.status, answer.error));
     }, 0);
     return () => clearTimeout(first);
   }, []);
@@ -95,8 +96,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
     return (
       <div className="sh-empty ops-denied">
         <h1>ALYR console</h1>
-        <p>{denied}</p>
-        <a className="btn primary" href={loginUrl(path)}>Sign in</a>
+        <p role="alert">{denied.message}</p>
+        {denied.signIn
+          ? <a className="btn primary" href={loginUrl(path)}>Sign in</a>
+          : <a className="btn primary" href={path}>Try again</a>}
       </div>
     );
   }

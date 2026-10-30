@@ -16,6 +16,7 @@ import { Chat, initialsOf, type ChatMessage, type Choice } from "./Chat";
 import { codeDigits } from "../login/code";
 import { COPY, type Lang } from "./copy";
 import { areaName, bookingWhat } from "./format";
+import { loginUrl } from "../login/next";
 import { HandoverView, ProductsView, moneyText, useHandover, useProducts } from "./OrderSteps";
 import "./start.css";
 
@@ -225,7 +226,8 @@ export default function Start() {
         ]);
         if (!alive) return;
         setTypes(typesAnswer.data.types ?? []);
-        setSignupOpen(typesAnswer.data.signup_open ?? false);
+        // Closed only when the API says so; an answer that failed is not a closed door.
+        setSignupOpen(!(typesAnswer.ok && typesAnswer.data.signup_open === false));
         if (!me.ok || !me.data.signed_in) {
           const draft = readDraft();
           if (!draft) return setStep("account");
@@ -637,10 +639,26 @@ export default function Start() {
 
   if (step === "loading") {
     main = <p className="ob-sub">…</p>;
+  } else if (step === "account" && !signupOpen) {
+    // A door that is shut has no form: a new address would be told "code sent" and no code would
+    // come. Someone who already uses ALYR signs in on /login and comes back here; anyone else
+    // writes to ALYR, whose advisor sets them up.
+    main = (
+      <>
+        {head(t.account.title, t.account.closed)}
+        <ul className="ob-trust">{t.account.trust.map((x) => <li key={x}><Ico name="check" size={16} />{x}</li>)}</ul>
+      </>
+    );
+    actions = (
+      <>
+        <Link className="ob-btn ghost" href={loginUrl("/start")}>{t.account.closedSignIn}</Link>
+        <a className="ob-btn primary" href={`mailto:${t.helpMail}`}>{t.account.closedWrite}<Ico name="arrow" /></a>
+      </>
+    );
   } else if (step === "account") {
     main = (
       <>
-        {head(t.account.title, signupOpen ? t.account.sub : t.account.closed)}
+        {head(t.account.title, t.account.sub)}
         <form id="ob-form" className="ob-fields" onSubmit={(e) => { e.preventDefault(); sendCode(); }}>
           <label className="ob-field">
             <span>{t.account.email}</span>
