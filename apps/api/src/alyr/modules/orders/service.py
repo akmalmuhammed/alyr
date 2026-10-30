@@ -42,7 +42,7 @@ from alyr.modules.items.clock import ShopClock
 from alyr.modules.items.service import MAX_QUANTITY
 from alyr.modules.items.service import load as load_items
 from alyr.modules.ledger import service as ledger
-from alyr.modules.orders import pay_ways, totals, track_link
+from alyr.modules.orders import pay_ways, staff_alert, totals, track_link
 
 STATUSES = ("new", "confirmed", "ready", "done", "cancelled")
 # The job that gives back the stock of an order nobody paid for.
@@ -531,6 +531,8 @@ async def create_order(
         {"number": number, "total": fmt_qar(total), "payment": payment,
          "table": table[:20] or None},
     )
+    # The staff numbers marked for new orders are told on WhatsApp (D-079).
+    await staff_alert.queue(conn, order_id, contact["wa_user_id"])
     # A pay-link order holds its stock until it is paid or the hold runs out.
     minutes = await clock.hold_minutes(conn)
     held_until = (

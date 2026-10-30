@@ -82,6 +82,8 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               (specs/014; cost lives in tables of its own and only owners and admins
                               ever see it: read costs.py before touching an item's or an order's reader);
                               orders/page.py is what the customer's order page reads (specs/005);
+                              orders/staff_alert.py tells the staff numbers marked for it about each
+                              new order (specs/039, D-079);
                               documents/ is the documents engine (receipts, invoices, credit notes:
                               gapless numbers, immutable once issued, a PDF drawn in Arabic and
                               English; specs/011, D-042), switched on per shop through the

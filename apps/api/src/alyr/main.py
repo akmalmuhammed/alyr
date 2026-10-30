@@ -34,6 +34,7 @@ from alyr.modules.items.import_photos import JOB as IMPORT_PHOTOS
 from alyr.modules.items.import_photos import ImportPhotos
 from alyr.modules.items.service import count_active
 from alyr.modules.orders import holds as order_holds
+from alyr.modules.orders import staff_alert
 from alyr.modules.orders.service import EXPIRE_JOB
 from alyr.routes import admin as admin_routes
 from alyr.routes import admin_media as admin_media_routes
@@ -151,6 +152,11 @@ def create_app() -> FastAPI:
     )
     app.state.jobs.register(
         EXPIRE_JOB, order_holds.HoldExpiry(app.state.db, app.state.outbound).run
+    )
+    # The staff numbers marked for new orders are told about each one (D-079).
+    app.state.jobs.register(
+        staff_alert.JOB,
+        staff_alert.StaffAlerts(app.state.db, app.state.outbound, settings.public_web_url).run,
     )
     # Documents sent to the customer (ALY-139): WhatsApp through the outbound layer, email with
     # the PDF attached. A delivery that fails every try shows the owner "not delivered".
