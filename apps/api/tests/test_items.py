@@ -4,7 +4,6 @@ that this package owns are in test_catalog_scenarios.py, which uses the helpers 
 """
 
 import json
-import re
 from datetime import UTC, date, datetime, time, timedelta
 from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo
@@ -12,6 +11,7 @@ from zoneinfo import ZoneInfo
 import asyncpg
 import pytest
 
+import pay_links
 from alyr.core import team
 from alyr.modules.items import stock
 from alyr.modules.items.cart import CartLine
@@ -81,8 +81,7 @@ def detail(response) -> dict:
 
 
 def pay(client, placed: dict) -> dict:
-    tenant_id, payment_id = re.search(r"/pay/(\S+)/(\S+)", placed["pay_url"]).groups()
-    return client.post(f"/api/pay/{tenant_id}/{payment_id}/complete")
+    return pay_links.pay(client, placed["pay_url"])
 
 
 def on_shop(client, fn, *args, **kwargs):

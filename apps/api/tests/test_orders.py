@@ -4,6 +4,7 @@ import re
 
 from alyr.seed import AHMED_PHONE, DEMO_SLUG
 from order_links import token
+from pay_links import pay, pay_page
 
 STORE = f"/api/store/{DEMO_SLUG}"
 
@@ -77,9 +78,8 @@ def test_order_paid_by_link_is_marked_paid_and_leaves_the_ledger_alone(client):
     assert "The total is QAR 630." in summary["body"]
     assert order["pay_url"] in summary["body"]
 
-    tenant_id, payment_id = re.search(r"/pay/(\S+)/(\S+)", order["pay_url"]).groups()
-    assert client.get(f"/api/pay/{tenant_id}/{payment_id}").json()["order_number"] == 1001
-    assert client.post(f"/api/pay/{tenant_id}/{payment_id}/complete").json() == {"status": "paid"}
+    assert pay_page(client, order["pay_url"]).json()["order_number"] == 1001
+    assert pay(client, order["pay_url"]).json() == {"status": "paid"}
 
     listed = client.get("/api/orders").json()["orders"][0]
     assert (listed["number"], listed["payment"], listed["customer"]) == (

@@ -10,20 +10,23 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 export { sleep };
 
-// The address of one order's tracking page, signed as the API signs it (`core/links.py`, purpose
-// "track", SEC-8): version 2, purpose 5, the order, an expiry, then the first 16 bytes of
-// HMAC-SHA256 over a context, the shop and that payload. With the key a developer machine signs
-// with when ALYR_LINK_SECRET is empty (it is in the repository and protects nothing), unless the
-// environment names another. A check that has the order's own message can use its link instead.
+// The address of one order's tracking page or one payment's pay page, signed as the API signs it
+// (`core/links.py`, purposes "track" and "pay", SEC-8): version 2, the purpose (5 or 6), the order
+// or payment, an expiry, then the first 16 bytes of HMAC-SHA256 over a context, the shop and that
+// payload. With the key a developer machine signs with when ALYR_LINK_SECRET is empty (it is in
+// the repository and protects nothing), unless the environment names another. A check that has
+// the order's own message can use its link instead.
 const DEV_LINK_SECRET = ["alyr", "local", "development", "link", "key", "not", "for", "real", "use"].join("-");
-export function trackPath(tenantId, slug, orderId, { days = 7, secret = process.env.ALYR_LINK_SECRET || DEV_LINK_SECRET } = {}) {
-  const bytes = (id) => Buffer.from(String(id).replaceAll("-", ""), "hex");
+function signedPath(page, purpose, tenantId, slug, id, { days = 7, secret = process.env.ALYR_LINK_SECRET || DEV_LINK_SECRET } = {}) {
+  const bytes = (value) => Buffer.from(String(value).replaceAll("-", ""), "hex");
   const expires = Buffer.alloc(4);
   expires.writeUInt32BE(Math.floor(Date.now() / 1000) + days * 86400);
-  const payload = Buffer.concat([Buffer.from([2, 5]), bytes(orderId), expires]);
+  const payload = Buffer.concat([Buffer.from([2, purpose]), bytes(id), expires]);
   const mac = createHmac("sha256", secret).update(Buffer.concat([Buffer.from("alyr-link-v2\0"), bytes(tenantId), payload])).digest().subarray(0, 16);
-  return `/t/${slug}?t=${payload.toString("base64url")}.${mac.toString("base64url")}`;
+  return `/${page}/${slug}?t=${payload.toString("base64url")}.${mac.toString("base64url")}`;
 }
+export const trackPath = (tenantId, slug, orderId, options) => signedPath("t", 5, tenantId, slug, orderId, options);
+export const payPath = (tenantId, slug, paymentId, options) => signedPath("pay", 6, tenantId, slug, paymentId, options);
 
 export async function launch({ edge, port, profile, width = 375, height = 812, scheme = "light" }) {
   mkdirSync(profile, { recursive: true });

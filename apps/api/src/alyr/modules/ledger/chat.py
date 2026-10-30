@@ -131,7 +131,7 @@ async def _pay(
         return OutboundMessage(to=to, body=f"{balance_line} {how}")
     # "pay 500" pays part of the balance; never more than is owed.
     amount = min(part, balance) if part else balance
-    link = await service.create_payment_request(conn, tenant_id, contact["id"], amount, web_url)
+    link = await service.create_payment_request(conn, contact["id"], amount, web_url)
     if lang == "ar":
         body = f"لدفع {fmt_qar(amount)} افتح الرابط: {link}"
         if amount == balance:

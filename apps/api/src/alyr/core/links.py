@@ -35,6 +35,11 @@ the page opened by the shop's ID and the order's ID in the address, which never 
 which anyone who had seen the order's ID (a webhook to the shop's own system, a list in the
 workspace, a log) could open.
 
+A sixth purpose, "pay" (SEC-8's second part, D-080), makes the link to one payment request's pay
+page the same way: the ID in the token is the payment's, the life is `ALYR_LINK_DAYS`, and it
+opens the pay page only. Until then that page too opened by the shop's ID and the payment's ID in
+the address, for good.
+
 A public link (an item, a category, a QR code on a counter or a table, a shop's booking
 page) never carries a contact ID or a token: it opens the page for anyone, and the page
 sends a customer who wants to order or book to the shop's WhatsApp to get their own link.
@@ -67,7 +72,8 @@ BOOKING = "booking"
 DOCUMENT = "document"
 RESUME = "resume"
 TRACK = "track"
-_CODES = {ORDER: 1, BOOKING: 2, DOCUMENT: 3, RESUME: 4, TRACK: 5}
+PAY = "pay"
+_CODES = {ORDER: 1, BOOKING: 2, DOCUMENT: 3, RESUME: 4, TRACK: 5, PAY: 6}
 _PURPOSES = {code: name for name, code in _CODES.items()}
 HEADER = 22  # version, purpose, contact ID, expiry
 MAC_BYTES = 16
@@ -95,8 +101,8 @@ class LinkError(Exception):
 @dataclass(frozen=True)
 class Link:
     # Who or what the link is for: a customer's contact ID for the order and booking pages, a
-    # document's ID for the document page, an order's for the tracking page (`subject_id` says
-    # it plainly there).
+    # document's ID for the document page, an order's for the tracking page and a payment
+    # request's for the pay page (`subject_id` says it plainly there).
     contact_id: UUID
     table: str
     expires_at: int
@@ -262,3 +268,10 @@ def track_url(web_url: str, slug: str, tenant_id: UUID, order_id: UUID) -> str:
     shop, opens the tracking page only, and runs out after `ALYR_LINK_DAYS`; each message about
     the order carries a fresh one. There is no bare ID in the address."""
     return f"{web_url}/t/{slug}?t={mint(tenant_id, order_id, purpose=TRACK)}"
+
+
+def pay_url(web_url: str, slug: str, tenant_id: UUID, payment_id: UUID) -> str:
+    """The link to one payment request's pay page (SEC-8, D-080). The token names the payment and
+    the shop, opens the pay page only, and runs out after `ALYR_LINK_DAYS`. There is no bare ID
+    in the address."""
+    return f"{web_url}/pay/{slug}?t={mint(tenant_id, payment_id, purpose=PAY)}"

@@ -181,15 +181,14 @@ def test_the_app_cannot_rewrite_the_consent_log(client):
 
 
 def test_payment_confirmation_still_arrives_days_after_the_last_message(client):
-    import re
+    from pay_links import pay
 
     link = say(client, AHMED_PHONE, reply_id="pay")[-1]["body"]
-    tenant_id, payment_id = re.search(r"/pay/(\S+)/(\S+)", link).groups()
     owner_sql(
         "update contacts set last_inbound_at = now() - interval '3 days' where phone = $1",
         AHMED_PHONE,
     )
-    client.post(f"/api/pay/{tenant_id}/{payment_id}/complete")
+    pay(client, link)
     last = conversation(client)[-1]
     assert "received your payment of QAR 1,850" in last["body"]
     assert (last["kind"], last["status"]) == ("template", "sent")

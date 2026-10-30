@@ -63,7 +63,9 @@ class SimulatorGateway:
         # Our payment's ID is the merchant reference: asking twice gives the same page.
         ref = f"simpay_{payment.id.hex}"
         self.checkouts.setdefault(ref, SimCheckout(key, payment.amount, payment.webhook_url))
-        return Checkout(ref, f"{payment.return_url}?sim={ref}")
+        # The return address is the signed pay link, which has a query already.
+        joiner = "&" if "?" in payment.return_url else "?"
+        return Checkout(ref, f"{payment.return_url}{joiner}sim={ref}")
 
     def read_webhook(
         self, keys: dict[str, str], headers: dict[str, str], body: bytes

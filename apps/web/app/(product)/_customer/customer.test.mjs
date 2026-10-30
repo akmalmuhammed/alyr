@@ -339,5 +339,5 @@ test("a fraction is written the way the server's reader is tested to read it, un
 
 test("a link from the API opens on this site with its signed token", () => {
   assert.equal(sitePath("https://app.alyr.qa/t/al-noor?t=AbC-1.x_Y"), "/t/al-noor?t=AbC-1.x_Y");
-  assert.equal(sitePath("http://localhost:3100/pay/a/b"), "/pay/a/b");
+  assert.equal(sitePath("http://localhost:3100/pay/al-noor?t=AbC-1.x_Y"), "/pay/al-noor?t=AbC-1.x_Y");
 });

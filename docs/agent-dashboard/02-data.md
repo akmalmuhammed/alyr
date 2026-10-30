@@ -45,7 +45,7 @@
 **Stored.**
 - `payment_requests`: `contact_id`, `amount`, `status` (`pending`, `paid`), `provider` (always `'standin'`), `created_at`, `paid_at`, and `order_id` (null for credit account links).
 - Order links are made in `modules/orders/service.py` `place_order`; account links in `modules/ledger/service.py` `create_payment_request()`.
-- Only `complete_payment()` (`ledger/service.py`) marks a request paid. It is reached through `POST /api/pay/{t}/{p}/complete`, the stand-in page, which answers 404 in production (`routes/pay.py`).
+- Only `complete_payment()` (`ledger/service.py`) marks a request paid. It is reached through `POST /api/pay/{shop}/complete` with the pay link's token, the stand-in page, which answers 404 in production (`routes/pay.py`).
 
 | Number | How |
 |---|---|

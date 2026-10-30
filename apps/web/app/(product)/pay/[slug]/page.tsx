@@ -2,10 +2,15 @@
 
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { Done, Empty, Frame, Glyph } from "../../../_customer/Frame";
-import { amount as amountOf, currency, formatPrice, type Lang } from "../../../_customer/price";
+import { Done, Empty, Frame, Glyph } from "../../_customer/Frame";
+import { amount as amountOf, currency, formatPrice, type Lang } from "../../_customer/price";
 
-// The payment page (ALY-73, ALY-112). A payment link is pending, paid, or expired: a pay-link
+// The payment page (ALY-73, ALY-112). `/pay/<shop>?t=<token>`: the token is made for this page
+// only, names one payment at one shop and runs out (SEC-8, D-080). The page sends it to the API in
+// the header `X-Order-Link`, never in the address of a request. A link that has expired, was
+// edited or was made for another page shows a calm page that says to open the newest link in the
+// chat or ask the shop for one; nothing in it names a payment.
+// A payment link is pending, paid, or expired: a pay-link
 // order that was not paid inside its hold (or was cancelled) is released, its items go back
 // on the shelf, and the link stops paying. Such a link says so and offers the way back to
 // the shop; it never keeps a Pay button that does nothing.
@@ -15,10 +20,15 @@ import { amount as amountOf, currency, formatPrice, type Lang } from "../../../_
 // waits and looks again. The test provider's page (a developer machine) is this same page with
 // `?sim=<ref>`.
 
-type Payment = {
-  shop: string; shop_ar: string | null; slug: string | null; customer: string; amount: number;
+type LinkState = { state: "none" | "ok" | "invalid" | "expired"; message: string; message_ar: string };
+// With a good link, the payment; with any other, only the shop and what to do (`link`).
+type Answer = { shop: string; shop_ar: string | null; slug: string | null; link: LinkState };
+type Payment = Answer & {
+  customer: string; amount: number;
   status: "pending" | "paid" | "expired"; order_number: number | null; order_id: string | null; lang: Lang;
   stand_in: boolean; preparing: boolean; unavailable: boolean; checkout_url: string | null;
+  /** The order's tracking page by a signed link of its own, as a path on this site. */
+  track_path: string | null;
 };
 
 const T = {
@@ -37,6 +47,9 @@ const T = {
     unavailableTitle: "This payment link no longer works",
     unavailableText: "Nothing was charged. Please ask the shop for a new link in your chat.",
     simulated: "Test provider page. No money moves.",
+    expiredLink: "This link has expired", invalidLink: "This link is not valid",
+    noneTitle: "Open this page from the link we sent you",
+    noneText: "The shop sends this link in your chat.",
   },
   ar: {
     context: "دفع", eyebrow: "دفع آمن", pay: (shop: string) => `ادفع إلى ${shop}`,
@@ -53,8 +66,15 @@ const T = {
     unavailableTitle: "رابط الدفع هذا لم يعد يعمل",
     unavailableText: "لم يُخصم أي مبلغ. اطلب من المتجر رابطاً جديداً في المحادثة.",
     simulated: "صفحة مزوّد تجريبية. لا تُنقل أي أموال.",
+    expiredLink: "انتهت صلاحية هذا الرابط", invalidLink: "هذا الرابط غير صالح",
+    noneTitle: "افتح هذه الصفحة من الرابط الذي أرسلناه لك",
+    noneText: "يرسل المتجر هذا الرابط في محادثتك.",
   },
 };
+
+function preferred(): Lang {
+  return typeof navigator !== "undefined" && /^ar/i.test(navigator.language) ? "ar" : "en";
+}
 
 /** The order page, with the customer's own link if this tab already has it (the order page
  *  keeps it for the tab), else the shop's public page. */
@@ -75,9 +95,16 @@ export default function PayPage() {
 }
 
 function Pay() {
-  const { tenant, payment } = useParams<{ tenant: string; payment: string }>();
-  const simRef = useSearchParams().get("sim");
-  const [data, setData] = useState<Payment | null>(null);
+  const { slug } = useParams<{ slug: string }>();
+  const query = useSearchParams();
+  const simRef = query.get("sim");
+  const asked = query.get("t");
+  // The link goes in a header, not in the address of a request, so no request log of ours holds
+  // it. A token is plain ASCII; anything else cannot be a header and cannot be ours, so it is
+  // sent as one the API will call invalid.
+  const token = asked ? (/^[\w.-]{1,300}$/.test(asked) ? asked : "invalid") : null;
+  const linked = token ? { "x-order-link": token } : undefined;
+  const [data, setData] = useState<Answer | Payment | null>(null);
   const [missing, setMissing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
@@ -86,14 +113,18 @@ function Pay() {
   const [look, setLook] = useState(0);
 
   useEffect(() => {
-    fetch(`/api/pay/${tenant}/${payment}`, { cache: "no-store" })
+    fetch(`/api/pay/${slug}`, { cache: "no-store", headers: token ? { "x-order-link": token } : undefined })
       .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((p: Payment) => { setData(p); setLang((current) => current ?? (p.lang === "ar" ? "ar" : "en")); })
+      .then((p: Answer | Payment) => {
+        setData(p);
+        // The page opens in the language the customer chats in; with no payment, the phone's.
+        setLang((current) => current ?? ("lang" in p ? (p.lang === "ar" ? "ar" : "en") : preferred()));
+      })
       .catch(() => setMissing(true));
-  }, [tenant, payment, look]);
+  }, [slug, token, look]);
 
   // The provider's page is being made: look again, for about half a minute.
-  const preparing = data?.status === "pending" && data.preparing;
+  const preparing = data !== null && "status" in data && data.status === "pending" && data.preparing;
   useEffect(() => {
     if (!preparing || look >= 20) return;
     const timer = setTimeout(() => setLook((n) => n + 1), 1500);
@@ -111,10 +142,12 @@ function Pay() {
       setBusy(false);
       return;
     }
-    const response = await fetch(`/api/pay/${tenant}/${payment}/complete`, { method: "POST" }).catch(() => null);
-    if (response?.ok) setData((d) => (d ? { ...d, status: "paid" } : d));
+    const response = await fetch(`/api/pay/${slug}/complete`, { method: "POST", headers: linked }).catch(() => null);
+    if (response?.ok) setData((d) => (d && "status" in d ? { ...d, status: "paid" } : d));
     // The hold ran out while the page was open: the link is released, and it says so.
-    else if (response?.status === 409) setData((d) => (d ? { ...d, status: "expired" } : d));
+    else if (response?.status === 409) setData((d) => (d && "status" in d ? { ...d, status: "expired" } : d));
+    // The link ran out while the page was open: look again, and the page says so.
+    else if (response?.status === 403) setLook((n) => n + 1);
     else setError(true);
     setBusy(false);
   }
@@ -123,12 +156,26 @@ function Pay() {
   if (missing) return <Empty text={t.invalid} />;
   if (!data || !lang) return null;
   const shop = lang === "ar" && data.shop_ar ? data.shop_ar : data.shop;
-  const money = formatPrice(data.amount, lang);
   const toggle = () => setLang(lang === "en" ? "ar" : "en");
-  // The tracking page opens only by its own signed link now (SEC-8, D-080), which this page will
-  // be given with its own signed link (after the payment adapters, ALY-17). Until then it shows
-  // no way there; the customer's chat holds the link.
-  const trackLink = (data as { track_path?: string | null }).track_path ?? null;
+  if (!("status" in data) || data.link.state !== "ok") {
+    // No payment to show: the link ran out (while the page was open, too), was edited, or is not
+    // this page's. Say what to do, in the customer's language; name no payment.
+    const state = data.link.state === "ok" ? "invalid" : data.link.state;
+    const title = state === "expired" ? t.expiredLink : state === "none" ? t.noneTitle : t.invalidLink;
+    const text = state === "none" ? t.noneText : lang === "ar" ? data.link.message_ar : data.link.message;
+    return (
+      <Frame lang={lang} onLang={toggle} shop={shop} context={t.context} short>
+        <section className="cx-hero" style={{ "--i": 0 } as React.CSSProperties}>
+          <span className="cx-eyebrow">{t.context}</span>
+          <h1>{title}</h1>
+        </section>
+        {text && <p className="cx-warn" role="alert" style={{ "--i": 1 } as React.CSSProperties}>{text}</p>}
+      </Frame>
+    );
+  }
+  const money = formatPrice(data.amount, lang);
+  // The order's tracking page, by its own signed link (SEC-8, D-080).
+  const trackLink = data.track_path;
 
   if (data.status === "paid") {
     return (

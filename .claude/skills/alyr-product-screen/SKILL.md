@@ -35,7 +35,7 @@ how it looks (`docs/lanes/`). Say in the PR which lane's files you touch.
 | Workspace home | `_agent/AgentDashboard.tsx` from `GET /api/agent?lang=` | [agent-dashboard.md](agent-dashboard.md) |
 | Back office | `(product)/ops/` (`Shell.tsx`, `ops.css` overrides `shell.css` by import order) | English only today; Today queue, clients, prices, requests, staff, audit |
 | Onboarding | `(product)/start/` (`copy.ts`, `start.css`, `.ob`) | The one product area with a copy file |
-| Customer pages | `(product)/s/[slug]`, `b/[slug]`, `pay/[tenant]/[payment]`, `t/[slug]`; frame `_customer/Frame.tsx`, `customer.css` (`.cx`) | Phone first; opened from a WhatsApp link; the shop's name and monogram lead, "ALYR" is small in the foot |
+| Customer pages | `(product)/s/[slug]`, `b/[slug]`, `pay/[slug]`, `t/[slug]`; frame `_customer/Frame.tsx`, `customer.css` (`.cx`) | Phone first; opened from a WhatsApp link; the shop's name and monogram lead, "ALYR" is small in the foot |
 
 ## Rules for every product screen
 

@@ -21,6 +21,7 @@ from documents_sales_support import (
     sales_shop,
 )
 from documents_support import as_app, issued, refused_by_database
+from pay_links import pay_page
 from test_consent import owner_sql
 
 
@@ -86,8 +87,7 @@ def test_an_order_paid_in_cash_is_settled_and_gets_its_receipt(client_factory, m
     order_row = owner_sql("select payment, status from orders where id = $1", UUID(order["order_id"]))[0]
     assert order_row["payment"] == "paid"
     # The pay link nobody needs now says so, and cannot be paid again.
-    tenant_id, payment_id = order["pay_url"].split("/pay/")[1].split("/")
-    page = shop.owner.get(f"/api/pay/{tenant_id}/{payment_id}").json()
+    page = pay_page(shop.owner, order["pay_url"]).json()
     assert page["status"] == "paid"
     assert [a["detail"]["method"] for a in activity(shop, "order", order["order_id"], "paid")] == ["cash"]
 

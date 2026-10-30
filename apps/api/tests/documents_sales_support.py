@@ -9,12 +9,12 @@ simulator channel and the job queue (which the test app drains after each commit
 
 import asyncio
 import json
-import re
 from dataclasses import dataclass, field
 from uuid import UUID, uuid4
 
 from documents_support import SELLER, configured_shop
 from order_links import token
+from pay_links import pay
 from test_consent import owner_sql
 
 PHONES = iter(range(97455550200, 97455559999))
@@ -114,8 +114,7 @@ def placed(shop: SalesShop, who: Customer, items=None, payment: str = "link") ->
 
 
 def pay_by_link(shop: SalesShop, order: dict):
-    tenant_id, payment_id = re.search(r"/pay/(\S+)/(\S+)", order["pay_url"]).groups()
-    return shop.owner.post(f"/api/pay/{tenant_id}/{payment_id}/complete")
+    return pay(shop.owner, order["pay_url"])
 
 
 def documents(shop: SalesShop, **where) -> list[dict]:
