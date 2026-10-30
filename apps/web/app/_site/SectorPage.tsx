@@ -1,11 +1,11 @@
 import { Icon } from "./brand";
-import { ContactButton } from "./Contact";
+import { Actions, TryFreeNote } from "./Contact";
 import { copy, fill, type Locale } from "./copy";
 import { DaySplit } from "./DaySplit";
 import { TickPath } from "./Frames";
 import { QuestionsBlock } from "./ProductKit";
 import { Shell } from "./Shell";
-import { guidePage, INCLUDED, PATHS, PRODUCTS, productPath, sectorPage, type ProductKey, type SectorKey } from "./site";
+import { guidePage, INCLUDED, PATHS, PRODUCTS, productPath, sectorPage, TRY_FREE_LIVE, type ProductKey, type SectorKey } from "./site";
 import { rich } from "./Text";
 import "./kit.css";
 import "./pages.css";
@@ -61,6 +61,11 @@ export function SectorPage({ locale, sector }: { locale: Locale; sector: SectorK
   const guide = t.guides.items[s.guide];
   const home = PATHS.home[locale];
   const keys = s.products.rows.map((row) => row.key);
+  const actions = (
+    <div className="pk-actions" data-hero-cta>
+      <Actions locale={locale} lean label={t.home.hero.action} message={{ prefill: s.prefill, subject: s.subject }} />
+    </div>
+  );
 
   return (
     <Shell locale={locale} page={sectorPage(sector)} cta={s.cta}>
@@ -70,9 +75,14 @@ export function SectorPage({ locale, sector }: { locale: Locale; sector: SectorK
           <h1 className="sp-title" id="answer-title">{rich(s.title)}</h1>
           <p className="sp-answer">{rich(s.answer)}</p>
           <div className="sp-act">
-            <div className="pk-actions" data-hero-cta>
-              <ContactButton locale={locale} lean label={t.home.hero.action} message={{ prefill: s.prefill, subject: s.subject }} />
-            </div>
+            {/* with "Try it free" on, the note goes under the buttons, so the pair is wrapped; off,
+                the markup is what it was */}
+            {TRY_FREE_LIVE ? (
+              <div className="sp-main">
+                {actions}
+                <TryFreeNote locale={locale} />
+              </div>
+            ) : actions}
             <p className="sp-uses">
               <span className="mono-k">{w.uses}</span>
               <ProductTags locale={locale} products={keys} />

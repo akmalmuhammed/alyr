@@ -561,6 +561,12 @@ export type Copy = {
     draft: string;
     bar: string;
   };
+  /** "Try it free": the way into the self-serve sign-up, shown only while the switch is on
+   * (site.ts `TRY_FREE_LIVE`, ALY-211). `note` says what it costs, as the plan step of /start
+   * does: nothing now, payment when the business goes live (D-053, D-092). `final` is the
+   * closing call on the pages that lead with it, in place of each page's own, which is about
+   * writing to us. */
+  tryFree: { action: string; note: string; bar: string; final: { title: string; body: string } };
   footer: { line: string; rights: string; legal: string; workspace: string; disclaimer: string; links: string; products: string };
   /** The "Sample" mark in a drawing's chrome; the phone header's "Sample business"; and the
    * line said first in a figure of a fictional business that is not one of the three. */
@@ -737,6 +743,16 @@ const en: Copy = {
     body: "Business name:\nArea:\nWhat you sell or book:\nHow customers reach you today:\nBest time to visit:\n",
     draft: "The message we fill in for you",
     bar: "Contact ALYR",
+  },
+  tryFree: {
+    action: "Try it free",
+    note: "Free to try. You pay only when you go live.",
+    // the phone bar's landmark name while the button says "Try it free" (`contact.bar` names the contact one)
+    bar: "Try ALYR free",
+    final: {
+      title: "Try it free, or book a check-up.",
+      body: "Set up your business and try it as your own customer. Or send us a message, and a person from ALYR replies and visits your shop.",
+    },
   },
   footer: {
     line: "We do the tech. You run the business.",
@@ -3091,6 +3107,16 @@ const ar: Copy = {
     body: "اسم النشاط:\nالمنطقة:\nماذا تبيع أو ماذا يُحجز لديك:\nكيف يصل إليك عملاؤك اليوم:\nأنسب وقت للزيارة:\n",
     draft: "الرسالة التي نكتبها لك مسبقاً",
     bar: "تواصل مع ALYR",
+  },
+  // A draft for the native review (ALY-66). «تبدأ العمل» is /start's own way to say go live.
+  tryFree: {
+    action: "جرّب مجاناً",
+    note: "التجربة مجانية. لا تدفع إلا عندما تبدأ العمل.",
+    bar: "جرّب ALYR مجاناً",
+    final: {
+      title: "جرّب مجاناً، أو احجز فحصاً.",
+      body: "جهّز نشاطك وجرّبه كأنك عميل عندك. أو أرسل لنا رسالة، فيردّ عليك شخص من ALYR ويزور محلك.",
+    },
   },
   footer: {
     line: "علينا التقنية، وعليك شغلك.",

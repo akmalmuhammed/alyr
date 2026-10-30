@@ -180,6 +180,15 @@ Cloudflare Access.** Add the founder's email.
    log prints the version ID; `pnpm exec wrangler deployments status --config wrangler.jsonc`
    shows it too.
 
+**Build switches (repository variables).** The workflow passes these to the build, in
+previews and in production, so a switch is turned on by setting the variable and publishing:
+`POSTHOG_PROJECT_KEY`, `GOOGLE_SITE_VERIFICATION`, `BING_SITE_VERIFICATION`, and
+`ALYR_TRY_FREE` (`on` shows the "Try it free" button that leads into the self-serve sign-up,
+D-119; unset or anything else builds the site without it). Set `ALYR_TRY_FREE` only after
+sign-up is open: [go-live-checklist.md](go-live-checklist.md), "Opening self-serve sign-up", last
+step. A build's `/version.txt` says which way the switches went (`offer`, `try-free`), so what is
+live can be read from outside.
+
 To publish automatically again after each merge, add a `push` trigger back to
 `site-deploy.yml`; with the reviewer in place every push then waits for the founder's
 approval. It was taken out on 30 Oct because that is a queue of approvals for unreleased,
@@ -199,7 +208,7 @@ commit, so prefer `site:deploy`.
 ## What is live?
 
 ```bash
-curl -s https://alyr.qa/version.txt          # commit, branch, built, offer
+curl -s https://alyr.qa/version.txt          # commit, branch, built, offer, try-free
 cd apps/web
 pnpm exec wrangler deployments status --config wrangler.jsonc        # the version serving alyr.qa now
 pnpm exec wrangler deployments list --config wrangler.jsonc          # every production deployment

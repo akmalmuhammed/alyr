@@ -161,3 +161,11 @@ jobs:
           name: out-site
           path: apps/web/out-site
           retention-days: 14
+      # The same build and checks with the "Try it free" button switched on (ALY-211, site.ts
+      # `TRY_FREE_LIVE`): the first run proves that off the site carries no trace of it, this one
+      # that the button, its address and "Book a check-up" beside it are right on every page, so
+      # the switch cannot rot before the founder uses it. Not uploaded: it is not what is published.
+      - name: site:check with the Try it free button on
+        run: pnpm site:check
+        env:
+          NEXT_PUBLIC_ALYR_TRY_FREE: "on"

@@ -170,6 +170,30 @@ Each page has its own English social card (`(site)/<page>/opengraph-image.tsx` t
 `_site/socialCard.tsx`). Arabic pages share the English homepage card until Arabic cards are
 drawn with resvg (`alyr-generated-image`).
 
+## The "Try it free" switch (D-119, ALY-211)
+
+The pages can lead with "Try it free" / «جرّب مجاناً», the way into the self-serve sign-up at
+`TRY_FREE_URL` (`_site/site.ts`, the one place the address is written). It is a build-time
+switch, `NEXT_PUBLIC_ALYR_TRY_FREE=on` (`TRY_FREE_LIVE`), **off unless set**, and the founder
+sets it at publish time, after sign-up is open (go-live checklist). Rules for anything that
+touches an action on the site:
+
+- **Off, the markup must be what it was.** A page built with the switch off is the same HTML as
+  before the button existed: no extra wrapper, no `false` child (it shows in the page's embedded
+  data). Use `Actions`, `TryFreeButton` and `TryFreeNote` from `Contact.tsx`, which return the old
+  button, or nothing; give an extra wrapper only on the switch's side of a ternary.
+- **On, one Volt button and one name.** "Try it free" is the Volt button of the opening, the
+  closing call and the phone's bar; "Book a check-up" (the one name of the check-up) is its outlined
+  twin, `variant="line"`, with `tone="band"` on a Carbon block. The header's button says "Try it free"
+  and steps aside as before; the phone's menu keeps "Book a check-up" as a row. A guide, the
+  company page and the privacy page keep their own closing call.
+- **The words are the plan step's**: free to try, you pay only when you go live. Never "trial",
+  "pilot", "plan", a price, a time to set up, or a word about Meta, WhatsApp connection or payments.
+- **No marker in the address.** `/start` reads none and the funnel records none; the press is
+  counted by `data-cta` ("try-free", "try-free-header", "try-free-bar") in `SiteAnalytics`.
+- **Both states are checked**: `scripts/site/tryfree-check.mjs` reads `version.txt`'s
+  `try-free on|off` line, and CI runs `pnpm site:check` once with the switch on.
+
 ## Adding a product page
 
 **First, may it exist?** A product gets a page only when it is built and the founder has

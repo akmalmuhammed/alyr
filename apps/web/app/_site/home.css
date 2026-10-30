@@ -49,6 +49,9 @@ main[data-page="home"] { font-size: 1.0625rem; line-height: 1.55; }
 .hero-text > .hero-lead { margin-top: clamp(1.5rem, 2.5vw, 2rem); }
 .hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1.5rem; margin-top: 1.75rem; }
 .hero-note { margin-top: .875rem; max-width: 28rem; }
+/* With "Try it free" on there are two buttons and the link: below the wide step the link takes
+   its own row, so it never runs under the Carbon plate beside the text */
+@media (max-width: 81.99rem) { .hero-actions.is-pair .hero-more { flex-basis: 100%; } }
 .hero-facts { display: flex; flex-wrap: wrap; gap: .25rem .625rem; max-width: 34rem; margin-top: 1.5rem; color: var(--text-muted); }
 .hero-facts li { font-size: .875rem; font-weight: 500; line-height: 1.4; }
 .hero-facts li:not(:last-child)::after { content: "\00b7"; margin-inline-start: .625rem; }

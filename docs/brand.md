@@ -106,7 +106,7 @@ Every public page, in both languages, has a light and a dark theme. Light is sti
 
 ## Positioning: the small business's tech team (added 23 Oct 2026, ALY-210, D-048)
 
-ALYR is the technology team an owner-run business never had: what consultants and an IT team do for a big company, done for a small one, with products to back it. WhatsApp is one product and the way in, never the whole story. The homepage says it in its H1, "The tech team your business never had." / «فريق التقنية الذي لم يكن لدى مشروعك.», in a Why ALYR table (a big company, you today, with ALYR), and in how we work, a loop: check, set up, see, improve, then check again. Its one action is "Book a check-up". In the site's own words, say "reason" or "why", not "rule", and keep everything technical inside the product.
+ALYR is the technology team an owner-run business never had: what consultants and an IT team do for a big company, done for a small one, with products to back it. WhatsApp is one product and the way in, never the whole story. The homepage says it in its H1, "The tech team your business never had." / «فريق التقنية الذي لم يكن لدى مشروعك.», in a Why ALYR table (a big company, you today, with ALYR), and in how we work, a loop: check, set up, see, improve, then check again. Its one action is "Book a check-up". (Built and off until the founder switches it on at publish time, D-119: "Try it free" / «جرّب مجاناً» leads into the self-serve sign-up as the one Volt button, and "Book a check-up" stays beside it as its outlined twin, still the check-up's only name.) In the site's own words, say "reason" or "why", not "rule", and keep everything technical inside the product.
 
 ## Sector pages and owner guides (added 25 Oct 2026, ALY-232, ALY-233, D-057)
 
