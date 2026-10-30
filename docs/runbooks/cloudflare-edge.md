@@ -95,7 +95,7 @@ of `scripts/check-edge.sh`.
 | 5 | SPF on `alyr.qa` | `v=spf1 include:_spf.mx.cloudflare.net include:zohomail.com ~all` | `v=spf1 include:zohomail.com ~all` | The zone's own nameserver and public DNS answer the new value; MX, DKIM and DMARC unchanged | Edit the apex TXT back to the "before" text |
 | 6 | Response header Transform Rules (`infra/cloudflare/zone/response-header-rules.json`) | none | API and media get the headers above; `x-powered-by` removed on `app` | Headers read on every host; webhook, sign-in code, sign-up code and Paddle paths still answered by the API | Rules, Transform Rules, Modify Response Header: disable or delete the three rules |
 
-**Checked after the six changes** (`scripts/check-edge.sh`, 30 Oct 2026): HTTPS redirects, site, sign-in page and
+**Checked after the six changes** (`scripts/check-edge.sh`, 30 Oct 2026, 40 checks, all passing): HTTPS redirects, site, sign-in page and
 `/health/ready` answer; an empty POST to the WhatsApp webhook, a wrong verify token and an unsigned Paddle post are
 each refused **by the API** (`bad signature`, `verification failed`, `not signed by Paddle`), so Cloudflare lets
 them through; the sign-in code route answers 422 to an empty body (no email sent); the headers above; TLS 1.0 and
