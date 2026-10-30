@@ -104,6 +104,16 @@ there and type the code Google sends). Then run `infra/gcp/monitoring.sh apply`,
 **9. After a tested restore from an export** (`docs/hosting.md`, "Backups on Google"):
 `infra/gcp/setup.sh lock-backups`. It cannot be undone.
 
+**10. Is it still protected?** (ALY-34) `infra/gcp/audit.sh` reads, and changes nothing: point-in-time
+recovery, backup schedule, retention and place, no public address, deletion protection, the newest
+backup and export, any backup outside Doha or an on-demand one past 35 days, the export bucket, secrets
+stored in Doha only, no secret kept as a plain setting, no key files, no project-wide secret role, and
+the superseded secret versions still enabled (with the command to disable each). About three minutes.
+Run it before go-live, after any change to the backups or a secret, and every quarter. A restore
+from a nightly backup, timed, into a temporary instance that is deleted at the end:
+`infra/gcp/restore.sh backup-drill` (about 20 minutes, a few cents; steps in
+`docs/runbooks/restore-rehearsal.md`).
+
 ## The visitor's address (ALY-265)
 
 So the per-address rate limits count the visitor and not the proxy, the edge Worker signs the

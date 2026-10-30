@@ -1,0 +1,17 @@
+{
+  "displayName": "Production database deleted, copied, restored over or its backups deleted",
+  "combiner": "OR",
+  "alertStrategy": {"autoClose": "86400s"},
+  "documentation": {
+    "mimeType": "text/markdown",
+    "content": "Someone deleted `alyr-db`, cloned it, restored a backup onto it, or deleted one of its backups (log-based metric alyr-db-protected-actions, from Google's audit log). If this was you (a restore rehearsal clones the database; a restore, or clearing old backups, does the rest), ignore it: it closes by itself after a day. If it was not, treat it as a Severity 1: `docs/runbooks/incident-response.md`, sections 5 and 6. Who did it: Logs Explorer, project alyr-prod, `protoPayload.serviceName=\"sqladmin.googleapis.com\"`, field `protoPayload.authenticationInfo.principalEmail`. The instance itself has deletion protection on."
+  },
+  "conditions": [{
+    "displayName": "A protected action on the production database",
+    "conditionThreshold": {
+      "filter": "metric.type=\"logging.googleapis.com/user/alyr-db-protected-actions\" AND resource.type=\"cloudsql_database\"",
+      "aggregations": [{"alignmentPeriod": "300s", "perSeriesAligner": "ALIGN_SUM", "crossSeriesReducer": "REDUCE_SUM"}],
+      "comparison": "COMPARISON_GT", "thresholdValue": 0, "duration": "0s", "trigger": {"count": 1}
+    }
+  }]
+}
