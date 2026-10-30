@@ -12,8 +12,9 @@ customers use ALYR. From the 17 Oct 2026 audit (`docs/audit/2026-10-17.md`).
 ## Hosting and data
 - [ ] Production hosting decided and running in Qatar (D-036 / PR #51, #52, ALY-63, ALY-10)
 - [ ] `ALYR_ENV=production` set explicitly; the stand-in payment route, simulator and API docs answer 404
-- [ ] Encrypted daily backups, and a restore rehearsed in the last 30 days, written up (rehearsed 30 Oct 2026, `docs/audit/restore-2026-10-30.md`; repeat if go-live is after 29 Nov)
-- [ ] Secrets in the key vault, not in a file on a laptop
+- [x] Encrypted daily backups, and a restore rehearsed in the last 30 days, written up: a point-in-time clone (`docs/audit/restore-2026-10-30.md`) and a nightly backup restored into a fresh instance (`docs/audit/hardening-2026-10-30.md`, ALY-34), both 30 Oct 2026; repeat both if go-live is after 29 Nov
+- [ ] A restore from the nightly **export** has been tested on production data, and then `infra/gcp/setup.sh lock-backups` run (the 27 Oct test used the demo shop; steps in `hardening-2026-10-30.md`)
+- [ ] Secrets in the key vault, not in a file on a laptop (production is all Secret Manager, in Doha, with no secret kept as a plain setting; the laptop's `.env` still holds the development-era copies of the Meta, Resend and R2 values, none rotated since go-live: `secret-rotation.md`, "Where production stands")
 - [ ] `ALYR_LINK_SECRET` set (32 or more random characters; the API will not start without it outside `ALYR_ENV=local`). On the founder's laptop, set it in `apps/api/.env` before the tunnel serves customers: the built-in development value is public (ALY-112)
 - [ ] `ALYR_PAYMENT_KEYS_KEY` set (32 random bytes, base64) before the first shop connects a real payment provider: without it connecting is refused outside `ALYR_ENV=local` (ALY-17, spec 033)
 - [ ] Postgres not reachable from the internet; only the web app and webhook are public
@@ -32,11 +33,12 @@ customers use ALYR. From the 17 Oct 2026 audit (`docs/audit/2026-10-17.md`).
 - [ ] Contact merge keeps consent records (audit issue)
 - [x] Security headers on the web app (CSP, HSTS, frame-ancestors, nosniff) and an Origin check on signed-in changes (ALY-118); on the public site: `_headers` has HSTS, nosniff, frame-ancestors, base-uri, object-src; add Cloudflare's own rules in front
 - [ ] Real payment provider connected, or stand-in payments switched off (ALY-17)
-- [ ] Data retention and "forget this customer" procedure (audit issue)
+- [ ] Data retention and "forget this customer" procedure: a customer's download and forgetting, and the purge of working copies, are shipped (D-075, ALY-119); **still open: deleting a business's data 60 days after it stops, which the privacy notice promises** (SEC-6, LEG-1; it needs a way for a business to stop, go-live item 39). Backups age out as promised: 14 nightly, 7 days of logs, exports 35 days; on-demand backups only when someone deletes them (`hosting.md`)
 
 ## Running it
 - [ ] Error tracking and uptime alerts reach the founder's phone (rows in stack.md and data-residency.md). Built 30 Oct (ALY-277): every alert goes to every channel; the founder adds the phone (`infra/gcp/README.md`, 8b) and confirms `infra/gcp/monitoring.sh test-fire` reached it
 - [ ] `/health` checks the database and the job queue's age
+- [ ] A status page that merchants can open (a plan, not built: `docs/runbooks/status-page.md`; needs the founder's yes)
 - [ ] `docs/runbooks/incident-response.md` read; someone named is on call (the runbook is rewritten for Google Cloud; the on-call name, phone and hours are a blank for the founder to fill in at its top)
 - [ ] Production served by `next build && next start`, not the dev server
 - [ ] Release tagged and CHANGELOG written

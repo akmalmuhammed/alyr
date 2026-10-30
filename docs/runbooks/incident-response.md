@@ -38,6 +38,8 @@ Where to look first:
 2. **Stop the harm before finding the cause.** Turn the thing off rather than debug it live
    (section 2). Everything there can be undone.
 3. **Write one line in Linear** (label `Incident`): what, since when, who is affected.
+4. **If merchants can see it, tell them** (section 7) and, once it exists, post it on the status page
+   (`docs/runbooks/status-page.md`, a plan today): within 30 minutes, before the cause is known.
 
 | Severity | Examples | Respond |
 |---|---|---|
@@ -103,7 +105,8 @@ curl -s https://api.alyr.qa/health/ready                # check
 
 Cloud SQL `alyr-db` is one instance in one zone, with no standby (CLD-5). Backups: nightly, 14
 kept, and point-in-time recovery for 7 days; plus a nightly export in `gs://alyr-prod-db-exports`
-kept 35 days.
+kept 35 days. **Both reach back only as far as the oldest backup that exists:** the window was 14 hours on 30 Oct
+2026 and is 7 days from 5 Nov. `infra/gcp/audit.sh database` says how far back it reaches today.
 
 1. **Down, but data fine** (`/health/ready` is 503, alert "API cannot reach the database"):
    check Cloud SQL > `alyr-db` for maintenance or an operation in progress
@@ -118,8 +121,12 @@ kept 35 days.
    infra/gcp/restore.sh clone alyr-db-restored 2026-10-30T09:15:00Z   # UTC, a moment before the damage
    infra/gcp/restore.sh check alyr-db-restored                        # counts only, nothing shown
    infra/gcp/restore.sh repoint alyr-db-restored                      # both secrets, then the API and worker
+   infra/gcp/restore.sh revert                                        # only if it was the wrong call: the old addresses back, apps restarted
    ```
 
+   The instance itself lost, or the moment is older than point-in-time reaches: restore a nightly backup
+   instead (`restore.sh backup-drill` is the same steps on a temporary instance; measured 12 minutes to a usable
+   copy, up to a day of data lost; run the migrations first if a deploy happened since the backup).
 3. Close the API first (section 2) if the damage is still spreading, and say so to merchants (section 7).
 
 ## 5. A secret leaked

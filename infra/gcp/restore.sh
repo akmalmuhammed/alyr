@@ -5,16 +5,21 @@
 # `gcloud auth login` as an owner of the project (infra/gcp/README.md).
 #
 #   infra/gcp/restore.sh rehearse                 clone, check, delete: the rehearsal, with timings
+#   infra/gcp/restore.sh backup-drill [<backup>]  the other way back (ALY-34): restore a NIGHTLY BACKUP (default: the
+#                                                 newest automatic one in Doha) into a new smallest-tier instance
+#                                                 alyr-restore-drill, count its rows and production's, delete it
 #   infra/gcp/restore.sh clone <name> [<time>]    point-in-time clone of alyr-db (time in UTC,
 #                                                 for example 2026-10-30T09:15:00Z; default: the latest)
 #   infra/gcp/restore.sh check <name>             from inside the private network, count rows in the
 #                                                 clone (counts only, no data is shown or copied out)
 #   infra/gcp/restore.sh repoint <name>           write the clone's new private address into BOTH
 #                                                 database secrets, then restart the API and the worker
+#   infra/gcp/restore.sh revert                   undo `repoint`: put the previous value of BOTH database secrets
+#                                                 back as the newest version, then restart the API and the worker
 #   infra/gcp/restore.sh drop <name>              delete a clone (never alyr-db)
 #
-# Only `repoint` changes anything the apps use. `rehearse` never reads or writes a secret value
-# and never touches alyr-db: it makes one extra instance and deletes it before it ends.
+# Only `repoint` and `revert` change anything the apps use. `rehearse` and `backup-drill` never read or write a
+# secret value and never touch alyr-db: each makes one extra instance and deletes it before it ends.
 set -euo pipefail
 
 PROJECT="${ALYR_GCP_PROJECT:-alyr-prod}"
@@ -43,6 +48,8 @@ instance_ip() { value sql instances describe "$1" --format='value(ipAddresses[0]
 wait_ready() { until [ "$(value sql instances describe "$1" --format='value(state)')" = RUNNABLE ]; do sleep 15; done; }
 # A new instance takes its first backup right after it is usable, and refuses a delete until it ends.
 wait_idle() { while [ -n "$(value sql operations list --instance="$1" --filter='NOT status=DONE' --format='value(name)')" ]; do sleep 15; done; }
+# One operation (a restore) by its name; gcloud's own wait gives up after about ten minutes.
+wait_op() { until [ "$(value sql operations describe "$1" --format='value(status)')" = DONE ]; do sleep 10; done; }
 
 clone() {
   local name="$1" at="${2:-}"
@@ -129,10 +136,37 @@ repoint() {
     echo "  $s now points at $name ($ip)"
   done
   unset old new
-  stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+  restart_apps
+  echo "The API and the worker restarted on $name. Check /health/ready and /health/worker."
+}
+
+# New copies of the API and the worker read the secrets again. (The web app reads none.)
+restart_apps() {
+  local stamp; stamp="$(date -u +%Y%m%dT%H%M%SZ)"
   g run services update alyr-api --region="$REGION" --update-env-vars="ALYR_SECRETS_AT=$stamp" >/dev/null
   g run worker-pools update alyr-worker --region="$REGION" --update-env-vars="ALYR_SECRETS_AT=$stamp" >/dev/null
-  echo "The API and the worker restarted on $name. Check /health/ready and /health/worker."
+}
+
+# Put the version before the newest back as the newest. `:latest` is the highest version number and
+# does NOT fall back to an older one when the newest is disabled: it fails with FAILED_PRECONDITION
+# (tried on a scratch secret, 30 Oct 2026, ALY-34). So going back is a new version holding the old value.
+# The value passes through this shell only; it is never printed.
+previous_as_new() {
+  local s="$1" prev val
+  prev="$(value secrets versions list "$s" --sort-by=~createTime --limit=2 --format='value(name.basename())' | sed -n 2p)"
+  [ -n "$prev" ] || { echo "restore: $s has only one version; nothing to go back to" >&2; exit 1; }
+  val="$(value secrets versions access "$prev" --secret="$s")"
+  [ -n "$val" ] || { echo "restore: version $prev of $s is empty or cannot be read; stopping" >&2; exit 1; }
+  printf '%s' "$val" | g secrets versions add "$s" --data-file=- >/dev/null
+  unset val
+  echo "  $s: the value of version $prev is the newest again"
+}
+
+revert() {
+  local s
+  for s in database-url migration-url; do previous_as_new "$s"; done
+  restart_apps
+  echo "The API and the worker restarted on the previous database address. Check /health/ready and /health/worker."
 }
 
 rehearse() {
@@ -155,11 +189,60 @@ rehearse() {
   echo "TIMINGS delete=$((t5 - t4))s total=$((t5 - t0))s rpo_lag=${lag}s"
 }
 
+# The other way back (ALY-34): a nightly backup into a new, smallest-tier instance. `rehearse` proves
+# point-in-time recovery; this proves the backups Cloud SQL keeps for 14 nights, which is what
+# remains when the instance or its disk is lost. The drill instance is not a clone: it is made empty
+# (private address only, no backups of its own, no deletion protection) and the backup is restored
+# over it, so it also shows what a restore into a fresh instance needs. A restore into a smaller
+# tier is allowed as long as the disk is not smaller than the source's.
+DRILL="alyr-restore-drill"
+backup_drill() {
+  local id="${1:-}" version size t0 t1 t2 t3 t4 t5 ended age op failure
+  [ "$DRILL" != "$SQL" ] || { echo "restore: the drill instance must not be $SQL" >&2; exit 1; }
+  exists g sql instances describe "$DRILL" && { echo "restore: $DRILL already exists; run 'restore.sh drop $DRILL' first" >&2; exit 1; }
+  if [ -z "$id" ]; then
+    id="$(value sql backups list --instance="$SQL" --filter='type=AUTOMATED AND status=SUCCESSFUL AND location='"$REGION" \
+      --sort-by=~windowStartTime --limit=1 --format='value(id)')"
+  fi
+  [ -n "$id" ] || { echo "restore: no automatic backup in $REGION to restore" >&2; exit 1; }
+  ended="$(value sql backups describe "$id" --instance="$SQL" --format='value(endTime)')"
+  age=$(( $(now) - $(epoch "$ended") ))
+  version="$(value sql instances describe "$SQL" --format='value(databaseVersion)')"
+  size="$(value sql instances describe "$SQL" --format='value(settings.dataDiskSizeGb)')"
+  echo "Backup $id finished $ended ($age s ago). That age is the data a restore from it would lose."
+  echo "Making $DRILL ($version, db-f1-micro, ${size} GB, private address only)..."
+
+  trap 'drop "$DRILL"' EXIT
+  t0=$(now)
+  # The root password is random and thrown away: the restore brings the backup's own users with it.
+  g sql instances create "$DRILL" --database-version="$version" --edition=ENTERPRISE --tier=db-f1-micro \
+    --region="$REGION" --network="projects/$PROJECT/global/networks/alyr-net" --no-assign-ip \
+    --ssl-mode=ENCRYPTED_ONLY --storage-type=SSD --storage-size="$size" --no-storage-auto-increase \
+    --availability-type=ZONAL --no-backup --no-deletion-protection \
+    --root-password="$(openssl rand -hex 24)" --async >/dev/null
+  wait_ready "$DRILL"; t1=$(now)
+  echo "  $DRILL is usable at $(instance_ip "$DRILL") (empty); restoring backup $id over it..."
+
+  op="$(value sql backups restore "$id" --backup-instance="$SQL" --restore-instance="$DRILL" --async --format='value(name)')"
+  wait_op "$op"
+  failure="$(value sql operations describe "$op" --format='value(error.errors[0].message)')"
+  [ -z "$failure" ] || { echo "restore: the restore failed: $failure" >&2; exit 1; }
+  wait_ready "$DRILL"; t2=$(now)
+  echo "  restored; counting rows in the restored copy..."
+  check "$DRILL"; t3=$(now)
+  echo "  production for comparison (it has moved on since the backup, so small differences are expected)..."
+  check "$SQL"
+  t4=$(now); drop "$DRILL"; trap - EXIT; t5=$(now)
+  echo "TIMINGS create=$((t1 - t0))s restore=$((t2 - t1))s check=$((t3 - t2))s delete=$((t5 - t4))s total=$((t5 - t0))s backup_age=${age}s"
+}
+
 case "${1:-}" in
   rehearse) rehearse ;;
+  backup-drill) backup_drill "${2:-}" ;;
   clone) clone "${2:?usage: restore.sh clone <new instance name> [<time in UTC>]}" "${3:-}" ;;
   check) check "${2:?usage: restore.sh check <instance name>}" ;;
   repoint) repoint "${2:?usage: restore.sh repoint <instance name>}" ;;
+  revert) revert ;;
   drop) drop "${2:?usage: restore.sh drop <instance name>}" ;;
-  *) sed -n '2,17p' "$0"; exit 1 ;;
+  *) sed -n '2,${/^#/!q;p}' "$0"; exit 1 ;;
 esac
