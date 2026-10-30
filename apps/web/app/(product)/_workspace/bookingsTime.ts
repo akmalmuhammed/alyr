@@ -16,7 +16,9 @@ export function zonedIso(day: string, time: string, zone: string): string {
 
 /** Today's date and the time now in the shop's zone, the time rounded up to 5 minutes. */
 export function nowIn(zone: string): { day: string; time: string } {
-  const at = new Date(Date.now() + 5 * 60_000 - (Date.now() % (5 * 60_000)));
+  // One reading of the clock: two could fall either side of a five-minute mark (xx:39, not xx:40).
+  const now = Date.now();
+  const at = new Date(now + 5 * 60_000 - (now % (5 * 60_000)));
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: zone, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit",
     hour: "2-digit", minute: "2-digit",
