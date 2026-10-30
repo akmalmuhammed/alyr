@@ -63,7 +63,7 @@ The workspace (`/app`) and sign-in answer 404 from outside the laptop; sign-in c
 
 | What the owner gets | Where it appears | State |
 |---|---|---|
-| A payment link for an order or for an account balance, and a receipt message when paid | `modules/ledger/service.py` (`create_payment_request`, `complete_payment`), `apps/web/app/(product)/pay/[tenant]/[payment]/page.tsx` | **Live (test number) on the stand-in page only.** The page says: "Test payment page. No money moves. A Qatar payment gateway replaces this before launch." Method shown: "Debit card (NAPS) · test" |
+| A payment link for an order or for an account balance, and a receipt message when paid | `modules/ledger/service.py` (`create_payment_request`, `complete_payment`), `apps/web/app/(product)/pay/[slug]/page.tsx` | **Live (test number) on the stand-in page only.** The page says: "Test payment page. No money moves. A Qatar payment gateway replaces this before launch." Method shown: "Debit card (NAPS) · test" |
 | A real gateway (the shop's own SADAD, SkipCash or Dibsy account) | Connections screen shows "Payment provider · Not available yet" (`catalog.py`, `connected=""`) | **Not built** (ALY-17; provider applications ALY-5 not filed) |
 | ALYR never holds the money | `CLAUDE.md` hard rule 3 | A design rule the code follows (it stores references and statuses only). True, but nothing moves today |
 
@@ -346,7 +346,7 @@ There is no `app/layout.tsx`. `apps/web/app/` has **three root layouts**, one pe
 |---|---|---|---|
 | `(site)` | `app/(site)/layout.tsx` → `SiteDocument locale="en"` (`<html lang="en" dir="ltr">`) | `/` (`(site)/page.tsx` → `HomePage`), `/chat` (`(site)/chat/page.tsx` → `ProductPage`) | `_site/site.css` only |
 | `(site-ar)` | `app/(site-ar)/layout.tsx` → `SiteDocument locale="ar"` (`lang="ar" dir="rtl"`) | `/ar`, `/ar/chat` | `_site/site.css` only |
-| `(product)` | `app/(product)/layout.tsx` (own fonts, `noindex`) | `/app/[[...section]]`, `/ops`, `/login`, `/whatsapp`, `/s/[slug]`, `/b/[slug]`, `/pay/[tenant]/[payment]`, `/t/[slug]` | `globals.css`, plus `_workspace/shell.css` or `_customer/customer.css` |
+| `(product)` | `app/(product)/layout.tsx` (own fonts, `noindex`) | `/app/[[...section]]`, `/ops`, `/login`, `/whatsapp`, `/s/[slug]`, `/b/[slug]`, `/pay/[slug]`, `/t/[slug]` | `globals.css`, plus `_workspace/shell.css` or `_customer/customer.css` |
 
 App-level files: `icon.svg`, `opengraph-image.tsx` (generated at build), `robots.ts`, `sitemap.ts` (from `PATHS`). `next.config.ts` sets `distDir` from `ALYR_DIST_DIR` and rewrites `/api` and `/sim` to FastAPI; there is no `output: "export"`.
 

@@ -7,13 +7,13 @@ account is connected, or on a developer machine, where the stand-in plays the pr
 `ALYR_STAND_IN_PAYMENTS=false` shows a developer machine what production gets. Every test goes
 through the real path: HTTP in, real PostgreSQL, the chat on the simulator."""
 
-import re
 from uuid import UUID
 
 import pytest
 
 from alyr.core.normalise import shown_name
 from alyr.seed import AHMED_PHONE, DEMO_SLUG
+from pay_links import pay_page
 from test_consent import owner_sql
 from test_items import counted, line, order
 from test_orders import STORE, customer
@@ -160,6 +160,5 @@ def test_a_phone_number_is_never_printed_as_the_customers_name(client):
     assert shown_name("Ahmed Al-Kuwari") == "Ahmed Al-Kuwari" and shown_name(None) == ""
     # A customer with no WhatsApp profile name is stored as "+<phone>" (core/identity.py).
     owner_sql("update contacts set name = $1 where phone = $2", f"+{AHMED_PHONE}", AHMED_PHONE)
-    link = re.search(r"/pay/(\S+)/(\S+)", chat(client, "pay")["body"])
-    details = client.get(f"/api/pay/{link.group(1)}/{link.group(2)}").json()
+    details = pay_page(client, chat(client, "pay")["body"]).json()
     assert details["customer"] == "" and AHMED_PHONE not in str(details)

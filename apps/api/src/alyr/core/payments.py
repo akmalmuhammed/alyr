@@ -15,7 +15,7 @@ from uuid import UUID, uuid4
 
 import asyncpg
 
-from alyr.core import jobs, payment_keys
+from alyr.core import jobs, links, payment_keys
 from alyr.core.outbound import Outbound
 from alyr.db import Database
 from alyr.gateways.base import BadKeys, Gateway, Payment
@@ -69,6 +69,16 @@ async def request(
     )
     await jobs.enqueue(conn, CHECKOUT, {"payment_id": str(payment_id)})
     return payment_id
+
+
+async def url(conn: asyncpg.Connection, web_url: str, payment_id: UUID) -> str:
+    """The link the customer opens to pay this request: signed for the pay page and this payment
+    only, and it runs out (SEC-8, D-080). Needs a tenant-scoped connection."""
+    shop = await conn.fetchrow(
+        "select id, slug from tenants "
+        "where id = nullif(current_setting('app.tenant_id', true), '')::uuid"
+    )
+    return links.pay_url(web_url, shop["slug"], shop["id"], payment_id)
 
 
 def present(row: asyncpg.Record | None, webhook_url: str) -> dict | None:
@@ -217,7 +227,7 @@ class Payments:
         payment_id = UUID(payload["payment_id"])
         async with self.db.tenant(tenant_id) as conn:
             row = await conn.fetchrow(
-                "select p.account_id, p.amount, p.status, p.checkout_url, o.number, t.name "
+                "select p.account_id, p.amount, p.status, p.checkout_url, o.number, t.name, t.slug "
                 "from payment_requests p join tenants t on t.id = p.tenant_id "
                 "left join orders o on o.id = p.order_id where p.id = $1",
                 payment_id,
@@ -232,7 +242,7 @@ class Payments:
         payment = Payment(
             payment_id, row["amount"],
             f"{row['name']} order {row['number']}" if row["number"] else row["name"],
-            f"{self.web_url}/pay/{tenant_id}/{payment_id}",
+            links.pay_url(self.web_url, row["slug"], tenant_id, payment_id),
             self.webhook_url(tenant_id, row["account_id"]),
         )
         try:

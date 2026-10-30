@@ -18,6 +18,8 @@ opened this page for good.
 * Nothing is cached for anyone else and nothing is indexed.
 """
 
+from uuid import UUID
+
 from fastapi import APIRouter, Header, HTTPException, Query, Request, Response
 
 from alyr.core import links
@@ -55,9 +57,8 @@ async def track(
     return {
         "shop": {"name": shop["name"], "name_ar": shop["name_ar"]},
         "order": order,
-        # The pay page still opens by the shop's ID and the payment's (SEC-8's second part
-        # signs it, after the payment adapters, ALY-17).
-        "pay_path": f"/pay/{shop['id']}/{order['payment_id']}"
+        # The pay page's own signed link, made fresh (SEC-8, D-080), as a path on this site.
+        "pay_path": links.pay_url("", slug, shop["id"], UUID(order["payment_id"]))
         if order and order["payment_id"] else None,
         "link": customer_link.view(state, links.TRACK),
     }

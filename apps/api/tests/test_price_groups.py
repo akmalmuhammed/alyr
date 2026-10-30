@@ -7,7 +7,6 @@ price it charged. A SKU is a code the owner picks, never repeated within a shop.
 through the real path: PostgreSQL, the order page's HTTP API, the workspace's HTTP API.
 """
 
-import re
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from uuid import UUID, uuid4
@@ -19,6 +18,7 @@ from alyr.db import Database
 from alyr.seed import AGENT_EMAIL, DEMO_TENANT_ID
 from conftest import APP_DSN, OWNER_DSN
 from order_links import token
+from pay_links import pay_page
 from test_consent import owner_sql
 from test_items import STORE, detail, fresh, line, mk, order, pay, people, vid
 from test_orders import customer
@@ -80,8 +80,7 @@ def on_page(shown: dict, item: dict) -> dict:
 
 
 def amount_to_pay(client, placed: dict) -> int:
-    tenant_id, payment_id = re.search(r"/pay/(\S+)/(\S+)", placed["pay_url"]).groups()
-    return client.get(f"/api/pay/{tenant_id}/{payment_id}").json()["amount"]
+    return pay_page(client, placed["pay_url"]).json()["amount"]
 
 
 def order_row(client, placed: dict) -> dict:

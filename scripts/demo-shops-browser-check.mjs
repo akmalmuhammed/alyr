@@ -31,7 +31,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { launch, sleep, trackPath } from "./browser-kit.mjs";
+import { launch, payPath, sleep, trackPath } from "./browser-kit.mjs";
 import { COPY } from "../apps/web/app/(product)/_workspace/catalogCopy.ts";
 
 const args = Object.fromEntries(
@@ -596,7 +596,7 @@ async function customer(shop, scheme) {
   await go(l.own, 1500);
 
   if (l.pending) {
-    await go(`/pay/${l.tenant}/${l.pending}`, 1500);
+    await go(payPath(l.tenant, l.slug, l.pending), 1500);
     await audit(shop, scheme, "pay");
   }
   if (l.track) {

@@ -10,6 +10,7 @@ from uuid import UUID
 
 import pytest
 
+import pay_links
 from alyr.core import team
 from alyr.modules.documents import sales
 from alyr.modules.documents import service as doc_service
@@ -312,11 +313,10 @@ def test_a_payment_on_a_credit_account_gets_a_receipt_that_says_what_is_left(cli
 
     async def ask(conn):
         return await ledger.create_payment_request(
-            conn, shop.tenant_id, UUID(who.id), 20_000, "http://web.test")
+            conn, UUID(who.id), 20_000, "http://web.test")
 
     link = run_in_app(shop.owner, shop.tenant_id, ask)
-    tenant_id, payment_id = link.split("/pay/")[1].split("/")
-    assert shop.owner.post(f"/api/pay/{tenant_id}/{payment_id}/complete").json() == {"status": "paid"}
+    assert pay_links.pay(shop.owner, link).json() == {"status": "paid"}
 
     [receipt] = documents(shop)
     assert (receipt["kind"], receipt["source"], receipt["total_minor"]) == ("receipt", "ledger_payment", 20_000)
@@ -327,7 +327,7 @@ def test_a_payment_on_a_credit_account_gets_a_receipt_that_says_what_is_left(cli
     assert shown["notes"]["ar"] == "الرصيد المتبقي على حسابك: 300.00 ر.ق."
     assert shown["payments"][0]["method"] == "link"
     # Reported again: still one.
-    shop.owner.post(f"/api/pay/{tenant_id}/{payment_id}/complete")
+    pay_links.pay(shop.owner, link)
     assert len(documents(shop)) == 1
 
 

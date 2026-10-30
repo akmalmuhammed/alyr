@@ -14,17 +14,20 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
+from alyr.core import links
 from alyr.core.auth import Staff
 from alyr.db import Database
 from alyr.modules.agent import facts, insights
 from alyr.modules.bookings import deposits, service
-from alyr.seed import AGENT_EMAIL, AHMED_PHONE, DEMO_TENANT_ID
+from alyr.seed import AGENT_EMAIL, AHMED_PHONE, DEMO_SLUG, DEMO_TENANT_ID
 from alyr.seed_bookings import SALON, ensure_sample_tenant, reset_sample
 from concurrency import LockWatch, hold_open
 from conftest import APP_DSN, OWNER_DSN
 from documents_sales_support import customer as sales_customer
 from documents_sales_support import documents, sales_shop
 from order_links import booking_token
+from pay_links import pay as pay_by_link
+from pay_links import pay_page
 from test_booking_resources import customers, listed
 from test_bookings import PAGE, a_working_day, service_id
 from test_consent import ahmed, conversation, owner_sql, say
@@ -102,7 +105,8 @@ def deposit_on(client, sid, kind="fixed", value=5_000):
 
 
 def pay(client, path):
-    return client.post(f"/api{path}/complete")
+    """Pay the stand-in by the deposit's signed link, as the pay page's button does."""
+    return pay_by_link(client, path)
 
 
 PHONES = iter(range(55660100, 55669999))
@@ -348,7 +352,8 @@ def test_a_deposit_holds_the_time_until_it_is_paid_then_the_visit_is_confirmed(c
     sid, start, made = deposit_booking(client)
     deposit = made["deposit"]
     assert (deposit["amount"], deposit["amount_text"]) == (5_000, "QAR 50")
-    assert deposit["pay_path"].startswith(f"/pay/{DEMO_TENANT_ID}/")
+    assert deposit["pay_path"].startswith(f"/pay/{DEMO_SLUG}?t=")  # signed (SEC-8, D-080)
+    assert str(DEMO_TENANT_ID) not in deposit["pay_path"]
     row = booking_row(made["id"])
     assert (row["deposit"], row["deposit_state"]) == (5_000, "due") and row["hold_until"]
     assert start not in free(client, sid)  # the time is held for her
@@ -361,7 +366,7 @@ def test_a_deposit_holds_the_time_until_it_is_paid_then_the_visit_is_confirmed(c
 
     # The pay page knows the visit and the rule the customer agreed to.
     path = deposit["pay_path"]
-    page = client.get(f"/api{path}").json()
+    page = pay_page(client, path).json()
     assert page["booking"]["number"] == made["number"]
     assert page["booking"]["deposit_terms"]["cancel_hours"] == 24
     # The visit, the person and the rule; nothing that identifies the customer beyond a name.
@@ -411,7 +416,7 @@ def test_an_unpaid_deposit_gives_the_time_back_after_the_hold(client):
     assert actions(made["id"], "released")[0]["detail"]["reason"] == "deposit_not_paid"
     late = pay(client, made["deposit"]["pay_path"])
     assert late.status_code == 409 and late.json()["detail"]["code"] == "expired"
-    assert client.get(f"/api{made['deposit']['pay_path']}").json()["status"] == "expired"
+    assert pay_page(client, made["deposit"]["pay_path"]).json()["status"] == "expired"
     assert release(client) == 0  # once
 
 
@@ -526,8 +531,7 @@ def test_a_paid_deposit_makes_a_deposit_receipt_and_counts_against_the_bill(
     booked = owner.post(f"/api/book/{shop.slug}", json={
         "token": booking_token(who.id, shop.tenant_id), "service_id": sid, "starts_at": start})
     assert booked.status_code == 200, booked.text
-    path = booked.json()["deposit"]["pay_path"]
-    assert owner.post(f"/api{path}/complete").status_code == 200
+    assert pay(owner, booked.json()["deposit"]["pay_path"]).status_code == 200
 
     [receipt] = documents(shop, kind="deposit_receipt")
     assert (receipt["source"], receipt["source_ref"], receipt["paid_minor"],
@@ -849,7 +853,7 @@ def test_the_live_salon_can_be_reset_after_a_rehearsal_paid_a_deposit(client):
     tid = SALON.tenant_id
     [waiting] = owner_sql("select id from payment_requests where tenant_id = $1 "
                           "and status = 'pending' and booking_id is not null", tid)
-    assert client.post(f"/api/pay/{tid}/{waiting['id']}/complete").status_code == 200
+    assert pay(client, links.pay_url("", SALON.slug, tid, waiting["id"])).status_code == 200
     receipts = owner_sql("select id from documents where tenant_id = $1 "
                          "and kind = 'deposit_receipt' and status = 'issued'", tid)
     assert len(receipts) == 1

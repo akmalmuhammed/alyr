@@ -1,10 +1,10 @@
 """What a customer's link token means to a public page (ALY-112, ALY-133, D-039).
 
-The order page, the booking page, the document page and the tracking page read their token the
-same way: the page sends it in the header `X-Order-Link` (the name is the first page's; the
-header carries every kind of token) so no request log of ours holds one, `?t=` is still read
-for a tool or a test, and a bare ID is not read at all. Each page names its purpose when it
-reads, so a token made for another page is refused (`core/links.py`).
+The order page, the booking page, the document page, the tracking page and the pay page read
+their token the same way: the page sends it in the header `X-Order-Link` (the name is the first
+page's; the header carries every kind of token) so no request log of ours holds one, `?t=` is
+still read for a tool or a test, and a bare ID is not read at all. Each page names its purpose
+when it reads, so a token made for another page is refused (`core/links.py`).
 
 A token that is not good does not stop a page from opening in public: the page asks for the
 state and shows the customer why, in both languages. Only an action that needs a customer
@@ -52,12 +52,27 @@ _TRACK_WORDS = {
         "انتهت صلاحية رابط تتبّع الطلب هذا. راسل المتجر على واتساب للحصول على رابط جديد.",
     ),
 }
-_WORDS = {links.BOOKING: _BOOKING_WORDS, links.DOCUMENT: _DOCUMENT_WORDS, links.TRACK: _TRACK_WORDS}
+_PAY_WORDS = {
+    "bad_link": (
+        "This payment link is not valid. Open the newest link in your chat with the shop, "
+        "or message the shop on WhatsApp.",
+        "رابط الدفع هذا غير صالح. افتح أحدث رابط في محادثتك مع المتجر، أو راسل المتجر على واتساب.",
+    ),
+    "expired_link": (
+        "This payment link has expired. Message the shop on WhatsApp to get a new one.",
+        "انتهت صلاحية رابط الدفع هذا. راسل المتجر على واتساب للحصول على رابط جديد.",
+    ),
+}
+_WORDS = {
+    links.BOOKING: _BOOKING_WORDS, links.DOCUMENT: _DOCUMENT_WORDS, links.TRACK: _TRACK_WORDS,
+    links.PAY: _PAY_WORDS,
+}
 _UNAVAILABLE = {
     links.ORDER: "orders are not available",
     links.BOOKING: "bookings are not available",
     links.DOCUMENT: "documents are not available",
     links.TRACK: "order tracking is not available",
+    links.PAY: "payments are not available",
 }
 
 

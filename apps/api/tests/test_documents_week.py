@@ -21,6 +21,7 @@ from documents_sales_support import (
     run_in_app,
     sales_shop,
 )
+from pay_links import pay
 from pdf_support import has_letters, page_text
 from test_documents_manual_payments import record, service_and_booking
 
@@ -67,12 +68,11 @@ def test_a_week_of_demo_activity_makes_exactly_the_right_documents(client_factor
     assert record(shop.owner, "booking", booking).status_code == 201
 
     async def ask(conn):
-        return await ledger.create_payment_request(conn, shop.tenant_id, UUID(noor.id), 10_000, "http://web.test")
+        return await ledger.create_payment_request(conn, UUID(noor.id), 10_000, "http://web.test")
 
     link = run_in_app(shop.owner, shop.tenant_id, ask)
-    tenant_id, payment_id = link.split("/pay/")[1].split("/")
     for _ in range(2):
-        shop.owner.post(f"/api/pay/{tenant_id}/{payment_id}/complete")
+        pay(shop.owner, link)
 
     # ── Thursday: a paid order cancelled, a credit order cancelled
     day(3)

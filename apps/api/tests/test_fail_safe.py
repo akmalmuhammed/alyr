@@ -4,7 +4,7 @@ developer conveniences instead of opening them."""
 import pytest
 
 from alyr.config import Settings
-from alyr.seed import DEMO_TENANT_ID
+from alyr.seed import DEMO_SLUG
 
 
 def test_the_default_environment_is_production(monkeypatch):
@@ -27,7 +27,7 @@ def test_outside_local_the_simulator_payments_and_api_docs_are_gone(
     assert client.get("/docs").status_code == 404
     assert client.get("/openapi.json").status_code == 404
     assert client.post("/sim/reset").status_code == 404
-    paid = client.post(f"/api/pay/{DEMO_TENANT_ID}/00000000-0000-4000-8000-000000000000/complete")
+    paid = client.post(f"/api/pay/{DEMO_SLUG}/complete", headers={"x-order-link": "x.y"})
     assert paid.status_code == 404
     # Without the open demo, the workspace needs a session.
     assert client.get("/api/workspace").status_code == 401

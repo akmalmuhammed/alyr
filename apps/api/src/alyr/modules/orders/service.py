@@ -629,7 +629,7 @@ async def create_order(
     else:
         # On the shop's own payment account when it has connected one (ALY-17).
         payment_id = await payments.request(conn, contact_id, total, order_id)
-        pay_url = f"{web_url}/pay/{tenant_id}/{payment_id}"
+        pay_url = await payments.url(conn, web_url, payment_id)
         closing = f"للدفع: {pay_url}" if arabic else f"Pay here: {pay_url}"
         if held_until is not None:
             closing += (

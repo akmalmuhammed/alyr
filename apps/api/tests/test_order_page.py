@@ -20,6 +20,7 @@ from alyr.modules.items.service import Loaded
 from alyr.modules.orders import page as page_module
 from alyr.seed import AHMED_PHONE, DEMO_SLUG, DEMO_TENANT_ID
 from order_links import token
+from pay_links import pay, pay_page
 from photo_files import photo
 from test_consent import owner_sql, say
 from test_items import EVERY_DAY, STORE, counted, detail, line, mk, order, people
@@ -670,9 +671,10 @@ def test_the_payment_page_says_a_released_order_is_expired(client):
     cake = counted(client, 2, name="Cake", name_ar="كعكة", price=500)
     ahmed = people(client, 1)[0]
     placed = order(client, ahmed, [line(cake)]).json()
-    tenant_id, payment_id = placed["pay_url"].split("/pay/")[1].split("/")
-    assert client.get(f"/api/pay/{tenant_id}/{payment_id}").json()["status"] == "pending"
-    owner_sql("update payment_requests set status = 'expired' where id = $1", UUID(payment_id))
-    shown = client.get(f"/api/pay/{tenant_id}/{payment_id}").json()
+    link = placed["pay_url"]
+    assert pay_page(client, link).json()["status"] == "pending"
+    owner_sql("update payment_requests set status = 'expired' where order_id = $1",
+              UUID(placed["order_id"]))
+    shown = pay_page(client, link).json()
     assert (shown["status"], shown["amount"]) == ("expired", 500)
-    assert client.post(f"/api/pay/{tenant_id}/{payment_id}/complete").status_code == 409
+    assert pay(client, link).status_code == 409

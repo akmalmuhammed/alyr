@@ -64,7 +64,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-064 | The owner's test order is marked in the database (a trigger sets `orders.is_test`), counted nowhere (a guard test reads every query), and cancelled with its stock returned when the test ends | Accepted |
 | D-079 | Staff numbers the owner marks for "New orders" are told on WhatsApp about every order placed (text inside their window, a utility template outside it); nobody until a number is marked, never for the owner's test order; web push waits for a data-residency decision | Accepted |
 | D-067 | Terms and the privacy notice are versions ALYR publishes; an owner accepts them at sign-up and again when a new one is published, in an append-only record | Accepted |
-| D-080 | The order tracking page opens by a signed link that runs out (`/t/<shop>?t=<token>`, purpose `track`, `ALYR_LINK_DAYS`); the order's ID alone opens nothing. The pay page follows after the payment adapters | Accepted |
+| D-080 | The order tracking page and the pay page open by signed links that run out (`/t/<shop>?t=<token>` and `/pay/<shop>?t=<token>`, purposes `track` and `pay`, `ALYR_LINK_DAYS`); an order's or a payment's ID alone opens nothing | Accepted |
 | D-068 | An owner who stops partway through setup gets two emails to come back, then none, and can stop them from the link; the funnel counts them | Accepted |
 | D-076 | Every table that holds a shop's rows has an index that starts with `tenant_id` (a test fails otherwise); a shop's default price group is made with the shop, so the order page only reads, in a read-only transaction; the worker looks for abandoned jobs once a minute | Accepted |
 | D-062 | The homepage hero is the explainer film (one afternoon at Qirfa Bakery in the product's own screens, three lanes at once, ending on the ALYR Agent home): "the product is the illustration" in motion; the hero's live ALYR Agent figure leaves the hero | Accepted |
@@ -1744,8 +1744,8 @@ Without it, analytics is off everywhere.
 
 ---
 
-## D-080 · The order tracking page opens by a signed link that runs out; the order's ID alone opens nothing
-**Date** 29 Oct 2026 · **Status** Accepted (go-live audit finding SEC-8, in ALY-271; Claude's scope under the founder's instruction of 29 Oct to finish the go-live items) · Changes spec 005's "The IDs that stay" for the tracking page · Builds on D-039 (a customer's signed links)
+## D-080 · The order tracking page and the pay page open by signed links that run out; an order's or a payment's ID alone opens nothing
+**Date** 29 Oct 2026, the pay page's part 30 Oct · **Status** Accepted (go-live audit finding SEC-8, in ALY-271; Claude's scope under the founder's instruction of 29 Oct to finish the go-live items) · Changes spec 005's "The IDs that stay" for both pages · Builds on D-039 (a customer's signed links)
 
 **Where we were.** The tracking page opened at `/t/<shop's ID>/<order's ID>`: two IDs and no token. ALY-133 kept that because the order's ID is random (122 bits) and cannot be guessed. But it does not have to be guessed. The order's ID is also in the workspace's addresses and in every request log that records them, and it can be forwarded with the link. A link made of it never ran out and could not be ended, so whoever held it saw the order's items, delivery address and staff member for good.
 
@@ -1759,13 +1759,17 @@ Without it, analytics is off everywhere.
   - The old route by two IDs is gone.
 - **A link that has run out, was edited, or belongs to another shop or page** opens a calm page that says what to do in both languages. Nothing in it names an order.
 - **Nothing is kept for anyone else:** answers are `private, no-store` and `noindex`, and the page sends no referrer.
-- **The pay page keeps its two IDs** until SEC-8's second part, after the payment adapters (ALY-17, PR #169) merge. Its link then gets the same treatment, and it gets its "Track this order" button back with a signed link. Until then the pay page shows no tracking button; the customer's chat holds the link.
+- **The pay page gets the same treatment** (SEC-8's second part, 30 Oct, after the payment adapters, ALY-17, PR #169, merged).
+  - A sixth purpose, `pay`: the token names one payment request and the shop, opens the pay page only, and runs out after `ALYR_LINK_DAYS`.
+  - The address is `/pay/<shop's address name>?t=<token>`; the API answers at `/api/pay/<shop>`, and the stand-in's Pay at `/api/pay/<shop>/complete` (a developer machine only) needs the same token. The old route by two IDs is gone.
+  - Every link to it is signed: the order's message and the order page's answer, the credit account's "pay" in the chat, the payment reminders, and the address a provider sends the customer back to.
+  - The two pages link to each other by fresh signed links: the tracking page's "Pay now", and the pay page's "Track this order", which is back.
 
 **Chosen over:**
 - *Keeping the old address beside the new one for links already sent.* Production has sent none (no WhatsApp traffic yet), and keeping it would keep the hole.
 - *A token in the path* (`/t/<shop>/<token>`). The query keeps the shape, the header and the checks of the other customer pages.
 
-**Revisit when** a shop prepares orders further ahead than 60 days and its customers find the link has run out, or the pay page is signed (SEC-8's second part).
+**Revisit when** a shop prepares orders further ahead than 60 days, or lets a credit balance stand longer, and its customers find the link has run out.
 
 ## D-065 · Owners and staff manage the shop from WhatsApp as well as the portal, through one shared action layer
 **Date** 18 Oct 2026 (numbered D-040 until 28 Oct, when it was renumbered: D-040 is ALYR's look) · **Status** Accepted (founder, 18 Oct, in chat: "implement this", after the plan was drawn in Figma https://www.figma.com/design/FymEODsZGzeQTXciYIvYWI) · Linear ALY-130 · Spec `specs/029-owner-actions/spec.md`

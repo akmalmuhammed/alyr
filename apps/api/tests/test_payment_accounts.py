@@ -11,10 +11,11 @@ from uuid import UUID, uuid4
 import pytest
 
 from alyr.config import Settings
-from alyr.core import payment_keys
+from alyr.core import links, payment_keys
 from alyr.gateways import registry
 from alyr.gateways.simulator import SIGNATURE, sign
-from alyr.seed import AGENT_EMAIL, AHMED_PHONE, DEMO_TENANT_ID
+from alyr.seed import AGENT_EMAIL, AHMED_PHONE, DEMO_SLUG, DEMO_TENANT_ID
+from pay_links import pay, pay_page
 from test_consent import ahmed, owner_sql, say
 from test_sign_in import sign_in
 
@@ -27,9 +28,20 @@ def connect(client, key=KEY, provider="simulator"):
     )
 
 
-def pay_link(client):
+def pay_link(client) -> tuple[str, str]:
+    """The payment link the chat sends for "pay": (the message, the payment's ID)."""
     body = say(client, AHMED_PHONE, reply_id="pay")[-1]["body"]
-    return re.search(r"/pay/(\S+)/(\S+)", body).groups()
+    return body, payment_in(body)
+
+
+def payment_in(text: str) -> str:
+    """The payment's ID inside the signed link in `text`."""
+    token = re.search(r"[?&]t=([\w.-]+)", text).group(1)
+    return str(links.read(token, DEMO_TENANT_ID, purpose=links.PAY).subject_id)
+
+
+def page(client, link: str) -> dict:
+    return pay_page(client, link).json()
 
 
 def last_message(client):
@@ -68,8 +80,8 @@ def test_wrong_keys_say_so_in_one_word(client):
     account = client.get("/api/payments/account").json()["account"]
     assert (account["status"], account["problem"]) == ("failed", "bad_keys")
     # A failed account takes no payment links: the stand-in, as before.
-    tenant_id, payment_id = pay_link(client)
-    assert client.get(f"/api/pay/{tenant_id}/{payment_id}").json()["stand_in"] is True
+    link, _ = pay_link(client)
+    assert page(client, link)["stand_in"] is True
 
 
 def test_a_provider_that_is_down_is_tried_again_then_marked_unavailable(client):
@@ -116,31 +128,33 @@ def test_only_owners_and_admins_and_only_signed_in(client_factory, monkeypatch):
 
 def test_a_payment_goes_through_the_provider_and_only_its_answer_marks_it_paid(client):
     connect(client)
-    tenant_id, payment_id = pay_link(client)
-    details = client.get(f"/api/pay/{tenant_id}/{payment_id}").json()
+    link, payment_id = pay_link(client)
+    details = page(client, link)
     assert (details["stand_in"], details["preparing"], details["unavailable"]) == (
         False, False, False
     )
     assert details["provider"] == "simulator"
-    ref = re.search(r"\?sim=(\S+)$", details["checkout_url"]).group(1)
-    assert details["checkout_url"].startswith(f"http://web.test/pay/{tenant_id}/{payment_id}")
+    ref = re.search(r"&sim=(\S+)$", details["checkout_url"]).group(1)
+    # The provider sends the customer back to the pay page by a signed link for this payment.
+    assert details["checkout_url"].startswith(f"http://web.test/pay/{DEMO_SLUG}?t=")
+    assert payment_in(details["checkout_url"]) == payment_id
     # The stand-in's button cannot pay a provider's payment.
-    assert client.post(f"/api/pay/{tenant_id}/{payment_id}/complete").status_code == 409
+    assert pay(client, link).status_code == 409
 
     paid = client.post(f"/sim/gateway/{ref}/pay").json()
     assert paid == {"webhook_status": 200, "webhook": {"status": "accepted"}}
-    assert client.get(f"/api/pay/{tenant_id}/{payment_id}").json()["status"] == "paid"
+    assert page(client, link)["status"] == "paid"
     assert last_message(client)["body"].startswith("Received QAR 1,850.")
     assert ahmed(client)["balance"] == 0
 
 
 def test_a_webhook_is_believed_once_and_only_with_the_shops_keys(client):
     connect(client)
-    tenant_id, payment_id = pay_link(client)
+    link, payment_id = pay_link(client)
     account_id = client.get("/api/payments/account").json()["account"]["id"]
     ref = owner_sql("select provider_ref from payment_requests where id = $1",
                     UUID(payment_id))[0]["provider_ref"]
-    url = f"/api/payments/hooks/{tenant_id}/{account_id}"
+    url = f"/api/payments/hooks/{DEMO_TENANT_ID}/{account_id}"
     body = f'{{"event_id": "evt_1", "ref": "{ref}"}}'.encode()
 
     # Signed with other keys, or for another shop's address: refused, nothing written.
@@ -156,7 +170,7 @@ def test_a_webhook_is_believed_once_and_only_with_the_shops_keys(client):
     # The provider has not taken the money yet: the webhook is recorded, the payment waits.
     good = client.post(url, content=body, headers={SIGNATURE: sign(KEY, body)})
     assert good.json() == {"status": "accepted"}
-    assert client.get(f"/api/pay/{tenant_id}/{payment_id}").json()["status"] == "pending"
+    assert page(client, link)["status"] == "pending"
     again = client.post(url, content=body, headers={SIGNATURE: sign(KEY, body)})
     assert again.json() == {"status": "duplicate"}
     # About no payment of ours: recorded, nothing done.
@@ -168,10 +182,10 @@ def test_a_webhook_is_believed_once_and_only_with_the_shops_keys(client):
 
 def test_a_payment_for_another_amount_is_not_marked_paid(client):
     connect(client)
-    tenant_id, payment_id = pay_link(client)
-    ref = client.get(f"/api/pay/{tenant_id}/{payment_id}").json()["checkout_url"].split("=")[1]
+    link, payment_id = pay_link(client)
+    ref = page(client, link)["checkout_url"].split("sim=")[1]
     client.post(f"/sim/gateway/{ref}/pay", json={"amount": 100})
-    assert client.get(f"/api/pay/{tenant_id}/{payment_id}").json()["status"] == "pending"
+    assert page(client, link)["status"] == "pending"
     row = owner_sql("select gateway_status from payment_requests where id = $1",
                     UUID(payment_id))[0]
     assert row["gateway_status"] == "amount_mismatch"
@@ -180,17 +194,17 @@ def test_a_payment_for_another_amount_is_not_marked_paid(client):
 
 def test_disconnecting_wipes_the_keys_and_new_links_go_back_to_the_stand_in(client):
     connect(client)
-    tenant_id, sent_before = pay_link(client)
+    sent_before, _ = pay_link(client)
     assert client.delete("/api/payments/account").json() == {"disconnected": True}
     assert client.get("/api/payments/account").json()["account"] is None
     assert owner_sql(
         "select count(*) as n from payment_accounts where sealed_keys is not null"
     )[0]["n"] == 0
     # A link sent on the old account can no longer be confirmed by ALYR, and says so.
-    old = client.get(f"/api/pay/{tenant_id}/{sent_before}").json()
+    old = page(client, sent_before)
     assert (old["unavailable"], old["preparing"]) == (True, False)
-    _, sent_after = pay_link(client)
-    assert client.get(f"/api/pay/{tenant_id}/{sent_after}").json()["stand_in"] is True
+    sent_after, _ = pay_link(client)
+    assert page(client, sent_after)["stand_in"] is True
 
 
 def test_connecting_again_replaces_the_old_account(client):
@@ -232,12 +246,11 @@ def test_an_order_paid_at_the_provider_is_settled_and_its_stock_sold(client):
     connect(client)
     cable = product(client, "Cable 2.5 mm")
     order = place(client, customer(client)["id"], [(cable, 2)], "link").json()
-    tenant_id, payment_id = re.search(r"/pay/(\S+)/(\S+)", order["pay_url"]).groups()
-    details = client.get(f"/api/pay/{tenant_id}/{payment_id}").json()
+    details = page(client, order["pay_url"])
     assert details["order_number"] == order["number"]
-    ref = details["checkout_url"].split("?sim=")[1]
+    ref = details["checkout_url"].split("&sim=")[1]
     client.post(f"/sim/gateway/{ref}/pay")
-    assert client.get(f"/api/pay/{tenant_id}/{payment_id}").json()["status"] == "paid"
+    assert page(client, order["pay_url"])["status"] == "paid"
     assert owner_sql("select payment from orders where tenant_id = $1 and number = $2",
                      DEMO_TENANT_ID, order["number"])[0]["payment"] == "paid"
     assert last_message(client)["body"] == (
@@ -251,10 +264,10 @@ def test_keys_that_no_longer_open_turn_the_account_to_connect_again(client):
     # As if the sealing key had changed: the stored value no longer opens.
     owner_sql("update payment_accounts set sealed_keys = $2 where id = $1",
               account_id, payment_keys.VERSION + bytes(40))
-    tenant_id, payment_id = pay_link(client)
+    link, _ = pay_link(client)
     account = client.get("/api/payments/account").json()["account"]
     assert (account["status"], account["problem"]) == ("failed", "keys_unreadable")
-    assert client.get(f"/api/pay/{tenant_id}/{payment_id}").json()["unavailable"] is True
+    assert page(client, link)["unavailable"] is True
     # The next link is the stand-in again.
-    _, after = pay_link(client)
-    assert client.get(f"/api/pay/{tenant_id}/{after}").json()["stand_in"] is True
+    after, _ = pay_link(client)
+    assert page(client, after)["stand_in"] is True

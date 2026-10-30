@@ -8,6 +8,7 @@ from alyr.core import links
 from alyr.seed import AGENT_EMAIL, AHMED_PHONE, DEMO_SLUG, DEMO_TENANT_ID
 from order_links import booking_token
 from order_links import token as order_token
+from pay_links import pay, pay_page
 from test_consent import ahmed, conversation, owner_sql, say
 from test_inbox_team import user_id
 from test_orders import place, product
@@ -70,9 +71,11 @@ def test_the_tracking_page_shows_what_was_bought_and_where_it_has_got_to(client)
     assert seen["items"][0]["quantity"] == 2 and seen["total_text"] == "QAR 450"
     assert [s["key"] for s in seen["steps"]] == ["placed", "confirmed", "ready", "done"]
     assert seen["steps"][0]["at"] and seen["steps"][1]["at"] is None
-    # Not paid yet, so the page can offer the payment link.
+    # Not paid yet, so the page offers the payment's own signed link (D-080), which opens it.
     assert seen["payment_id"]
-    assert page["pay_path"] == f"/pay/{DEMO_TENANT_ID}/{seen['payment_id']}"
+    assert page["pay_path"].startswith(f"/pay/{DEMO_SLUG}?t=")
+    assert seen["payment_id"] not in page["pay_path"]
+    assert pay_page(client, page["pay_path"]).json()["order_number"] == order["number"]
     assert seen["handler"] is None
     # Nobody else's cache keeps it, nothing indexes it, and it varies by the link.
     assert shown.headers["cache-control"] == "private, no-store"
@@ -104,8 +107,8 @@ def test_moving_the_order_shows_on_the_page_with_who_is_handling_it(client):
 
 def test_paying_closes_the_payment_offer(client):
     order = an_order(client)
-    payment = tracked(client, order)["payment_id"]
-    assert client.post(f"/api/pay/{DEMO_TENANT_ID}/{payment}/complete").status_code == 200
+    offered = track(client, token_of(order["track_url"])).json()["pay_path"]
+    assert pay(client, offered).status_code == 200
     page = track(client, token_of(order["track_url"])).json()
     seen = page["order"]
     assert seen["payment"] == "paid" and seen["payment_id"] is None and seen["paid_at"]

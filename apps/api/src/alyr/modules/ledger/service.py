@@ -177,12 +177,13 @@ async def summary(conn: asyncpg.Connection, now: datetime | None = None) -> dict
 
 
 async def create_payment_request(
-    conn: asyncpg.Connection, tenant_id: UUID, contact_id: UUID, amount: int, web_url: str
+    conn: asyncpg.Connection, contact_id: UUID, amount: int, web_url: str
 ) -> str:
-    """Record a payment request and return the link the customer opens."""
+    """Record a payment request and return the link the customer opens: signed for the pay page
+    and this payment only (SEC-8, D-080)."""
     # On the shop's own payment account when it has connected one (ALY-17).
     payment_id = await payments.request(conn, contact_id, amount)
-    return f"{web_url}/pay/{tenant_id}/{payment_id}"
+    return await payments.url(conn, web_url, payment_id)
 
 
 def reminder_tier(oldest_days: int) -> str:
@@ -262,9 +263,7 @@ async def send_reminders(
         arabic = customer["lang"] == "ar"
         link = how = ""
         if online:
-            link = await create_payment_request(
-                conn, tenant_id, contact_id, customer["balance"], web_url
-            )
+            link = await create_payment_request(conn, contact_id, customer["balance"], web_url)
         else:
             how = pay_the_shop(ways, "ar" if arabic else "en")
         tier = reminder_tier(customer["oldest_days"])

@@ -50,7 +50,7 @@ CATALOGUE: dict[str, Template] = {
         "purchase was {{3}} days ago. You can pay here: {{4}} . Thank you.",
         "تذكير ودي من {{1}}: على حسابك مبلغ {{2}}، وأقدم فاتورة غير مدفوعة مضى عليها {{3}} يوماً. "
         "يمكنك الدفع من هنا: {{4}} . شكراً لك.",
-        ("Al Noor Electricals", "QAR 1,850", "41", "https://app.alyr.online/pay/a/b"),
+        ("Al Noor Electricals", "QAR 1,850", "41", "https://app.alyr.online/pay/al-noor?t=Ab3dE.f9Gh"),
     ),
     "payment_reminder_overdue": Template(
         "utility",
@@ -58,7 +58,7 @@ CATALOGUE: dict[str, Template] = {
         "purchase was {{3}} days ago. You can pay here: {{4}} . Thank you.",
         "تذكير من {{1}}: مبلغ {{2}} على حسابك متأخر السداد، وأقدم فاتورة غير مدفوعة مضى عليها "
         "{{3}} يوماً. يمكنك الدفع من هنا: {{4}} . شكراً لك.",
-        ("Al Noor Electricals", "QAR 1,850", "72", "https://app.alyr.online/pay/a/b"),
+        ("Al Noor Electricals", "QAR 1,850", "72", "https://app.alyr.online/pay/al-noor?t=Ab3dE.f9Gh"),
     ),
     "payment_reminder_final": Template(
         "utility",
@@ -67,7 +67,7 @@ CATALOGUE: dict[str, Template] = {
         "us today: {{4}} . Thank you.",
         "إشعار أخير من {{1}}: مبلغ {{2}} على حسابك متأخر منذ أكثر من 90 يوماً، وأقدم فاتورة غير "
         "مدفوعة مضى عليها {{3}} يوماً. نرجو السداد من هنا أو التواصل معنا اليوم: {{4}} . شكراً لك.",
-        ("Al Noor Electricals", "QAR 2,500", "118", "https://app.alyr.online/pay/a/b"),
+        ("Al Noor Electricals", "QAR 2,500", "118", "https://app.alyr.online/pay/al-noor?t=Ab3dE.f9Gh"),
     ),
     # The same three for a shop that takes no money online yet (ALY-271): no link, and the
     # last blank says how the shop is paid ("You can pay us by cash or bank transfer, ...").
@@ -128,7 +128,7 @@ CATALOGUE: dict[str, Template] = {
         "utility",
         "Order {{1}} received: {{2}}. The total is {{3}}. You can pay here: {{4}} . Thank you.",
         "تم استلام الطلب رقم {{1}}: {{2}}. الإجمالي {{3}}. يمكنك الدفع من هنا: {{4}} . شكراً لك.",
-        ("1001", "1 x Breaker 16 A, 1 x Cable 1.5 mm", "QAR 179", "https://app.alyr.online/pay/a/b"),
+        ("1001", "1 x Breaker 16 A, 1 x Cable 1.5 mm", "QAR 179", "https://app.alyr.online/pay/al-noor?t=Ab3dE.f9Gh"),
     ),
     "order_received_later": Template(
         "utility",
@@ -200,9 +200,9 @@ CATALOGUE: dict[str, Template] = {
         "حجزك رقم {{1}} لدى {{2}}: {{3}}. نرجو دفع العربون {{4}} خلال {{5}} دقيقة للاحتفاظ "
         "بهذا الموعد: {{6}} . سياسة المحل للعربون موضحة في صفحة الدفع.",
         ("105", "Dafira Salon", "Hair colour with Reem, Thu 30 Oct, 5:00 PM", "QAR 50", "30",
-         "https://app.alyr.online/pay/a/b"),
+         "https://app.alyr.online/pay/dafira?t=Ab3dE.f9Gh"),
         samples_ar=("105", "صالون ضفيرة", "صبغة شعر مع ريم، 30/10 17:00", "50 ر.ق", "30",
-                    "https://app.alyr.online/pay/a/b"),
+                    "https://app.alyr.online/pay/dafira?t=Ab3dE.f9Gh"),
     ),
     "booking_deposit_paid": Template(
         "utility",

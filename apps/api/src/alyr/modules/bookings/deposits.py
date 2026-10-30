@@ -27,7 +27,7 @@ from uuid import UUID
 
 import asyncpg
 
-from alyr.core import jobs, team, templates
+from alyr.core import jobs, payments, team, templates
 from alyr.core.normalise import fmt_qar
 from alyr.core.outbound import Outbound
 from alyr.db import Database
@@ -55,10 +55,6 @@ async def hold_end(conn: asyncpg.Connection) -> datetime:
     return await conn.fetchval("select now() + make_interval(mins => $1)", minutes)
 
 
-def pay_path(tenant_id: UUID, payment_id: UUID) -> str:
-    return f"/pay/{tenant_id}/{payment_id}"
-
-
 async def ask(
     conn: asyncpg.Connection, tenant_id: UUID, outbound: Outbound, booking_id: UUID,
     number: int, contact: asyncpg.Record, starts_at: datetime, amount: int, terms: dict,
@@ -72,7 +68,8 @@ async def ask(
         contact["id"], amount, booking_id,
     )
     await jobs.enqueue(conn, EXPIRE_JOB, {"booking_id": str(booking_id)}, hold_until)
-    path = pay_path(tenant_id, payment_id)
+    # Signed for the pay page and this payment only, and it runs out (SEC-8, D-080).
+    path = await payments.url(conn, "", payment_id)
     url = f"{web_url}{path}"
     arabic = contact["lang"] == "ar"
     when = await service.when_text(conn, starts_at, arabic)

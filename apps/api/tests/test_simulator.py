@@ -1,8 +1,7 @@
 """Demo 1, step by step, through the same code a real WhatsApp message takes."""
 
-import re
-
 from alyr.seed import AHMED_PHONE, STAFF_PHONE
+from pay_links import pay, pay_page
 
 
 def say(client, phone, text="", reply_id=""):
@@ -74,13 +73,12 @@ def test_steps_4_and_5_reminder_then_payment_clears_the_balance(client):
     assert [c["id"] for c in reminder["payload"]["choices"]] == ["pay", "promise"]
     assert "QAR 1,850" in reminder["body"]
 
-    link = re.search(r"http://web\.test/pay/(\S+)/(\S+)", reminder["body"])
-    tenant_id, payment_id = link.groups()
-    details = client.get(f"/api/pay/{tenant_id}/{payment_id}").json()
+    assert "http://web.test/pay/al-noor?t=" in reminder["body"]
+    details = pay_page(client, reminder["body"]).json()
     assert details["amount_text"] == "QAR 1,850"
     assert details["status"] == "pending"
 
-    assert client.post(f"/api/pay/{tenant_id}/{payment_id}/complete").json() == {"status": "paid"}
+    assert pay(client, reminder["body"]).json() == {"status": "paid"}
     confirmation = client.get(f"/sim/conversations/{AHMED_PHONE}").json()["messages"][-1]
     assert "received your payment of QAR 1,850" in confirmation["body"]
     assert ahmed(client)["balance"] == 0
@@ -88,9 +86,8 @@ def test_steps_4_and_5_reminder_then_payment_clears_the_balance(client):
 
 def test_paying_twice_does_not_record_two_payments(client):
     link = say(client, AHMED_PHONE, reply_id="pay")[-1]["body"]
-    tenant_id, payment_id = re.search(r"/pay/(\S+)/(\S+)", link).groups()
-    client.post(f"/api/pay/{tenant_id}/{payment_id}/complete")
-    client.post(f"/api/pay/{tenant_id}/{payment_id}/complete")
+    pay(client, link)
+    pay(client, link)
     assert ahmed(client)["balance"] == 0
 
 
@@ -134,8 +131,7 @@ def test_staff_are_warned_when_a_sale_goes_over_the_credit_limit(client):
 def test_customer_can_pay_part_of_the_balance(client):
     link = say(client, AHMED_PHONE, "pay 500")[-1]["body"]
     assert "To pay QAR 500" in link
-    tenant_id, payment_id = re.search(r"/pay/(\S+)/(\S+)", link).groups()
-    client.post(f"/api/pay/{tenant_id}/{payment_id}/complete")
+    pay(client, link)
     assert ahmed(client)["balance_text"] == "QAR 1,350"
 
 
@@ -180,8 +176,7 @@ def test_reminder_tone_follows_the_age_of_the_debt(client):
 def test_money_collected_through_links_is_counted(client):
     assert client.get("/api/ledger/summary").json()["collected_by_link"] == 0
     link = say(client, AHMED_PHONE, "pay 500")[-1]["body"]
-    tenant_id, payment_id = re.search(r"/pay/(\S+)/(\S+)", link).groups()
-    client.post(f"/api/pay/{tenant_id}/{payment_id}/complete")
+    pay(client, link)
     summary = client.get("/api/ledger/summary").json()
     assert summary["collected_by_link_text"] == "QAR 500"
     assert summary["payments_by_link"] == 1
@@ -216,8 +211,7 @@ def test_customer_without_a_phone_number_can_ask_be_reminded_and_pay(client):
     # The customer just asked for their balance, so the window is open.
     assert reminder["kind"] == "text"
 
-    tenant_id, payment_id = re.search(r"/pay/(\S+)/(\S+)", reminder["body"]).groups()
-    client.post(f"/api/pay/{tenant_id}/{payment_id}/complete")
+    pay(client, reminder["body"])
     assert username_only(client)["balance"] == 0
     assert "Received" in conversation(client, customer["user_id"])[-1]["body"]
 
