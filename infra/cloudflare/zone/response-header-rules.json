@@ -1,0 +1,41 @@
+{
+  "rules": [
+    {
+      "action": "rewrite",
+      "enabled": true,
+      "description": "ALY-116 CLD-7/SEC-11: security headers on the API (it sends none)",
+      "expression": "(http.host eq \"api.alyr.qa\")",
+      "action_parameters": {
+        "headers": {
+          "Strict-Transport-Security": { "operation": "set", "value": "max-age=31536000" },
+          "X-Content-Type-Options": { "operation": "set", "value": "nosniff" },
+          "X-Frame-Options": { "operation": "set", "value": "DENY" },
+          "Referrer-Policy": { "operation": "set", "value": "no-referrer" }
+        }
+      }
+    },
+    {
+      "action": "rewrite",
+      "enabled": true,
+      "description": "ALY-116: HSTS and nosniff on the media host (it sends none)",
+      "expression": "(http.host eq \"media.alyr.qa\")",
+      "action_parameters": {
+        "headers": {
+          "Strict-Transport-Security": { "operation": "set", "value": "max-age=31536000" },
+          "X-Content-Type-Options": { "operation": "set", "value": "nosniff" }
+        }
+      }
+    },
+    {
+      "action": "rewrite",
+      "enabled": true,
+      "description": "SEC-11: do not announce the framework on the web app",
+      "expression": "(http.host eq \"app.alyr.qa\")",
+      "action_parameters": {
+        "headers": {
+          "X-Powered-By": { "operation": "remove" }
+        }
+      }
+    }
+  ]
+}

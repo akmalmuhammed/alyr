@@ -78,6 +78,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-065 | Owners and staff manage the shop from WhatsApp as well as the portal, through one shared action layer; phases 0 and 1 (link a number, read-only commands) are built first | Accepted (written as D-040 on 18 Oct; renumbered 28 Oct, D-040 is the look) |
 | D-091 | Recovery targets (data lost under 10 minutes, back in about 15) and the rule that an alert counts only when it reaches a phone; a restore is always a point-in-time clone to a new instance | Proposed |
 | D-072 | Shops get paid online through three doors, each ending in an account in the shop's own name: connect your own account (built first), ALYR-assisted sign-up with a partner (Noqoody, then SADAD), and opening by API only once a provider proves it; apply to Noqoody, SADAD and Tap. Updates D-044 | Accepted |
+| D-113 | The Cloudflare zone is hardened with what the Free plan offers and the state is written down: HTTPS only, minimum TLS 1.2, strict SSL, CAA, a trimmed SPF and response-header rules for the API and media host are live; the edge rate-limit rule waits because Free has only Block; no Access until Zero Trust is onboarded; DMARC stays `none` until the reports are read, never `reject` | Proposed |
 
 ---
 
@@ -1891,3 +1892,25 @@ Without it, analytics is off everywhere.
 **Rejected.** *Tap first for model B* (D-044): unproven for Qatar, and its Marketplace product is model C. *Waiting for a model B partner before building anything*: door 1 needs no deal and every other door ends in it.
 
 **Revisit when** Tap says a Platforms lead in Qatar is the shop's own merchant (Tap becomes door 3); Noqoody's partner portal can submit applications (Noqoody becomes door 3); a provider stores data outside Qatar (it waits for a row in `docs/data-residency.md`).
+
+---
+
+## D-113 · The zone's edge layer on the Free plan: what is set, and what waits
+**Date** 30 Oct 2026 · **Status** Proposed (written by Claude in the ALY-116 edge work for the founder to accept or change; the changes are live and each can be undone) · Linear ALY-116, ALY-219, ALY-266 (CLD-7, CLD-18)
+
+**The decision.**
+- **Set now:** SSL mode Full (strict); minimum TLS 1.2; Always Use HTTPS; CAA for the CAs Cloudflare issues from; an SPF without Email Routing's retired include; response-header rules that give the API and the media host the headers the web app already sends, and drop `x-powered-by`.
+- **HSTS stays out of the zone setting.** The site and the web app send their own one-year header; a zone-wide setting would overwrite both with one value for every host. A rule per host instead.
+- **Not set:** an edge rate-limit rule (the Free plan has only Block, so "log or challenge first" cannot run; it waits for the founder's yes or a paid plan); Bot Fight Mode (it cannot be skipped for webhooks); DNSSEC (`.qa` is not signed); Access (Zero Trust asks for payment details and `ops.alyr.qa` is not built); `p=quarantine` or `p=reject` for DMARC until the reports are read (review 13 Nov 2026; `reject` is not planned).
+- **The state is written down, not remembered:** rule definitions in `infra/cloudflare/zone/`, the numbers and the undo steps in `docs/runbooks/cloudflare-edge.md`, a check from outside in `scripts/check-edge.sh`.
+
+**Why.**
+- The audit (ALY-266) found plain HTTP on `app` and `api`, TLS 1.0 and 1.1 accepted, no CAA, a retired SPF include and an API with no security headers. Each of these is a setting, free, and reversible.
+- Every change was one step with a check from outside before the next (`scripts/check-edge.sh`), and nothing changes what a customer sees except that a device speaking only TLS 1.1 or older can no longer connect.
+- A rate limit that only blocks, on shared mobile addresses, is a decision about real customers; it is better asked than assumed.
+
+**Costs and risks, said plainly.** Free. A CAA list that misses a CA Cloudflare switches to would stop a certificate renewal: Cloudflare published its own hidden records for the CAs we did not list, and the first renewals start about 27 Dec 2026, so check then. The changes were made in the dashboard's session, not by a token, so their history is in Cloudflare's audit log and the runbook, not in git.
+
+**Chosen over** a zone-wide HSTS (it would weaken the site's header); applying a Block rate-limit rule without a yes (the brief said not to block first); `p=reject` for DMARC (a missed sender would be lost mail).
+
+**Revisit when** the first paying client signs (a paid plan for log mode and the managed rules), `.qa` is signed (DNSSEC), or Zero Trust is onboarded (the back office behind Access, ALY-219).

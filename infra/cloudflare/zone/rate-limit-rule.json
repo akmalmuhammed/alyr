@@ -1,0 +1,23 @@
+{
+  "rules": [
+    {
+      "action": "block",
+      "enabled": true,
+      "description": "ALY-116 first layer: sign-in, sign-up and order POSTs, per IP, above the app limits",
+      "expression": "(http.request.uri.path in {\"/api/auth/code\" \"/api/auth/verify\" \"/api/onboarding/code\" \"/api/onboarding/verify\" \"/api/onboarding/business\" \"/api/onboarding/resume/stop\" \"/api/account/email/code\"}) or (starts_with(http.request.uri.path, \"/api/store/\") and (ends_with(http.request.uri.path, \"/orders\") or ends_with(http.request.uri.path, \"/orders/repeat\")))",
+      "ratelimit": {
+        "characteristics": ["cf.colo.id", "ip.src"],
+        "period": 10,
+        "requests_per_period": 30,
+        "mitigation_timeout": 10
+      },
+      "action_parameters": {
+        "response": {
+          "status_code": 429,
+          "content_type": "application/json",
+          "content": "{\"detail\":\"Too many requests. Please wait a few seconds and try again.\"}"
+        }
+      }
+    }
+  ]
+}

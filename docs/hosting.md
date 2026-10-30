@@ -74,7 +74,8 @@ and `https://alyr-api-841433519399.me-central1.run.app`, and points redirects ba
 public name. Chosen by the founder on 28 Oct 2026 over Google's load balancer (about USD 18 a
 month), because Cloud Run's own domain mappings are refused in Doha ("Creating domain
 mappings is not allowed in me-central1"). The Worker keeps no logs and no cache. alyr.qa is
-verified in Google Search Console for akmal@alyr.qa (TXT record on alyr.qa).
+verified in Google Search Console for akmal@alyr.qa (TXT record on alyr.qa). The zone's own
+settings (HTTPS only, minimum TLS 1.2, header rules, CAA, SPF) are in `docs/runbooks/cloudflare-edge.md`.
 
 **Who is asking.** The `run.app` addresses are public too, so the API cannot believe a header
 that anyone could write. The Worker is the one place that knows the visitor: it writes the address

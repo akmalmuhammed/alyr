@@ -131,10 +131,13 @@ scripts/                      check.sh (everything CI runs), demo.sh (start and 
                               connect-browser-check.mjs (the connection screen, phone width, both languages),
                               golive-truth-check.mjs (every onboarding sentence of every business type proved on the
                               finished order page and workspace, English and Arabic),
+                              check-edge.sh (the edge and DNS of alyr.qa from outside, docs/runbooks/cloudflare-edge.md),
                               hooks/pre-commit
 specs/                        One folder per spec; write or update the spec before building
 infra/gcp/                    Production on Google Cloud in Doha (D-060): setup.sh, push-images.sh, README
 infra/cloudflare/edge/        app.alyr.qa and api.alyr.qa: a Worker in front of Cloud Run (ALY-219)
+infra/cloudflare/zone/        Rules set on the alyr.qa zone itself: response headers (live) and one rate-limit
+                              rule (prepared); docs/runbooks/cloudflare-edge.md
 infra/cloudflare/api/          The API Worker and container settings for interim hosting (D-052, specs/021);
                               superseded for real clients by D-060
 packages/compliance/          WPS SIF and e-invoice libraries (not created yet)
