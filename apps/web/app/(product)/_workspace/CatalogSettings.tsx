@@ -180,6 +180,7 @@ function StaffNumbers({ lang, t, push }: { lang: Lang; t: Copy; push: Push }) {
   const [phone, setPhone] = useState("");
   const [language, setLanguage] = useState<"en" | "ar">(lang);
   const [manager, setManager] = useState(false);
+  const [orders, setOrders] = useState(false);
   const [failure, setFailure] = useState("");
   const [busy, setBusy] = useState(false);
   const [asking, setAsking] = useState<string | null>(null);
@@ -194,11 +195,12 @@ function StaffNumbers({ lang, t, push }: { lang: Lang; t: Copy; push: Push }) {
     setBusy(true);
     setFailure("");
     try {
-      const made = await api<StaffNumber>("/api/staff-numbers", "POST", { name: name.trim(), phone: phone.trim(), lang: language, manager });
+      const made = await api<StaffNumber>("/api/staff-numbers", "POST", { name: name.trim(), phone: phone.trim(), lang: language, manager, order_alerts: orders });
       setNumbers((all) => [...(all ?? []).filter((n) => n.id !== made.id), made]);
       setName("");
       setPhone("");
       setManager(false);
+      setOrders(false);
       push(t.staffAdded);
     } catch (error) {
       setFailure(sayError(error, lang, t));
@@ -207,10 +209,10 @@ function StaffNumbers({ lang, t, push }: { lang: Lang; t: Copy; push: Push }) {
     }
   }
 
-  async function setManagerOf(number: StaffNumber, next: boolean) {
+  async function change(number: StaffNumber, what: { manager: boolean } | { order_alerts: boolean }) {
     setFailure("");
     try {
-      const changed = await api<StaffNumber>(`/api/staff-numbers/${number.id}`, "PUT", { manager: next });
+      const changed = await api<StaffNumber>(`/api/staff-numbers/${number.id}`, "PUT", what);
       setNumbers((all) => (all ?? []).map((n) => (n.id === changed.id ? changed : n)));
     } catch (error) {
       setFailure(sayError(error, lang, t));
@@ -244,7 +246,11 @@ function StaffNumbers({ lang, t, push }: { lang: Lang; t: Copy; push: Push }) {
             </div>
             <div className="ct-toggle">
               <span className="ct-toggle-text"><b>{t.staffManager}</b><small>{t.staffManagerHint}</small></span>
-              <Switch on={n.manager} label={`${t.staffManager}: ${n.name}`} onChange={(next) => void setManagerOf(n, next)} />
+              <Switch on={n.manager} label={`${t.staffManager}: ${n.name}`} onChange={(next) => void change(n, { manager: next })} />
+            </div>
+            <div className="ct-toggle">
+              <span className="ct-toggle-text"><b>{t.staffOrders}</b><small>{t.staffOrdersHint}</small></span>
+              <Switch on={n.order_alerts} label={`${t.staffOrders}: ${n.name}`} onChange={(next) => void change(n, { order_alerts: next })} />
             </div>
             {asking === n.id ? (
               <div className="ct-stack">
@@ -277,6 +283,7 @@ function StaffNumbers({ lang, t, push }: { lang: Lang; t: Copy; push: Push }) {
           </select>
         </Field>
         <label className="ct-check"><input type="checkbox" checked={manager} onChange={(e) => setManager(e.target.checked)} />{t.staffManager}</label>
+        <label className="ct-check"><input type="checkbox" checked={orders} onChange={(e) => setOrders(e.target.checked)} />{t.staffOrders}</label>
         <button type="submit" className="btn ct-btn" disabled={busy || !name.trim() || !phone.trim()}>
           <Icon name="plus" />{t.staffAdd}
         </button>

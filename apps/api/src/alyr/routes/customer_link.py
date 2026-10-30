@@ -1,10 +1,10 @@
 """What a customer's link token means to a public page (ALY-112, ALY-133, D-039).
 
-The order page and the booking page read the customer's token the same way: the page sends it
-in the header `X-Order-Link` (the name is the first page's; the header carries either kind of
-token) so no request log of ours holds one, `?t=` is still read for a tool or a test, and a
-bare contact ID is not read at all. Each page names its purpose when it reads, so a token
-made for the other page is refused (`core/links.py`).
+The order page, the booking page, the document page and the tracking page read their token the
+same way: the page sends it in the header `X-Order-Link` (the name is the first page's; the
+header carries every kind of token) so no request log of ours holds one, `?t=` is still read
+for a tool or a test, and a bare ID is not read at all. Each page names its purpose when it
+reads, so a token made for another page is refused (`core/links.py`).
 
 A token that is not good does not stop a page from opening in public: the page asks for the
 state and shows the customer why, in both languages. Only an action that needs a customer
@@ -40,17 +40,31 @@ _DOCUMENT_WORDS = {
         "انتهت صلاحية رابط المستند هذا. اطلب من المتجر إرسال المستند مرة أخرى.",
     ),
 }
+_TRACK_WORDS = {
+    "bad_link": (
+        "This tracking link is not valid. Open the newest link in your chat with the shop, "
+        "or message the shop on WhatsApp.",
+        "رابط تتبّع الطلب هذا غير صالح. افتح أحدث رابط في محادثتك مع المتجر، أو راسل المتجر "
+        "على واتساب.",
+    ),
+    "expired_link": (
+        "This tracking link has expired. Message the shop on WhatsApp to get a new one.",
+        "انتهت صلاحية رابط تتبّع الطلب هذا. راسل المتجر على واتساب للحصول على رابط جديد.",
+    ),
+}
+_WORDS = {links.BOOKING: _BOOKING_WORDS, links.DOCUMENT: _DOCUMENT_WORDS, links.TRACK: _TRACK_WORDS}
 _UNAVAILABLE = {
     links.ORDER: "orders are not available",
     links.BOOKING: "bookings are not available",
     links.DOCUMENT: "documents are not available",
+    links.TRACK: "order tracking is not available",
 }
 
 
 def say(purpose: str, code: str, lang: str) -> str:
     """The sentence for `bad_link` or `expired_link`, on the page that asked."""
-    if purpose in (links.BOOKING, links.DOCUMENT):
-        english, arabic = (_BOOKING_WORDS if purpose == links.BOOKING else _DOCUMENT_WORDS)[code]
+    if purpose in _WORDS:
+        english, arabic = _WORDS[purpose][code]
         return arabic if lang == "ar" else english
     return text.say(code, lang, {})
 

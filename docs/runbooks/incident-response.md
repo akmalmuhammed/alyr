@@ -202,7 +202,7 @@ Do not post on social media or tell the press before the shops have been told.
    usually mean Meta's token expired (`infra/gcp/setup.sh set-secret meta-access-token`) or a template was paused.
 3. Messages arriving? Meta app dashboard > WhatsApp > Configuration: the callback must be
    `https://api.alyr.qa/webhooks/whatsapp` with `messages` on. The alert "No WhatsApp message received"
-   (when `docs/runbooks/monitoring.md` is in place) and the uptime check on `api.alyr.qa` watch this.
+   (`docs/runbooks/monitoring.md`) and the uptime check on `api.alyr.qa` watch this.
 4. Meta's status page and the app's quality rating.
 
 ## 9. Afterwards (within a week, for Severity 1 and 2)

@@ -7,7 +7,9 @@ import { Screens, type WorkspaceTab } from "../../_workspace/Screens";
 import { TeamReport } from "../../_workspace/Team";
 import { WhatsappLink } from "../../_workspace/WhatsappLink";
 import { Catalog } from "../../_workspace/Catalog";
+import { NotSent } from "../../_workspace/NotSent";
 import { Documents } from "../../_workspace/Documents";
+import { BillingBanner } from "../../_workspace/BillingBanner";
 import { TermsBanner } from "../../_workspace/TermsBanner";
 import { keepLang, savedLang, type Lang } from "../../_workspace/lang";
 import { ConnectLink, ConnectSettings } from "../../_workspace/ConnectSettings";
@@ -15,6 +17,7 @@ import { usePolling } from "../../_workspace/poll";
 import { AgentDashboard } from "../../../_agent/AgentDashboard";
 import type { AgentView } from "../../../_agent/types";
 import { color } from "../../../_tokens/tokens";
+import { Account } from "../../_workspace/Account";
 import "../../_workspace/shell.css";
 
 type Text = { en: string; ar: string };
@@ -77,10 +80,11 @@ const T = {
     helpTitle: "ALYR team", helpOnline: "A person from ALYR reads every message.",
     helpHello: "What should we set up or change for you?",
     helpPlaceholder: "Write to ALYR…", send: "Send to ALYR",
-    sentReply: "Sent to the ALYR team. We answer on WhatsApp or by email.",
+    sentReply: "Sent to the ALYR team. We answer by email.",
     suggestions: ["Connect our WhatsApp number", "Add our services and prices", "Add a team member"],
     live: "WhatsApp live", sim: "Simulator", seeAll: "See all",
     go: "Go to", actions: "Actions", noMatch: "Nothing matches that.", navigate: "Move", choose: "Open", close: "Close",
+    notSent: "Messages not sent",
     more: "More", doha: "Doha",
   },
   ar: {
@@ -115,10 +119,11 @@ const T = {
     helpTitle: "فريق ALYR", helpOnline: "يقرأ كل رسالة شخص من فريق ALYR.",
     helpHello: "ماذا نُعدّ أو نغيّر لك؟",
     helpPlaceholder: "اكتب إلى ALYR…", send: "أرسل إلى ALYR",
-    sentReply: "أُرسلت إلى فريق ALYR. نرد عبر واتساب أو البريد.",
+    sentReply: "أُرسلت إلى فريق ALYR. نرد عبر البريد الإلكتروني.",
     suggestions: ["اربطوا رقم واتساب", "أضيفوا خدماتنا وأسعارنا", "أضيفوا عضواً للفريق"],
     live: "واتساب يعمل", sim: "المحاكي", seeAll: "عرض الكل",
     go: "انتقل إلى", actions: "إجراءات", noMatch: "لا نتائج.", navigate: "تنقّل", choose: "افتح", close: "إغلاق",
+    notSent: "رسائل لم تُرسل",
     more: "المزيد", doha: "الدوحة",
   },
 };
@@ -147,6 +152,7 @@ const ICON: Record<string, string> = {
   doc: "M7 3h8l4 4v14H7z M15 3v4h4 M10 12h6 M10 16h6",
   plug: "M9 3v5 M15 3v5 M6 8h12v3a6 6 0 0 1-12 0z M12 17v4",
   users: "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z M3 21v-2a6 6 0 0 1 12 0v2 M16 4.5a3.5 3.5 0 0 1 0 6.5 M17 15a5 5 0 0 1 4 4.9V21",
+  user: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z M5 21v-1a7 7 0 0 1 14 0v1",
   plus: "M12 5v14 M5 12h14",
   search: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z M20 20l-4-4",
   chat: "M4 5h16v11H10l-6 4z M8 10h8",
@@ -371,6 +377,8 @@ export default function WorkspaceShell() {
     }));
     list.push(
       { id: "ask", group: t.actions, label: t.ask, icon: "chat", run: () => router.push("/app#ask") },
+      // Not in the navigation: ALYR Agent links to it when a message fails (specs/036).
+      { id: "go-unsent", group: t.go, label: t.notSent, icon: "inbox", run: () => router.push("/app/unsent") },
       { id: "lang", group: t.actions, label: t.langName, icon: "globe", run: () => chooseLang(lang === "en" ? "ar" : "en") },
     );
     if (state?.me.signed_in) list.push({ id: "out", group: t.actions, label: t.signOut, icon: "out", run: signOut });
@@ -515,6 +523,9 @@ export default function WorkspaceShell() {
         </section>
       </>
     );
+  } else if (section === "account") {
+    // Every role: their sign-in email and businesses; owners also download the data (specs/040).
+    body = <Account lang={lang} />;
   } else if (section === "products") {
     body = (
       <>
@@ -600,6 +611,8 @@ export default function WorkspaceShell() {
         )}
       </>
     );
+  } else if (section === "unsent") {
+    body = <NotSent lang={lang} />;
   } else if (section === "connect" && documentsOn) {
     body = <ConnectSettings lang={lang} canManage={state.can_manage} />;
   } else if (section === "catalog" && enabledScreens.has("catalog")) {
@@ -685,6 +698,7 @@ export default function WorkspaceShell() {
           <main className="sh-main sh-enter" key={`${section}-${lang}`}>
             {offline && <div className="error" role="status">{t.offline}</div>}
             <TermsBanner lang={lang} canAccept={state.me.signed_in && (state.me.role === "owner" || state.me.role === "admin")} />
+            <BillingBanner lang={lang} canSee={state.me.signed_in && (state.me.role === "owner" || state.me.role === "admin")} />
             {body}
           </main>
         </div>

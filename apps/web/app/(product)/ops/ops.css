@@ -186,6 +186,9 @@
 /* A client's payment and access (ALY-212). */
 .ops-access { display: grid; gap: 8px; margin-bottom: 8px; }
 .ops-access p { margin: 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+/* where the plan stands after go-live (ALY-218) */
+.ops-plan { display: grid; gap: 8px; padding-top: 8px; border-top: 1px solid var(--hair); }
+.ops-plan .sh-pill.danger { color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, transparent); box-shadow: none; }
 .ops-access select, .ops-access input[type="date"] { min-height: 32px; padding: 0 8px; border-radius: 8px; border: 0; box-shadow: 0 0 0 1px var(--hair-2) inset; background: transparent; color: inherit; font: inherit; }
 
 /* The onboarding funnel (ALY-169) */

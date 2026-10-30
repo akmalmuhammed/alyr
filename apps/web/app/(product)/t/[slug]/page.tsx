@@ -1,12 +1,18 @@
 "use client";
 
-import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
-import { Empty, Frame, Glyph, initials } from "../../../_customer/Frame";
-import { dayShort, goodsBeforeDiscount, zoneName, type Fulfilment } from "../../../_customer/fulfil";
-import { formatPrice, type Lang } from "../../../_customer/price";
-import { fmtQtyUnit, lineUnit } from "../../../_customer/qty";
-import "../../../_customer/fulfil.css";
+import { useParams, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { Empty, Frame, Glyph, initials } from "../../_customer/Frame";
+import { dayShort, goodsBeforeDiscount, zoneName, type Fulfilment } from "../../_customer/fulfil";
+import { formatPrice, type Lang } from "../../_customer/price";
+import { fmtQtyUnit, lineUnit } from "../../_customer/qty";
+import "../../_customer/fulfil.css";
+
+// The customer's tracking page for one order. `/t/<shop>?t=<token>`: the token is made for this
+// page only, names one order at one shop and runs out (SEC-8, D-080). The page sends it to the API
+// in the header `X-Order-Link`, never in the address of a request. A link that has expired, was
+// edited or was made for another page shows a calm page that says to open the newest link in the
+// chat or ask the shop for one; nothing in it names an order.
 
 type Step = { key: "placed" | "confirmed" | "ready" | "done"; at: string | null };
 type Order = {
@@ -27,7 +33,12 @@ type Order = {
   fulfilment?: Fulfilment;
   steps: Step[]; cancelled_at: string | null; paid_at: string | null; payment_id: string | null;
 };
-type Tracking = { shop: { name: string; name_ar: string }; order: Order };
+type LinkState = { state: "none" | "ok" | "invalid" | "expired"; message: string; message_ar: string };
+type Tracking = {
+  shop: { name: string; name_ar: string }; order: Order | null; link: LinkState;
+  /** The pay page's address on this site, while the order is not paid. */
+  pay_path: string | null;
+};
 
 const T = {
   en: {
@@ -46,6 +57,9 @@ const T = {
     pay: "Pay now", updates: "This page updates by itself. We also message you on WhatsApp at every step.",
     cancelled: "This order was cancelled. Message the shop on WhatsApp if that is unexpected.",
     notFound: "We could not find this order. Open the link from your chat again.",
+    expiredTitle: "This link has expired", invalidTitle: "This link is not valid",
+    noneTitle: "Open this page from the link we sent you",
+    noneText: "The shop sends this link in your chat with every update on your order.",
   },
   ar: {
     context: "تتبّع الطلب", eyebrow: "طلبك", title: (n: number) => `الطلب رقم ${n}`,
@@ -63,27 +77,43 @@ const T = {
     pay: "ادفع الآن", updates: "تتحدّث هذه الصفحة تلقائياً، ونراسلك على واتساب عند كل خطوة.",
     cancelled: "تم إلغاء هذا الطلب. راسل المتجر على واتساب إن لم يكن ذلك متوقعاً.",
     notFound: "لم نعثر على هذا الطلب. افتح الرابط من المحادثة مرة أخرى.",
+    expiredTitle: "انتهت صلاحية هذا الرابط", invalidTitle: "هذا الرابط غير صالح",
+    noneTitle: "افتح هذه الصفحة من الرابط الذي أرسلناه لك",
+    noneText: "يرسل المتجر هذا الرابط في محادثتك مع كل تحديث على طلبك.",
   },
 };
 
-export default function TrackPage() {
-  const { tenant, order } = useParams<{ tenant: string; order: string }>();
+function preferred(asked: string | null): Lang {
+  if (asked === "ar" || asked === "en") return asked;
+  return typeof navigator !== "undefined" && /^ar/i.test(navigator.language) ? "ar" : "en";
+}
+
+function TrackPage() {
+  const { slug } = useParams<{ slug: string }>();
+  const query = useSearchParams();
+  const asked = query.get("t");
+  // The link goes in a header, not in the address of a request, so no request log of ours holds
+  // it. A token is plain ASCII; anything else cannot be a header and cannot be ours, so it is
+  // sent as one the API will call invalid.
+  const token = asked ? (/^[\w.-]{1,300}$/.test(asked) ? asked : "invalid") : null;
   const [data, setData] = useState<Tracking | null>(null);
   const [missing, setMissing] = useState(false);
   const [lang, setLang] = useState<Lang | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const response = await fetch(`/api/track/${tenant}/${order}`, { cache: "no-store" });
+      const response = await fetch(`/api/track/${slug}`, {
+        cache: "no-store", headers: token ? { "x-order-link": token } : undefined,
+      });
       if (!response.ok) throw new Error();
       const next: Tracking = await response.json();
       setData(next);
       // The page opens in the language the customer chats in.
-      setLang((current) => current ?? (next.order.lang === "ar" ? "ar" : "en"));
+      setLang((current) => current ?? (next.order ? (next.order.lang === "ar" ? "ar" : "en") : preferred(query.get("lang"))));
     } catch {
       setMissing(true);
     }
-  }, [tenant, order]);
+  }, [slug, token, query]);
 
   useEffect(() => {
     const first = setTimeout(load, 0);
@@ -94,9 +124,25 @@ export default function TrackPage() {
   const t = T[lang ?? "en"];
   if (missing && !data) return <Empty text={t.notFound} />;
   if (!data || !lang) return null;
-  const o = data.order;
   const shop = lang === "ar" && data.shop.name_ar ? data.shop.name_ar : data.shop.name;
   const toggle = () => setLang(lang === "en" ? "ar" : "en");
+  const o = data.order;
+  if (!o || data.link.state !== "ok") {
+    // No order to show: the link ran out (while the page was open, too), was edited, or is not
+    // this page's. Say what to do, in the customer's language; name no order.
+    const state = data.link.state === "ok" ? "invalid" : data.link.state;
+    const title = state === "expired" ? t.expiredTitle : state === "none" ? t.noneTitle : t.invalidTitle;
+    const text = state === "none" ? t.noneText : lang === "ar" ? data.link.message_ar : data.link.message;
+    return (
+      <Frame lang={lang} onLang={toggle} shop={shop} context={t.context} short>
+        <section className="cx-hero" style={{ "--i": 0 } as React.CSSProperties}>
+          <span className="cx-eyebrow">{t.context}</span>
+          <h1>{title}</h1>
+        </section>
+        {text && <p className="cx-warn" role="alert" style={{ "--i": 1 } as React.CSSProperties}>{text}</p>}
+      </Frame>
+    );
+  }
   const reachedIndex = o.steps.reduce((last, s, i) => (s.at ? i : last), 0);
   const time = (iso: string) =>
     new Intl.DateTimeFormat(lang === "ar" ? "ar-QA-u-nu-latn" : "en-GB", {
@@ -212,8 +258,8 @@ export default function TrackPage() {
             <div className="cx-row-text">
               <span className={`cx-pill ${o.payment === "unpaid" ? "due" : "good"}`} style={{ justifySelf: "start" }}>{t.payment[o.payment]}</span>
             </div>
-            {o.payment_id && !cancelled && (
-              <a className="cx-btn" style={{ width: "auto", height: 40, padding: "0 16px", fontSize: 14 }} href={`/pay/${tenant}/${o.payment_id}`}>
+            {data.pay_path && !cancelled && (
+              <a className="cx-btn" style={{ width: "auto", height: 40, padding: "0 16px", fontSize: 14 }} href={data.pay_path}>
                 <Glyph name="card" />{t.pay}
               </a>
             )}
@@ -223,5 +269,13 @@ export default function TrackPage() {
 
       <p className="cx-note" style={{ "--i": 4, textAlign: "center" } as React.CSSProperties}>{t.updates}</p>
     </Frame>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={null}>
+      <TrackPage />
+    </Suspense>
   );
 }

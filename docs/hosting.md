@@ -69,6 +69,11 @@ month), because Cloud Run's own domain mappings are refused in Doha ("Creating d
 mappings is not allowed in me-central1"). The Worker keeps no logs and no cache. alyr.qa is
 verified in Google Search Console for akmal@alyr.qa (TXT record on alyr.qa).
 
+**Who is asking.** The `run.app` addresses are public too, so the API cannot believe a header
+that anyone could write. The Worker is the one place that knows the visitor: it writes the address
+from `CF-Connecting-IP` and signs it, and the API counts its per-address limits only by an address
+with a good signature (ALY-265, D-083; `runbooks/client-address.md`).
+
 ## Production settings
 
 The API image starts in production unless told otherwise (`ALYR_ENV=production`,
@@ -85,6 +90,8 @@ only in the worker.
 | `ALYR_EMAIL_API_KEY` | Resend, for sign-in codes | Yes |
 | `ALYR_LINK_SECRET` | Signs every customer's order and document link (ALY-112). The API and worker refuse to start without it. Generated once and kept: changing it ends every link already sent | Yes |
 | `ALYR_R2_ACCOUNT_ID`, `ALYR_R2_ACCESS_KEY_ID`, `ALYR_R2_SECRET_ACCESS_KEY` | Product photos on Cloudflare R2 (D-039), served from `ALYR_MEDIA_BASE_URL` (`https://media.alyr.qa`). Without all three the API and worker refuse to start outside a developer machine, because a container's disk is wiped on restart and not shared between copies | Yes |
+| `ALYR_CLIENT_IP_HEADER` | `x-alyr-client-ip`: where the API reads the visitor's address from, for the per-address rate limits (ALY-116). Empty: the limits are off and the API says so at start-up. Set only together with the next row, by `setup.sh client-ip-on` | No |
+| `ALYR_CLIENT_IP_KEYS` | The keys (comma separated) that sign that address: Secret Manager `client-ip-key`, the same value as the edge Worker's secret `CLIENT_IP_KEY`. The API believes the address only with a matching signature (ALY-265; `runbooks/client-address.md`) | Yes |
 | `ALYR_MEDIA_ALLOW_LOCAL`, `ALYR_MEDIA_LOCAL_DIR` | Only for a single server whose photo folder is a kept volume (the rehearsal) | No |
 | `ALYR_ENV` | `production`, or `staging` for a demo copy that keeps the simulator | No |
 

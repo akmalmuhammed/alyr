@@ -10,7 +10,11 @@ from alyr.core.words import CUSTOMERS, counted
 from alyr.modules.ledger import service
 
 TITLE = {"en": "Credit accounts", "ar": "الحسابات الآجلة"}
-REMINDERS = ("payment_reminder", "payment_reminder_overdue", "payment_reminder_final")
+REMINDERS = (
+    "payment_reminder", "payment_reminder_overdue", "payment_reminder_final",
+    "payment_reminder_offline", "payment_reminder_overdue_offline",
+    "payment_reminder_final_offline",
+)
 LATE_BUCKETS = ("d61_90", "d90_plus")
 
 
@@ -30,7 +34,8 @@ async def numbers(conn: asyncpg.Connection, start: datetime, end: datetime, tz: 
         return out
     out["by_link"] = await conn.fetchval(
         "select coalesce(sum(amount), 0)::bigint from payment_requests "
-        "where status = 'paid' and order_id is null and paid_at >= $1 and paid_at < $2",
+        "where status = 'paid' and order_id is null and booking_id is null "
+        "and paid_at >= $1 and paid_at < $2",
         start, end,
     )
     out["reminders"] = await conn.fetchval(

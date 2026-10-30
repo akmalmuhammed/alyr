@@ -86,7 +86,7 @@ async def staff_changed(
     a change, what changed. The phone number is not copied onto the record."""
     detail: dict = {"name": person["name"], "manager": person["manager"]}
     if before is not None:
-        kept = ("name", "lang", "manager")
+        kept = ("name", "lang", "manager", "order_alerts")
         detail["changes"] = differences(
             {k: before[k] for k in kept}, {k: person[k] for k in kept}
         )

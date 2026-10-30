@@ -313,7 +313,7 @@ const en = {
   } as Record<string, string>,
   by: (who: string) => `by ${who}`,
   // The names the system writes in the record for what nobody typed.
-  actors: { Customer: "Customer", Assistant: "Assistant", ALYR: "ALYR" } as Record<string, string>,
+  actors: { Customer: "Customer", Assistant: "Auto-reply", ALYR: "ALYR" } as Record<string, string>,
   orderNo: (n: number) => `order #${n}`,
   chooseSize: "Which size or colour",
 
@@ -576,6 +576,8 @@ const en = {
   staffLangs: { en: "English", ar: "العربية" } as Record<string, string>,
   staffManager: "Manager",
   staffManagerHint: "Gets low-stock, sold-out and refund messages, and can put items on sale by message.",
+  staffOrders: "New orders",
+  staffOrdersHint: "Gets a WhatsApp message for every order placed: what it holds, the total, and how it is paid and collected.",
   staffAdd: "Add number",
   staffRemove: "Remove",
   staffAdded: "Number added",
@@ -979,7 +981,7 @@ const ar: Copy = {
     wasted: "هالك", counted: "جرد", adjusted: "تصحيح",
   },
   by: (who) => `بواسطة ${who}`,
-  actors: { Customer: "العميل", Assistant: "المساعد", ALYR: "ALYR" },
+  actors: { Customer: "العميل", Assistant: "رد تلقائي", ALYR: "ALYR" },
   orderNo: (n) => `الطلب رقم ${n}`,
   chooseSize: "أي مقاس أو لون",
 
@@ -1236,6 +1238,8 @@ const ar: Copy = {
   staffLangs: { en: "English", ar: "العربية" },
   staffManager: "مدير",
   staffManagerHint: "تصله رسائل المخزون القليل والنفاد والمبالغ المستحقة للاسترداد، ويستطيع عرض الأصناف للبيع برسالة.",
+  staffOrders: "الطلبات الجديدة",
+  staffOrdersHint: "تصله رسالة واتساب عن كل طلب جديد: ما فيه والإجمالي وطريقة الدفع والاستلام.",
   staffAdd: "إضافة رقم",
   staffRemove: "إزالة",
   staffAdded: "تمت إضافة الرقم",
