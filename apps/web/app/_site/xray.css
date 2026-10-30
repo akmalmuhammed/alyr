@@ -7,7 +7,7 @@
 
 /* the drawing is pinned under the header and the product's bar, which tightens with the header */
 .xr { --xr-top: calc(var(--header) + 3rem + 1px); }
-:root:has(.top[data-scrolled]) .xr { --xr-top: calc(3.75rem + 3rem + 1px); }
+:root[data-scrolled] .xr { --xr-top: calc(3.75rem + 3rem + 1px); }
 
 /* ------------------------------------------------------------- no scripts */
 .xr-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2.5rem clamp(1.5rem, 3.5vw, 3.5rem); align-items: start; }

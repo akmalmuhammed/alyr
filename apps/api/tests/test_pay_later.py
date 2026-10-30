@@ -115,7 +115,7 @@ def test_the_payment_ways_must_name_a_way_and_only_owners_change_them(client):
     pay_on_collection(client)
     # Turning the link back on keeps the ways for later.
     back = client.put(WAYS, json={"online": True}).json()
-    assert back == {"online": True, "ways": ["cash", "bank_transfer"]}
+    assert back == {"online": True, "ways": ["cash", "bank_transfer"], "online_possible": True}
     placed = a_cash_order(client)
     assert placed["payment"] == "link" and placed["pay_url"]
 

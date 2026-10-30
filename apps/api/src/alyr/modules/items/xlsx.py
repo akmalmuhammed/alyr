@@ -9,7 +9,8 @@ that holds one gives its saved value, and the caller is told it was a formula.
 
 `.xls` (the old binary format) and `.xlsm` (macros) are refused with a plain message.
 
-Reading: `read(data) -> Sheet`. Writing: `write(sheets) -> bytes`.
+Reading: `read(data) -> Sheet`. Writing: `write(sheets) -> bytes`. Keeping what was read with
+an upload, so a file is read once: `to_stored(sheet)` and `from_stored(json)`.
 """
 
 import io
@@ -20,6 +21,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from xml.etree import ElementTree
+from xml.parsers import expat
 from xml.sax.saxutils import escape
 
 # ── limits ────────────────────────────────────────────────
@@ -27,11 +29,13 @@ MAX_FILE_BYTES = 8 * 1024 * 1024        # the upload as sent (the caller also ch
 MAX_PART_BYTES = 32 * 1024 * 1024       # any one part, unpacked
 MAX_TOTAL_BYTES = 64 * 1024 * 1024      # all parts, unpacked
 MAX_PARTS = 400
+MAX_DIRECTORY_BYTES = 1024 * 1024       # the zip's list of its parts, which is read first
 MAX_RATIO = 200                         # unpacked / packed, for a part over MAX_RATIO_FREE
 MAX_RATIO_FREE = 1024 * 1024
 MAX_ROWS = 20_000                       # rows read; the importer's own cap is lower
 MAX_COLUMNS = 60
 MAX_CELL_CHARS = 10_000
+SHEET_ROWS = 1_048_576                  # the last row an Excel sheet has
 
 OLE_MAGIC = bytes.fromhex("D0CF11E0A1B11AE1")  # the old .xls (and other Office 97) format
 ZIP_MAGIC = b"PK\x03\x04"
@@ -47,6 +51,32 @@ class SheetError(Exception):
 
 def _bad(code: str, en: str, ar: str, status: int = 422) -> SheetError:
     return SheetError(code, en, ar, status)
+
+
+_END = b"PK\x05\x06"          # the zip's end record
+_END64_AT = b"PK\x06\x07"     # where a zip64 end record is
+_END64 = b"PK\x06\x06"
+
+
+def zip_directory_bytes(data: bytes) -> int | None:
+    """How long the zip says its list of parts is, from its end record, or None if it has no
+    end record that can be read (then opening it fails anyway). Python's zipfile reads the
+    whole list before anything can be counted, so a list of a million tiny parts would hold
+    the reader for seconds; this is read first, the way zipfile finds it (ALY-278)."""
+    at = len(data) - 22
+    if at < 0:
+        return None
+    if not (data[at:at + 4] == _END and data[-2:] == b"\0\0"):
+        at = data.rfind(_END, max(0, len(data) - 22 - 65_535))
+        if at < 0 or at + 22 > len(data):
+            return None
+    size = int.from_bytes(data[at + 12:at + 16], "little")
+    locator = at - 20
+    if size == 0xFFFFFFFF and locator >= 0 and data[locator:locator + 4] == _END64_AT:
+        start = int.from_bytes(data[locator + 8:locator + 16], "little")
+        if data[start:start + 4] == _END64 and start + 48 <= len(data):
+            size = int.from_bytes(data[start + 40:start + 48], "little")
+    return size
 
 
 NOT_A_SHEET = (
@@ -81,21 +111,30 @@ def _local(tag: str) -> str:
     return tag.rsplit("}", 1)[-1] if "}" in tag else tag
 
 
-def _column_index(ref: str) -> int:
-    letters = re.match(r"[A-Za-z]+", ref)
-    if not letters:
+# A cell's address, like B12. An Excel sheet ends at column XFD and row 1,048,576, so an
+# address of more letters or digits than that is not one. It is refused before any arithmetic:
+# the letters are read as a number, whose cost grows with the square of their length (ALY-278).
+_REF = re.compile(r"([A-Za-z]{1,3})([0-9]{1,7})")
+
+
+def _cell_ref(ref: str) -> tuple[int, int]:
+    """(column index from 0, row number from 1) of a cell address. Raises ValueError."""
+    found = _REF.fullmatch(ref)
+    if not found:
         raise ValueError(ref)
     n = 0
-    for ch in letters.group().upper():
+    for ch in found.group(1).upper():
         n = n * 26 + ord(ch) - 64
-    return n - 1
+    return n - 1, int(found.group(2))
 
 
-def _row_number(ref: str) -> int:
-    digits = re.search(r"\d+", ref)
-    if not digits:
-        raise ValueError(ref)
-    return int(digits.group())
+def _row_attr(value: str | None) -> int | None:
+    """A row's own number (`<row r="12">`), or None when it has none that a sheet could have.
+    A number out of range would otherwise make the sheet that long (ALY-278)."""
+    if not value or not value.isdigit() or len(value) > 7:
+        return None
+    number = int(value)
+    return number if 1 <= number <= SHEET_ROWS else None
 
 
 _BUILTIN_DATE_IDS = set(range(14, 23)) | set(range(27, 37)) | set(range(45, 48)) | set(
@@ -140,12 +179,39 @@ def _read_part(archive: zipfile.ZipFile, info: zipfile.ZipInfo) -> bytes:
     return data
 
 
-def _xml(data: bytes) -> ElementTree.Element:
-    """Parse a part. A document type or entity declaration has no place in a spreadsheet
-    and is how entity-expansion attacks are made, so any is refused before parsing."""
-    head = data[:4096].lower()
-    if b"<!doctype" in head or b"<!entity" in data[:65536].lower():
+class _Prolog(Exception):
+    """The first element began: the part has no document type declaration."""
+
+
+def _refuse_doctype(data: bytes) -> None:
+    """A document type declaration has no place in a spreadsheet and is how entity-expansion
+    attacks are made, so a part with one is refused before it is parsed. The parser itself
+    says whether there is one, whatever the part's encoding and wherever in the prolog it sits
+    (a search of the bytes misses one written in UTF-16 or after a long comment). A
+    declaration can only come before the first element, so this stops there."""
+    parser = expat.ParserCreate()
+
+    def doctype(*_args) -> None:
         raise _bad(*NOT_A_SHEET)
+
+    def element(*_args) -> None:
+        raise _Prolog
+
+    parser.StartDoctypeDeclHandler = doctype
+    parser.EntityDeclHandler = doctype
+    parser.StartElementHandler = element
+    try:
+        parser.Parse(data, True)
+    except _Prolog:
+        return
+    except expat.ExpatError as error:
+        raise _bad(*NOT_A_SHEET) from error
+    raise _bad(*NOT_A_SHEET)  # no element at all
+
+
+def _xml(data: bytes) -> ElementTree.Element:
+    """Parse a part, once it is known to declare no document type."""
+    _refuse_doctype(data)
     try:
         return ElementTree.fromstring(data)
     except (ElementTree.ParseError, ValueError) as error:
@@ -254,6 +320,8 @@ def _read(data: bytes) -> Sheet:
         )
     if data[:4] != ZIP_MAGIC:
         raise _bad(*NOT_A_SHEET)
+    if (zip_directory_bytes(data) or 0) > MAX_DIRECTORY_BYTES:
+        raise _bad(*NOT_A_SHEET)
     try:
         archive = zipfile.ZipFile(io.BytesIO(data))
     except zipfile.BadZipFile as error:
@@ -310,21 +378,17 @@ def _read(data: bytes) -> Sheet:
 def _read_sheet(
     data: bytes, title: str, strings: list[str], date_style: list[bool], epoch_1904: bool
 ) -> Sheet:
-    head = data[:4096].lower()
-    if b"<!doctype" in head or b"<!entity" in data[:65536].lower():
-        raise _bad(*NOT_A_SHEET)
+    _refuse_doctype(data)
     sheet = Sheet(name=title)
     by_row: dict[int, dict[int, object]] = {}
     formulas: set[tuple[int, int]] = set()
+    highest = 0  # the highest row number so far, for a row that gives none
     try:
         events = ElementTree.iterparse(io.BytesIO(data), events=("end",))
         for _event, node in events:
             if _local(node.tag) != "row":
                 continue
-            try:
-                number = int(node.get("r") or 0) or None
-            except ValueError:
-                number = None
+            number = _row_attr(node.get("r"))
             cells: dict[int, object] = {}
             next_col = 0
             for cell in node:
@@ -332,9 +396,9 @@ def _read_sheet(
                     continue
                 ref = cell.get("r")
                 try:
-                    col = _column_index(ref) if ref else next_col
-                    if number is None and ref:
-                        number = _row_number(ref)
+                    col, ref_row = _cell_ref(ref) if ref else (next_col, None)
+                    if number is None and ref_row:
+                        number = ref_row
                 except ValueError:
                     col = next_col
                 next_col = col + 1
@@ -346,12 +410,13 @@ def _read_sheet(
                 if value is not None:
                     cells[col] = value
             if number is None:
-                number = (max(by_row) + 1) if by_row else 1
+                number = highest + 1
             if number > MAX_ROWS:
                 sheet.truncated = True
                 node.clear()
                 break
             by_row[number] = cells
+            highest = max(highest, number)
             node.clear()
     except ElementTree.ParseError as error:
         raise _bad(*NOT_A_SHEET) from error
@@ -417,6 +482,71 @@ def _cell_value(
             return as_date, is_formula
     return number, is_formula
 
+
+
+# ── keeping what was read ─────────────────────────────────
+
+def to_stored(sheet: Sheet) -> dict:
+    """The sheet as JSON, kept with an upload so the file is read once, not again for every
+    look at its preview (ALY-278). Each text is kept once, in `strings`, and a cell holds its
+    place in that list: a sheet that repeats one long text in every cell stays small. A number,
+    a date or a time is a string with a letter in front (n, d, t). Empty cells at the end of a
+    row are left out, and `widths` says how long each row was."""
+    strings: list[str] = []
+    places: dict[str, int] = {}
+
+    def cell(value: object) -> object:
+        if value is None or isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            place = places.get(value)
+            if place is None:
+                place = places[value] = len(strings)
+                strings.append(value)
+            return place
+        if isinstance(value, Decimal):
+            return "n" + str(value)
+        if isinstance(value, datetime):
+            return "t" + value.isoformat()
+        if isinstance(value, date):
+            return "d" + value.isoformat()
+        raise TypeError(type(value))
+
+    rows = []
+    for row in sheet.rows:
+        end = len(row)
+        while end and row[end - 1] is None:
+            end -= 1
+        rows.append([cell(v) for v in row[:end]])
+    return {
+        "name": sheet.name, "first_row": sheet.first_row, "truncated": sheet.truncated,
+        "formulas": sorted([r, c] for r, c in sheet.formulas), "strings": strings,
+        "rows": rows, "widths": [len(row) for row in sheet.rows],
+    }
+
+
+def from_stored(kept: dict) -> Sheet:
+    """The sheet `to_stored` kept, as it was read."""
+    strings = kept["strings"]
+
+    def cell(value: object) -> object:
+        if value is None or isinstance(value, bool):
+            return value
+        if isinstance(value, int):
+            return strings[value]
+        tag, text = value[0], value[1:]
+        if tag == "n":
+            return Decimal(text)
+        return datetime.fromisoformat(text) if tag == "t" else date.fromisoformat(text)
+
+    rows = [
+        [cell(v) for v in cells] + [None] * (width - len(cells))
+        for cells, width in zip(kept["rows"], kept["widths"], strict=True)
+    ]
+    return Sheet(
+        rows=rows, first_row=kept["first_row"], name=kept["name"], truncated=kept["truncated"],
+        formulas={(r, c) for r, c in kept["formulas"]},
+    )
 
 # ── writing ───────────────────────────────────────────────
 

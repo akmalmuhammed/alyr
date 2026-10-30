@@ -54,9 +54,9 @@ worker, the web app and the nightly export:
 infra/gcp/setup.sh apps <tag>
 ```
 
-It also sets who may read which secret (ALY-268): the API and the worker read their own eleven
-secrets one by one, and only the migration job's account, `alyr-migrate`, reads the database
-owner's address. To see or change that alone: `infra/gcp/setup.sh access --dry-run` prints what
+It also sets who may read which secret (ALY-268): the API and the worker read the secrets
+listed in `SECRETS` in `setup.sh` one by one, and only the migration job's account,
+`alyr-migrate`, reads the database owner's address. To see or change that alone: `infra/gcp/setup.sh access --dry-run` prints what
 it would change, `access grant` adds access, and `access tighten` takes the broader roles away
 (a project-wide Secret Manager role, Editor on the default compute account, the legacy project
 roles on the export bucket). On a project that already runs, do them in that order with the
@@ -85,6 +85,16 @@ ALYR_ALERT_EMAIL=akmal@alyr.qa infra/gcp/setup.sh monitoring
 
 **9. After a tested restore from an export** (`docs/hosting.md`, "Backups on Google"):
 `infra/gcp/setup.sh lock-backups`. It cannot be undone.
+
+## The visitor's address (ALY-265)
+
+So the per-address rate limits count the visitor and not the proxy, the edge Worker signs the
+address it sees and the API believes only a signed one. Four steps, in this order, each safe to
+stop after: `setup.sh client-ip-key` (make the key), `setup.sh edge-key` (give it to the Worker,
+logged in to the business Cloudflare account), deploy the Worker, `setup.sh client-ip-on` (the
+API starts counting); `setup.sh client-ip-off` undoes the last. Check with
+`scripts/check-client-address.sh`. The full procedure, the check and the rollback are in
+`docs/runbooks/client-address.md`. `setup.sh apps` keeps these settings when they are on.
 
 ## Meta's webhook
 

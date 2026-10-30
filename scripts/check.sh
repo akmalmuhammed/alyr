@@ -22,6 +22,8 @@ echo "== web: lint"
 (cd "$root/apps/web" && pnpm lint)
 echo "== web: tests (search folding, prices, cart, QR codes)"
 (cd "$root/apps/web" && pnpm test)
+echo "== edge worker: tests (the visitor's address, signed; CI does not run these yet, ALY-265)"
+(cd "$root/infra/cloudflare/edge" && node --test "test/*.test.mjs")
 echo "== web: types"
 (cd "$root/apps/web" && pnpm exec tsc --noEmit)
 echo "== web: known vulnerabilities"

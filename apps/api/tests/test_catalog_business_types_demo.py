@@ -78,11 +78,11 @@ def test_a_shop_that_never_chose_has_both_alerts_on_as_it_always_had(client):
 def test_staff_commands_do_not_find_samples(client):
     sample = make_sample(client, name="Shawarma", name_ar="شاورما")
     reply = talk(client, STAFF_PHONE, "sold out shawarma")[-1]
-    assert "could not find an item called" in reply["body"]
+    assert "No item is called" in reply["body"]
     reply = talk(client, STAFF_PHONE, "price shawarma 12")[-1]
-    assert "could not find an item called" in reply["body"]
+    assert "No item is called" in reply["body"]
     reply = talk(client, STAFF_PHONE, "نفذ شاورما")[-1]
-    assert "لم أجد صنفاً" in reply["body"]
+    assert "لا يوجد صنف" in reply["body"]
     assert fresh(client, sample)["price"] == 1200 and fresh(client, sample)["sample"] is True
     # Once the owner makes it theirs, the same words find it.
     client.post(f"/api/items/{sample['id']}/adopt")

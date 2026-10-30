@@ -406,11 +406,12 @@ class DocumentSender:
             message = templates.notice(
                 d["contact_id"], template, lang, caption, doc["number"], ctx["shop"],
                 ctx["amount"], ctx["url"], document=ctx["pdf"], filename=file_name,
+                document_id=doc["id"],
             )
         else:
             message = OutboundMessage(
                 to=d["contact_id"], kind="document", body=caption, document=ctx["pdf"],
-                filename=file_name, lang=lang,
+                filename=file_name, lang=lang, document_id=doc["id"],
             )
         sent = await self._outbound.send(conn, message)
         await conn.execute(

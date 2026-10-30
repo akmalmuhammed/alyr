@@ -236,7 +236,7 @@ def test_scenario_13_the_customer_agrees_once_and_is_told_once_when_it_is_back(c
     assert "not a subscription" in asked["body"]
     assert "STOP" in asked["body"] and [c["title"] for c in choices(asked)] == [
         "Yes, tell me", "No thanks"]
-    assert "I will message you once when Shawarma is back" in done["body"]
+    assert "We will message you once when Shawarma is back" in done["body"]
     # Recorded like every other consent: what they were shown, where, and when.
     [row] = owner_sql(
         "select s.purpose, s.status, s.source, s.wording from consents s "
@@ -282,7 +282,7 @@ def test_scenario_13_in_arabic(client):
     assert "أوافق" not in asked["body"]
     assert "توافق على تلقي هذه الرسالة الواحدة من النور" in asked["body"]
     assert [c["title"] for c in choices(asked)] == ["نعم، أخبرني", "لا شكراً"]
-    assert ARABIC.search(done["body"]) and "سأراسلك مرة واحدة عند توفر «شاورما»" in done["body"]
+    assert ARABIC.search(done["body"]) and "سنراسلك مرة واحدة عند توفر «شاورما»" in done["body"]
     count = len(sent(client, AHMED_PHONE))
     talk(client, STAFF_PHONE, "رجع شاورما")
     told = sent(client, AHMED_PHONE)[count:]
@@ -296,7 +296,7 @@ def test_scenario_13_only_if_they_agreed(client):
     asked = talk(client, AHMED_PHONE, "tell me when shawarma is back")[-1]
     no = next(c for c in choices(asked) if c["id"].startswith("notify_no:"))
     declined = talk(client, AHMED_PHONE, reply_id=no["id"])[-1]
-    assert "I will not message you about Shawarma" in declined["body"]
+    assert "We will not message you about Shawarma" in declined["body"]
     talk(client, BILAL_PHONE, "shawarma")  # looked, did not ask
     assert watches() == []
     assert not owner_sql("select 1 from consents where source = 'back_in_stock_request'")
@@ -311,7 +311,8 @@ def test_a_customer_who_already_agreed_to_messages_is_not_asked_again(client):
     other = mk(client, name="Falafel", name_ar="فلافل")
     talk(client, STAFF_PHONE, "sold out falafel")
     done = talk(client, AHMED_PHONE, "tell me when falafel is back")[-1]
-    assert done["kind"] == "text" and "I will message you once when Falafel is back" in done["body"]
+    assert done["kind"] == "text"
+    assert "We will message you once when Falafel is back" in done["body"]
     assert len(watches("waiting")) == 2 and fresh(client, other)["available"] is False
 
 
@@ -540,7 +541,7 @@ def test_start_does_not_give_back_the_consent_that_stop_took(client):
     assert [c["title"] for c in choices(asked)] == ["Yes, tell me", "No thanks"]
     assert watches("waiting") == []
     yes = next(c for c in choices(asked) if c["id"].startswith("notify_yes:"))
-    assert "I will message you once" in talk(client, AHMED_PHONE, reply_id=yes["id"])[-1]["body"]
+    assert "We will message you once" in talk(client, AHMED_PHONE, reply_id=yes["id"])[-1]["body"]
     assert consent_states(AHMED_PHONE) == ("granted", "revoked", "granted")
     assert [w["status"] for w in watches("waiting")] == ["waiting"]
 

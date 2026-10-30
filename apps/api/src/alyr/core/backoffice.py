@@ -181,14 +181,22 @@ async def today(conn: asyncpg.Connection) -> dict:
                 since, client_id=o["client_id"], business_id=o["id"],
                 urgent=_days(since, now) >= 2,
             ))
+    reasons: dict = {}
+    for r in await conn.fetch("select * from admin_delivery_reasons() order by n desc, error"):
+        said = r["error"] or "no reason given"
+        reasons.setdefault(r["tenant_id"], []).append(f"{said} ({r['n']})")
     for d in await conn.fetch(
         "select * from admin_delivery_problems() where failed_messages + failed_jobs > 0"
     ):
         business = names.get(d["tenant_id"])
+        why = reasons.get(d["tenant_id"], [])
         items.append(_item(
             "delivery", d["tenant_id"], f"Messages failing for {d['name']}",
             f"{d['failed_messages']} failed messages and {d['failed_jobs']} failed jobs "
-            "in the last 7 days.",
+            "in the last 7 days."
+            # What failed, so the first look says whether it is ALYR (could not be delivered:
+            # the token, the number, an outage) or the customers' side (WhatsApp's words).
+            + (f" Why: {'; '.join(why[:3])}." if why else ""),
             d["last_failure"], client_id=business["client_id"] if business else None,
             business_id=d["tenant_id"], urgent=True,
         ))

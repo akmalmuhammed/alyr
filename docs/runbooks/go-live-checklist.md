@@ -15,11 +15,12 @@ customers use ALYR. From the 17 Oct 2026 audit (`docs/audit/2026-10-17.md`).
 - [ ] Encrypted daily backups, and a restore rehearsed in the last 30 days, written up
 - [ ] Secrets in the key vault, not in a file on a laptop
 - [ ] `ALYR_LINK_SECRET` set (32 or more random characters; the API will not start without it outside `ALYR_ENV=local`). On the founder's laptop, set it in `apps/api/.env` before the tunnel serves customers: the built-in development value is public (ALY-112)
+- [ ] `ALYR_PAYMENT_KEYS_KEY` set (32 random bytes, base64) before the first shop connects a real payment provider: without it connecting is refused outside `ALYR_ENV=local` (ALY-17, spec 033)
 - [ ] Postgres not reachable from the internet; only the web app and webhook are public
 - [ ] `docs/data-residency.md` reviewed against what really leaves Qatar
 
 ## Application
-- [ ] Rate limits on sign-in codes, sign-up and public pages (ALY-116, built; the per-address part is on only once `ALYR_CLIENT_IP_HEADER` names where the visitor's address is read from, then run Check 5 of `cloudflare-neon-hosting.md`; add Cloudflare rules in front as the first layer)
+- [ ] Rate limits on sign-in codes, sign-up and public pages (ALY-116, built; the per-address part is on only once the edge signs the visitor's address and the API is told to read it: ALY-265, steps and check in `client-address.md`; add Cloudflare rules in front as the first layer)
 - [ ] Staff roles: agents cannot change prices, services, hours or send bulk reminders (audit issue)
 - [ ] Contact merge keeps consent records (audit issue)
 - [x] Security headers on the web app (CSP, HSTS, frame-ancestors, nosniff) and an Origin check on signed-in changes (ALY-118); on the public site: `_headers` has HSTS, nosniff, frame-ancestors, base-uri, object-src; add Cloudflare's own rules in front
@@ -38,6 +39,8 @@ customers use ALYR. From the 17 Oct 2026 audit (`docs/audit/2026-10-17.md`).
 Self-serve sign-up is built for appointment businesses and, since 29 Oct 2026, for order businesses (restaurant, bakery, grocery, shop, fashion). It is closed: `ALYR_SIGNUP_OPEN` is off outside a local machine, and every business type is set up with ALYR until you switch it. Do these in order; the last one is the door.
 
 - [ ] **Mail works in production.** The mail provider is set up (`ALYR_EMAIL_API_KEY`, ALY-74). Read one sign-in code email and one reminder email in a real inbox, in English and in Arabic: the reminder (ALY-171) has only been checked against a recording transport.
+- [ ] **What happens when a client stops paying** (ALY-218, D-082). The worker runs the hourly plan check (`keep_billing_checked` in its log); `ALYR_BILLING_GRACE_DAYS` and `ALYR_BILLING_PAUSE_SENDING` set as the founder decided; every live client has a contact email in `/ops` (the reminders go there); a test client's plan shown in `/ops` with the right paid-through day.
+- [ ] **Card payments for ALYR's own billing, if offered** (ALY-180, D-074). Sandbox first: the three Paddle values stored in Secret Manager (`paddle-api-key`, `paddle-webhook-secret`, `paddle-client-token`) and the switch `ALYR_CARD_BILLING` set to `paddle`; then a test card payment from a test client recorded in `/ops`, then a renewal (Paddle's sandbox can bill the subscription early). Live only after Paddle approves `app.alyr.qa`, the terms, privacy and refund pages are public and the customer agreement is signed off (ALY-98): new live keys stored the same way, the setting `ALYR_PADDLE_ENVIRONMENT` changed to `live`, and the notification destination pointed at `https://api.alyr.qa/api/billing/paddle/webhook`.
 - [ ] **The worker is running** (`python -m alyr.worker`, with `ALYR_JOBS_INLINE=false`). It sends the reminder emails (every hour), the weekly reports and gives back the stock of unpaid orders.
 - [ ] **The visitor's address is read from the right place.** `ALYR_CLIENT_IP_HEADER` (and `ALYR_CLIENT_IP_PROXIES` if more than one proxy is in front) names the header the real address arrives in. Until it does, only the per-email limits on codes and sign-ups are on (ALY-116), and the address stored with each terms acceptance is the proxy's.
 - [ ] **Terms.** The privacy notice (version `2026-10-28`) is the only version published, so owners accept that today. When the lawyer's customer agreement is final (ALY-98, ALY-51), put it on a page and publish it from `/ops` → Terms: it asks every owner once. Decide whether an owner who will not accept is blocked (today they are asked, not blocked).

@@ -249,8 +249,10 @@ async def upload_import(
     limit = get_settings().catalog_import_max_bytes
     data = await _file(request, limit)
     try:
+        # Read once, here: off the event loop and before a transaction is open (ALY-278).
+        _kind, sheet = await sheets.off_loop(sheets.read_table, data, filename)
         async with _db(request).tenant(staff.tenant_id) as conn:
-            return await sale_imports.upload(conn, actor_of(staff), filename, data, limit)
+            return await sale_imports.upload(conn, actor_of(staff), filename, data, limit, sheet)
     except SheetError as error:
         return _sheet_failure(error)
 

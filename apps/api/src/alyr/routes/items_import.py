@@ -32,9 +32,11 @@ from alyr.modules.items import (
     costs,
     exports,
     features,
+    import_photos,
     imports,
     photos,
     service,
+    sheets,
 )
 from alyr.modules.items.import_plan import COSTS
 from alyr.modules.items.xlsx import SheetError
@@ -210,10 +212,12 @@ async def import_upload(
         await access.require_edit(conn, staff)
     data = await _body(request, request.app.state.media.settings.catalog_import_max_bytes)
     try:
+        # Read once, here: off the event loop and before a transaction is open (ALY-278).
+        kind, sheet = await sheets.off_loop(sheets.read_table, data, filename)
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
             return await imports.start(
                 conn, _media(request), await clock.load(conn), staff.tenant_id,
-                team.actor_of(staff), data, filename, on_duplicate,
+                team.actor_of(staff), data, filename, kind, sheet, on_duplicate,
             )
     except SheetError as error:
         raise _fail(error) from error
@@ -260,10 +264,14 @@ async def import_zip(
         await access.require_edit(conn, staff)
     data = await _body(request, request.app.state.media.settings.catalog_import_max_zip_bytes)
     try:
+        # Listed once, here, like the sheet (ALY-278); a zip that cannot be used stops here.
+        zip_view = await sheets.off_loop(
+            import_photos.index, data, _media(request).settings.media_max_upload_bytes
+        ) if data else None
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
             return await imports.set_zip(
                 conn, _media(request), await clock.load(conn), staff.tenant_id, import_id,
-                data, filename,
+                data, filename, zip_view,
             )
     except SheetError as error:
         raise _fail(error) from error
@@ -278,7 +286,7 @@ async def import_zip_remove(
             await access.require_edit(conn, staff)
             return await imports.set_zip(
                 conn, _media(request), await clock.load(conn), staff.tenant_id, import_id,
-                None, "",
+                None, "", None,
             )
     except SheetError as error:
         raise _fail(error) from error
