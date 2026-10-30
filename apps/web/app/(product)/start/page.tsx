@@ -522,7 +522,7 @@ export default function Start() {
     if (step === "services") {
       const lines = rows.slice(0, 4).map((s) => `${ar && s.name_ar ? s.name_ar : s.name}${s.price ? `: QAR ${qar(s.price)}` : ""} (${s.duration_minutes} ${ar ? "دقيقة" : "min"})`);
       return [
-        { direction: "in", body: ar ? "كم الأسعار؟" : "What are your prices?" },
+        { direction: "in", body: ar ? "الأسعار" : "Prices" },
         { direction: "out", body: [ar ? "خدماتنا:" : "Our services:", ...lines].join("\n"), payload: { choices: [{ id: "b", title: ar ? "احجز موعداً" : "Book a visit" }] } },
       ];
     }
@@ -540,7 +540,7 @@ export default function Start() {
         .slice(0, 4)
         .map((r) => `${ar && r.name_ar ? r.name_ar : r.name}${r.priceText ? `: QAR ${r.priceText}` : ""}`);
       return [
-        { direction: "in", body: ar ? "شو عندكم اليوم؟" : "What do you have today?" },
+        { direction: "in", body: ar ? "القائمة" : "Menu" },
         { direction: "out", body: [ar ? "قائمتنا:" : "Our menu:", ...lines].join("\n"), payload: { choices: [{ id: "o", title: ar ? "اطلب الآن" : "Order now" }] } },
       ];
     }
@@ -556,9 +556,8 @@ export default function Start() {
     }
     if (step === "account" || step === "code") {
       return [
-        { direction: "in", body: ar ? "مرحبا، أبي أحجز حلاقة بكرة المسا" : "Hi, can I book a haircut tomorrow evening?" },
-        { direction: "out", body: ar ? "أكيد. اختر الوقت ليوم الخميس:" : "Of course. Pick a time for Thursday:", payload: { choices: [{ id: "a", title: "6:00 pm" }, { id: "b", title: "7:30 pm" }] } },
-        { direction: "in", body: "7:30 pm" },
+        { direction: "in", body: ar ? "أبي أحجز" : "I want to book" },
+        { direction: "out", body: ar ? "اختر الخدمة والوقت المناسب من هنا: app.alyr.qa/b/…" : "Pick a service and a time that suits you: app.alyr.qa/b/…" },
         { direction: "out", body: ar ? "تم الحجز: حلاقة، الخميس 7:30 مساءً. سنذكّرك قبل ساعتين." : "Booked: haircut, Thursday 7:30 pm. We'll remind you 2 hours before." },
       ];
     }
@@ -870,7 +869,7 @@ export default function Start() {
           <section className="ob-price preparing">
             <p className="ob-preparing"><span className="ob-pulse" /><b>{t.plan.preparing}</b></p>
             <small>{t.plan.preparingNote}</small>
-            <ul>{t.plan.includes.map((x) => <li key={x}><Ico name="check" size={16} />{x}</li>)}</ul>
+            <ul>{(way === "orders" ? t.plan.includesOrders : t.plan.includes).map((x) => <li key={x}><Ico name="check" size={16} />{x}</li>)}</ul>
           </section>
         )}
         <section className="ob-note-card"><b>{t.plan.meta}</b><small>{t.plan.metaSub}</small></section>
