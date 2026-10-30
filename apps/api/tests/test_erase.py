@@ -47,6 +47,15 @@ def office(client_factory):
     return client_factory()
 
 
+@pytest.fixture(autouse=True)
+def leave_no_watches_behind():
+    """Other tests count `stock_watches` over the whole database; the businesses these tests
+    leave behind (a dry run does not erase) must not hold any."""
+    yield
+    owner_sql("delete from stock_watches where tenant_id in "
+              "(select id from tenants where name like 'Zq Bakery %')")
+
+
 def public_tables() -> set[str]:
     return {r["table_name"] for r in owner_sql(
         "select table_name from information_schema.tables "

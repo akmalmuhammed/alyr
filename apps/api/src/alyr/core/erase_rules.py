@@ -59,6 +59,9 @@ RULES: dict[str, Rule] = {
         "services", "booking_resources", "resource_hours", "service_resources", "business_hours",
         "stock_holds",
     ),
+    # The cost tables are among them. Cost prices are for owners and admins only (the
+    # `cost_margin` feature, `modules/items/costs.py`); nothing here reads them, it deletes
+    # the rows.
     **_delete(
         "the business's catalog, prices, stock and settings",
         "items", "item_variants", "item_categories", "item_code_counters", "item_cost_history",

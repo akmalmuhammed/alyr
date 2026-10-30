@@ -236,7 +236,7 @@ async def erase_business(
         if client is None or client["erased_at"] is not None or client["cancels_on"] is None:
             raise NotDue("not stopped")
         if client["cancels_on"] + timedelta(days=days) > on:
-            raise NotDue("not yet")
+            raise NotDue("too early")
         why = await refusal(conn, client_id, client["erase_hold"])
         if why:
             raise NotDue(why)
