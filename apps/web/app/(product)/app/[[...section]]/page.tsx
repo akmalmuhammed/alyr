@@ -7,6 +7,7 @@ import { Screens, type WorkspaceTab } from "../../_workspace/Screens";
 import { TeamReport } from "../../_workspace/Team";
 import { WhatsappLink } from "../../_workspace/WhatsappLink";
 import { Catalog } from "../../_workspace/Catalog";
+import { NotSent } from "../../_workspace/NotSent";
 import { Documents } from "../../_workspace/Documents";
 import { TermsBanner } from "../../_workspace/TermsBanner";
 import { keepLang, savedLang, type Lang } from "../../_workspace/lang";
@@ -81,6 +82,7 @@ const T = {
     suggestions: ["Connect our WhatsApp number", "Add our services and prices", "Add a team member"],
     live: "WhatsApp live", sim: "Simulator", seeAll: "See all",
     go: "Go to", actions: "Actions", noMatch: "Nothing matches that.", navigate: "Move", choose: "Open", close: "Close",
+    notSent: "Messages not sent",
     more: "More", doha: "Doha",
   },
   ar: {
@@ -119,6 +121,7 @@ const T = {
     suggestions: ["اربطوا رقم واتساب", "أضيفوا خدماتنا وأسعارنا", "أضيفوا عضواً للفريق"],
     live: "واتساب يعمل", sim: "المحاكي", seeAll: "عرض الكل",
     go: "انتقل إلى", actions: "إجراءات", noMatch: "لا نتائج.", navigate: "تنقّل", choose: "افتح", close: "إغلاق",
+    notSent: "رسائل لم تُرسل",
     more: "المزيد", doha: "الدوحة",
   },
 };
@@ -371,6 +374,8 @@ export default function WorkspaceShell() {
     }));
     list.push(
       { id: "ask", group: t.actions, label: t.ask, icon: "chat", run: () => router.push("/app#ask") },
+      // Not in the navigation: ALYR Agent links to it when a message fails (specs/036).
+      { id: "go-unsent", group: t.go, label: t.notSent, icon: "inbox", run: () => router.push("/app/unsent") },
       { id: "lang", group: t.actions, label: t.langName, icon: "globe", run: () => chooseLang(lang === "en" ? "ar" : "en") },
     );
     if (state?.me.signed_in) list.push({ id: "out", group: t.actions, label: t.signOut, icon: "out", run: signOut });
@@ -600,6 +605,8 @@ export default function WorkspaceShell() {
         )}
       </>
     );
+  } else if (section === "unsent") {
+    body = <NotSent lang={lang} />;
   } else if (section === "connect" && documentsOn) {
     body = <ConnectSettings lang={lang} canManage={state.can_manage} />;
   } else if (section === "catalog" && enabledScreens.has("catalog")) {

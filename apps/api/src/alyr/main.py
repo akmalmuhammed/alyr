@@ -281,6 +281,7 @@ def create_app() -> FastAPI:
     )
     app.include_router(store.router, dependencies=[Depends(require_module_for_slug("orders"))])
     app.include_router(jobs_routes.router)
+    app.include_router(jobs_routes.messages)
     app.include_router(inbox.router, dependencies=[Depends(require_module("inbox"))])
     app.include_router(team_routes.router)
     app.include_router(owner_routes.router)
