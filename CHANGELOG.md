@@ -5,6 +5,7 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- No setup fee for now (D-092; no migration, no new dependency): at go-live a client pays the first month of their plan and nothing else. The go-live card and the go-live step stop naming a setup fee when the accepted plan has none, and the API's payment answer says how much of it is setup (`setup`). In production the founder unticks the `setup` line in `/ops` → Price list.
 
 ## v0.3.0 (30 Oct 2026)
 - Alerts, an incident runbook and a rehearsed restore for Google Cloud (ALY-277, D-091; no code change, no migration, no new dependency): alerts on the database's CPU, disk and connections, a failed or missing backup and a nightly export that did not start or did not write a file (`infra/gcp/monitoring.sh`, `infra/gcp/alerts/`), a second budget on cost with credits excluded, every alert sent to every notification channel (the founder adds the phone); `infra/gcp/restore.sh` clones the database to a point in time, checks it and points the apps at it; `docs/runbooks/incident-response.md` rewritten for Cloud Run (kill switches, rollback by traffic split, restore, Meta webhook, merchant notice in English and Arabic, breach steps); `docs/runbooks/restore-rehearsal.md` and the first rehearsal, `docs/audit/restore-2026-10-30.md`.

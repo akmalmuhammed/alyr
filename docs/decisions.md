@@ -78,6 +78,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-065 | Owners and staff manage the shop from WhatsApp as well as the portal, through one shared action layer; phases 0 and 1 (link a number, read-only commands) are built first | Accepted (written as D-040 on 18 Oct; renumbered 28 Oct, D-040 is the look) |
 | D-091 | Recovery targets (data lost under 10 minutes, back in about 15) and the rule that an alert counts only when it reaches a phone; a restore is always a point-in-time clone to a new instance | Proposed |
 | D-072 | Shops get paid online through three doors, each ending in an account in the shop's own name: connect your own account (built first), ALYR-assisted sign-up with a partner (Noqoody, then SADAD), and opening by API only once a provider proves it; apply to Noqoody, SADAD and Tap. Updates D-044 | Accepted |
+| D-092 | No setup fee for now: at go-live a client pays the first period of their plan and nothing else; the price list's setup line is out of use, not deleted | Accepted |
 
 ---
 
@@ -1891,3 +1892,18 @@ Without it, analytics is off everywhere.
 **Rejected.** *Tap first for model B* (D-044): unproven for Qatar, and its Marketplace product is model C. *Waiting for a model B partner before building anything*: door 1 needs no deal and every other door ends in it.
 
 **Revisit when** Tap says a Platforms lead in Qatar is the shop's own merchant (Tap becomes door 3); Noqoody's partner portal can submit applications (Noqoody becomes door 3); a provider stores data outside Qatar (it waits for a row in `docs/data-residency.md`).
+
+## D-092 · No setup fee for now: a client pays only for their plan
+**Date** 30 Oct 2026 · **Status** Accepted (the founder, 30 Oct 2026: "no setup fees now") · Changes the setup fee of D-017 and the "setup fee and first period" of D-053
+
+**The decision.**
+- **No client pays a setup fee for now**, whether they sign up themselves or are set up with ALYR. At go-live a client pays the first period of the plan they accepted, and nothing else.
+- **Switched off where ALYR sets prices:** the `setup` line of the back office's price list is out of use (`/ops` → Price list, "In use" unticked). It is not deleted, so ticking it brings it back with its names. A quote already made keeps its lines: the price list never changes a quote that exists.
+- **The screens follow the quote.** With no setup line, the plan shows only the monthly price, the go-live card shows only the first month, and the go-live step says "Pay your first month to go live". A card payment through Paddle already leaves out a setup item of 0 (D-074).
+- **Not yet changed:** the public site's prepared offer copy (`apps/web/app/_site/copy.ts`: `price.setup`, `price.firstMonth` and the agreement's "If we miss it") still names a setup fee. It is not published (`NEXT_PUBLIC_ALYR_OFFER` is off) and changes before it is.
+
+**Why.** The founder's call on 30 Oct 2026, the day the self-serve test showed a bakery owner who had set everything up themselves being asked QAR 2,500 for "number connection, data and training".
+
+**Chosen over** a setup line of QAR 0 on every quote (the screens would show "Setup, once: QAR 0"), and deleting the line from the price list (its names and history would go with it).
+
+**Revisit when** setup by ALYR is sold as a service of its own, for example training on site or bringing in a large catalogue.
