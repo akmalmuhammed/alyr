@@ -47,12 +47,36 @@ credentials. The tunnel (`api.alyr.online`) stopped being the webhook on 28 Oct;
 credentials file**, which removes a secret instead of rotating one. GitHub's two Cloudflare tokens are
 `runbooks/release.md`'s to roll (go-live checklist, Releases).
 
-**Superseded versions are still enabled** (CLD-15): `meta-access-token` and the three R2 secrets keep their
-old versions readable by anyone who can read the secret (today only the project owner, ALY-268). Every
-runtime reads `:latest`, so disabling the older versions breaks nothing and can be undone with
-`gcloud secrets versions enable`. Do it only after the new value is proven (the check column above). The
-exact commands for each are printed by `infra/gcp/audit.sh secrets`. Never destroy a version until the
-rotation has held for a week.
+**Superseded versions are still enabled** (CLD-15): `meta-access-token` (versions 1 and 2) and the three R2 secrets
+(`r2-access-key-id`, `r2-secret-access-key`, `r2-account-id`, version 1 each) keep their old versions readable by anyone who
+can read the secret (today only the project owner, ALY-268). **The founder decides when to disable them.** What was checked
+on 30 Oct 2026 (ALY-34), and what each could still break:
+
+- **Cloud Run:** all 40 revisions that exist (17 of `alyr-api`, 9 of `alyr-web`, 14 of `alyr-worker`) read their secrets as
+  `:latest`; none pins a version number. A rollback to any of them (`rollback.md`) therefore reads the newest version and does
+  not need the old ones. The jobs (`alyr-migrate`, `alyr-db-export`) and every script in `infra/` also read `:latest`.
+- **`:latest` and a disabled version:** disabling an *older* version changes nothing for a reader of `:latest`. Disabling the
+  *newest* breaks every reader at its next start (`FAILED_PRECONDITION`), so **never disable the newest** (tried on a scratch
+  secret). Going back after a bad rotation is `setup.sh set-secret` with the old value (a new version), not a disable.
+- **What disabling an old version could break:** only something that reads that version by number. None is known (Cloud
+  Run and `infra/` were checked; the laptop's own scripts and anyone's notes were not). Disabling is reversible
+  (`gcloud secrets versions enable <n> --secret=<name>`); destroying is not, so do not destroy.
+- **What it does not do:** it does not revoke anything at Meta or Cloudflare. A token that was valid stays valid there until
+  revoked in the provider's dashboard. Disable the old version after the old token is revoked, or the old version is the
+  only copy you could use to undo a bad revocation.
+
+The commands, one per version (also printed by `infra/gcp/audit.sh secrets`), each safe to run at any time for the reasons
+above and each undone by `enable`:
+
+```bash
+gcloud secrets versions disable 1 --secret=meta-access-token --project=alyr-prod
+gcloud secrets versions disable 2 --secret=meta-access-token --project=alyr-prod
+gcloud secrets versions disable 1 --secret=r2-access-key-id --project=alyr-prod
+gcloud secrets versions disable 1 --secret=r2-secret-access-key --project=alyr-prod
+gcloud secrets versions disable 1 --secret=r2-account-id --project=alyr-prod
+```
+
+Never destroy a version until the rotation has held for a week.
 
 **No rotation schedule exists** (CLD-15). Put the date of each rotation in this table and in `docs/access.md`,
 and rotate the long-lived tokens at least once a year (the first line of this page). The quarterly review

@@ -121,6 +121,7 @@ kept 35 days. **Both reach back only as far as the oldest backup that exists:** 
    infra/gcp/restore.sh clone alyr-db-restored 2026-10-30T09:15:00Z   # UTC, a moment before the damage
    infra/gcp/restore.sh check alyr-db-restored                        # counts only, nothing shown
    infra/gcp/restore.sh repoint alyr-db-restored                      # both secrets, then the API and worker
+   infra/gcp/restore.sh revert                                        # only if it was the wrong call: the old addresses back, apps restarted
    ```
 
    The instance itself lost, or the moment is older than point-in-time reaches: restore a nightly backup

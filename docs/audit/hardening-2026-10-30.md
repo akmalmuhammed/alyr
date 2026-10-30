@@ -90,6 +90,13 @@ What the drill found:
    password of the drill instance into a log file. The log was deleted at once; the password belonged to an instance
    with no public address that was deleted 17 minutes later. The script itself never prints it.
 
+7. **Found by checking a claim, not by the drill: the runbook's way of going back after `repoint` was wrong.** Step 8 said to
+   disable the newest version of `database-url` and `migration-url` so that `:latest` is the old one again. On a throwaway secret
+   (30 Oct, deleted at once) disabling the newest version makes `:latest` **fail** (`FAILED_PRECONDITION`); it does not fall back, so
+   new copies of the API and worker would have refused to start in the middle of an incident. Fixed: `restore.sh revert` copies
+   the previous value back as a new version and restarts the apps (tested on a scratch secret, including its refusal when there
+   is only one version), and step 8 says so. Disabling an *older* version is harmless.
+
 Cost: one `db-f1-micro` with a 10 GB disk for 17 minutes and two one-minute Cloud Run jobs, under USD 0.05 at list
 prices (estimate; the billing report lags by a day). Estimated at under USD 0.10 beforehand; authorised for this
 one drill by the brief.
@@ -111,9 +118,58 @@ The promises are in `apps/web/app/_site/copyPrivacy.ts` (section "How long we ke
 | Session recordings (PostHog) deleted after 30 days | PostHog's own setting, in the EU | not checked here |
 | "If a breach affects a business's data, we tell the business without delay" | `incident-response.md`, sections 6 and 7. The regulator and deadline are unknown until ALY-51 | ok; blanks open |
 
+### The 60-day promise: where it is made, and what would have to carry it
+
+For the product lane's brief. No exploit detail; the architecture only.
+
+**Where it is made.** `apps/web/app/_site/copyPrivacy.ts`, the section with `id: "keep"` ("How long we keep it"), English in
+`privacyEn` (line 113) and Arabic in `privacyAr` (line 240), published at `/privacy` and `/ar/privacy`:
+
+> For as long as the business uses ALYR. When a business stops, it can ask for a copy of its records within 30 days. 60 days after
+> it stops, we delete its data, except what the law requires us to keep, such as our invoices to it. Copies in our backups are gone
+> within 35 days after that.
+
+`specs/038-customer-data/spec.md` (lines 84 and 103) says where the job belongs: "go-live item 39 (cancelling)". And
+`apps/api/migrations/0075_*.sql` says the opposite for now: "Nothing is ever deleted and the workspace stays open (D-033, D-053)".
+The two need one decision (a new D-number, product lane): what stays open for the 30 days of copy, what "stops" means, and when.
+
+**What already exists to start the clock.** `clients.cancel_requested_at`, `clients.cancels_on`, `clients.billing_state = 'cancelled'`,
+`clients.sending_paused_reason = 'cancelled'` (migration 0075); `core/subscription.py` (`cancel`, `undo_cancel`, `sweep`), run every
+hour by `keep_billing_checked` in `worker.py`. A client owns one or more businesses (`tenants`), so the unit to delete is all of a
+client's businesses, 60 days after `cancels_on`. A copy for the owner already exists (`core/export.py`, the account ZIP, D-081).
+
+**What would have to carry the deletion, and why each part is needed.**
+
+1. **A daily step that finds clients whose `cancels_on` is more than 60 days past** and have not been undone, in `core/` next to
+   `core/retention.py` and `core/forget.py`, started from `worker.py` beside `keep_old_copies_purged`. It should write an
+   `erase_after` date when the client cancels so the date can be shown and emailed (30, 14 and 7 days before; `billing_notices` is
+   the pattern), and refuse to run while a payment or an order is open.
+2. **It cannot run as the worker as it is.** The application role cannot write `tenants` or `clients`, and since ALY-268 the API and the
+   worker no longer hold the owner credential. Two ways: (a) a Cloud Run job under the `alyr-migrate` account started by Cloud
+   Scheduler, like `alyr-db-export` (keeps the owner credential away from the always-on processes; recommended), or (b) a
+   SECURITY DEFINER function the worker calls (the pattern of sign-up and the back office; those guards trust session settings,
+   SEC-5 of the 29 Oct audit, so a new one needs its own check).
+3. **A table-by-table rule, with a test.** The migrations declare 91 foreign keys to `tenants(id)` (a count of the text in 41 files,
+   not of the live schema): 27 say `ON DELETE CASCADE`, one `SET NULL`, and about 63 say nothing, which refuses the delete while a
+   row remains. So a business is not removed by deleting its `tenants` row; the cascading ones would take their rows and the
+   rest, and the immutable ones in (4), stop it. Deleting a business means a rule for every table, in an order. `core/forget.py`'s `TABLES`, with `tests/test_forget.py::test_every_table_that_points_at_a_customer_has_been_decided`,
+   is the pattern: a registry of what happens to each table, and a test that reads the foreign keys and fails when a new
+   tenant-owned table has no rule.
+4. **The records the database refuses to delete, on purpose.** Issued documents (`0034_documents.sql`: "an issued document is
+   never deleted", and its PDF), recorded payments (`0038_documents_sales.sql`) and the back-office audit log (`0016`). The deletion has
+   to remove a business's own documents deliberately, owner role only, and leave one record with counts and no personal data. What
+   the law requires ALYR to keep ("our invoices to it": ALYR's billing records for the client, not the shop's receipts to its
+   own customers) is a question for the lawyer (ALY-51) before this is built.
+5. **Files outside the database.** Product photos are on R2 under the prefix `shops/<business id>/` (`core/media.py`, line 277); they are not in any
+   backup of the database and must be deleted by that prefix. Check Paddle's and Resend's copies against `docs/data-residency.md`.
+6. **The backups promise follows by itself** (14 nightly backups, 7 days of logs, exports 35 days) except on-demand backups, which
+   `audit.sh` flags.
+7. **Proof afterwards:** a count-only receipt for ALYR (how many rows per table were deleted, when, for which client's ID), no data in it.
+
 ## 4. What this pull request changes
 
 - `infra/gcp/restore.sh backup-drill`: the drill above, scripted, timed, deleting its instance on any exit.
+- `infra/gcp/restore.sh revert` and a corrected step 8 of the restore runbook (finding 7 above).
 - `infra/gcp/audit.sh`: the read-only audit of this page as a command. It reports **no FAIL** on production today
   (it caught its own two false alarms while being written: an empty value shifting the columns).
 - **Alert (applied to production, additive and free):** the log metric `alyr-db-protected-actions` and the policy
@@ -134,7 +190,7 @@ None of these was run. `gcloud` in Git Bash: `source infra/gcp/gcloud.sh`, then 
 | # | Do | Command | Expected effect | Undo |
 |---|---|---|---|---|
 | 1 | Rotate the development-era keys, in this order (`secret-rotation.md`, "Where production stands"): Resend, R2, the Meta system-user token, then the Meta app secret and verify token together | Provider dashboards, then `infra/gcp/setup.sh set-secret <name>` for each (typed, hidden; it restarts the API and worker). For the two Meta values then `infra/gcp/setup.sh meta-webhook 1071845795713841` | A minute of restart per secret; Meta's webhook is refused between changing the app secret and storing it, so do both in one sitting | The old value stays as a version in Secret Manager until disabled |
-| 2 | Once a rotated value works, disable the superseded secret versions (every runtime reads `:latest`, so no running app can be affected) | `infra/gcp/audit.sh secrets` prints each line, for example `gcloud secrets versions disable 1 --secret=meta-access-token --project=alyr-prod` (also `2`, and `r2-access-key-id`, `r2-account-id`, `r2-secret-access-key` version `1`) | The old values can no longer be read from Secret Manager | `gcloud secrets versions enable <n> --secret=<name>` |
+| 2 | **The founder decides** when to disable the five superseded secret versions. Checked: all 40 Cloud Run revisions (17 API, 9 web, 14 worker) read `:latest`, none pins a number, so a rollback does not need the old versions; `:latest` ignores a disabled *older* version but **fails if the newest is disabled** (tried on a throwaway secret), so never disable the newest. What they could still break: only something that reads a version by number; none is known | `gcloud secrets versions disable 1 --secret=meta-access-token --project=alyr-prod`, the same with `2`, and with `1` for `r2-access-key-id`, `r2-secret-access-key`, `r2-account-id` (`secret-rotation.md` lists them with the reasoning; `audit.sh secrets` prints them) | The old values can no longer be read from Secret Manager. Nothing is revoked at Meta or Cloudflare | `gcloud secrets versions enable <n> --secret=<name>`. Never `destroy` |
 | 3 | Delete the Cloudflare tunnel and its credentials file on the laptop (the webhook left it on 28 Oct) | Cloudflare dashboard > Zero Trust > Tunnels > delete; delete `~/.cloudflared/<id>.json` | One secret fewer; the laptop demo's public address `api.alyr.online` stops | Make a tunnel again |
 | 4 | Test a restore **from an export** on production data, then lock the exports | (a) `SA=$(gcloud sql instances describe alyr-db --format='value(serviceAccountEmailAddress)')`; (b) `gcloud storage buckets add-iam-policy-binding gs://alyr-prod-db-exports --member="serviceAccount:$SA" --role=roles/storage.objectViewer`; (c) `gcloud sql databases create alyr_restored --instance alyr-db`; (d) `gcloud sql import sql alyr-db gs://alyr-prod-db-exports/<newest file> --database alyr_restored`; (e) compare table and row counts with `alyr`; (f) `gcloud sql databases delete alyr_restored --instance alyr-db` and `gcloud storage buckets remove-iam-policy-binding` with the same member and role; (g) `infra/gcp/setup.sh lock-backups` | A scratch database inside the production instance for a few minutes (45 KB of data); a temporary read grant on the export bucket. No restart. **The lock cannot be undone**: nobody can delete an export early, or shorten the 35 days | Everything but the lock |
 | 5 | Optional: keep a last backup when the instance is deleted | `gcloud sql instances patch alyr-db --final-backup --final-backup-retention-days=30` | Nothing while it runs; a backup is taken at deletion and kept 30 days (inside the 35 of the privacy notice). Google's `--help` shows no restart warning on this flag | `gcloud sql instances patch alyr-db --no-final-backup` |

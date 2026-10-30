@@ -14,9 +14,11 @@
 #                                                 clone (counts only, no data is shown or copied out)
 #   infra/gcp/restore.sh repoint <name>           write the clone's new private address into BOTH
 #                                                 database secrets, then restart the API and the worker
+#   infra/gcp/restore.sh revert                   undo `repoint`: put the previous value of BOTH database secrets
+#                                                 back as the newest version, then restart the API and the worker
 #   infra/gcp/restore.sh drop <name>              delete a clone (never alyr-db)
 #
-# Only `repoint` changes anything the apps use. `rehearse` and `backup-drill` never read or write a
+# Only `repoint` and `revert` change anything the apps use. `rehearse` and `backup-drill` never read or write a
 # secret value and never touch alyr-db: each makes one extra instance and deletes it before it ends.
 set -euo pipefail
 
@@ -134,10 +136,37 @@ repoint() {
     echo "  $s now points at $name ($ip)"
   done
   unset old new
-  stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+  restart_apps
+  echo "The API and the worker restarted on $name. Check /health/ready and /health/worker."
+}
+
+# New copies of the API and the worker read the secrets again. (The web app reads none.)
+restart_apps() {
+  local stamp; stamp="$(date -u +%Y%m%dT%H%M%SZ)"
   g run services update alyr-api --region="$REGION" --update-env-vars="ALYR_SECRETS_AT=$stamp" >/dev/null
   g run worker-pools update alyr-worker --region="$REGION" --update-env-vars="ALYR_SECRETS_AT=$stamp" >/dev/null
-  echo "The API and the worker restarted on $name. Check /health/ready and /health/worker."
+}
+
+# Put the version before the newest back as the newest. `:latest` is the highest version number and
+# does NOT fall back to an older one when the newest is disabled: it fails with FAILED_PRECONDITION
+# (tried on a scratch secret, 30 Oct 2026, ALY-34). So going back is a new version holding the old value.
+# The value passes through this shell only; it is never printed.
+previous_as_new() {
+  local s="$1" prev val
+  prev="$(value secrets versions list "$s" --sort-by=~createTime --limit=2 --format='value(name.basename())' | sed -n 2p)"
+  [ -n "$prev" ] || { echo "restore: $s has only one version; nothing to go back to" >&2; exit 1; }
+  val="$(value secrets versions access "$prev" --secret="$s")"
+  [ -n "$val" ] || { echo "restore: version $prev of $s is empty or cannot be read; stopping" >&2; exit 1; }
+  printf '%s' "$val" | g secrets versions add "$s" --data-file=- >/dev/null
+  unset val
+  echo "  $s: the value of version $prev is the newest again"
+}
+
+revert() {
+  local s
+  for s in database-url migration-url; do previous_as_new "$s"; done
+  restart_apps
+  echo "The API and the worker restarted on the previous database address. Check /health/ready and /health/worker."
 }
 
 rehearse() {
@@ -213,6 +242,7 @@ case "${1:-}" in
   clone) clone "${2:?usage: restore.sh clone <new instance name> [<time in UTC>]}" "${3:-}" ;;
   check) check "${2:?usage: restore.sh check <instance name>}" ;;
   repoint) repoint "${2:?usage: restore.sh repoint <instance name>}" ;;
+  revert) revert ;;
   drop) drop "${2:?usage: restore.sh drop <instance name>}" ;;
   *) sed -n '2,${/^#/!q;p}' "$0"; exit 1 ;;
 esac

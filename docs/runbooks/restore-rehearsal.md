@@ -72,10 +72,12 @@ Times are from the rehearsal of 30 Oct 2026 (`docs/audit/restore-2026-10-30.md`)
 7. **Keep the old instance until the incident is closed**, for comparison. It costs about USD 34 a month, so
    do not leave it. `gcloud sql instances patch alyr-db --no-deletion-protection`, then
    `gcloud sql instances delete alyr-db`.
-8. **Going back** (the restore was the wrong call, the old instance is untouched): `gcloud secrets versions list
-   database-url` and `migration-url`; disable the newest version of each
-   (`gcloud secrets versions disable <n> --secret=<name>`) so `:latest` is the old one again; restart the API
-   and the worker as in step 4.
+8. **Going back** (the restore was the wrong call, the old instance is untouched): `infra/gcp/restore.sh revert`. It puts the
+   previous value of `database-url` and `migration-url` back as the newest version of each, then restarts the API and the
+   worker as in step 4. Run it once: a second run goes forward again. **Do not go back by disabling the newest version.**
+   `:latest` is the highest version number and does not fall back to an older one: with the newest disabled, reading
+   `:latest` fails (`FAILED_PRECONDITION`, tried on a scratch secret on 30 Oct 2026), so new copies of the API and worker
+   would not start. (An earlier version of this page said to disable the newest; that was wrong.)
 
 ## Restoring a nightly backup (the second way back)
 
@@ -91,6 +93,11 @@ production's, and deletes it, whatever happens. First run, 30 Oct 2026 (`docs/au
 | Row-count check | about 1 minute |
 | Delete | 2 min 10 s (17 min 11 s from create to gone) |
 | Data lost | Everything after the backup: 13 h 56 min in that run, about a day at worst (the backup runs at 02:00 Doha) |
+
+Exact times, UTC, 30 Oct 2026 (Cloud SQL's operation records and the audit log): create requested 13:20:58, usable 13:26:06;
+restore requested 13:26:28, done 13:33:32; copy counted 13:34:07, production counted 13:35:05; delete requested 13:35:59,
+**gone 13:38:09**. Delete confirmation: the audit log's closing `cloudsql.instances.delete` entry at 13:38:09, `gcloud sql instances
+describe alyr-restore-drill` answering 404, and `gcloud sql instances list` showing only `alyr-db`.
 
 For a real restore, with this way:
 
