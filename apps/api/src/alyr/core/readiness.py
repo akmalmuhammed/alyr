@@ -98,9 +98,8 @@ CHECKS: tuple[Check, ...] = (
         "paid",
         Text("You paid to go live", "دفعت لتبدأ العمل"),
         Text(
-            "Pay the setup fee and your first month to go live. ALYR sees the payment the same "
-            "working day.",
-            "ادفع رسوم الإعداد وشهرك الأول لتبدأ العمل. تصل الدفعة إلى ALYR في يوم العمل نفسه.",
+            "Pay your first month to go live. ALYR sees the payment the same working day.",
+            "ادفع شهرك الأول لتبدأ العمل. تصل الدفعة إلى ALYR في يوم العمل نفسه.",
         ),
     ),
     Check(

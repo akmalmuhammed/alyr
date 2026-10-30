@@ -742,6 +742,8 @@ _STATUS_TEXT = {
     "done": ("Order #{n} is complete. Thank you.", "تم إنجاز الطلب رقم {n}. شكراً لك."),
     "cancelled": ("Order #{n} has been cancelled.", "تم إلغاء الطلب رقم {n}."),
 }
+# "Ready for collection" is for pickup; a delivery is ready for delivery, as on the tracking page.
+_READY_DELIVERY = ("Order #{n} is ready for delivery.", "الطلب رقم {n} جاهز للتوصيل.")
 
 
 async def cancel_order(
@@ -869,7 +871,7 @@ async def set_status(
         return await cancel_order(conn, order_id, outbound, actor, restock) is not None
     row = await conn.fetchrow(
         "update orders set status = $2 where id = $1 and status is distinct from $2 "
-        "and status <> 'cancelled' returning contact_id, number",
+        "and status <> 'cancelled' returning contact_id, number, fulfilment",
         order_id, status,
     )
     if row is None:
@@ -885,12 +887,14 @@ async def set_status(
         conn, "order", order_id, status, actor, row["contact_id"], {"number": row["number"]}
     )
     lang = await conn.fetchval("select lang from contacts where id = $1", row["contact_id"])
-    english, arabic = _STATUS_TEXT[status]
+    delivering = status == "ready" and row["fulfilment"] == "delivery"
+    english, arabic = _READY_DELIVERY if delivering else _STATUS_TEXT[status]
     body = (arabic if lang == "ar" else english).format(n=row["number"])
     if web_url:
         body += "\n" + _track_line(await track_link.url(conn, web_url, order_id), lang == "ar")
     await outbound.send(conn, templates.notice(
-        row["contact_id"], f"order_{status}", lang, body, row["number"],
+        row["contact_id"], "order_ready_delivery" if delivering else f"order_{status}", lang,
+        body, row["number"],
     ))
     if status == "done" and not await conn.fetchval(
         "select is_test from orders where id = $1", order_id

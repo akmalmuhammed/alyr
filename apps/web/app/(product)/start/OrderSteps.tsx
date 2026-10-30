@@ -52,10 +52,16 @@ export function useProducts(active: boolean, t: Copy): Products {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  const load = useCallback(async () => {
+  // `keepEdits`: after an item is added or removed (or a save is refused), the ticks and prices
+  // the owner changed but has not saved yet stay as they were; only a finished save resets them.
+  const load = useCallback(async (keepEdits = false) => {
     const answer = await call<{ items: Item[] }>("/api/items?limit=200");
     if (!answer.ok) return;
-    setRows(answer.data.items.filter((i) => i.status !== "archived").map((i) => ({ ...i, keep: true, priceText: qar(i.price) })));
+    const items = answer.data.items.filter((i) => i.status !== "archived");
+    setRows((before) => items.map((i) => {
+      const was = keepEdits ? before.find((r) => r.id === i.id) : undefined;
+      return { ...i, keep: was?.keep ?? true, priceText: was?.priceText ?? qar(i.price) };
+    }));
     setLoaded(true);
   }, []);
   useEffect(() => {
@@ -86,7 +92,7 @@ export function useProducts(active: boolean, t: Copy): Products {
         return false;
       }
       setDraft({ name: "", name_ar: "", price: "" });
-      await load();
+      await load(true);
       return true;
     });
   };
@@ -94,7 +100,7 @@ export function useProducts(active: boolean, t: Copy): Products {
   const remove = async (id: string) => {
     await work(async () => {
       await call(`/api/items/${id}`, "DELETE");
-      await load();
+      await load(true);
       return true;
     });
   };
@@ -111,7 +117,7 @@ export function useProducts(active: boolean, t: Copy): Products {
         if (!price) { setError(t.products.saveFailed); return false; }
         const adopted = await call(`/api/items/${r.id}/adopt`, "POST");
         const live = adopted.ok ? await call<Fault>(`/api/items/${r.id}`, "PUT", { price, status: "live" }) : adopted;
-        if (!live.ok) { setError(codeOf(live.data as Fault) === "arabic_needed" ? t.products.arabicNeeded : t.products.saveFailed); await load(); return false; }
+        if (!live.ok) { setError(codeOf(live.data as Fault) === "arabic_needed" ? t.products.arabicNeeded : t.products.saveFailed); await load(true); return false; }
       } else if (price && price !== r.price) {
         const saved = await call(`/api/items/${r.id}`, "PUT", { price });
         if (!saved.ok) { setError(t.products.saveFailed); return false; }
