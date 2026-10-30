@@ -19,6 +19,7 @@ import httpx
 
 from alyr import brand
 from alyr.config import get_settings
+from alyr.core.normalise import fmt_qar, fmt_qar_ar
 
 log = logging.getLogger("alyr.mail")
 
@@ -278,6 +279,49 @@ def billing_message(
 <tr><td style="padding-top:14px;font-size:13px;color:{e["muted"]}">{escape(w["reply"])}</td></tr>
 </table></td></tr></table></body></html>"""
     return subject, text, html
+
+
+# The email that tells an owner their price is ready (ALY-274, CJ-14). Sent once, when ALYR
+# publishes the first quote for their client; the price itself is read in the workspace.
+_PRICE = {
+    "en": {
+        "subject": lambda amount: f"Your ALYR price is ready: {amount} a month",
+        "hello": lambda name: f"Hello {name}," if name else "Hello,",
+        "body": lambda client, amount: (
+            f"ALYR has prepared the price for {client}: {amount} a month. "
+            "Read it in your workspace and accept it to carry on towards going live."
+        ),
+        "note": "Accepting the price does not charge you anything.",
+        "button": "See your price",
+        "reply": "Reply to this email if you have a question about it.",
+    },
+    "ar": {
+        "subject": lambda amount: f"سعرك من ALYR جاهز: {amount} شهرياً",
+        "hello": lambda name: f"مرحباً {name}،" if name else "مرحباً،",
+        "body": lambda client, amount: (
+            f"جهّزت ALYR السعر لـ {client}: {amount} شهرياً. "
+            "اطّلع عليه في مساحة عملك واقبله لتتابع نحو الإطلاق."
+        ),
+        "note": "قبول السعر لا يحمّلك أي مبلغ.",
+        "button": "اطّلع على سعرك",
+        "reply": "ردّ على هذه الرسالة إن كان لديك سؤال عنه.",
+    },
+}
+
+
+def price_ready_message(
+    lang: str, owner: str, client: str, monthly: int, link: str,
+) -> tuple[str, str, str]:
+    """Subject, plain text and HTML of "your price is ready", in the language the owner reads.
+    `monthly` is the quote's monthly total in dirhams."""
+    lang = "ar" if lang == "ar" else "en"
+    w = _PRICE[lang]
+    amount = fmt_qar_ar(monthly) if lang == "ar" else fmt_qar(monthly)
+    first = _first(owner)
+    subject, body = w["subject"](amount), w["body"](client, amount)
+    part = {"lang": lang, "lines": [w["hello"](first), body, w["note"]],
+            "button": (w["button"], link), "small": w["reply"]}
+    return subject, _plain([part]), _letter([part])
 
 
 def sign_in_message(code: str, minutes: int) -> tuple[str, str, str]:

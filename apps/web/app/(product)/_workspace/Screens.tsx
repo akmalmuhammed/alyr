@@ -14,6 +14,7 @@ import type { Fulfilment } from "../_customer/fulfil";
 import { DELIVERY } from "./deliveryCopy";
 import { PRICING } from "./pricingCopy";
 import { usePolling } from "./poll";
+import { asksLedgerSummary, shopNameShown, type ShopNames } from "./shopLedger";
 import "./pricing.css";
 
 type Choice = { id: string; title: string };
@@ -342,6 +343,11 @@ type ScreensProps = {
   /** A filter from ALYR Agent (`?show=`), and how to clear it. */
   show?: string | null;
   onClearShow?: () => void;
+  /** What is switched on for this shop, and its names (the workspace's own state). Without them
+   * (the sales demo) every module is on. A shop without the credit accounts module is not asked
+   * for their summary, which would only be refused. */
+  modules?: readonly string[];
+  business?: ShopNames;
 };
 
 /**
@@ -349,7 +355,8 @@ type ScreensProps = {
  * The sales demo at /whatsapp shows them beside the chat simulator; the workspace shell
  * at /app shows one at a time under its own navigation.
  */
-export function Screens({ embedded = false, section, lang: langProp, intro, show = null, onClearShow }: ScreensProps = {}) {
+export function Screens({ embedded = false, section, lang: langProp, intro, show = null, onClearShow, modules, business }: ScreensProps = {}) {
+  const ledgerOn = asksLedgerSummary(modules);
   const router = useRouter();
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [phone, setPhone] = useState("");
@@ -484,9 +491,9 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
         setMembers(team.members);
         setCanManage(team.can_manage);
       }),
-      maybe<Summary | null>("/api/ledger/summary", null).then(setSummary),
+      ledgerOn ? maybe<Summary | null>("/api/ledger/summary", null).then(setSummary) : null,
     ]);
-  }, []);
+  }, [ledgerOn]);
   usePolling(loadShop, 300_000);
 
   // Saved replies, and the price groups the conversation's side panel offers, change rarely:
@@ -819,7 +826,7 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
               </div>
               )}
               <p>
-                {lang === "ar" ? summary?.shop.name_ar : summary?.shop.name} · {tab === "ledger" ? t.sub : tab === "orders" ? t.ordersSub : tab === "bookings" ? t.bookingsSub : tab === "team" ? t.teamSub : t.inboxSub}
+                {shopNameShown(lang, summary?.shop, business)} · {tab === "ledger" ? t.sub : tab === "orders" ? t.ordersSub : tab === "bookings" ? t.bookingsSub : tab === "team" ? t.teamSub : t.inboxSub}
               </p>
             </div>
             <span className="spacer" />

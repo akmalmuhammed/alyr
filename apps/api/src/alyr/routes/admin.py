@@ -8,6 +8,7 @@ run unless this module has declared, inside the same transaction, that it checke
 caller. Every change is written to the audit log in the same transaction (D-033).
 """
 
+import logging
 import re
 from contextlib import asynccontextmanager
 from datetime import UTC, date, datetime, timedelta
@@ -25,6 +26,7 @@ from alyr.core import (
     auth,
     backoffice,
     card_billing,
+    price_notice,
     pricing,
     readiness,
     subscription,
@@ -39,6 +41,7 @@ from alyr.modules.items import template, template_change
 from alyr.routes.deps import current_staff
 
 router = APIRouter(prefix="/api/admin", tags=["back office"])
+log = logging.getLogger("alyr.admin")
 
 _SLUG = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$")
 
@@ -581,13 +584,22 @@ async def quote_action(
     try:
         async with _back_office(request) as conn:
             client_id = await _client_of(conn, quote_id)
+            was = await conn.fetchval("select status from quotes where id = $1", quote_id)
             await pricing.set_quote_status(conn, quote_id, action, _by(staff))
             await backoffice.audit(
                 conn, staff, f"quote.{action}", "quote", quote_id, client_id=client_id
             )
-            return await pricing.client(conn, client_id)
+            detail = await pricing.client(conn, client_id)
     except pricing.PricingError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
+    if action == "publish" and was != "published":
+        # Once the price is committed, tell the owner it is ready (ALY-274). A failed email
+        # never undoes the publishing: the Today queue still shows the quote as waiting.
+        try:
+            await price_notice.send_ready(request.app.state.db, quote_id)
+        except Exception:
+            log.exception("could not email a client that their price is ready")
+    return detail
 
 
 # ── today, staff and the audit log (D-033) ────────────────

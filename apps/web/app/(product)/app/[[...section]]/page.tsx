@@ -14,6 +14,7 @@ import { TermsBanner } from "../../_workspace/TermsBanner";
 import { keepLang, savedLang, type Lang } from "../../_workspace/lang";
 import { ConnectLink, ConnectSettings } from "../../_workspace/ConnectSettings";
 import { usePolling } from "../../_workspace/poll";
+import { STEPS_LEFT, checksLeft, withoutSetupRow } from "../../_workspace/goLive";
 import { AgentDashboard } from "../../../_agent/AgentDashboard";
 import type { AgentView } from "../../../_agent/types";
 import { color } from "../../../_tokens/tokens";
@@ -65,7 +66,7 @@ const T = {
     planReadySub: (amount: string) => `${amount} a month. Review it and accept it to go ahead.`,
     planReview: "Review and accept",
     goLive: { setting_up: "A few steps left to go live", ready: "Ready, waiting for your WhatsApp number" } as Record<string, string>,
-    goLiveSub: (left: string) => `Still to do: ${left}.`,
+    goLiveSub: (n: number, left: string) => `${STEPS_LEFT.en(n)}: ${left}.`,
     goLiveOpen: "See what is left",
     productsTitle: "Products", productsEyebrow: "Your plan",
     productsSub: "Switch on what your business needs. Switching off hides the screens and keeps every record.",
@@ -104,8 +105,8 @@ const T = {
     planReady: "سعرك من ALYR جاهز",
     planReadySub: (amount: string) => `${amount} شهرياً. راجعه واقبله للمتابعة.`,
     planReview: "راجع واقبل",
-    goLive: { setting_up: "خطوات قليلة للإطلاق", ready: "جاهز، بانتظار رقم واتساب" },
-    goLiveSub: (left: string) => `المتبقي: ${left}.`,
+    goLive: { setting_up: "خطوات قليلة للإطلاق", ready: "جاهز، بانتظار رقم واتساب" } as Record<string, string>,
+    goLiveSub: (n: number, left: string) => `${STEPS_LEFT.ar(n)}: ${left}.`,
     goLiveOpen: "اعرض المتبقي",
     productsTitle: "المنتجات", productsEyebrow: "خطتك",
     productsSub: "فعّل ما يحتاجه عملك. الإيقاف يخفي الشاشات ويحفظ كل السجلات.",
@@ -434,6 +435,13 @@ export default function WorkspaceShell() {
 
   const stagger = (i: number) => ({ "--i": i }) as React.CSSProperties;
 
+  // What is left to go live comes from the go-live check alone: the banner lists it and counts it,
+  // and "Needs you now" leaves out its own row of product setup steps while the banner shows, so
+  // the home never gives two numbers for the same work (CJ-24 of the go-live audit).
+  const goLiveLeft = checksLeft(readiness?.checks);
+  const goLive = readiness && readiness.stage !== "live" && state.can_manage ? readiness : null;
+  const agentView = agent ? withoutSetupRow(agent, goLive !== null) : null;
+
   // The full setup checklist leads only while nothing has happened yet, and only for people
   // who can act on it; after that it is one row in "Needs you now" (05-critique P1-2).
   const setupTiles = state.can_manage && (!agent || agent.state === "empty")
@@ -475,19 +483,19 @@ export default function WorkspaceShell() {
             <Link className="btn small" href="/start">{t.planReview}<Icon name="arrow" className="sh-ico arrow" /></Link>
           </section>
         )}
-        {readiness && readiness.stage !== "live" && state.can_manage && (
+        {goLive && (
           <section className="sh-tile raised sh-allset sh-plan-ready sh-home-row" style={stagger(0)}>
             <span className="sh-check" />
             <div>
-              <h2>{t.goLive[readiness.stage]}</h2>
-              <p className="sh-note">{t.goLiveSub(readiness.checks.filter((c) => c.status !== "done").map((c) => pick(c.label)).join(lang === "ar" ? "، " : ", "))}</p>
+              <h2>{t.goLive[goLive.stage]}</h2>
+              <p className="sh-note">{t.goLiveSub(goLiveLeft.length, goLiveLeft.map((c) => pick(c.label)).join(lang === "ar" ? "، " : ", "))}</p>
             </div>
             <Link className="btn small" href="/start?golive">{t.goLiveOpen}<Icon name="arrow" className="sh-ico arrow" /></Link>
           </section>
         )}
-        {agent ? (
-          <AgentDashboard view={agent} link={Link} animate={agentRise} onNotNow={state.can_manage ? notNow : undefined}
-            stale={offline ? `${t.offline} ${agent.header.updated}` : null} setup={setupTiles} />
+        {agentView ? (
+          <AgentDashboard view={agentView} link={Link} animate={agentRise} onNotNow={state.can_manage ? notNow : undefined}
+            stale={offline ? `${t.offline} ${agentView.header.updated}` : null} setup={setupTiles} />
         ) : (
           <>
             {setupTiles}
@@ -625,6 +633,7 @@ export default function WorkspaceShell() {
   } else if ((WORK_SCREENS as string[]).includes(section) && enabledScreens.has(section)) {
     body = (
       <Screens embedded section={section as WorkspaceTab} lang={lang} show={show}
+        modules={state.modules} business={state.business}
         onClearShow={() => { setShow(null); router.replace(`/app/${section}`); }}
         intro={section === "team"
           ? (
