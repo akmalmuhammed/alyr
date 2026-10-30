@@ -40,6 +40,13 @@ page the same way: the ID in the token is the payment's, the life is `ALYR_LINK_
 opens the pay page only. Until then that page too opened by the shop's ID and the payment's ID in
 the address, for good.
 
+A seventh purpose, "sales" (ALY-216, D-105), makes the link ALYR's founder gives a prospective owner
+after a visit: the ID in the token is the sales link's own (a row in `sales_links`), the client's ID
+takes the place of the shop's inside the signature, so the token is worthless for any other client,
+and the life is the one the founder chose (`mint(expires=)` makes the same token again from the
+row, which is how the link is shown a second time without storing it). It opens the join page and
+nothing else.
+
 A public link (an item, a category, a QR code on a counter or a table, a shop's booking
 page) never carries a contact ID or a token: it opens the page for anyone, and the page
 sends a customer who wants to order or book to the shop's WhatsApp to get their own link.
@@ -73,7 +80,8 @@ DOCUMENT = "document"
 RESUME = "resume"
 TRACK = "track"
 PAY = "pay"
-_CODES = {ORDER: 1, BOOKING: 2, DOCUMENT: 3, RESUME: 4, TRACK: 5, PAY: 6}
+SALES = "sales"
+_CODES = {ORDER: 1, BOOKING: 2, DOCUMENT: 3, RESUME: 4, TRACK: 5, PAY: 6, SALES: 7}
 _PURPOSES = {code: name for name, code in _CODES.items()}
 HEADER = 22  # version, purpose, contact ID, expiry
 MAC_BYTES = 16
@@ -172,10 +180,12 @@ def _mac(key: bytes, tenant_id: UUID, payload: bytes) -> bytes:
 def mint(
     tenant_id: UUID, contact_id: UUID, *, purpose: str, table: str = "",
     now: float | None = None, settings: Settings | None = None, days: int | None = None,
+    expires: int | None = None,
 ) -> str:
     """A token that makes the page named by `purpose` open for this customer at this shop.
     The purpose is not optional: every link is made for one page. For the document page the
-    ID in the token is the document's, not a customer's, and `days` is its own life."""
+    ID in the token is the document's, not a customer's, and `days` is its own life. `expires`
+    (unix seconds) fixes the end instead, to make again the token a record stands for."""
     if purpose not in _CODES:
         raise ValueError(f"a link is made for one of {sorted(_CODES)}, not {purpose!r}")
     if clean_table(table) and purpose != ORDER:
@@ -185,7 +195,8 @@ def mint(
     life = days if days is not None else (
         settings.document_link_days if purpose == DOCUMENT else settings.link_days
     )
-    expires = int((now if now is not None else time.time()) + life * 86400)
+    if expires is None:
+        expires = int((now if now is not None else time.time()) + life * 86400)
     payload = (
         bytes([VERSION, _CODES[purpose]]) + contact_id.bytes + expires.to_bytes(4, "big")
         + clean_table(table).encode("utf-8")
@@ -227,6 +238,28 @@ def read(
     except UnicodeDecodeError as error:  # signed by us, so this cannot happen; refuse anyway
         raise LinkError("malformed") from error
     return Link(UUID(bytes=payload[2:18]), table, expires, made_for)
+
+
+def peek(token: str) -> UUID:
+    """The ID inside a token, BEFORE its signature is checked. For one use only: finding the
+    record whose client's ID the signature is then checked against (`read`). Nothing it returns
+    is to be trusted or acted on until `read` has accepted the same token. Raises `LinkError`."""
+    try:
+        payload = _unb64(token.partition(".")[0])
+    except (ValueError, LinkError) as error:
+        raise LinkError("malformed") from error
+    if len(payload) < HEADER or payload[0] != VERSION:
+        raise LinkError("malformed")
+    return UUID(bytes=payload[2:18])
+
+
+def sales_url(web_url: str, client_id: UUID, link_id: UUID, expires: int) -> str:
+    """The sales link's address (ALY-216): the join page, with the token and nothing else in it.
+    No name, email, phone, price or business is in the address; the client's ID is in the
+    signature only. The token is the address's fragment (`/join#<token>`), which a browser never
+    sends to a server: it is in no web, edge or API request log and in no Referer, and the page
+    reads it itself and gives it back in the body of its own calls."""
+    return f"{web_url}/join#{mint(client_id, link_id, purpose=SALES, expires=expires)}"
 
 
 def resume_stop_url(web_url: str, slug: str, tenant_id: UUID) -> str:

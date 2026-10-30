@@ -36,6 +36,24 @@ async def audit(
     )
 
 
+OWNER_ACTOR = "Owner (sales link)"
+
+
+async def audit_owner(
+    conn: asyncpg.Connection, action: str, subject_type: str, subject_id: object = "", *,
+    client_id: UUID | None = None, business_id: UUID | None = None, detail: dict | None = None,
+) -> None:
+    """Record what an owner did through a sales link (ALY-216) in the same log as staff actions.
+    There is no staff member, so the actor is named by what it is and holds no address; `detail`
+    never holds a code, a token or an address."""
+    await conn.execute(
+        "insert into platform_audit (staff_email, staff_name, action, subject_type, "
+        "subject_id, client_id, business_id, detail) values ('', $1, $2, $3, $4, $5, $6, $7)",
+        OWNER_ACTOR, action, subject_type, str(subject_id or ""), client_id, business_id,
+        detail or {},
+    )
+
+
 async def audit_log(
     conn: asyncpg.Connection, client_id: UUID | None = None, limit: int = 200
 ) -> list[dict]:

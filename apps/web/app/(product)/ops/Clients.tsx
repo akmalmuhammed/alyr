@@ -12,6 +12,8 @@ import {
 import { BusinessTemplate } from "./BusinessTemplate";
 import { ClientAccess } from "./ClientAccess";
 import { BusinessTerms } from "./BusinessTerms";
+import { NewLead } from "./NewLead";
+import { SalesLink } from "./SalesLink";
 
 type DraftLine = Line & { priceText: string };
 type Draft = { period_months: number; discount_pct: number; show_promise: boolean; note: string; lines: DraftLine[] };
@@ -49,6 +51,7 @@ export function Clients({ pricing, onChange, initialClient }: { pricing: Pricing
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [pick, setPick] = useState({ item: "", business: "" });
+  const [newLead, setNewLead] = useState(false);
 
   const loadList = useCallback(async () => {
     const answer = await api<{ clients: ClientSummary[] }>("/api/admin/clients");
@@ -148,7 +151,14 @@ export function Clients({ pricing, onChange, initialClient }: { pricing: Pricing
   return (
     <div className="ops-split">
       {!detail && <section className="ops-list">
-        <h2>Clients <span className="sh-count">{list.length}</span></h2>
+        <div className="ops-detail-head">
+          <h2>Clients <span className="sh-count">{list.length}</span></h2>
+          <button className="btn small" type="button" aria-expanded={newLead} onClick={() => setNewLead(!newLead)}>New lead</button>
+        </div>
+        {newLead && pricing && (
+          <NewLead types={pricing.types} onCancel={() => setNewLead(false)}
+            onCreated={(id) => { setNewLead(false); loadList(); onChange(); openClient(id); }} />
+        )}
         <div className="tablewrap"><table>
           <thead><tr><th>Client</th><th>Businesses · onboarding</th><th>Price</th></tr></thead>
           <tbody>
@@ -157,7 +167,7 @@ export function Clients({ pricing, onChange, initialClient }: { pricing: Pricing
                 tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter") openClient(c.id); }}>
                 <td><b>{c.name}</b><br /><small>{c.contact_email || "no contact yet"}</small></td>
                 <td>
-                  {c.businesses.length === 0 && <small>none</small>}
+                  {c.businesses.length === 0 && <small>{c.prospect ? "Lead: no business yet" : "none"}</small>}
                   {c.businesses.map((b) => (
                     <div key={b.id} className="ops-biz"><span>{b.name}<small> · {b.type_name || "set up by ALYR"}</small></span>{progress(b)}</div>
                   ))}
@@ -329,6 +339,14 @@ export function Clients({ pricing, onChange, initialClient }: { pricing: Pricing
                   <p className="sh-note">From today’s price list it would start with: {detail.draft_preview.map((l) => `${l.name}${l.business && detail.businesses.length > 1 ? ` (${l.business})` : ""} ${qar(l.unit_price)}`).join(", ")}.</p>
                 )}
               </div>
+            )}
+
+            {detail.prospect && detail.businesses.length === 0 && pricing && (
+              <>
+                <h3>Sales link</h3>
+                <SalesLink key={`${open?.id}-${open?.status}`} client={detail} types={pricing.types}
+                  hasPublished={open?.status === "published"} onChange={() => { loadList(); onChange(); }} />
+              </>
             )}
 
             {detail.quotes.filter((q) => q.id !== open?.id).length > 0 && (

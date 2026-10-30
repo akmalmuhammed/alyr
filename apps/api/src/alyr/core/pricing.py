@@ -17,6 +17,7 @@ from uuid import UUID
 import asyncpg
 
 from alyr import catalog, presets
+from alyr.config import get_settings
 from alyr.core import paddle
 from alyr.core.normalise import fmt_qar
 
@@ -403,11 +404,25 @@ async def create_first_quote(
 # ALYR staff (`app.platform_admin`); without it row-level security shows nothing.
 
 
+def prospect_business(row) -> Business | None:
+    """The business a lead will become, for drafting its first quote before it exists (ALY-216):
+    named as the client is, with the modules its type is created with. None for a client that
+    is not a lead."""
+    plan = row["prospect"]
+    preset = presets.PRESET_BY_KEY.get((plan or {}).get("type"))
+    if preset is None:
+        return None
+    modules = preset.modules_for(get_settings().catalog_for_new_shops)
+    return Business(None, row["name"], frozenset(modules))
+
+
 def _client(row) -> dict:
     return {
         "id": str(row["id"]), "name": row["name"], "contact_name": row["contact_name"],
         "contact_email": row["contact_email"], "contact_phone": row["contact_phone"],
         "note": row["note"], "price_mode": row["price_mode"],
+        # A lead's plan (the type of business, the Arabic name, the area); null for the rest.
+        "prospect": row["prospect"],
         "created_at": row["created_at"].isoformat(),
         # Where the plan stood at the last hourly check (ALY-218): '' before the first.
         "billing_state": row["billing_state"],
@@ -485,7 +500,7 @@ async def client(conn: asyncpg.Connection, client_id: UUID) -> dict:
     price_list = await items(conn, only_active=True)
     fresh = draft_lines(price_list, [
         Business(b["id"], b["name"], frozenset(b["modules"])) for b in businesses
-    ])
+    ] or [x for x in (prospect_business(row),) if x])
     names = {b["id"]: b["name"] for b in businesses}
     preview = [
         x | {"business_id": str(x["business_id"]) if x["business_id"] else None,
@@ -523,7 +538,8 @@ async def new_quote(
 ) -> UUID:
     """A new draft for the client: from today's price list, or a copy of their latest
     quote. A client has one open quote at a time."""
-    if not await conn.fetchval("select true from clients where id = $1", client_id):
+    row = await conn.fetchrow("select * from clients where id = $1", client_id)
+    if row is None:
         raise PricingError("no such client")
     if await conn.fetchval(
         "select true from quotes where client_id = $1 and status in ('draft', 'published')",
@@ -549,9 +565,11 @@ async def new_quote(
     else:
         terms = (1, 0, True, "")
         businesses = [b for b in await _businesses_of(conn) if b["client_id"] == client_id]
+        # A lead has no business yet: its first quote is drafted for the one it will become, so
+        # the owner sees the lines sign-up would have drafted (ALY-216).
         lines = draft_lines(await items(conn, only_active=True), [
             Business(b["id"], b["name"], frozenset(b["modules"])) for b in businesses
-        ])
+        ] or [x for x in (prospect_business(row),) if x])
     quote_id = await conn.fetchval(
         "insert into quotes (client_id, number, period_months, discount_pct, show_promise, "
         "note, updated_by) values ($1, $2, $3, $4, $5, $6, $7) returning id",

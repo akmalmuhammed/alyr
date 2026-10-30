@@ -16,7 +16,7 @@
 /* the client list and the open client side by side */
 .ops-split { display: grid; gap: 18px; align-items: start; }
 .ops-back { justify-self: start; }
-.ops-list, .ops-detail { display: grid; gap: 12px; min-width: 0; }
+.ops-list, .ops-detail { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }
 .ops-detail { padding: 18px; border-radius: 16px; background: var(--raise); box-shadow: 0 0 0 1px var(--hair) inset; }
 .ops-detail h3 { margin: 10px 0 0; font-size: var(--ui-small); font-weight: 600; color: var(--ink-2); font-family: var(--font-ui-mono); text-transform: uppercase; letter-spacing: 0.06em; }
 .ops-detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
@@ -200,3 +200,17 @@
 .ops-terms ul { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; font-size: var(--ui-body-sm); }
 .ops-terms code { font-family: var(--font-ui-mono); font-size: var(--ui-small); }
 .ops-terms-open { color: var(--warn); }
+
+/* the lead's sales link (ALY-216): the form for a new lead, the link's card and its QR code */
+.ops-newlead { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr)); gap: 12px; padding: 16px; border-radius: 14px; background: var(--sheet); box-shadow: 0 0 0 1px var(--hair) inset; }
+.ops-newlead > .ops-wide { grid-column: 1 / -1; }
+.ops-sales .ops-sales-status { margin: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: var(--ui-body-sm); }
+.ops-sales .ops-field input[readonly] { font-family: var(--font-ui-mono); font-size: var(--ui-small); }
+.ops-qr { margin: 0; display: grid; justify-items: center; gap: 10px; padding: 16px; border-radius: 14px; background: var(--sheet); box-shadow: 0 0 0 1px var(--hair) inset; }
+.ops-qr img { width: min(100%, 22rem); height: auto; aspect-ratio: 1; display: block; }
+.ops-qr figcaption { font-size: var(--ui-body-sm); color: var(--ink-2); text-align: center; }
+@media (max-width: 47.99rem) {
+  .ops-sales .ops-actions .btn { flex: 1 1 8rem; height: 44px; }
+  .ops-sales .ops-actions .spacer { display: none; }
+  .ops-sales .ops-field select, .ops-sales .ops-field input { min-height: 44px; }
+}

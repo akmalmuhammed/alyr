@@ -68,12 +68,14 @@ from alyr.routes import documents as documents_routes
 from alyr.routes import features as feature_routes
 from alyr.routes import items_import as items_import_routes
 from alyr.routes import jobs as jobs_routes
+from alyr.routes import join as join_routes
 from alyr.routes import media as media_routes
 from alyr.routes import onboarding as onboarding_routes
 from alyr.routes import owner as owner_routes
 from alyr.routes import payments as payment_routes
 from alyr.routes import price_groups as price_group_routes
 from alyr.routes import reports as reports_routes
+from alyr.routes import sales_links as sales_link_routes
 from alyr.routes import staff_numbers as staff_numbers_routes
 from alyr.routes import team as team_routes
 from alyr.routes import templates as template_routes
@@ -323,6 +325,8 @@ def create_app() -> FastAPI:
     app.include_router(media_routes.router)
     app.include_router(media_routes.public)
     app.include_router(onboarding_routes.router)
+    app.include_router(sales_link_routes.router)
+    app.include_router(join_routes.router)
     if local:
         app.include_router(simulator.router)
     return app

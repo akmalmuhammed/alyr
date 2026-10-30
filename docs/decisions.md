@@ -77,6 +77,10 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-082 | A client who stops paying keeps everything for 14 days with reminders; then ALYR's automatic WhatsApp sending pauses until they pay, never their workspace or data; cancelling takes seven days | Proposed (built on the recommended option while the founder decides) |
 | D-065 | Owners and staff manage the shop from WhatsApp as well as the portal, through one shared action layer; phases 0 and 1 (link a number, read-only commands) are built first | Accepted (written as D-040 on 18 Oct; renumbered 28 Oct, D-040 is the look) |
 | D-091 | Recovery targets (data lost under 10 minutes, back in about 15) and the rule that an alert counts only when it reaches a phone; a restore is always a point-in-time clone to a new instance | Proposed |
+| D-105 | A sales link is one offer to one lead: a signed token for one sales_links row (single client, expires, revocable), opened only with a code emailed to the address ALYR recorded for the lead | Accepted for review (numbers provisional) |
+| D-106 | A lead is a client with no business yet and a plan (clients.prospect); the quote engine drafts its first quote from the price list for that type before the owner signs up; the pipeline around leads stays ALY-84 | Accepted for review |
+| D-107 | A sales link works while public sign-up is closed, makes the business for the lead own client in the same hand-off that uses the link, and lands the owner on the go-live step with the quote and the terms accepted | Accepted for review |
+| D-108 | The founder shares a sales link himself (copy, WhatsApp from his own phone, a QR code on his phone); ALYR does not send it, and the page is outside the sign-up layout so no analytics script sees the token | Accepted for review |
 | D-072 | Shops get paid online through three doors, each ending in an account in the shop's own name: connect your own account (built first), ALYR-assisted sign-up with a partner (Noqoody, then SADAD), and opening by API only once a provider proves it; apply to Noqoody, SADAD and Tap. Updates D-044 | Accepted |
 
 ---
@@ -1891,3 +1895,62 @@ Without it, analytics is off everywhere.
 **Rejected.** *Tap first for model B* (D-044): unproven for Qatar, and its Marketplace product is model C. *Waiting for a model B partner before building anything*: door 1 needs no deal and every other door ends in it.
 
 **Revisit when** Tap says a Platforms lead in Qatar is the shop's own merchant (Tap becomes door 3); Noqoody's partner portal can submit applications (Noqoody becomes door 3); a provider stores data outside Qatar (it waits for a row in `docs/data-residency.md`).
+
+
+---
+
+## D-105 · A sales link is one offer to one lead, opened with a code to the address ALYR recorded
+**Date** 30 Oct 2026 · **Status** Accepted for review (number provisional; assigned for ALY-216) · Linear ALY-216, ALY-163 · Spec `specs/041-sales-link/spec.md` · Builds on D-022, D-032, D-067, D-080
+
+**The decision.** After a visit the founder makes the shop a lead, builds its quote in `/ops` and sends **one link**. The link is a token in the address (`/join#<token>`, purpose `sales` in `core/links.py`; the token is the address's fragment, so no server or log sees it) for one row of `sales_links`: one client, a life of 1, 3, 7, 14 or 30 days (7 by default), revocable, at most one live link per client. The token holds the link's own ID, the expiry and a MAC whose key material includes the client's ID. Nothing about the business or the owner is in the address. The owner opens it, a **code goes to `clients.contact_email`** (the page cannot be made to send it elsewhere), a right code gives a one-time sign-up token for that email, and the database function that makes the business refuses unless the link is live, the client has no business and the proved email is the recorded one.
+
+**Why.**
+- The founder sells in person and the link is the hand-off from a visit to a client who pays. A link anyone could use would make whoever sees a forwarded message the owner of that client; the code to the mailbox the founder recorded makes the link worthless without it.
+- The token is not stored; it is made again from the row (so Copy and Show QR work on a later day), and revocation is a column, not a list of bad tokens.
+- Forged, foreign, unknown and wrong-purpose tokens all answer the same words and status, so the endpoint tells a stranger nothing about which links exist. An expired, revoked or used link says so, because the owner needs to know whom to ask.
+- Every call is counted against the address before the token is read, and a link has its own limits on codes (5 an hour) and guesses (20 an hour), so a forged token costs a try and a crowd of addresses gets no more tries than one.
+
+**Costs and risks, said plainly.** A founder who types the wrong email must correct it (changing the email revokes the live link). A link held by someone who can also read the owner's mailbox is as good as the owner's. The shop's name and a masked email are shown before the code, to whoever holds the link.
+
+**Chosen over** an unsigned link carrying the client's ID (guessable and shareable), a link that signs the owner in on its own (the link would be a password), and a PIN the founder reads out (a second secret to carry on a visit).
+
+**Revisit when** a stronger check than a mailbox exists for owners in Qatar, or ALYR sends the links itself.
+
+---
+
+## D-106 · A lead is a client with no business yet; its first quote is drafted for the business it will become
+**Date** 30 Oct 2026 · **Status** Accepted for review · Linear ALY-216, ALY-84 · Builds on D-032, D-033, D-035
+
+**The decision.** A lead is a row in `clients` with its plan in `clients.prospect` (the type of business, the Arabic name, the area). The quote engine drafts the lead's first quote from the price list for the modules that type is created with (`pricing.prospect_business`): the same lines sign-up would have drafted, so the amounts are the price list's and the back office edits them with the editor it already has. When the owner signs up through the link, the lines the price list charges per business move onto the business that is made. A client with a business has no sales link: its owner signs in and answers a published price on the plan step, as today.
+
+**Why.** The quote tables are keyed on the client, so a quote before sign-up needs only a client with no business; a separate lead table would have to be copied into one at sign-up. ALY-84 (stages, follow-ups, lost reasons, convert) builds on this row and does not have to move it.
+
+**Chosen over** a `leads` table with its own quote (two places to price), and drafting the quote only after sign-up (the visit's quote is the point).
+
+**Revisit when** ALY-84 lands: it may move `prospect` into a lead record, and a lead may have more than one business to be.
+
+---
+
+## D-107 · A sales link works while public sign-up is closed, and lands the owner on the go-live step
+**Date** 30 Oct 2026 · **Status** Accepted for review · Linear ALY-216 · Builds on D-031, D-051, D-053, D-092
+
+**The decision.** `/api/join/*` does not read `ALYR_SIGNUP_OPEN`: the founder's invitation is the permission, and sign-up through `/start` stays as the founder set it. Accepting creates the business (the starting setup of its type, as sign-up makes it), records the current terms against it (who, which version, when, from where, as at `/start`), accepts the published quote the owner was shown (if the price changed in the moment between, the business opens at the plan step to answer it), signs the owner in to the new business (not to another one they may work for), and sets the step to `golive`. The first payment is `access.due()`, so D-092's rule (no setup fee while the `setup` line is off) shows by itself. Nothing is paid on the page and nothing is hidden: the go-live list still shows what is left.
+
+**Why.** Most of the first ten clients are expected through this door while sign-up is closed (D-049: one flow for both doors). The owner agreed a price with the founder; asking them to find it again on the plan step and click through steps they will do later in the workspace loses them. Accepting the quote and the terms in the same hand-off that makes the business leaves no state where a business exists without its agreement.
+
+**Chosen over** creating the business from the back office with an invite email (the owner has not accepted anything), and landing on the plan step (the price is already accepted).
+
+**Revisit when** the pay step becomes its own screen (ALY-274 owns the payment panel), or sign-up opens to everyone and the two doors are merged.
+
+---
+
+## D-108 · The founder shares a sales link himself; the page keeps the token out of analytics and referrers
+**Date** 30 Oct 2026 · **Status** Accepted for review · Linear ALY-216 · Builds on D-070 (analytics), hard rules 2, 4 and 5
+
+**The decision.** The back office shows the link with Copy, **Share on WhatsApp** (a `wa.me` address that opens the founder's own WhatsApp with a message in English and Arabic and the link) and **Show QR** (the ALY-112 utility, ink on paper, so the owner scans it from his phone during the visit). ALYR sends nothing itself: no template, no consent step, no email of the link. The page is `app/(product)/join`, outside the sign-up layout, so the analytics script is not loaded on it; its metadata says `noindex` and `referrer: no-referrer`.
+
+**Why.** Hard rule 5 (consent before sending) is about messages ALYR starts; this is a message the founder types to someone he is standing next to. An email of the link would need its own design and wording, and the code email already exists. The token is a bearer secret until the code is typed: it must reach no third party's logs.
+
+**Chosen over** ALYR emailing the link (a later issue, with the email skill), and a short code the owner types (no signature to check).
+
+**Revisit when** ALYR sends the link itself (consent and the 24-hour window apply then), or the founder asks for a printed card with the QR (`alyr-print`).
