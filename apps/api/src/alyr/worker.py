@@ -14,7 +14,7 @@ import signal
 import socket
 
 from alyr.config import get_settings
-from alyr.core import resume
+from alyr.core import alerts, resume
 from alyr.core.links import check_secret as check_link_secret
 from alyr.core.storage import check_store
 from alyr.main import close_channels, create_app
@@ -115,6 +115,7 @@ async def main() -> None:
     scheduler = asyncio.create_task(keep_reports_scheduled(app.state.db))
     sweeper = asyncio.create_task(keep_holds_swept(app.state.db, app.state.outbound))
     meters = asyncio.create_task(keep_meters_fresh(app.state.media))
+    watching = asyncio.create_task(alerts.keep_watching(app.state.db))
     reminders = asyncio.create_task(keep_owners_reminded(app.state.db))
     try:
         await app.state.jobs.run_forever(heartbeat=heartbeat(app.state.db))
@@ -123,6 +124,7 @@ async def main() -> None:
         scheduler.cancel()
         sweeper.cancel()
         meters.cancel()
+        watching.cancel()
         reminders.cancel()
         await app.state.db.close()
         await close_channels(app)

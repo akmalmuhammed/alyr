@@ -127,6 +127,13 @@ class Settings(BaseSettings):
     email_from: str = "ALYR <no-reply@alyr.qa>"
     email_reply_to: str = "hello@alyr.qa"
 
+    # Alerts to a person's phone and inbox (ALY-121, spec 034, D-073). Both empty: alerts are only
+    # logged. The ntfy topic is a secret: anyone who knows it can read and send alerts. An alert
+    # holds counts and ages only, never a name, a number or a message.
+    alert_ntfy_topic: str = ""
+    alert_ntfy_url: str = "https://ntfy.sh"
+    alert_email: str = ""
+
     # Product photos (D-039, ALY-103). With the account ID and both keys set, photos go to
     # Cloudflare R2 and are served from `media_base_url`. With any of the three missing
     # they go to local disk under `media_local_dir` and the API serves them itself, so a

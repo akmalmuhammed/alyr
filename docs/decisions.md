@@ -1606,6 +1606,22 @@ Without it, analytics is off everywhere.
 
 **Revisit when.** Owners ask for commands the rules cannot understand (then phase 4 with a model), or a shop needs more than one number per person, or Meta's pricing makes nudges outside the 24-hour window too costly (ALY-64).
 
+## D-073 · Alert rules live in the worker; health checks and uptime stay with the Google Cloud setup
+**Date** 28 Oct 2026 (renumbered 29 Oct from D-062) · **Status** Accepted for review (the founder, 24 Oct 2026: "i wanna start free then pay once we scale"; ntfy parked, alert email later at ops@alyr.qa, he is on call) · Linear ALY-121 · Spec `specs/034-alert-rules/spec.md` · Runbook `docs/runbooks/monitoring.md` · Builds on D-060
+
+**The decision.** The four alert rules (late queue, parked job, failing sends, quiet webhook) run inside the worker once a minute and keep their state in one platform table, `alert_state`. Alerts are log lines first, then a push through a free ntfy topic and an email through Resend once those are set. The health routes, the worker heartbeat and the uptime checks are D-060's (`/health/ready`, `/health/worker`, `worker_heartbeats`, Cloud Monitoring); this adds none of its own.
+
+**Why.**
+- An uptime check sees whether ALYR answers, not whether messages are going out; these rules see that, from our own tables.
+- Hard rule 2: an alert carries counts and ages only, so ntfy and Resend receive no personal data. A test fails if a customer's phone number or message appears in one.
+- One heartbeat and one set of health routes: the first version of this work (PR #120, 24 Oct) had its own, aimed at the Cloudflare host D-060 retired.
+
+**Costs and risks, said plainly.** Free. ntfy has no delivery guarantee, so email is the second route and the log line the third. A dead worker cannot alert about itself; the uptime check on `/health/worker` covers that. Not yet sent to a real phone.
+
+**Chosen over** an outside error tracker now (customer data abroad), and a second heartbeat table (two answers to one question).
+
+**Revisit when** a client SLA exists (a paid pager), or a second worker instance runs (one evaluator, or a lock).
+
 ---
 
 ## D-072 · Three doors to the shop's own payment account
