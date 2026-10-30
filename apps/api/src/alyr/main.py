@@ -45,6 +45,7 @@ from alyr.routes import agent as agent_routes
 from alyr.routes import auth as auth_routes
 from alyr.routes import billing as billing_routes
 from alyr.routes import bookings as bookings_routes
+from alyr.routes import client_address as client_address_routes
 from alyr.routes import connect as connect_routes
 from alyr.routes import connect_setup as connect_setup_routes
 from alyr.routes import costs as cost_routes
@@ -112,11 +113,8 @@ def create_app() -> FastAPI:
         docs_url="/docs" if local else None, redoc_url=None,
         openapi_url="/openapi.json" if local else None,
     )
-    if not ratelimit.address_limits_on(settings):
-        log.warning(
-            "per-address rate limits are off: set ALYR_CLIENT_IP_HEADER to say where the "
-            "visitor's address is read from (ALY-116)"
-        )
+    for note in ratelimit.startup_notes(settings):
+        log.warning(note)
     app.add_middleware(origin.OwnPagesOnly, settings=settings)
     app.state.db = Database(settings.database_url)
     app.state.outbound = Outbound(
@@ -301,6 +299,7 @@ def create_app() -> FastAPI:
     app.include_router(team_routes.router)
     app.include_router(owner_routes.router)
     app.include_router(auth_routes.router)
+    app.include_router(client_address_routes.router)
     app.include_router(account_routes.router)
     app.include_router(
         bookings_routes.public, dependencies=[Depends(require_module_for_slug("bookings"))]

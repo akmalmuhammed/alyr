@@ -69,6 +69,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-070 | Product analytics with PostHog (EU), at two levels the visitor chooses: cookieless counting by default, cookies and masked recordings with consent; never customer pages, the inbox or names | Accepted |
 | D-075 | A customer's data: an owner or admin gives a customer a copy or forgets them from the conversation; the sales records stay without the person, issued documents unchanged; working copies (finished jobs, handled message IDs) are purged after 30 days, failed jobs after 90 | Accepted |
 | D-071 | The homepage plays like a video: the film starts at load and moves at once; its Pause controls are not on show (only on hover, keyboard focus or while paused); a click on the film pauses it | Accepted |
+| D-083 | The per-address rate limits count the address the edge Worker signs (HMAC with a key only the Worker and the API hold); an address without a good signature is counted in one shared bucket, so a caller who skips the edge can neither pick nor borrow an address | Proposed (the founder approves the production steps in ALY-265's pull request) |
 | D-074 | Clients can pay ALYR by card through Paddle, in US dollars, recorded only from Paddle's signed webhook after reading the payment back | Accepted |
 | D-082 | A client who stops paying keeps everything for 14 days with reminders; then ALYR's automatic WhatsApp sending pauses until they pay, never their workspace or data; cancelling takes seven days | Proposed (built on the recommended option while the founder decides) |
 | D-065 | Owners and staff manage the shop from WhatsApp as well as the portal, through one shared action layer; phases 0 and 1 (link a number, read-only commands) are built first | Accepted (written as D-040 on 18 Oct; renumbered 28 Oct, D-040 is the look) |
@@ -1649,6 +1650,27 @@ Without it, analytics is off everywhere.
 **Cost.** The film's canvas is drawn inside the window Lighthouse measures: on the mobile run LCP is unchanged (2.41 s), Total Blocking Time rises (about 300 to 700 ms against 100 to 200 ms) and Speed Index too (the film moves), so the lowest Performance score of three runs falls from about 95 to between 80 and 95 (/ 80, /ar 95 on the last check; axe clean on both at 1440 and 390, light and dark). It changes D-062's condition "the homepage's Lighthouse no worse than before": the founder put the motion first. The re-styling cost of the homepage's `:root:has(...)` rules (task "Remove :root:has() style recalc cost on the site") is most of that blocking time.
 
 **Revisit when** the `:root:has()` work lands (measure again), or the founder finds the hidden control hard to find.
+
+## D-083 · The per-address rate limits count the address the edge signs
+**Date** 29 Oct 2026 · **Status** Proposed (built; the founder approves the production steps in the pull request) · Linear ALY-265, follow-up to ALY-116 · Runbook `docs/runbooks/client-address.md`
+
+**Where we were.** ALY-116's per-address limits count only when `ALYR_CLIENT_IP_HEADER` names where the visitor's address is read from. In production on Google Cloud it names nothing, so they are off. The path is visitor, Cloudflare (`alyr-edge`), Cloud Run (`alyr-web`, which forwards `/api/*` and also calls the API from its server, and `alyr-api`), and the two `run.app` addresses are public.
+
+**The decision.**
+- **The edge Worker writes the address and signs it.** `x-alyr-client-ip` from `CF-Connecting-IP` (Cloudflare sets it; a visitor cannot), `x-alyr-client-ip-sig` the HMAC-SHA256 of the address with a key only the Worker and the API hold. Whatever a visitor sent in those two headers, `X-Forwarded-For` or `X-Real-IP` is dropped first.
+- **The API believes an address only with a matching signature** (`ALYR_CLIENT_IP_KEYS`, a list so a key can be replaced with no gap). Every other request, with a made-up address, a wrong signature or none, is counted in **one shared bucket** (`unvouched`). A caller who skips the edge therefore cannot pick an address of their own (no fresh allowance per request) and cannot use anybody else's (no visitor who came through the edge is held up by them); the price is that such callers share 20 sign-in codes an hour between them, which is the point.
+- **The web app holds no key and checks nothing.** It passes the two headers on: Next's `/api/*` rewrite carries every request header, and its own server-side calls (the order page) copy them from the request they answer, with a test that fails if a new server-side caller does not.
+- **The connection's address is never the fallback once a header is named.** The API runs `uvicorn --forwarded-allow-ips '*'`, which makes `request.client` the first `X-Forwarded-For` entry, that is, what the caller wrote.
+- **A read-only `GET /api/client-address`** says what the API sees (the address, where it came from, whether the limits are counting), so one script checks the whole path from outside, and a wrong key shows at once.
+- **The per-email limits stay as they are** and do not depend on any of this.
+
+**Chosen over** a plain shared-secret header (the secret itself would travel through the web app on every request; a signature is good for one address only), reading Cloud Run's `X-Forwarded-For` by position (Google does not document how it is built, it grows with every hop, and the API's uvicorn setting makes the first entry the caller's), allowing only Cloudflare's published addresses (anyone's Worker comes from them), Google's load balancer with Cloud Armor (about USD 18 a month, D-060), and falling back to the connection's address for unsigned requests (spoofable, above).
+
+**Cost and risk.** One secret in Secret Manager (a few cents a month) and one in the Worker. If the two keys ever differ, every visitor is counted together until fixed, so the check runs the moment the API is switched on and switching off is one command. An API with a header and no keys still believes the header, as ALY-116 shipped (the interim Cloudflare host needs that), and says so when it starts.
+
+**Not covered.** IPv6 is counted per full address, not per `/64`. Cloudflare's own rate-limit rules in front are not set.
+
+**Revisit when** IPv6 visitors are common in the logs, when the interim Cloudflare host is retired for good (then a header without keys can be refused at start-up), or when the API leaves Cloud Run's public addresses for a private path.
 
 ---
 
