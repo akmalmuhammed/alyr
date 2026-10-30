@@ -39,14 +39,30 @@ fi
 [ "$(field counting "$a")" = true ] && pass "per-address limits are counting" ||
   fail "per-address limits are not counting (ALYR_CLIENT_IP_HEADER is not set on the API)"
 
-# 1b. A visitor who writes the Cloudflare and forwarding headers themselves is not believed: the
-#     Worker reads the address Cloudflare saw, and drops what the visitor sent.
-e="$(get -H 'CF-Connecting-IP: 198.51.100.77' -H 'x-alyr-client-ip: 198.51.100.78' \
-      -H 'x-alyr-client-ip-sig: 0000' -H 'X-Forwarded-For: 198.51.100.79' "$edge_api/api/client-address")"
+# 1b. A visitor who writes the forwarding headers themselves is not believed: the Worker reads
+#     the address Cloudflare saw, and drops what the visitor sent.
+e="$(get -H 'x-alyr-client-ip: 198.51.100.78' -H 'x-alyr-client-ip-sig: 0000' \
+      -H 'X-Forwarded-For: 198.51.100.79' -H 'X-Real-IP: 198.51.100.80' "$edge_api/api/client-address")"
 if [ "$(field source "$e")" = signed ] && [ "$(field address "$e")" = "$mine" ]; then
   pass "$edge_api: addresses a visitor writes themselves are ignored"
 else
   fail "$edge_api answered: $e"
+fi
+
+# 1c. A visitor who writes CF-Connecting-IP never reaches the Worker: Cloudflare refuses the
+#     request itself (403, "error code: 1000", seen on 30 Oct 2026). If it ever lets one through
+#     instead, the Worker must still count the address Cloudflare saw and not the one written.
+code="$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' -H 'CF-Connecting-IP: 198.51.100.77' \
+        "$edge_api/api/client-address" 2>/dev/null || true)"
+if [ "$code" = 403 ] || [ "$code" = 400 ]; then
+  pass "$edge_api: a written CF-Connecting-IP is refused by Cloudflare ($code)"
+else
+  f="$(get -H 'CF-Connecting-IP: 198.51.100.77' "$edge_api/api/client-address")"
+  if [ "$(field source "$f")" = signed ] && [ "$(field address "$f")" = "$mine" ]; then
+    pass "$edge_api: a written CF-Connecting-IP is ignored"
+  else
+    fail "$edge_api answered ($code): $f"
+  fi
 fi
 
 # 2. Through the edge, the web app and its /api forwarding to the API (app.alyr.qa).
