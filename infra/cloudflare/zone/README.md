@@ -6,7 +6,7 @@ in `docs/runbooks/cloudflare-edge.md`; check the live state with `scripts/check-
 | File | State | Phase |
 |---|---|---|
 | `response-header-rules.json` | **Live** since 30 Oct 2026 (three rules: security headers on `api` and `media`, `x-powered-by` removed on `app`) | `http_response_headers_transform` |
-| `rate-limit-rule.json` | **Prepared, not applied.** The Free plan offers only the Block action, so the "log or challenge first" plan could not run; it waits for a yes (runbook, section 3) | `http_ratelimit` |
+| `rate-limit-rule.json` | **Live** since 30 Oct 2026 (applied in the dashboard session after the founder's yes). Block only, because the Free plan has no log or challenge mode. Undo: delete the rule in Security, Security rules, or PUT `{"rules":[]}` to this phase's entrypoint (runbook, step 9) | `http_ratelimit` |
 
 They were applied in the business account's dashboard session, not with a token. To apply or restore one by script, the
 founder makes a token for the zone `alyr.qa` only (scopes: runbook, section 4, item 6), and then, for example:
