@@ -207,6 +207,18 @@ class Settings(BaseSettings):
     billing_grace_days: int = 14
     billing_pause_sending: bool = True
 
+    # Deleting a stopped client's data (spec 042, D-116). The privacy notice promises it 60 days
+    # after the client's cancellation takes effect. `erase_stopped_clients` is the switch: OFF,
+    # the daily job (`python -m alyr.erase_job`) only reports what it would delete and changes
+    # nothing. The founder turns it on (infra/gcp/erase.sh enable) once the lawyer has read the
+    # keep-list (ALY-51). `erase_after_days` is never read below 31, so the 30 days the notice
+    # gives a business to download its copy are always over first. `erase_max_per_run` is how
+    # many businesses one run may erase: a mistake in the dates cannot empty the database in a
+    # night, and the rest wait for the next run.
+    erase_stopped_clients: bool = False
+    erase_after_days: int = 60
+    erase_max_per_run: int = 3
+
     # Per shop, to start (D-039; our estimate). A cap stops new items or photos with a
     # clear message and never deletes anything.
     catalog_max_items: int = 1000

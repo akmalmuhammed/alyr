@@ -14,7 +14,7 @@ import signal
 import socket
 
 from alyr.config import get_settings
-from alyr.core import alerts, resume, subscription
+from alyr.core import alerts, erase, resume, subscription
 from alyr.core.links import check_secret as check_link_secret
 from alyr.core.retention import purge as purge_old_copies
 from alyr.core.storage import check_store
@@ -133,6 +133,22 @@ async def keep_old_copies_purged(db) -> None:
         await asyncio.sleep(86400)
 
 
+async def keep_erased_files_removed(db, store) -> None:
+    """Empty the photo store of the businesses the erasure job deleted (spec 042, D-116). The job
+    runs as the database owner and holds no store keys; it leaves one row per business in
+    `erasure_files`, and this removes everything under that business's prefix. Every hour; it
+    finishes a business only when a listing of its prefix comes back empty."""
+    while True:
+        try:
+            gone = await erase.remove_files(db, store)
+            if gone["objects"] or gone["errors"]:
+                log.info("removed %s photo files of %s erased businesses (%s could not be)",
+                         gone["objects"], gone["businesses"], gone["errors"])
+        except Exception:  # never let the clean-up stop the worker
+            log.exception("could not remove the photo files of erased businesses")
+        await asyncio.sleep(3600)
+
+
 async def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     # The worker answers customers too ("order" in the chat makes a signed link), so it
@@ -154,6 +170,7 @@ async def main() -> None:
     reminders = asyncio.create_task(keep_owners_reminded(app.state.db))
     billing = asyncio.create_task(keep_billing_checked(app.state.db))
     purger = asyncio.create_task(keep_old_copies_purged(app.state.db))
+    erased = asyncio.create_task(keep_erased_files_removed(app.state.db, app.state.media.store))
     try:
         await app.state.jobs.run_forever(heartbeat=heartbeat(app.state.db))
         log.info("stopped: the jobs that had started finished, the rest went back in the queue")
@@ -165,6 +182,7 @@ async def main() -> None:
         reminders.cancel()
         billing.cancel()
         purger.cancel()
+        erased.cancel()
         await app.state.db.close()
         await close_channels(app)
 

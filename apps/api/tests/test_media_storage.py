@@ -194,6 +194,72 @@ def test_unusable_r2_names_are_refused_at_once():
             })
 
 
+# ── listing a shop's prefix (erasing a stopped client, spec 042) ─────────────────────────
+
+
+def listing(*keys: str, truncated: bool = False) -> str:
+    contents = "".join(f"<Contents><Key>{k}</Key><Size>10</Size></Contents>" for k in keys)
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">'
+        f"<Name>alyr-media</Name><IsTruncated>{str(truncated).lower()}</IsTruncated>{contents}"
+        "</ListBucketResult>"
+    )
+
+
+def test_a_shops_prefix_is_listed_with_a_signed_get_on_the_bucket():
+    seen = []
+    other = f"shops/{TENANT}/{'cd' * 32}-1600.webp"
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        # Everything under the prefix is passed on, so an empty answer means an empty prefix;
+        # an object outside it (which a listing of the prefix never returns) is not.
+        return httpx.Response(200, text=listing(
+            other, KEY, f"shops/{TENANT}/readme.txt", "shops/elsewhere/x.webp"))
+
+    store = r2(handler)
+    assert run(store.list(f"shops/{TENANT}/", limit=50)) == sorted(
+        [KEY, other, f"shops/{TENANT}/readme.txt"])
+    request = seen[0]
+    assert request.method == "GET" and request.url.path == "/alyr-media"
+    # Sorted, every reserved character encoded: the form the signature is made over.
+    assert request.url.query.decode() == (
+        f"list-type=2&max-keys=50&prefix=shops%2F{TENANT}%2F")
+    stamp = datetime.strptime(request.headers["x-amz-date"], "%Y%m%dT%H%M%SZ").replace(tzinfo=UTC)
+    expected = sign_v4(
+        method="GET", host=request.url.host, path="/alyr-media",
+        query=request.url.query.decode(), headers={}, payload_hash=EMPTY,
+        access_key_id="test-key-id", secret_access_key=SECRET, region="auto", now=stamp,
+    )
+    assert request.headers["authorization"] == expected["authorization"]
+
+
+def test_only_a_shops_own_prefix_may_be_listed_and_one_page_is_at_most_1000():
+    seen = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, text=listing())
+
+    store = r2(handler)
+    for bad in ("", "shops/", f"shops/{TENANT}", "shops/x/", "_check/", f"shops/{TENANT}/../"):
+        with pytest.raises(ValueError):
+            run(store.list(bad))
+    assert seen == []
+    assert run(store.list(f"shops/{TENANT}/", limit=99_999)) == []
+    assert "max-keys=1000" in seen[0].url.query.decode()
+
+
+def test_a_listing_that_is_refused_or_unavailable_says_so_without_a_secret():
+    forbidden = r2(lambda r: httpx.Response(403, text="<Error><Code>AccessDenied</Code></Error>"))
+    with pytest.raises(StoreError, match="403, AccessDenied"):
+        run(forbidden.list(f"shops/{TENANT}/"))
+    busy = r2(lambda r: httpx.Response(503))
+    with pytest.raises(StoreUnavailable):
+        run(busy.list(f"shops/{TENANT}/"))
+
+
 # ── local disk ────────────────────────────────────────────
 
 

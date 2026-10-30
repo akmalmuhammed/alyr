@@ -176,6 +176,8 @@ async def summary(conn: asyncpg.Connection, client_id: UUID | None = None) -> di
         "due": amount_due, "due_text": fmt_qar(amount_due),
         "paid": paid, "paid_text": fmt_qar(paid),
         "left": max(amount_due - paid, 0), "left_text": fmt_qar(max(amount_due - paid, 0)),
+        # The setup part of what is due; 0 when the accepted price has none (D-092).
+        "setup": quote["totals"]["one_time_total"] if quote else 0,
         "setup_text": quote["totals"]["one_time_total_text"] if quote else "",
         "period_text": quote["totals"]["period_total_text"] if quote else "",
         "period_months": quote["period_months"] if quote else 1,

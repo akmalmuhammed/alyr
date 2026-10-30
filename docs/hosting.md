@@ -43,6 +43,7 @@ alone, Google stores them in the nearest multi-region, `eu`, and the backups tak
 | Migrations | Cloud Run job `alyr-migrate` | Run by each deploy, before the rollout |
 | Database | Cloud SQL for PostgreSQL 16 `alyr-db`, `db-g1-small` | Shared vCPU, 1.7 GB, 10 GB SSD growing on its own; private address only; encrypted connections only |
 | Nightly export | Cloud Run job `alyr-db-export`, started at 02:00 Doha time by Cloud Scheduler | Writes `gs://alyr-prod-db-exports/alyr-<time>.sql.gz` |
+| Erasing stopped clients' data (spec 042, D-116) | Cloud Run job `alyr-erase` (as `alyr-migrate`) started at 03:30 Doha time by Cloud Scheduler. **Written in `infra/gcp/erase.sh`, not applied;** when applied it is made with the switch off and the schedule paused | Reports only until `erase.sh enable`; `docs/runbooks/erasing-a-client.md` |
 | Secrets | Secret Manager, stored in Doha only | |
 | Images | Artifact Registry `me-central1-docker.pkg.dev/alyr-prod/alyr` | |
 | Spending | Two budgets of USD 150: "ALYR monthly" (credits count, so it alerts only once credits are gone) and "ALYR gross cost" (credits excluded, so it alerts while credits pay), each at 50%, 90%, 100% and a forecast of 100%, sent to the same alert channels as everything else | |
@@ -189,7 +190,17 @@ security policies and the app role's grants; the API runs on the restored copy.
   with a **new private address** (`infra/gcp/restore.sh clone alyr-db-restored <time>`), so the broken
   one stays for comparison and both database secrets are rewritten (`infra/gcp/restore.sh repoint`).
   Steps, targets and the rehearsal of 30 Oct 2026: `docs/runbooks/restore-rehearsal.md`,
-  `docs/audit/restore-2026-10-30.md`.
+  `docs/audit/restore-2026-10-30.md`. Restoring a nightly backup (the way back when the instance or
+  its disk is lost) was drilled the same day: `infra/gcp/restore.sh backup-drill`,
+  `docs/audit/hardening-2026-10-30.md`.
+- **On-demand backups never expire.** The 14 are the automatic ones. A backup taken by hand
+  (`gcloud sql backups create`, for example before a release) stays until someone deletes it, so it
+  outlives the privacy notice's "gone within 35 days" unless it is deleted by then. Delete each one
+  once its release has held for a week and in any case before it is 35 days old. `infra/gcp/audit.sh
+  database` lists any that are older.
+- **Who deleted, cloned or restored what** is watched: the alert "Production database deleted,
+  copied, restored over or its backups deleted" reads Google's audit log (ALY-34). A rehearsal clones
+  the database, so it raises it too; the alert closes by itself after a day.
 - **The nightly export:** an SQL file per night in `gs://alyr-prod-db-exports`, in Doha, kept
   35 days. A copy outside the instance, readable without Cloud SQL. `infra/gcp/setup.sh
   lock-backups` makes the 35 days unbreakable, even by the project's owner; run it only

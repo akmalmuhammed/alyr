@@ -12,8 +12,9 @@ customers use ALYR. From the 17 Oct 2026 audit (`docs/audit/2026-10-17.md`).
 ## Hosting and data
 - [ ] Production hosting decided and running in Qatar (D-036 / PR #51, #52, ALY-63, ALY-10)
 - [ ] `ALYR_ENV=production` set explicitly; the stand-in payment route, simulator and API docs answer 404
-- [ ] Encrypted daily backups, and a restore rehearsed in the last 30 days, written up (rehearsed 30 Oct 2026, `docs/audit/restore-2026-10-30.md`; repeat if go-live is after 29 Nov)
-- [ ] Secrets in the key vault, not in a file on a laptop
+- [x] Encrypted daily backups, and a restore rehearsed in the last 30 days, written up: a point-in-time clone (`docs/audit/restore-2026-10-30.md`) and a nightly backup restored into a fresh instance (`docs/audit/hardening-2026-10-30.md`, ALY-34), both 30 Oct 2026; repeat both if go-live is after 29 Nov
+- [ ] A restore from the nightly **export** has been tested on production data, and then `infra/gcp/setup.sh lock-backups` run (the 27 Oct test used the demo shop; steps in `hardening-2026-10-30.md`)
+- [ ] Secrets in the key vault, not in a file on a laptop (production is all Secret Manager, in Doha, with no secret kept as a plain setting; the laptop's `.env` still holds the development-era copies of the Meta, Resend and R2 values, none rotated since go-live: `secret-rotation.md`, "Where production stands")
 - [ ] `ALYR_LINK_SECRET` set (32 or more random characters; the API will not start without it outside `ALYR_ENV=local`). On the founder's laptop, set it in `apps/api/.env` before the tunnel serves customers: the built-in development value is public (ALY-112)
 - [ ] `ALYR_PAYMENT_KEYS_KEY` set (32 random bytes, base64) before the first shop connects a real payment provider: without it connecting is refused outside `ALYR_ENV=local` (ALY-17, spec 033)
 - [ ] Postgres not reachable from the internet; only the web app and webhook are public
@@ -32,11 +33,12 @@ customers use ALYR. From the 17 Oct 2026 audit (`docs/audit/2026-10-17.md`).
 - [ ] Contact merge keeps consent records (audit issue)
 - [x] Security headers on the web app (CSP, HSTS, frame-ancestors, nosniff) and an Origin check on signed-in changes (ALY-118); on the public site: `_headers` has HSTS, nosniff, frame-ancestors, base-uri, object-src; Cloudflare's header rules for `api` and `media` are live (`cloudflare-edge.md`)
 - [ ] Real payment provider connected, or stand-in payments switched off (ALY-17)
-- [ ] Data retention and "forget this customer" procedure (audit issue)
+- [ ] Data retention and "forget this customer" procedure: a customer's download and forgetting, and the purge of working copies, are shipped (D-075, ALY-119); **still open: deleting a business's data 60 days after it stops, which the privacy notice promises** (SEC-6, LEG-1; it needs a way for a business to stop, go-live item 39). Backups age out as promised: 14 nightly, 7 days of logs, exports 35 days; on-demand backups only when someone deletes them (`hosting.md`)
 
 ## Running it
 - [ ] Error tracking and uptime alerts reach the founder's phone (rows in stack.md and data-residency.md). Built 30 Oct (ALY-277): every alert goes to every channel; the founder adds the phone (`infra/gcp/README.md`, 8b) and confirms `infra/gcp/monitoring.sh test-fire` reached it
 - [ ] `/health` checks the database and the job queue's age
+- [ ] A status page that merchants can open (a plan, not built: `docs/runbooks/status-page.md`; needs the founder's yes)
 - [ ] `docs/runbooks/incident-response.md` read; someone named is on call (the runbook is rewritten for Google Cloud; the on-call name, phone and hours are a blank for the founder to fill in at its top)
 - [ ] Production served by `next build && next start`, not the dev server
 - [ ] Release tagged and CHANGELOG written
@@ -51,7 +53,7 @@ Self-serve sign-up is built for appointment businesses and, since 29 Oct 2026, f
 - [ ] **The worker is running** (`python -m alyr.worker`, with `ALYR_JOBS_INLINE=false`). It sends the reminder emails (every hour), the weekly reports and gives back the stock of unpaid orders.
 - [ ] **The visitor's address is read from the right place.** `ALYR_CLIENT_IP_HEADER` (and `ALYR_CLIENT_IP_PROXIES` if more than one proxy is in front) names the header the real address arrives in. Until it does, only the per-email limits on codes and sign-ups are on (ALY-116), and the address stored with each terms acceptance is the proxy's.
 - [ ] **Terms.** The privacy notice (version `2026-10-28`) is the only version published, so owners accept that today. When the lawyer's customer agreement is final (ALY-98, ALY-51), put it on a page and publish it from `/ops` → Terms: it asks every owner once. Decide whether an owner who will not accept is blocked (today they are asked, not blocked).
-- [ ] **Money.** Nothing is paid first (D-053). The setup fee for a self-serve client and when the first charge is taken wait for the bank and payment side: decide before opening to the public, because the plan and go-live lines say what will be charged.
+- [ ] **Money.** Nothing is paid first (D-053). There is no setup fee for now (D-092): a client pays the first month at go-live. When that first charge is taken waits for the bank and payment side: decide before opening to the public, because the plan and go-live lines say what will be charged.
 - [ ] **WhatsApp.** A self-serve owner chooses how to connect (ALY-217) and ALYR attaches the number from `/ops` (ALY-166) until Embedded Signup (ALY-39) and Meta Tech Provider approval (ALY-52). Say in your first message to an owner what happens to their number and how long it takes.
 - [ ] **Arabic read by a native speaker** (ALY-66): the owner screens, the terms banner and the reminder email.
 - [ ] **Switch one type.** `/ops` → Sign-up: set one business type to self-serve (the bakery is the recommended first, ALY-164); the others stay with ALYR. Add the rest one at a time.

@@ -324,6 +324,9 @@ def test_the_cost_tables_are_not_read_by_any_route_that_serves_an_agent_or_a_cus
         "modules/items/import_plan.py", "modules/items/report.py", "modules/orders/service.py",
         "modules/items/exports.py", "routes/items_import.py", "modules/items/features.py",
         "routes/items.py", "seed.py",
+        # Names the tables to delete when a stopped client is erased; it reads nothing
+        # (spec 042).
+        "core/erase_rules.py",
     }
     readers = set()
     for path in src.rglob("*.py"):

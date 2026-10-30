@@ -104,6 +104,20 @@ there and type the code Google sends). Then run `infra/gcp/monitoring.sh apply`,
 **9. After a tested restore from an export** (`docs/hosting.md`, "Backups on Google"):
 `infra/gcp/setup.sh lock-backups`. It cannot be undone.
 
+**10. Is it still protected?** (ALY-34) `infra/gcp/audit.sh` reads, and changes nothing: point-in-time
+recovery, backup schedule, retention and place, no public address, deletion protection, the newest
+backup and export, any backup outside Doha or an on-demand one past 35 days, the export bucket, secrets
+stored in Doha only, no secret kept as a plain setting, no key files, no project-wide secret role, and
+the superseded secret versions still enabled (with the command to disable each). About three minutes.
+Run it before go-live, after any change to the backups or a secret, and every quarter. A restore
+from a nightly backup, timed, into a temporary instance that is deleted at the end:
+`infra/gcp/restore.sh backup-drill` (about 20 minutes, a few cents; steps in
+`docs/runbooks/restore-rehearsal.md`).
+
+## Erasing a stopped client's data (spec 042, D-116) - written, not applied
+
+The privacy notice promises that a business's data is deleted 60 days after it stops. `infra/gcp/erase.sh` makes the Cloud Run job `alyr-erase` (the same image as the API, run as `alyr-migrate`, the only account that reads the database owner's address) and a Cloud Scheduler schedule for 03:30 Doha time, created **paused**. The job is made with the switch off, so it only reports. `plan` prints what `deploy` would do and calls nothing; `dry-run`, `logs` and `status` look; `hold` and `release` keep one client back; `enable` turns the real deletion on and asks for the word ERASE. It needs no new account and no new secret. Read `docs/runbooks/erasing-a-client.md`, "Before the switch goes on", first.
+
 ## The visitor's address (ALY-265)
 
 So the per-address rate limits count the visitor and not the proxy, the edge Worker signs the

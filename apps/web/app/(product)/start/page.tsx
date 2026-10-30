@@ -69,7 +69,8 @@ const WHATSAPP_OFFERED = ["new_number", "move_number", "own_account"];
 // What the client pays ALYR to go live (ALY-242, D-053): the setup fee and the first period.
 type Payment = {
   status: "paid" | "no_price" | "unpaid"; due_text: string; paid: number; paid_text: string;
-  left: number; left_text: string; setup_text: string; period_text: string; period_months: number;
+  // `setup` is 0 when the accepted price has no setup line (no setup fee for now, D-092).
+  left: number; left_text: string; setup: number; setup_text: string; period_text: string; period_months: number;
   reference: string; bank: string;
   // Offered while nothing is paid yet and ALYR's card provider is set up (ALY-180).
   card: { provider: "paddle"; amount_text: string; period_text: string } | null;
@@ -543,10 +544,19 @@ export default function Start() {
   }, [tested]);
 
   // ── the live preview on the right ─────────────────────
+  const takesOrders = way === "orders";
   const preview = useMemo((): ChatMessage[] => {
     const name = shopShown || t.yourBusiness;
     const ar = lang === "ar";
-    const greeting: ChatMessage = {
+    // A shop that takes orders greets with its order link and the menu button (modules/orders/chat.py),
+    // not the booking menu.
+    const greeting: ChatMessage = takesOrders ? {
+      direction: "out",
+      body: ar
+        ? `أهلاً بك في ${name}. تقدر تطلب من هنا: app.alyr.qa/s/…\nإذا عندك سؤال، اكتبه وسنرد عليك هنا.`
+        : `Welcome to ${name}. You can order here: app.alyr.qa/s/…\nIf you have a question, write it and we will reply here.`,
+      payload: { choices: [{ id: "p0", title: ar ? "القائمة" : "See the menu" }] },
+    } : {
       direction: "out", body: ar ? `أهلاً بك في ${name}. كيف نقدر نخدمك؟` : `Welcome to ${name}. How can we help?`,
       payload: { choices: (ar ? ["احجز موعداً", "حجزي", "الأسعار"] : ["Book a visit", "My booking", "Prices"]).map((title, i) => ({ id: `p${i}`, title })) },
     };
@@ -593,7 +603,7 @@ export default function Start() {
       ];
     }
     return [greeting];
-  }, [step, rows, shopShown, lang, t, products.rows, handover.pickup, handover.delivery]);
+  }, [step, rows, shopShown, lang, t, takesOrders, products.rows, handover.pickup, handover.delivery]);
 
   // ── screens ──────────────────────────────────────────
   const total = rail.length;
@@ -1056,7 +1066,7 @@ export default function Start() {
             <section className="ob-check-more ob-pay" aria-label={t.plan.payTitle}>
               <h2>{t.plan.payTitle}</h2>
               <p className="ob-pay-total"><span>{t.plan.payTotal}</span><b className="num"><bdi dir="ltr">{pay.left_text}</bdi></b></p>
-              <small>{t.plan.paySetup(pay.setup_text)} · {t.plan.payPeriod(pay.period_months, pay.period_text)}</small>
+              <small>{pay.setup > 0 && <>{t.plan.paySetup(pay.setup_text)} · </>}{t.plan.payPeriod(pay.period_months, pay.period_text)}</small>
               {pay.paid > 0 && <small>{t.plan.paidSoFar(pay.paid_text, pay.left_text)}</small>}
               {pay.card && (
                 <div className="ob-pay-card">

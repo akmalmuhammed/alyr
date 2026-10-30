@@ -23,7 +23,7 @@ Anything else belongs to another lane. If a task needs it, keep the change small
 
 ## Now (update this section in the same pull request as the work)
 
-Last updated 30 Oct 2026 (Cloudflare edge and DNS hardening, ALY-116 first layer, branch `claude/cf-edge-dns-hardening-ae84c8`), on top of 29 Oct 2026 (the visitor's address for the rate limits, ALY-265, branch `aly-ratelimit-trusted-client-ip`) and 24 Oct 2026 (site tooling, branch `aly-site-tooling`, `docs/site-audit/05-tooling-log.md`).
+Last updated 30 Oct 2026 (Cloudflare edge and DNS hardening, ALY-116 first layer, branch `claude/cf-edge-dns-hardening-ae84c8`; and the production database's backups, restore and secrets audited, ALY-34, branch `claude/aly-34-backups-restore-2b913c`), on top of 29 Oct 2026 (the visitor's address for the rate limits, ALY-265, branch `aly-ratelimit-trusted-client-ip`) and 24 Oct 2026 (site tooling, branch `aly-site-tooling`, `docs/site-audit/05-tooling-log.md`).
 
 - **Cloudflare edge and DNS of alyr.qa hardened (ALY-116 first layer, CLD-7, CLD-18, D-113), live since 30 Oct,
   recorded in a pull request.** Always Use HTTPS, minimum TLS 1.2, SSL Full (strict), CAA for the three CAs
@@ -35,6 +35,18 @@ Last updated 30 Oct 2026 (Cloudflare edge and DNS hardening, ALY-116 first layer
   `docs/runbooks/cloudflare-edge.md`, section 4 (the Block-only rate-limit rule, Zero Trust for the back
   office, the old tunnel). Not done: Access and `ops.alyr.qa` (ALY-219), the edge
   rate-limit rule, DNSSEC (`.qa` is not signed), MTA-STS.
+
+- **Backups, restore and secrets audited (ALY-34, 30 Oct 2026), in a pull request.** Read-only audit of `alyr-prod`
+  (`docs/audit/hardening-2026-10-30.md`; repeat with `infra/gcp/audit.sh`, which reports no FAIL today). A nightly
+  backup was restored into a fresh `db-f1-micro` instance and the instance deleted: **12 min 8 s to a usable copy**
+  (`restore.sh backup-drill`). Found and recorded: the point-in-time window is 14 hours until 5 Nov (the old `eu` backups
+  were deleted), on-demand backups never expire, the development-era keys are all unrotated, nothing deletes a stopped
+  business's data after 60 days (product), no status page. New alert on a delete, clone, restore-over or backup delete
+  of `alyr-db` (applied, free). Status-page plan in `docs/runbooks/status-page.md`. **Waiting on the founder (Needs Akmal):**
+  the nine rows in section 5 of the audit record (rotate keys, an export restore on production data then `lock-backups`,
+  the phone channel, the on-call blanks, the status page's yes). Not done: the export restore on production data, the
+  apps running on a restored copy, a restore with real data volume.
+
 
 - **Per-address rate limits in production (ALY-265, D-083), in a pull request, nothing applied
   to production.** The edge Worker (`infra/cloudflare/edge`) writes the visitor's address from

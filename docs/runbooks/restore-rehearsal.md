@@ -22,7 +22,7 @@ the database cost) is the next step if a paying client needs a firmer RTO.
 | Situation | Way | Keeps the address? |
 |---|---|---|
 | Data wrong from a known moment (bad migration, bad import, deleted rows) | **Point-in-time clone** of `alyr-db` to a new instance (below) | No: new address, new name |
-| The instance is lost or its disk is corrupt, any time in the last 14 nights | Restore a nightly backup into a new instance of the same version and at least the same size (create it first, then `gcloud sql backups restore <id> --backup-instance=alyr-db --restore-instance=<new>`); the backup list: `gcloud sql backups list --instance alyr-db` | No |
+| The instance is lost or its disk is corrupt, or point-in-time recovery cannot reach the moment (it only reaches back as far as the oldest backup that exists) | Restore a nightly backup into a new instance of the same version and at least the same disk size: **`infra/gcp/restore.sh backup-drill` is exactly this, run on a temporary instance and measured** (below); by hand, create the instance first, then `gcloud sql backups restore <id> --backup-instance=alyr-db --restore-instance=<new>`; the list: `gcloud sql backups list --instance alyr-db`. A deleted `alyr-db` leaves its backups for up to 14 days (Google keeps them as retained backups) | No |
 | Only a few tables or rows are needed | Clone, read the rows from the clone, put them back with a normal change, delete the clone | The apps never move |
 | Everything inside Cloud SQL is gone or untrusted | Import the newest export: `gcloud sql import sql <instance> gs://alyr-prod-db-exports/<file> --database alyr` into an empty database (`docs/hosting.md`, "Backups on Google") | No |
 
@@ -32,8 +32,10 @@ Everything below is for the first row, the common case.
 
 Times are from the rehearsal of 30 Oct 2026 (`docs/audit/restore-2026-10-30.md`).
 
-1. **Decide the moment.** The last time the data was good, in UTC. Anything between 7 days ago and
-   `gcloud sql instances get-latest-recovery-time alyr-db` works. If the damage is still spreading,
+1. **Decide the moment.** The last time the data was good, in UTC. Anything between the earliest and the latest
+   moment that `gcloud sql instances get-latest-recovery-time alyr-db` prints works. **The earliest is not always 7 days ago:**
+   it is the end of the oldest backup that still exists (on 30 Oct 2026 it was 14 hours ago, because the old `eu` backups had
+   just been deleted; it is 7 days from 5 Nov). A moment before it needs a nightly backup instead (row 2). If the damage is still spreading,
    close the API first (incident runbook, section 2).
 2. **Clone** (6 to 9 minutes, measured):
    `infra/gcp/restore.sh clone alyr-db-restored 2026-10-30T09:15:00Z`
@@ -70,10 +72,45 @@ Times are from the rehearsal of 30 Oct 2026 (`docs/audit/restore-2026-10-30.md`)
 7. **Keep the old instance until the incident is closed**, for comparison. It costs about USD 34 a month, so
    do not leave it. `gcloud sql instances patch alyr-db --no-deletion-protection`, then
    `gcloud sql instances delete alyr-db`.
-8. **Going back** (the restore was the wrong call, the old instance is untouched): `gcloud secrets versions list
-   database-url` and `migration-url`; disable the newest version of each
-   (`gcloud secrets versions disable <n> --secret=<name>`) so `:latest` is the old one again; restart the API
-   and the worker as in step 4.
+8. **Going back** (the restore was the wrong call, the old instance is untouched): `infra/gcp/restore.sh revert`. It puts the
+   previous value of `database-url` and `migration-url` back as the newest version of each, then restarts the API and the
+   worker as in step 4. Run it once: a second run goes forward again. **Do not go back by disabling the newest version.**
+   `:latest` is the highest version number and does not fall back to an older one: with the newest disabled, reading
+   `:latest` fails (`FAILED_PRECONDITION`, tried on a scratch secret on 30 Oct 2026), so new copies of the API and worker
+   would not start. (An earlier version of this page said to disable the newest; that was wrong.)
+
+## Restoring a nightly backup (the second way back)
+
+`infra/gcp/restore.sh backup-drill [<backup id>]` restores the newest automatic backup in Doha into a new
+temporary instance `alyr-restore-drill` (`db-f1-micro`, private address only, no backups of its own), counts its rows and
+production's, and deletes it, whatever happens. First run, 30 Oct 2026 (`docs/audit/hardening-2026-10-30.md`):
+
+| | Measured |
+|---|---|
+| Create the empty instance | 5 min 4 s |
+| Restore the backup over it | 7 min 4 s |
+| **Decision to a usable copy** | **12 min 8 s** |
+| Row-count check | about 1 minute |
+| Delete | 2 min 10 s (17 min 11 s from create to gone) |
+| Data lost | Everything after the backup: 13 h 56 min in that run, about a day at worst (the backup runs at 02:00 Doha) |
+
+Exact times, UTC, 30 Oct 2026 (Cloud SQL's operation records and the audit log): create requested 13:20:58, usable 13:26:06;
+restore requested 13:26:28, done 13:33:32; copy counted 13:34:07, production counted 13:35:05; delete requested 13:35:59,
+**gone 13:38:09**. Delete confirmation: the audit log's closing `cloudsql.instances.delete` entry at 13:38:09, `gcloud sql instances
+describe alyr-restore-drill` answering 404, and `gcloud sql instances list` showing only `alyr-db`.
+
+For a real restore, with this way:
+
+1. Make the instance at **production's tier** (`db-g1-small`), at least the same disk size, private address only, the same
+   PostgreSQL version, and restore the backup onto it (the script's `create` and `restore` lines show the flags).
+2. **If the backup is older than the last deploy, run the migrations first**: the 30 Oct backup had 57 migrations and production 72.
+   Point the migration job at the copy (`restore.sh repoint` writes both secrets; then `gcloud run jobs execute alyr-migrate
+   --region me-central1 --wait`), because the new code meets the old schema otherwise.
+3. The users come back with the backup (the application role connected with production's own password), so `restore.sh check`
+   then `restore.sh repoint <name>` and the rest of "The steps" above (from step 3) apply unchanged.
+4. **Data erased after the backup was taken is back.** The daily erasure job (`docs/runbooks/erasing-a-client.md`, "After a
+   restore") erases it again by itself, because it works from the dates in the database. If its switch is on, let it run (or run
+   `infra/gcp/erase.sh dry-run` first to see the clients it lists); if it is off, switch it on only after that first dry run.
 
 ## What the rehearsal does
 
@@ -90,8 +127,8 @@ The clone lives for minutes and costs cents (an extra `db-g1-small` and 10 GB of
 If anything fails after the clone exists, the script still deletes it. Check `gcloud sql instances list`
 afterwards: only `alyr-db` should be there.
 
-Rehearse: once before the first paying customer (done 30 Oct 2026), after any change to the backup
-settings, the database tier or the network, and every quarter. The go-live checklist wants one in the last 30 days.
+Rehearse both ways (`rehearse` and `backup-drill`): once before the first paying customer (done 30 Oct 2026), after any change
+to the backup settings, the database tier or the network, and every quarter. The go-live checklist wants one in the last 30 days.
 The rewrite of the secrets and the restart of the apps are deliberately **not** done in the rehearsal, because
 doing them would move production onto the clone. Their steps are exact (`restore.sh repoint`), the address rewrite
 is shown on a made-up URL each time, and the redeploy times come from past deploys.

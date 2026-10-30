@@ -58,13 +58,18 @@ export default function TodayPage() {
 
   const date = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Qatar", weekday: "long", day: "numeric", month: "long" }).format(new Date());
   const urgent = data?.items.filter((i) => i.urgent).length ?? 0;
+  const count = data?.items.length ?? 0;
+  // "1 thing needs ALYR", never "1 things"; the count and its noun stay on one line.
+  const needs = count === 1
+    ? `1 thing needs ALYR${urgent ? ", and it is urgent" : ""}.`
+    : `${count} things need ALYR${urgent ? `, ${urgent} of them urgent` : ""}.`;
 
   return (
     <>
       <header className="sh-head">
         <span className="sh-eyebrow">{date} · Doha</span>
         <h1>Today</h1>
-        <p>{!data ? "Loading…" : data.items.length === 0 ? "Nothing needs you right now." : `${data.items.length} things need ALYR${urgent ? `, ${urgent} of them urgent` : ""}.`}</p>
+        <p>{!data ? "Loading…" : count === 0 ? "Nothing needs you right now." : needs}</p>
       </header>
       {error && <p className="ops-error" role="alert">{error}</p>}
 

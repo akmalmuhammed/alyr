@@ -44,6 +44,7 @@ WARN_DAYS = 3
 # What a client gives before a cancellation takes effect (D-034).
 NOTICE_DAYS = 7
 CANCEL_JOB = "billing.card_cancel"
+ERASED = "the erasure of this client's data has begun, so there is nothing left to bring back"
 STATES = ("no_price", "awaiting_payment", "active", "past_due", "suspended", "cancelled")
 
 
@@ -209,10 +210,14 @@ async def cancel(
     cancels_on = await conn.fetchval(
         "update clients set cancel_requested_at = coalesce(cancel_requested_at, now()), "
         "cancels_on = coalesce(cancels_on, $2), cancel_note = $3 "
-        "where id = $1 returning cancels_on",
+        "where id = $1 and erased_at is null and erase_started_at is null returning cancels_on",
         client_id, day, note,
     )
     if cancels_on is None:
+        if await conn.fetchval(
+            "select erase_started_at is not null from clients where id = $1", client_id
+        ):
+            raise CancelError(ERASED)
         raise LookupError("no such client")
     await refresh(conn, client_id, on=on)
     return cancels_on
@@ -221,7 +226,15 @@ async def cancel(
 async def undo_cancel(conn: asyncpg.Connection, client_id: UUID) -> bool:
     """The client stays after all. Answers whether a cancellation was undone. A card
     subscription Paddle has already cancelled cannot be restarted: the client then pays the
-    next period by transfer."""
+    next period by transfer. Within the 60 days before ALYR erases the client's data
+    (core/erase.py, D-116) nothing has been deleted, so the client is exactly as it was; after
+    them there is nothing to bring back, and this is refused. The client's row is locked first,
+    so an undo and the erasure cannot both win."""
+    erased = await conn.fetchrow(
+        "select erase_started_at from clients where id = $1 for update", client_id
+    )
+    if erased is not None and erased["erase_started_at"] is not None:
+        raise CancelError(ERASED)
     undone = await conn.fetchval(
         "update clients set cancel_requested_at = null, cancels_on = null, cancel_note = '' "
         "where id = $1 and cancels_on is not null returning true",
