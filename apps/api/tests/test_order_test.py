@@ -214,6 +214,9 @@ def test_a_test_order_cannot_be_marked_paid_and_makes_no_document(client):
 # file and the start of the query, so moving code never breaks it but changing a query asks
 # for the decision again.
 FINE_WITHOUT = {
+    ("core/forget.py", "select (select count(*) from messages where contact_id = $1) as messages"):
+        "one customer's own records, counted before they are forgotten; every order of theirs "
+        "is kept without them, a test one too",
     ("modules/documents/service.py", "select number from orders where id = $1"):
         "the number of one order by its ID",
     ("modules/items/costs.py", "select o.id"):

@@ -7,6 +7,7 @@ import { formatPrice } from "../_customer/price";
 import { OrderMargin, useOrderMargins } from "./Margin";
 import { OrderSum } from "./OrderSum";
 import { MarkPaid, PayWays } from "./OrderPay";
+import { ForgetCustomer } from "./Forget";
 import { FulfilDetails, FulfilFilters, FulfilPill, matchesFilter, type FulfilFilter } from "./OrderFulfil";
 import type { Fulfilment } from "../_customer/fulfil";
 import { DELIVERY } from "./deliveryCopy";
@@ -153,6 +154,7 @@ const T = {
       const thing = { conversation: "this conversation", order: `order${n}`, booking: `booking${n}`, account: "the credit account" }[a.subject];
       switch (a.action) {
         case "took": return `${who} took ${thing}`;
+        case "data_exported": return `${who} downloaded this customer's data`;
         case "assigned": return a.detail.to ? `${who} gave ${thing} to ${a.detail.to}` : `${who} took ${thing} back from ${a.detail.from}`;
         case "closed": return a.detail.outcome
           ? `${who} closed it: ${outcomes[a.detail.outcome]}${a.detail.reason ? `, ${reasons[a.detail.reason].toLowerCase()}` : ""}`
@@ -227,6 +229,7 @@ const T = {
       const thing = { conversation: "المحادثة", order: `الطلب${n}`, booking: `الحجز${n}`, account: "الحساب الآجل" }[a.subject];
       switch (a.action) {
         case "took": return `${who} تولّى ${thing}`;
+        case "data_exported": return `${who} نزّل بيانات هذا العميل`;
         case "assigned": return a.detail.to ? `${who} أسند ${thing} إلى ${a.detail.to}` : `${who} سحب ${thing} من ${a.detail.from}`;
         case "closed": return a.detail.outcome
           ? `${who} أغلقها: ${outcomes[a.detail.outcome]}${a.detail.reason ? `، ${reasons[a.detail.reason]}` : ""}`
@@ -1000,6 +1003,14 @@ export function Screens({ embedded = false, section, lang: langProp, intro, show
                         disabled={composeMode === "reply" && !openThread.customer.window_open}
                       >{composeMode === "note" ? t.addNote : t.reply}</button>
                     </form>
+                    {canManage && (
+                      <ForgetCustomer
+                        key={openThread.customer.id}
+                        contactId={openThread.customer.id}
+                        lang={lang}
+                        onDone={() => { setChatId(null); refresh(); }}
+                      />
+                    )}
                   </>
                 )}
               </div>
