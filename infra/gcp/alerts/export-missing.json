@@ -1,0 +1,17 @@
+{
+  "_needs_metric": "alyr-export-succeeded",
+  "displayName": "Nightly export missing for 26 hours",
+  "combiner": "OR",
+  "documentation": {
+    "mimeType": "text/markdown",
+    "content": "No nightly export file was written in 26 hours (it should land at 02:00 Doha time). That covers a schedule that never fired, a paused or deleted scheduler job, and a job that ran but did not finish. First step: `gcloud scheduler jobs describe alyr-db-export-nightly --location me-central1` (state ENABLED? last attempt?), then `gcloud run jobs executions list --job alyr-db-export --region me-central1`, then run it by hand with `gcloud run jobs execute alyr-db-export --region me-central1`."
+  },
+  "conditions": [{
+    "displayName": "No export file in 26 hours",
+    "conditionPrometheusQueryLanguage": {
+      "query": "absent_over_time(logging_googleapis_com:user_alyr_export_succeeded{monitored_resource=\"cloud_run_job\"}[25h])",
+      "duration": "3600s",
+      "evaluationInterval": "300s"
+    }
+  }]
+}
