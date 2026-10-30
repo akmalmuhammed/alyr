@@ -37,7 +37,8 @@ function aiWords() {
   return { en: bullet("Words"), ar: bullet("Arabic") };
 }
 
-const startCopy = strings(read(join(HERE, "copy.ts")));
+// The page a sales link opens (ALY-216) says the same things in its own copy file.
+const startCopy = [...strings(read(join(HERE, "copy.ts"))), ...strings(read(join(HERE, "../join/copy.ts")))];
 const screens = read(join(HERE, "../_workspace/Screens.tsx"));
 const inboxCopy = strings(screens.slice(screens.indexOf("const T = {"), screens.indexOf("\n};\n", screens.indexOf("const T = {"))));
 // "Assistant" is the name the activity record keeps for automatic replies (core/team.py); the

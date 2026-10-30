@@ -59,6 +59,9 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               subscription.py a client's plan after go-live: past due, paused, cancelled, D-082),
                               actions (one set of actions behind the workspace and WhatsApp, D-065),
                               staff_link (links a staff number to a person by a one-time code),
+                              sales_link (a lead's quote opened from one signed link: a code to the
+                              email ALYR recorded, then the business made for the lead's client,
+                              specs/041, D-105; routes/join.py is the owner's side),
                               not_sent (the messages that did not reach a customer, and sending one
                               again through the same consent checks; specs/036) and
                               drawing (PDFs and report cards drawn in a process of their own, D-078)

@@ -48,6 +48,14 @@ SIGNUPS_PER_ADDRESS = Limit(10, HOUR)
 STOPS_PER_ADDRESS = Limit(30, HOUR)
 # Orders and bookings placed from one address on customers' pages.
 PLACED_PER_ADDRESS = Limit(30, TEN_MINUTES)
+# The join page a sales link opens (ALY-216): every call to it from one address, and the code
+# guesses from one address. A forged or unknown token is counted here before it is looked at.
+JOIN_PER_ADDRESS = Limit(60, HOUR)
+JOIN_GUESSES_PER_ADDRESS = Limit(30, HOUR)
+# Codes asked for, and guesses made, against one sales link whoever asks: the link is for one
+# owner, so a crowd of addresses gets no more tries than one.
+JOIN_CODES_PER_LINK = Limit(5, HOUR)
+JOIN_GUESSES_PER_LINK = Limit(20, HOUR)
 
 
 class TooManyRequests(Exception):

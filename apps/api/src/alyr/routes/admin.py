@@ -27,6 +27,7 @@ from alyr.core import (
     card_billing,
     pricing,
     readiness,
+    sales_link,
     subscription,
     terms,
     welcome,
@@ -513,10 +514,16 @@ async def change_client(
                 conn, staff, "client.saved", "client", client_id, client_id=client_id,
                 detail=body.model_dump(),
             )
+            before = await conn.fetchval(
+                "select contact_email from clients where id = $1", client_id
+            )
             await pricing.save_client(
                 conn, client_id, body.name, body.contact_name, body.contact_email,
                 body.contact_phone, body.note, body.price_mode,
             )
+            if body.contact_email.strip().lower() != (before or "").strip().lower():
+                # A sales link was made for the old address (ALY-216).
+                await sales_link.email_changed(conn, staff, client_id)
             return await pricing.client(conn, client_id)
     except pricing.PricingError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error

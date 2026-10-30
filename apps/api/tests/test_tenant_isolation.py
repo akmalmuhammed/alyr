@@ -36,6 +36,9 @@ GLOBAL_TABLES = {
     # The emails ALYR sent a client about their plan (ALY-218): only the back office reads or
     # writes them. Forced row-level security.
     "billing_notices",
+    # The offers ALYR's founder sends a prospective owner after a visit (ALY-216, D-105): only the
+    # back office reads or writes them. Forced row-level security.
+    "sales_links",
     # Which alerts are firing (ALY-121, D-073): a platform record with no customer data.
     "alert_state",
     # What owners are asked to accept: every shop may read it, only the back office adds to it

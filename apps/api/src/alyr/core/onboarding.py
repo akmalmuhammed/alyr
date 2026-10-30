@@ -102,12 +102,16 @@ async def _free_slug(conn: asyncpg.Connection, name: str) -> str:
 async def create_business(
     db: Database, token: str, owner_name: str, name: str, name_ar: str, type_key: str,
     area: str, accepted_terms: list[UUID] | None = None, ip: str = "", user_agent: str = "",
-    lang: str = "en",
+    lang: str = "en", sales_link: UUID | None = None,
 ) -> tuple[UUID, str]:
     """Create the business, its owner and its starting setup. Returns the tenant and a
     session cookie value for the owner. The owner must have accepted every current version of
     the terms and the privacy notice (ALY-167): without that nothing is created, and with it
-    each acceptance is recorded with who, when and from where."""
+    each acceptance is recorded with who, when and from where.
+
+    With `sales_link` (ALY-216) the business is made for the lead's own client, and the
+    database refuses unless that link is live and its client's recorded email is the one the
+    sign-up token proved. The session opens this business, not the owner's other ones."""
     async with db.unscoped() as conn:
         required = {t["id"] for t in await terms.current(conn)}
     if required - {str(t) for t in accepted_terms or []}:
@@ -132,9 +136,10 @@ async def create_business(
             try:
                 async with conn.transaction():
                     tenant_id = await conn.fetchval(
-                        "select signup_create_business($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+                        "select signup_create_business("
+                        "$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
                         _hash(token), owner_name, name, name_ar.strip(), slug, preset.key,
-                        area.strip(), way, first_step, list(modules),
+                        area.strip(), way, first_step, list(modules), sales_link,
                     )
                 break
             except asyncpg.UniqueViolationError:
@@ -188,6 +193,12 @@ async def create_business(
                 f"{preset.hint.en.lower()} with the owner.",
                 owner_name,
             )
+    if sales_link is not None:
+        # A person who already works for another business would be signed in to that one.
+        async with db.unscoped() as conn, conn.transaction():
+            user_id = await conn.fetchval("select id from users where email = $1", email)
+            await conn.execute("select set_config('app.user_id', $1, true)", str(user_id))
+            return tenant_id, await auth.create_session(conn, user_id, tenant_id)
     session = await auth.session_for(db, email)
     return tenant_id, session
 

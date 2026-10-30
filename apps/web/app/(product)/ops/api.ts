@@ -26,9 +26,19 @@ export type Quote = {
   updated_at: string; updated_by: string; published_at: string | null; accepted_at: string | null;
   accepted_by: string; lines: Line[]; totals: Totals;
 };
+// A lead's plan (ALY-216): the client has no business yet; this is what it will become.
+export type Prospect = { type: string; name_ar: string; area: string };
+// A sales link for a lead, and what came of it (ALY-216). `url` only while it is live.
+export type SalesLinkState = {
+  id: string; state: "live" | "expired" | "revoked" | "used"; created_at: string; created_by: string;
+  expires_at: string; opens: number; first_opened_at: string | null; last_opened_at: string | null;
+  verified_at: string | null; claimed_at: string | null; business: string; revoked_at: string | null;
+  revoked_by: string; revoked_reason: "" | "by_hand" | "replaced" | "email_changed"; url: string | null;
+};
 export type ClientSummary = {
   id: string; name: string; contact_name: string; contact_email: string; contact_phone: string;
   note: string; price_mode: "automatic" | "prepared" | null; created_at: string;
+  prospect: Prospect | null;
   // Where the plan stood at the last hourly check (ALY-218); '' before the first.
   billing_state?: string; cancels_on?: string | null;
   businesses: Business[];

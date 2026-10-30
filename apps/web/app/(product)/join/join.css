@@ -1,0 +1,3 @@
+/* The page a sales link opens (ALY-216) uses the sign-up screens' styles (../start/start.css).
+   This is only what a phone needs beyond them: the language switch is a 44 px target here. */
+.ob-top .ob-lang { min-height: 44px; min-width: 44px; }
