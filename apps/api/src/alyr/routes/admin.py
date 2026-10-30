@@ -130,11 +130,12 @@ class SwitchModule(BaseModel):
     enabled: bool
 
 
-# The modules the back office switches for one business. The Catalog is on for every business
-# (ALY-113) and this is how one business has it turned off, or back on; the other modules are
-# a business's products and are switched in its own workspace. Documents (ALY-138) is off for
-# every business and has no screen yet: this is how ALYR switches it on for one business to
-# try it, until the workspace screens (package 3) make it part of a product.
+# The modules the back office switches for one business. The Catalog (ALYR Shelf) and Documents
+# (ALYR Docs) are products since D-123, so an owner or admin switches them on the Products
+# screen too; this is how ALYR does it for one business: the Catalog is on for every business
+# (ALY-113) and this is how one has it turned off, or back on, and Documents is off for every
+# business until it is switched on. The other modules are a business's products and are
+# switched in its own workspace only.
 SWITCHABLE_MODULES = ("catalog", "documents")
 
 
