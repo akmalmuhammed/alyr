@@ -19,7 +19,7 @@ from uuid import UUID
 import asyncpg
 
 from alyr.config import get_settings
-from alyr.core import jobs, mail
+from alyr.core import auth, jobs, mail
 from alyr.db import Database
 
 log = logging.getLogger("alyr.welcome")
@@ -87,13 +87,9 @@ class AccountMail:
         await mail.send(person["email"], subject, text, html)
 
     async def _opens_elsewhere(self, user_id: UUID, tenant_id: UUID) -> bool:
-        """Whether signing in takes this person to another business: it opens the first they
-        joined (`auth.session_for`), and there is no way to switch yet (go-live item 40)."""
+        """Whether signing in takes this person to another business (`auth.business_at_sign_in`):
+        then the invite says how to switch to this one, from Your account (D-081)."""
         async with self._db.unscoped() as conn, conn.transaction():
             await conn.execute("select set_config('app.user_id', $1, true)", str(user_id))
-            first = await conn.fetchval(
-                "select tenant_id from memberships where user_id = $1 "
-                "order by created_at limit 1",
-                user_id,
-            )
-        return first is not None and first != tenant_id
+            opens = await auth.business_at_sign_in(conn, user_id)
+        return opens is not None and opens != tenant_id
