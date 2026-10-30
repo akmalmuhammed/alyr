@@ -19,6 +19,13 @@ customers use ALYR. From the 17 Oct 2026 audit (`docs/audit/2026-10-17.md`).
 - [ ] Postgres not reachable from the internet; only the web app and webhook are public
 - [ ] `docs/data-residency.md` reviewed against what really leaves Qatar
 
+## Releases (ALY-269; `docs/runbooks/release.md`, `docs/runbooks/rollback.md`)
+- [ ] The founder is the required reviewer on the `production` environment, which only `main` can use, and administrators cannot bypass it
+- [ ] `main` is protected and requires the `ci` jobs; merged branches delete themselves; secret scanning and push protection are on
+- [ ] The Cloudflare token and account ID are environment secrets (`production`, and a narrower token in `preview`), the repository copies are deleted and the old token is rolled
+- [ ] One release has run end to end through `deploy-gcp` (gate, approval, deploy, health checks, tag `v0.x.y`) and the CHANGELOG has a cut section
+- [ ] A rollback by traffic split has been rehearsed on the API, the web app and the worker, and a deploy afterwards served the new revision (`rollback.md`, "Rehearsal")
+
 ## Application
 - [ ] Rate limits on sign-in codes, sign-up and public pages (ALY-116, built; the per-address part is on only once the edge signs the visitor's address and the API is told to read it: ALY-265, steps and check in `client-address.md`; add Cloudflare rules in front as the first layer)
 - [ ] Staff roles: agents cannot change prices, services, hours or send bulk reminders (audit issue)

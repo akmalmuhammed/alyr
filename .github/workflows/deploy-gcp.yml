@@ -1,44 +1,74 @@
 name: deploy-gcp
 
-# Builds ALYR's two images, pushes them to Artifact Registry in Doha, and (when asked)
-# deploys them: migrations first, then the API, worker and web app (D-060, ALY-10).
+# Builds ALYR's two images, pushes them to Artifact Registry in Doha, and deploys them:
+# migrations first, then the API, worker and web app (D-060, ALY-10). This is the normal way
+# production changes (ALY-269); `infra/gcp/push-images.sh` on the laptop is the fallback.
 #
-# Started by hand only (Actions > deploy-gcp > Run workflow), from main. Signs in to Google
-# Cloud with GitHub's short-lived token (Workload Identity Federation): no key is stored in
-# GitHub. Needs the repository variables printed by `infra/gcp/setup.sh github`.
+# Started by hand only (Actions > deploy-gcp > Run workflow), from main, with the release's
+# version. Three jobs, in this order:
+#   1. gate    release-gate.yml: the commit's ci run is green, and the version is cut in
+#              CHANGELOG.md and unused. Fails here, before anyone is asked to approve.
+#   2. deploy  waits in the GitHub environment `production` for the founder's approval, then
+#              ships and checks it is healthy.
+#   3. tag     only after the checks pass: the commit is tagged with the version.
+# Procedure: docs/runbooks/release.md. Going back: docs/runbooks/rollback.md.
+#
+# Signs in to Google Cloud with GitHub's short-lived token (Workload Identity Federation): no key
+# is stored in GitHub. Needs the repository variables printed by `infra/gcp/setup.sh github`.
 on:
   workflow_dispatch:
     inputs:
+      version:
+        description: "The release, v0.x.y. Its section must be cut in CHANGELOG.md (docs/runbooks/release.md)"
+        type: string
+        required: true
       deploy:
-        description: "Deploy after building (false: build and push only)"
+        description: "Deploy after building (false: build and push only; nothing is tagged)"
         type: boolean
         default: true
 
-permissions:
-  contents: read
-  id-token: write
+permissions: {}
 
 concurrency:
   group: deploy-gcp
   cancel-in-progress: false
 
 jobs:
+  gate:
+    uses: ./.github/workflows/release-gate.yml
+    with:
+      version: ${{ inputs.version }}
+    permissions:
+      actions: read
+      contents: read
+
   deploy:
+    needs: gate
     if: github.ref == 'refs/heads/main' && vars.GCP_WORKLOAD_IDENTITY_PROVIDER != ''
     runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # The founder is this environment's required reviewer (docs/runbooks/release.md): the job
+    # waits for the approval, and nothing below runs before it.
+    environment:
+      name: production
+      url: https://app.alyr.qa
+    permissions:
+      contents: read
+      id-token: write
     env:
       PROJECT: ${{ vars.GCP_PROJECT }}
       REGION: ${{ vars.GCP_REGION }}
       TAG: ${{ github.sha }}
+      VERSION: ${{ inputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: google-github-actions/auth@v2
+      - uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2.1.13
         with:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
 
-      - uses: google-github-actions/setup-gcloud@v2
+      - uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2.2.1
 
       - name: Find the registry and the apps' addresses
         run: |
@@ -49,6 +79,19 @@ jobs:
           # The web app's public address, for its staff link; a custom domain if one is set.
           web_url="${{ vars.ALYR_WEB_URL }}"
           echo "WEB_URL=${web_url:-https://app.alyr.qa}" >> "$GITHUB_ENV"
+
+      - name: Note what serves now (the way back)
+        if: inputs.deploy
+        run: |
+          # For the job summary only; a failed lookup must not stop the release.
+          {
+            echo "### Releasing $VERSION from ${TAG:0:12}"
+            echo "Serving before this run. To go back: docs/runbooks/rollback.md"
+            for s in alyr-api alyr-web; do
+              echo "- $s: $(gcloud run services describe "$s" --region "$REGION" --format='value(status.latestReadyRevisionName)' 2>/dev/null || echo unknown)"
+            done
+            echo "- alyr-worker: $(gcloud run worker-pools describe alyr-worker --region "$REGION" --format='value(status.latestReadyRevisionName)' 2>/dev/null || echo unknown)"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Build and push the images
         run: |
@@ -75,6 +118,17 @@ jobs:
           gcloud run worker-pools update alyr-worker --region "$REGION" --image "$IMAGES/alyr-api:$TAG" --quiet
           gcloud run services update alyr-web --region "$REGION" --image "$IMAGES/alyr-web:$TAG" --quiet
 
+      - name: Send traffic to the new revisions
+        if: inputs.deploy
+        run: |
+          # After a rollback (docs/runbooks/rollback.md) the services stay pinned to the old
+          # revision, and a new deploy gets no traffic until they are sent back to "latest".
+          # Without this step the health check below would be talking to the old revision.
+          # Harmless when nothing is pinned.
+          gcloud run services update-traffic alyr-api --region "$REGION" --to-latest --quiet
+          gcloud run services update-traffic alyr-web --region "$REGION" --to-latest --quiet
+          gcloud run worker-pools update-instance-split alyr-worker --region "$REGION" --to-latest --quiet
+
       - name: Check it is healthy
         if: inputs.deploy
         run: |
@@ -83,4 +137,20 @@ jobs:
           for _ in $(seq 1 18); do curl -fs "$API_URL/health/worker" && break; sleep 10; done
           curl -fs "$API_URL/health/worker"
           curl -fs -o "$RUNNER_TEMP/login.html" "$WEB_URL/login"
-          echo "Deployed $TAG"
+          echo "Deployed $TAG as $VERSION"
+          echo "Deployed $VERSION (${TAG:0:12}) and it answers its health checks." >> "$GITHUB_STEP_SUMMARY"
+
+  tag:
+    # Only a release that deployed and passed its health checks is tagged.
+    needs: deploy
+    if: inputs.deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Tag the commit
+        env:
+          VERSION: ${{ inputs.version }}
+        run: bash scripts/release.sh tag "$VERSION" "$GITHUB_SHA"

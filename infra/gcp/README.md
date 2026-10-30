@@ -66,7 +66,10 @@ roles on the export bucket). On a project that already runs, do them in that ord
 `/health/ready`, `/health/worker` and `/login`.
 
 **7. GitHub deploys** (once GitHub Actions runs again, ALY-206): print the four variables,
-set them in the repository, then use Actions > `deploy-gcp`.
+set them in the repository, then use Actions > `deploy-gcp` with a release version. It
+deploys only a commit whose `ci` run is green, after the founder approves in the `production`
+environment, and tags the release (`docs/runbooks/release.md`). Going back:
+`infra/gcp/rollback.sh` (`docs/runbooks/rollback.md`).
 
 ```bash
 infra/gcp/setup.sh github
@@ -126,4 +129,5 @@ a message to ALYR's test number was answered from production within two seconds.
   refused with 401.
 
 Not yet proven: that `roles/run.developer` is enough for GitHub's deploy account to update
-the worker pool (the first `deploy-gcp` run will tell).
+the worker pool, and to move its instance split back to "latest" (the first `deploy-gcp` run
+will tell).
