@@ -5,6 +5,7 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- No setup fee for now (D-092; no migration, no new dependency): at go-live a client pays the first month of their plan and nothing else. The go-live card and the go-live step stop naming a setup fee when the accepted plan has none, and the API's payment answer says how much of it is setup (`setup`). In production the founder unticks the `setup` line in `/ops` → Price list.
 - Production hardening of the database's backups, restore and secrets (ALY-34; no code change to the product, no migration, no new dependency): `infra/gcp/restore.sh backup-drill` restores a nightly backup into a temporary instance and deletes it (12 min 8 s to a usable copy, measured on 30 Oct); `infra/gcp/audit.sh` checks the backups, the export and the secrets in one read-only command; an alert on a delete, clone, restore-over or backup delete of the production database; `infra/gcp/restore.sh revert` and a corrected way back after `repoint` (disabling the newest secret version makes `:latest` fail); the production state of secret rotation, a status-page proposal and the audit record are in `docs/`.
 
 ## v0.3.0 (30 Oct 2026)
