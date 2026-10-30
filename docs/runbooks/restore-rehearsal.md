@@ -108,6 +108,9 @@ For a real restore, with this way:
    --region me-central1 --wait`), because the new code meets the old schema otherwise.
 3. The users come back with the backup (the application role connected with production's own password), so `restore.sh check`
    then `restore.sh repoint <name>` and the rest of "The steps" above (from step 3) apply unchanged.
+4. **Data erased after the backup was taken is back.** The daily erasure job (`docs/runbooks/erasing-a-client.md`, "After a
+   restore") erases it again by itself, because it works from the dates in the database. If its switch is on, let it run (or run
+   `infra/gcp/erase.sh dry-run` first to see the clients it lists); if it is off, switch it on only after that first dry run.
 
 ## What the rehearsal does
 

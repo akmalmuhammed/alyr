@@ -14,6 +14,7 @@ reaching either backend.
 import asyncio
 import hashlib
 import hmac
+import html
 import logging
 import os
 import re
@@ -44,6 +45,15 @@ def valid_key(key: str) -> bool:
     return bool(PHOTO_KEY.fullmatch(key) or CHECK_KEY.fullmatch(key))
 
 
+# Everything a shop has in the store lives under shops/<shop id>/. Listing is only ever asked for
+# that prefix, so a bad one cannot list the whole bucket (erasing a stopped client, spec 042).
+SHOP_PREFIX = re.compile(r"shops/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/")
+
+
+def valid_prefix(prefix: str) -> bool:
+    return bool(SHOP_PREFIX.fullmatch(prefix))
+
+
 class StoreError(Exception):
     """The store refused the request (wrong credentials, wrong bucket). Retrying the same
     request will not help until someone fixes the settings."""
@@ -63,6 +73,11 @@ class Store(Protocol):
     async def get(self, key: str) -> bytes | None: ...
 
     async def delete(self, key: str) -> None: ...
+
+    async def list(self, prefix: str, limit: int = 1000) -> list[str]:
+        """Up to `limit` keys under a shop's prefix (`shops/<shop id>/`), in name order: every
+        object there, so an empty answer means the prefix is empty. Only those `valid_key`
+        accepts can be passed to `delete`."""
 
     def url(self, key: str) -> str:
         """Where a browser fetches this object."""
@@ -115,6 +130,20 @@ class LocalStore:
     async def delete(self, key: str) -> None:
         path = self._path(key)
         await asyncio.to_thread(lambda: path.unlink(missing_ok=True))
+
+    async def list(self, prefix: str, limit: int = 1000) -> list[str]:
+        if not valid_prefix(prefix):
+            raise ValueError("not a shop's prefix")
+        folder = self.root / prefix
+
+        def walk() -> list[str]:
+            if not folder.is_dir():
+                return []
+            return sorted(f"{prefix}{path.name}" for path in folder.iterdir() if path.is_file())[
+                :limit
+            ]
+
+        return await asyncio.to_thread(walk)
 
     def url(self, key: str) -> str:
         return f"{self.url_prefix}/{key}"
@@ -176,6 +205,7 @@ def sign_v4(
 
 
 _CODE = re.compile(r"<Code>([A-Za-z0-9_.-]{1,60})</Code>")
+_KEY = re.compile(r"<Key>([^<]{1,1024})</Key>")
 
 
 class S3Store:
@@ -216,10 +246,19 @@ class S3Store:
     ) -> httpx.Response:
         if not valid_key(key):
             raise ValueError("not a storable key")
-        path = quote(f"/{self.bucket}/{key}", safe="/")
+        return await self._send(
+            method, quote(f"/{self.bucket}/{key}", safe="/"), body=body, headers=headers
+        )
+
+    async def _send(
+        self, method: str, path: str, *, query: str = "", body: bytes = b"",
+        headers: dict[str, str] | None = None,
+    ) -> httpx.Response:
+        """One signed request. `query` is already in the form it is signed in (sorted, every
+        reserved character encoded), because the same text goes on the wire."""
         sent = dict(headers or {})
         sent.update(sign_v4(
-            method=method, host=self.host, path=path, headers=sent,
+            method=method, host=self.host, path=path, query=query, headers=sent,
             payload_hash=hashlib.sha256(body).hexdigest(),
             access_key_id=self._key_id, secret_access_key=self._secret,
             region=self.region, now=datetime.now(UTC),
@@ -229,7 +268,8 @@ class S3Store:
                 transport=self._transport, timeout=httpx.Timeout(20.0, connect=5.0)
             ) as http:
                 response = await http.request(
-                    method, f"https://{self.host}{path}", content=body or None, headers=sent
+                    method, f"https://{self.host}{path}" + (f"?{query}" if query else ""),
+                    content=body or None, headers=sent,
                 )
         except httpx.HTTPError as error:
             raise StoreUnavailable(f"{type(error).__name__} talking to the store") from error
@@ -269,6 +309,23 @@ class S3Store:
         # Deleting what is already gone is not an error: deletes are retried.
         if response.status_code not in (200, 204, 404):
             raise self._refused(response)
+
+    async def list(self, prefix: str, limit: int = 1000) -> list[str]:
+        """ListObjectsV2 on the shop's prefix (R2 supports it: Cloudflare's S3 API page, read
+        30 Oct 2026). One page of at most `limit` keys, 1000 at the most; a caller that deletes
+        what it got asks again."""
+        if not valid_prefix(prefix):
+            raise ValueError("not a shop's prefix")
+        query = "&".join(
+            f"{quote(k, safe=_SAFE)}={quote(v, safe=_SAFE)}" for k, v in sorted({
+                "list-type": "2", "max-keys": str(max(1, min(limit, 1000))), "prefix": prefix,
+            }.items())
+        )
+        response = await self._send("GET", quote(f"/{self.bucket}", safe="/"), query=query)
+        if response.status_code != 200:
+            raise self._refused(response)
+        keys = (html.unescape(k) for k in _KEY.findall(response.text))
+        return sorted(key for key in keys if key.startswith(prefix))
 
 
 def make_store(settings) -> Store:

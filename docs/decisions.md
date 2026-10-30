@@ -79,6 +79,9 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-091 | Recovery targets (data lost under 10 minutes, back in about 15) and the rule that an alert counts only when it reaches a phone; a restore is always a point-in-time clone to a new instance | Proposed |
 | D-072 | Shops get paid online through three doors, each ending in an account in the shop's own name: connect your own account (built first), ALYR-assisted sign-up with a partner (Noqoody, then SADAD), and opening by API only once a provider proves it; apply to Noqoody, SADAD and Tap. Updates D-044 | Accepted |
 | D-092 | No setup fee for now: at go-live a client pays the first period of their plan and nothing else; the price list's setup line is out of use, not deleted | Accepted |
+| D-116 | A stopped client's data is deleted 60 days after its cancellation takes effect (never earlier than 31); until then nothing is deleted and the workspace stays open; coming back inside the 60 days keeps everything; the deletion only reports until the founder switches it on | Proposed (built and tested; switched off; the founder switches it on once the lawyer has read D-118) |
+| D-117 | The deletion is a daily Cloud Run job under the database owner: one business per transaction, through one door in the guards of issued documents, the business's row really deleted, photos emptied by the worker from a list the job leaves, a receipt of counts only | Proposed |
+| D-118 | What ALYR keeps when it erases a client is data in one file (`core/erase_rules.py`), with ALYR's reading of the law: its own billing records and audit log stay, the shop's receipts to its customers go; every line the lawyer may change is marked | Proposed (pending the lawyer, ALY-51) |
 
 ---
 
@@ -1687,6 +1690,8 @@ Without it, analytics is off everywhere.
 
 **Revisit when** the lawyer answers ALY-51 (retention periods, what an invoice must keep), a business can stop using ALYR (item 39: its data goes 60 days later), or a customer can ask from WhatsApp directly.
 
+*Updated by D-116 (30 Oct 2026): item 39's deletion is built (spec 042); "a business's messages and records are kept while it uses ALYR" is unchanged.*
+
 ## D-071 · The homepage plays like a video
 **Date** 29 Oct 2026 · **Status** Accepted (the founder, 29 Oct 2026: "all animations should start right away. In the homepage also remove the pause button, it should feel like a video. Now it's taking a few seconds to start the motion"; asked how far, the founder chose "hide until hover or Tab") · Branch `aly-motion-now`
 
@@ -1859,6 +1864,8 @@ Without it, analytics is off everywhere.
 
 **Revisit when** the founder answers the decision card (a different grace length, or nothing paused), a Qatari card provider is added, or refunds through ALYR are built.
 
+*Updated by D-116 (30 Oct 2026): "nothing is deleted" holds for the 60 days after a cancellation takes effect; after them a stopped client's data is deleted.*
+
 ## D-073 · Alert rules live in the worker; health checks and uptime stay with the Google Cloud setup
 **Date** 28 Oct 2026 (renumbered 29 Oct from D-062) · **Status** Accepted for review (the founder, 24 Oct 2026: "i wanna start free then pay once we scale"; ntfy parked, alert email later at ops@alyr.qa, he is on call) · Linear ALY-121 · Spec `specs/034-alert-rules/spec.md` · Runbook `docs/runbooks/monitoring.md` · Builds on D-060
 
@@ -1907,3 +1914,62 @@ Without it, analytics is off everywhere.
 **Chosen over** a setup line of QAR 0 on every quote (the screens would show "Setup, once: QAR 0"), and deleting the line from the price list (its names and history would go with it).
 
 **Revisit when** setup by ALYR is sold as a service of its own, for example training on site or bringing in a large catalogue.
+
+## D-116 · A stopped client's data is deleted 60 days after its cancellation takes effect; until then nothing is, and the deletion only reports until the founder switches it on
+**Date** 30 Oct 2026 · **Status** Proposed: built and tested, switched off; the founder switches the real deletion on once the lawyer has read D-118 · Linear ALY-119 (go-live item 39; ALY-51; Linear refused a new issue, "free issue limit") · Spec `specs/042-erase-stopped-client/spec.md` · Updates D-033, D-053, D-075 and D-082 (what "nothing is deleted" meant)
+
+**Where we were.** The published privacy notice promises that "60 days after it stops, we delete its data, except what the law requires us to keep, such as our invoices to it", and that copies in backups are gone within 35 days after that. Nothing carried the promise: migration 0075, D-033, D-053 and D-082 all say nothing is deleted and the workspace never closes, and spec 038 deferred the job. The ALY-34 audit (30 Oct) found it.
+
+**The decision.**
+- **"Stops" is the day a cancellation takes effect** (`clients.cancels_on`, D-082). A client is due when that day plus `erase_after_days` (60) has come, in Qatar's calendar. The setting is never read below 31, so the 30 days to ask for a copy (D-081) are always over first.
+- **For those 60 days nothing is deleted.** Sign-in, the workspace, the data and the download all stay; only ALYR's own sending is paused (D-082). This is what D-033 and D-053 meant: ALYR does not close a client out for not paying. It never meant the data lives for ever.
+- **Coming back keeps everything.** Undoing the cancellation inside the 60 days empties `cancels_on`, and the client is never due: it is exactly as it was. The erasure and an undo cannot both win: each locks the client's row, and the erasure re-reads it. From the moment the first business of a client is erased the undo, and a new cancellation, are refused, even if the cap leaves other businesses for another night: a client half erased is not one to bring back (a hold keeps the rest).
+- **A client is the unit.** All of its businesses are erased, each in its own transaction; the client's own contact details are blanked when the last one is gone.
+- **Dry run by default; the real deletion is a switch that is off.** `ALYR_ERASE_STOPPED_CLIENTS` is false until the founder runs `infra/gcp/erase.sh enable`. With it off, or with `--dry-run`, the job reports what it would delete in a read-only transaction. A run erases at most three businesses a night, skips a client in a **hold** (a short reference, for a dispute or an authority; it travels in the job's arguments, which Google logs, so never a name) or with a **card subscription still running** at the provider or with a **business made after the cancellation was asked for** (an owner who signed up again under the same client; a business also cannot be moved into a cancelled client), never erases ALYR's own business, and stops entirely if the database has a table the rules do not name.
+- **The owner is not emailed before it happens** in this change. That is the first follow-up, and the founder should decide it before switching the deletion on (the cancellation email of D-082 already tells them the day the plan ends).
+
+**Why.** The promise is public and in two languages; a business that stops is entitled to it, and every month it is not kept is a month ALYR holds a business's customers' names and numbers without a reason. The 31-day floor, the cap, the hold and the dry run are there because this is the only thing in the product that deletes a client's data for good: a wrong date must not be able to do it quickly.
+
+**Rejected.**
+- *Deleting at the moment of cancelling.* The business would lose its 30 days to download and ALYR its answer to "I did not mean it".
+- *Closing the workspace for the 60 days.* An owner who cannot sign in cannot download their data (D-053, D-082).
+- *Counting from the last sign-in or the last message.* Nobody would know the date; the notice promises a date.
+- *Deleting an abandoned sign-up the same way.* It has no cancellation and so no clock; whether and when is a question for the lawyer and the founder (spec 042).
+
+**Revisit when** the lawyer answers ALY-51, a client asks for faster deletion (that would be an early run for that client, not a different rule), or a second kind of "stop" exists (a client closed by ALYR for abuse).
+
+## D-117 · The deletion is a daily job under the database owner: one business per transaction, through one door in the guards of issued documents, the business's row really deleted, photos emptied by the worker from a list the job leaves
+**Date** 30 Oct 2026 · **Status** Proposed · Linear ALY-119 · Spec `specs/042-erase-stopped-client/spec.md` · Migrations 0083, 0084 · Builds on D-042 (issued paper cannot be changed), D-060 (Cloud Run job, Doha) and ALY-268 (nothing always-on holds the owner's address)
+
+**The decision.**
+- **Who runs it.** A Cloud Run job `alyr-erase` (`python -m alyr.erase_job`) started daily by Cloud Scheduler, under the service account `alyr-migrate`, which already reads the owner's address and nothing more. The application's role cannot delete a business and the worker no longer holds the owner's address, so neither can run it. The job is written and **not applied** (`infra/gcp/erase.sh`): the schedule is created paused.
+- **A rule for every table, as data.** `core/erase_rules.py` says for each of the 113 tables whether it is deleted, scrubbed, kept, about people, or global, and why. `tests/test_erase.py` reads the database's tables and foreign keys and fails when a table has none, in the style of `tests/test_forget.py`. The deletion order is worked out from the foreign keys, not written by hand. The run itself refuses to start when the rules and the database disagree.
+- **One business, one transaction.** All of it or none. The client's row is locked and the conditions are checked again inside it.
+- **One door through the guards (migration 0083).** Issued documents, their lines and PDFs, and recorded payments refuse deletion for everyone, the table owner included. Each trigger that covered DELETE is split: the original keeps its name and covers the rest; a new `*_delete_guard` covers DELETE with a `WHEN` condition that skips it only for a business named in `erasing_businesses`. Only the job can add a row there (the application's role has no privilege on it), and it does so inside the transaction and removes it before it commits, so no other session ever sees it. The guard functions are not touched, and every existing immutability test passes unchanged.
+- **The business's row is deleted, not blanked.** Three foreign keys to `tenants` are dropped (migration 0084) so ALYR's kept records (quote lines, card checkouts, the terms record) name the business by ID, as the audit log already does. A blanked row left behind would have kept the business in every list and in every background loop that reads `tenants` (weekly reports, hold sweeps, the photo meters), each needing to remember to skip it.
+- **People.** A person who belonged to no other business is deleted, or made anonymous when a record ALYR keeps points at them (the quote they accepted, the terms). Someone in another business, and ALYR's own staff, are never touched.
+- **Photos.** In the same transaction the job writes `erasure_files`, a row per business with its prefix `shops/<id>/`. The worker, which holds the store's keys (the job holds none), empties the prefix every hour from a listing and finishes the row when a listing is empty. This also removes strays no record points at. R2's S3 API supports `ListObjectsV2` and `DeleteObject` (Cloudflare's page, 30 Oct 2026).
+- **The receipt** (`erasure_receipts`, append-only) is counts only: tables and numbers, dates, the rules' fingerprint. A test searches every column of the database, and the receipt, for the made-up strings of the test business.
+
+**Chosen over.**
+- *A SECURITY DEFINER function the worker calls.* Those functions trust session settings (SEC-5 of the 29 Oct audit), the worker would still hold a path to delete any business, and a bug in it would be reachable from the always-on process.
+- *Giving the worker the owner's address.* Undoes ALY-268.
+- *Switching the guards off for the length of the job* (`alter table ... disable trigger`, or `session_replication_role`). A lock on four live tables for the whole of a business's erasure, and the guard off for everyone meanwhile.
+- *A flag the application could set to pass the guard.* Anything the application can set, an attack through the application can set.
+- *Listing keys from `media_assets` instead of the prefix.* Misses strays, and has no way to show the prefix is empty.
+
+**Costs and risks, said plainly.** One long transaction per business; a business that cannot finish (a lock held by live traffic for more than 15 seconds) waits for the next night. The migration drops three foreign keys, so those records are no longer protected from naming a business that does not exist. A restore from a backup older than an erasure brings the data back and the next run erases it again. Not yet run on Google Cloud, on the real R2, or on Cloud SQL's owner role.
+
+**Revisit when** a business is too big for one transaction, or the lawyer asks for the shop's documents to be kept (D-118: one rule moves from deleted to kept, and the door's `WHEN` conditions can go).
+
+## D-118 · What ALYR keeps when it erases a client is data in one file, with ALYR's reading of the law; the lawyer's answers change lines, not code
+**Date** 30 Oct 2026 · **Status** Proposed, pending the lawyer (ALY-51) · Spec `specs/042-erase-stopped-client/spec.md` · File `apps/api/src/alyr/core/erase_rules.py`
+
+**The reading, until the lawyer answers.** "Except what the law requires us to keep, such as our invoices to it" means **ALYR's own records about the client**, not the shop's records about its customers.
+- **Kept, untouched:** the quotes and their lines (what ALYR offered and the client accepted), the client's payments, the plan emails' dates and kinds, and the back office's audit log (the database refuses to change it, so it keeps what staff typed, such as how a client asked to cancel and an owner's email when the business was made). They name the business by ID.
+- **Kept, with the personal details blanked:** the client's row keeps the name (the addressee of ALYR's invoices); the contact person's name, email and phone, ALYR's notes about them and the note of how the client asked to cancel go. A card checkout keeps its references and amounts, and loses who started it. The terms record keeps which version was accepted, when and by whom (a name as written); the address and browser go. The person who accepted is made anonymous in `users`; their name as written stays on the quote and the terms record.
+- **Deleted:** everything the business holds, including **the receipts and invoices it issued to its own customers** and the payments it recorded. They are the business's records, the business could download every PDF for 30 days (D-081), and the law's duty to keep them is the business's.
+
+**Why this, and what makes it provisional.** It keeps the smallest set that supports ALYR's own accounts and its defence in a dispute, and deletes the most that is plausibly not required. If the lawyer says ALYR must hold the shop's receipts too, that is one line in the file (and the door in migration 0083 for them stops being used); if the lawyer says a name on the quote is not needed, another. **16 rules are marked `lawyer=True`.** Questions for ALY-51: the retention period for ALYR's own records and when it starts; the accepter's name; whether a processor must keep a controller's issued invoices after the contract ends; whether a set-up that never went live is "a business that stops"; whether the 35-day backup tail needs more than the notice says.
+
+**Revisit when** the lawyer answers.

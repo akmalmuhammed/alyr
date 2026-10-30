@@ -18,6 +18,10 @@ GLOBAL_TABLES = {
     "platform_admins",
     # A verified email before its business exists (D-031).
     "signup_tokens",
+    # Erasing a stopped client (spec 042): the door through the guards (empty outside the job's
+    # own transaction), the receipt of what was deleted (counts only) and the photo store's
+    # prefixes still to empty. They name a business by ID after it is gone; no tenant_id.
+    "erasing_businesses", "erasure_receipts", "erasure_files",
     # The paying client spans businesses; the price list and the switches are ALYR's.
     # Each has its own forced row-level security (D-032).
     "clients", "price_items", "business_type_settings", "platform_settings", "quotes",

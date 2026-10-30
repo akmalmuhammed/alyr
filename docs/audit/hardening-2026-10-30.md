@@ -23,6 +23,10 @@ or printed: secrets were listed by name, version and date, never opened. Times a
   the privacy notice promises (product work, needs a way for a business to stop); (2) the development-era keys
   were never rotated, and the laptop still holds copies (founder); (3) no status page (a plan is written; needs a
   yes); (4) exports are not yet locked, which waits for one restore from an export on production data (founder).
+  *Update, 30 Oct 2026 (later the same day): (1) is built and switched off: a daily job, a rule for every table,
+  a dry run by default (`specs/042-erase-stopped-client`, D-116 to D-118, PR #205). It does nothing on production
+  until the founder applies the job and switches it on (`docs/runbooks/erasing-a-client.md`); what ALYR must keep
+  is the lawyer's question (ALY-51).*
 
 ## 1. What was asked, what was found
 
@@ -109,7 +113,7 @@ The promises are in `apps/web/app/_site/copyPrivacy.ts` (section "How long we ke
 |---|---|---|
 | A business's records are kept while it uses ALYR | Nothing deletes them; a workspace never closes (D-033, D-053, D-082) | ok |
 | A business can ask for a copy of its records within 30 days of stopping | Owners download everything as one ZIP from their account screen (D-081) | ok |
-| **ALYR deletes a stopped business's data 60 days after it stops, except what the law requires (our invoices)** | **Nothing.** There is no way for a business to stop yet (go-live item 39; `specs/038-customer-data/spec.md` defers it) and no deletion job (SEC-6, LEG-1) | **open** |
+| **ALYR deletes a stopped business's data 60 days after it stops, except what the law requires (our invoices)** | **Nothing.** There is no way for a business to stop yet (go-live item 39; `specs/038-customer-data/spec.md` defers it) and no deletion job (SEC-6, LEG-1). *Since built and switched off: `specs/042-erase-stopped-client`, D-116 to D-118; the clock is `clients.cancels_on` (D-082), which a cancellation in `/ops` sets* | **open** until the job is applied and switched on |
 | Backups are gone within 35 days after that | Cloud SQL: 14 nightly (14 days), 7 days of logs. Exports: retention 35 days, deleted at 36. On-demand backups do **not** age out: they must be deleted by hand, and `audit.sh database` fails when one is over 35 days old. The `eu` backups were deleted on 30 Oct | ok, with the manual rule |
 | A customer asks to see, correct or delete their data: answered within 30 days | The owner or admin downloads or forgets a customer from the conversation (D-075, `core/forget.py`); the rest is by email to hello@alyr.qa | ok |
 | Working copies: finished jobs 30 days, failed jobs 90, handled-message IDs 30 | `core/retention.py`, run by the worker once a day. It shipped in v0.3.0 today and nothing is yet old enough to purge, so there is no log line to show; the worker logged no error from it in 24 hours. The tests prove the delete (`tests/test_retention.py`) | ok, unproven in production until data is 30 days old |

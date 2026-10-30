@@ -43,6 +43,7 @@ alone, Google stores them in the nearest multi-region, `eu`, and the backups tak
 | Migrations | Cloud Run job `alyr-migrate` | Run by each deploy, before the rollout |
 | Database | Cloud SQL for PostgreSQL 16 `alyr-db`, `db-g1-small` | Shared vCPU, 1.7 GB, 10 GB SSD growing on its own; private address only; encrypted connections only |
 | Nightly export | Cloud Run job `alyr-db-export`, started at 02:00 Doha time by Cloud Scheduler | Writes `gs://alyr-prod-db-exports/alyr-<time>.sql.gz` |
+| Erasing stopped clients' data (spec 042, D-116) | Cloud Run job `alyr-erase` (as `alyr-migrate`) started at 03:30 Doha time by Cloud Scheduler. **Written in `infra/gcp/erase.sh`, not applied;** when applied it is made with the switch off and the schedule paused | Reports only until `erase.sh enable`; `docs/runbooks/erasing-a-client.md` |
 | Secrets | Secret Manager, stored in Doha only | |
 | Images | Artifact Registry `me-central1-docker.pkg.dev/alyr-prod/alyr` | |
 | Spending | Two budgets of USD 150: "ALYR monthly" (credits count, so it alerts only once credits are gone) and "ALYR gross cost" (credits excluded, so it alerts while credits pay), each at 50%, 90%, 100% and a forecast of 100%, sent to the same alert channels as everything else | |
