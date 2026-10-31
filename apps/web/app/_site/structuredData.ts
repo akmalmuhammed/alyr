@@ -3,8 +3,12 @@
 // in the page's language, so the markup never claims more than the page does.
 //
 // Honest by construction (alyr-design/honesty.md):
-// - no `offers`, `price`, `aggregateRating` or `review`: prices are off (D-034) and there are
-//   no customers to rate anything;
+// - no `offers`, `price`, `aggregateRating` or `review`: the homepage's and the product pages'
+//   prices are off (D-034) and there are no customers to rate anything. The pricing page
+//   (ALY-301) shows prices but is a plain WebPage like the privacy policy: its figures are
+//   on the page for people, and ALYR does not mark them up as an Offer (the price depends on
+//   the products a business chooses and a quote confirms it, so one machine-readable price
+//   would claim more than the page does);
 // - `legalName`, `taxID`, `identifier`, `foundingDate` and the city come from the commercial
 //   registration and the tax card (26 Oct 2026), nothing else, and `sameAs`
 //   only lists profiles named in NEXT_PUBLIC_ALYR_SAME_AS, once each exists (D-056);

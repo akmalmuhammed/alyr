@@ -189,6 +189,13 @@ sign-up is open: [go-live-checklist.md](go-live-checklist.md), "Opening self-ser
 step. A build's `/version.txt` says which way the switches went (`offer`, `try-free`), so what is
 live can be read from outside.
 
+**The pricing, terms and refund pages need no switch** (ALY-301, D-124). `/pricing`, `/terms`,
+`/refund` and their `/ar` pages are built into every publish, and the pricing page shows its prices
+whatever `NEXT_PUBLIC_ALYR_OFFER` says. The workflow does not pass that variable, so the homepage's
+price section stays off; do not set it until the prepared offer copy has been re-read against D-092
+(it still names a setup fee). After a publish: `curl -sI https://alyr.qa/pricing /terms /refund` (and
+the `/ar` ones) answer 200, and `/sitemap.xml` lists them.
+
 To publish automatically again after each merge, add a `push` trigger back to
 `site-deploy.yml`; with the reviewer in place every push then waits for the founder's
 approval. It was taken out on 30 Oct because that is a queue of approvals for unreleased,

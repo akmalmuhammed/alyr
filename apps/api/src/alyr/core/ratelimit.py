@@ -26,6 +26,7 @@ log = logging.getLogger("alyr.ratelimit")
 
 HOUR = 3600
 TEN_MINUTES = 600
+DAY = 24 * HOUR
 
 
 @dataclass(frozen=True)
@@ -192,6 +193,34 @@ async def hit(db: Database, bucket: str, subject: str, limit: Limit) -> None:
             "insert into rate_hits (bucket, key) values ($1, $2)", bucket, key
         )
         await conn.execute("delete from rate_hits where at < now() - interval '1 day'")
+
+
+async def count_on(conn, bucket: str, subject: str, seconds: int) -> int:
+    """How many requests `subject` made in this bucket in the last `seconds`, on a connection the
+    caller already holds (so the count and a later `record_on` can sit in one transaction). A day
+    is the longest window that is kept: `hit` deletes older rows."""
+    return await conn.fetchval(
+        "select count(*) from rate_hits "
+        "where bucket = $1 and key = $2 and at > now() - make_interval(secs => $3)",
+        bucket, _digest(subject), float(seconds),
+    )
+
+
+async def record_on(conn, bucket: str, subject: str) -> None:
+    """Count one request without ever refusing it. For events that must be counted whether or
+    not the limit is reached, such as a wrong sign-in code."""
+    await conn.execute(
+        "insert into rate_hits (bucket, key) values ($1, $2)", bucket, _digest(subject)
+    )
+
+
+async def forget_on(conn, bucket: str, subject: str) -> int:
+    """Forget every request counted for `subject` in this bucket; returns how many. Only the
+    break-glass script calls it (`staff_breakglass.py`), as the database owner."""
+    return await conn.fetchval(
+        "with gone as (delete from rate_hits where bucket = $1 and key = $2 returning 1) "
+        "select count(*) from gone", bucket, _digest(subject),
+    )
 
 
 def refuse(error: TooManyRequests) -> HTTPException:

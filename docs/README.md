@@ -16,7 +16,7 @@ Where each kind of document lives is set by [hygiene.md](hygiene.md). Read in th
 | [working-with-claude.md](working-with-claude.md) | How AI-built projects fail and our guard against each |
 | [brand.md](brand.md) | Brand rules and the design system |
 | [research/](research/) | Every marketing, sales, growth, customer, design and social study; start with `research/current-truth.md` |
-| [runbooks/](runbooks/) | Incident response, restoring the database (and rehearsing it), monitoring and alerts, secret rotation, the Cloudflare edge and DNS (`cloudflare-edge.md`), go-live checklist, product photo storage, site deploy and rollback, releases (`release.md`) and rolling back production (`rollback.md`), the visitor's address for the rate limits, connecting a shop's WhatsApp number and looking after its line (`whatsapp-line.md`), message templates on a shop's account (`whatsapp-templates.md`) |
+| [runbooks/](runbooks/) | Incident response, restoring the database (and rehearsing it), monitoring and alerts, secret rotation, the Cloudflare edge and DNS (`cloudflare-edge.md`), go-live checklist, product photo storage, site deploy and rollback, releases (`release.md`) and rolling back production (`rollback.md`), the visitor's address for the rate limits, the sign-in of ALYR's own staff and its break-glass (`staff-sign-in.md`), connecting a shop's WhatsApp number and looking after its line (`whatsapp-line.md`), message templates on a shop's account (`whatsapp-templates.md`) |
 | [audit/](audit/) | Audits, each finding with an issue number |
 | [lanes/](lanes/) | Each lane's brief and "Now" |
 | [growth/](growth/), [company/](company/) | Drafts and applications for the founder |
