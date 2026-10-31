@@ -208,6 +208,11 @@ async def booking_page(
     async with request.app.state.db.tenant(shop["id"]) as conn:
         services = await service.list_services(conn, only_active=True)
         resources = await _public_resources(conn)
+        # Who does each service, so the page offers only them (a service the shop limited to
+        # one chair is not offered with the others).
+        by_service = await service.doers(conn)
+        for one in services:
+            one["doers"] = by_service.get(one["id"], [])
         terms = await deposits.shop_terms(conn)
         customer = None
         if link is not None:

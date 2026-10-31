@@ -20,7 +20,7 @@ import { customerName } from "../../_customer/testName";
 
 type Service = {
   id: string; name: string; name_ar: string; duration_minutes: number; price: number;
-  deposit: number;
+  deposit: number; doers: string[];
 };
 type Person = { id: string; name: string; name_ar: string; kind: "person" | "place"; services: string[] };
 type LinkState = { state: "none" | "ok" | "invalid" | "expired"; message: string; message_ar: string };
@@ -197,7 +197,7 @@ function BookingForm() {
   const toggle = () => setChosen(lang === "en" ? "ar" : "en");
   const chosenService = page.services.find((s) => s.id === serviceId);
   // The people or chairs that do the chosen service: a choice only when there is more than one.
-  const doers = page.resources.filter((r) => r.services.length === 0 || r.services.includes(serviceId));
+  const doers = page.resources.filter((r) => chosenService?.doers.includes(r.id));
   const choosing = Boolean(serviceId) && doers.length > 1;
   const step = (n: number) => (choosing ? n + 1 : n);
   const nameOf = (r: { name: string; name_ar: string }) => (lang === "ar" && r.name_ar ? r.name_ar : r.name);

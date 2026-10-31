@@ -483,6 +483,24 @@ async def set_service_resources(
     return True
 
 
+async def doers(conn: asyncpg.Connection) -> dict[str, list[str]]:
+    """For each service, the active people or chairs that do it, in the shop's order: all of
+    them for a service nobody was chosen for, else the ones chosen. The booking page offers
+    exactly these (a chair with nothing chosen for it does every service only while no service
+    is narrowed, so the page cannot guess it from the chair's own list)."""
+    out: dict[str, list[str]] = {}
+    for row in await conn.fetch(
+        "select s.id as service_id, r.id as resource_id from services s "
+        "join booking_resources r on r.active "
+        "where not exists (select 1 from service_resources sr where sr.service_id = s.id) "
+        "   or exists (select 1 from service_resources sr "
+        "              where sr.service_id = s.id and sr.resource_id = r.id) "
+        "order by r.sort, r.created_at"
+    ):
+        out.setdefault(str(row["service_id"]), []).append(str(row["resource_id"]))
+    return out
+
+
 async def resource(conn: asyncpg.Connection, resource_id: UUID | None) -> dict | None:
     """One resource as messages name it: {name, name_ar, kind}, or None."""
     if resource_id is None:

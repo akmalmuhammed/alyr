@@ -146,6 +146,21 @@ def test_only_the_chosen_chair_takes_the_service(client):
     assert who(book(client, sid, first, a)) == "Chair 2"
 
 
+def test_the_booking_page_says_who_does_each_service(client):
+    """A chair with nothing chosen for it does every service only while no service is narrowed, so
+    the page is told who does each one and offers exactly them."""
+    one, two = chairs(client)
+    made(client, resource_ids=[two])
+    by_name = {s["name"]: s for s in client.get(PAGE).json()["services"]}
+    assert by_name["Eyebrow threading"]["doers"] == [two]
+    assert by_name["Electrician site visit"]["doers"] == [one, two]
+    # A chair switched off is not offered for anything.
+    client.post(f"/api/resources/{one}/active", json={"active": False})
+    by_name = {s["name"]: s for s in client.get(PAGE).json()["services"]}
+    assert by_name["Electrician site visit"]["doers"] == [two]
+    assert client.get(PAGE).json()["services"][0]["doers"] == [two]
+
+
 def test_a_missing_service_is_not_found(client):
     gone = "0a1f0000-0000-4000-8000-00000000dead"
     assert client.patch(f"/api/services/{gone}", json={"price": 1}).status_code == 404

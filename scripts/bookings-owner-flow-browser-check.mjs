@@ -53,7 +53,7 @@ const W = AR
     thread: "تشذيب الحاجبين", threadEn: "Eyebrow threading", needName: "اكتب اسم الخدمة", badLength: "المدة عدد صحيح من الدقائق",
     needPrice: "النسبة من السعر تحتاج إلى سعر", added: "تمت إضافة الخدمة", saved: "تم حفظ الخدمة", hidden: "أُخفيت الخدمة",
     shown: "الخدمة ظاهرة الآن", hiddenTag: "مخفية", booked: "تم تأكيد", edit: "تعديل", minutes: "دقيقة", qar: "ر.ق",
-    onlyThese: "هؤلاء فقط", needWho: "اختر موظفاً أو كرسياً واحداً على الأقل", addPerson: "إضافة",
+    onlyThese: "هؤلاء فقط", needWho: "اختر موظفاً أو كرسياً واحداً على الأقل", addPerson: "إضافة", chooseWho: "اختر من يخدمك",
   }
   : {
     setup: "Set up bookings", back: "Back to the day", services: "Services", addService: "Add a service", addSave: "Add service",
@@ -61,7 +61,7 @@ const W = AR
     thread: "Eyebrow threading", threadEn: "Eyebrow threading", needName: "Write the service's name", badLength: "The length is a whole number of minutes",
     needPrice: "A share of the price needs the service to have a price", added: "Service added", saved: "Service saved", hidden: "Hidden. Customers no longer see it",
     shown: "Shown on the booking page", hiddenTag: "Hidden", booked: "confirmed", edit: "Edit", minutes: "min", qar: "QAR",
-    onlyThese: "Only these", needWho: "Choose at least one person or chair", addPerson: "Add",
+    onlyThese: "Only these", needWho: "Choose at least one person or chair", addPerson: "Add", chooseWho: "Choose who",
   };
 
 // A booking link for one customer, signed with the development key, as the chat would send it.
@@ -116,6 +116,9 @@ try {
   await b.send("Emulation.setLocaleOverride", { locale: AR ? "ar-QA" : "en-GB" });
 
   await run("sign up a new salon through the real sign-up", async () => {
+    // Every run makes a salon and asks for codes, and the sign-up is limited per address (ten an
+    // hour): this scratch database's counters start from nothing, as a first visit's would.
+    sql("delete from rate_hits");
     await b.go(`${BASE}/login`, 800);
     const made = await js(`(async () => {
       localStorage.setItem('alyr-workspace-lang', ${JSON.stringify(LANG)});
@@ -257,6 +260,7 @@ try {
     await until("document.querySelectorAll('.cx-choice').length > 0", "the services");
     check(await js("[...document.querySelectorAll('.cx-choice')].some((x) => x.textContent.includes('Eyebrow') || x.textContent.includes('تشذيب'))"), "the service the owner added is on the booking page");
     await click("[...document.querySelectorAll('.cx-choice')].find((x) => x.textContent.includes('Eyebrow') || x.textContent.includes('تشذيب'))", 600);
+    check(!(await text()).includes(W.chooseWho), "the page does not ask who when only one chair does the service");
     for (let d = 1; d < 10; d += 1) {
       await click(`document.querySelectorAll('.cx-day')[${d}]`, 900);
       await until("document.querySelectorAll('.cx-time').length > 0 || [...document.querySelectorAll('.cx-note')].length > 0", "the times");

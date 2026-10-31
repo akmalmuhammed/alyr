@@ -25,7 +25,7 @@ Rules, in the API and again in the page's own words before anything is sent:
 - The length is a whole number of minutes from 5 to 600 (`bad_duration` on the page; the database's check behind it). The booking page offers times on the shop's 30-minute step whatever the length.
 - The price is typed in QAR ("80", "12.5", Arabic digits and the Arabic decimal mark too) and stored in dirhams, read from the text and never through a float. Empty means no price is shown (stored as 0).
 - A deposit is none, a fixed amount from QAR 1 and not over the price (when the service has one), or a share of the price from 1% to 100% (`bad_deposit`). A share of a service with no price asks nothing, so it is refused (`deposit_needs_price`). The check is on the **whole** service: a price cannot be lowered under a fixed deposit by a change that names only the price.
-- Who does it: everyone who takes bookings, or only the people or chairs ticked (at least one). Asked only when the shop lists people or chairs. Someone switched off since is dropped from the choice.
+- Who does it: everyone who takes bookings, or only the people or chairs ticked (at least one). Asked only when the shop lists people or chairs. Someone switched off since is dropped from the choice. The booking page is told who does each service (`doers` on each service: every active person or chair for a service nobody was chosen for, else the chosen ones) and offers exactly those; a service limited to one chair is booked on that chair with no question asked.
 - A shop may list up to 100 services (`too_many_services`).
 
 **Hiding is not deleting.** A hidden service leaves the booking page and cannot be booked or asked for times; the bookings on it stay. When there are bookings still to come the screen says how many, and asks, before hiding. The list marks a hidden service and keeps it, so it can be shown again. If every service is hidden the screen says customers have nothing to book.
@@ -47,7 +47,7 @@ Every word is in `bookingsCopy.ts`, English and Arabic against one type. The for
 
 ## Checks
 
-- `tests/test_bookings_services.py` (16): the whole service made in one request and nothing half made, the refusals, the price held over a fixed deposit, who does it (and the chosen chair takes the booking), hide and show with bookings kept and not bookable, the price a booking was made at kept across a price change (and the trigger alone), agents refused, another shop's service refused, the 100 limit.
+- `tests/test_bookings_services.py` (17): the whole service made in one request and nothing half made, the refusals, the price held over a fixed deposit, who does it (the chosen chair takes the booking, and the booking page offers only the people who do a service), hide and show with bookings kept and not bookable, the price a booking was made at kept across a price change (and the trigger alone), agents refused, another shop's service refused, the 100 limit.
 - `bookingsServiceForm.test.mjs` (11): prices read from text without a float, Arabic digits, what is refused, the form turned into the request.
 - `scripts/bookings-owner-flow-browser-check.mjs`: a new salon signs up through the real sign-up API; the owner adds a service with a deposit (every refusal in words), changes the price, hides and shows it; a customer books it on `/b/<slug>`; the owner sees it on the day. English and Arabic, 1440, 390 and 320 px, light and dark, axe, 44 px targets, no sideways scroll.
 - `scripts/bookings-day-browser-check.mjs` follows the new setup layout.
