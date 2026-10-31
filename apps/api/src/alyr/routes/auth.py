@@ -98,6 +98,7 @@ async def logout(request: Request, response: Response) -> dict:
     token = request.cookies.get(auth.COOKIE)
     if token:
         await auth.sign_out(request.app.state.db, token)
+        request.app.state.sessions.forget(token)
     response.delete_cookie(auth.COOKIE, path="/")
     return {"signed_in": False}
 

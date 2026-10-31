@@ -16,9 +16,12 @@ queued, so a customer's messages arrive in the order they were written (ALY-276)
 
 Customers come first. A kind registered as `background` (a weekly report, a photo for the
 store, an event for a shop's other system) is claimed only after every customer's job that
-is due, and a batch holds no more of them than the runner runs at once. So the shops' weekly
-reports, all due at nine on Sunday, never stand in front of a customer's message. A
-background job that has waited `BACKGROUND_WAITS_AT_MOST` takes its turn like any other.
+is due, and a batch holds no more of them than half the runner's places (`background_places`).
+So the shops' weekly reports, all due at nine on Sunday, never stand in front of a customer's
+message, and a message that arrives while a batch of reports runs finds free places instead of
+waiting for it to finish (D-132: the Sunday run of 31 Oct 2026 made replies take 3.8 s at the
+95th percentile with five reports at a time, against 1.4 s without them). A background job that
+has waited `BACKGROUND_WAITS_AT_MOST` takes its turn like any other.
 """
 
 import asyncio
@@ -101,6 +104,11 @@ class JobRunner:
         self._draining = False
         self._again = False
         self._reclaimed_at = float("-inf")
+
+    @property
+    def background_places(self) -> int:
+        """How many background jobs a batch holds: half the places, and at least one."""
+        return max(1, self._concurrency // 2)
 
     def register(
         self, kind: str, handler: Handler, on_dead: Handler | None = None, *,
@@ -219,7 +227,7 @@ class JobRunner:
                                     "or run_at < now() - make_interval(secs => $3))"),
                 BATCH, background, BACKGROUND_WAITS_AT_MOST,
             )
-            room = min(BATCH - len(claimed), self._concurrency)
+            room = min(BATCH - len(claimed), self.background_places)
             if room > 0 and background:
                 claimed += await conn.fetch(
                     _CLAIM.format(which="kind = any($2::text[])"), room, background

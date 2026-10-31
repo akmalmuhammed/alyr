@@ -482,7 +482,7 @@ for s in json.load(sys.stdin).get('data', []):
 
     echo "The API, the worker and the web app..."
     g run deploy alyr-api --region="$REGION" --image="$images/alyr-api:$tag" --args=api --port=8080 \
-      --cpu=1 --memory=1Gi --min-instances=1 --max-instances=3 --concurrency=40 --cpu-boost \
+      --cpu=1 --memory=1Gi --min-instances=1 --max-instances=3 --concurrency=80 --timeout=60 --cpu-boost \
       --service-account="$(sa alyr-run)" "${private_net[@]}" --allow-unauthenticated \
       --set-env-vars="$api_env" --set-secrets="$api_secrets"
     g run worker-pools deploy alyr-worker --region="$REGION" --image="$images/alyr-api:$tag" \

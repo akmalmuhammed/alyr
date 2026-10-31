@@ -906,6 +906,19 @@ async def set_status(
     return True
 
 
+# The Orders screen lists the orders of the last ORDERS_DAYS days and every order still open,
+# at most ORDERS_SHOWN of them, newest first. It is read every few seconds by every open tab,
+# and a shop that has traded for a year has thousands of finished orders nobody is working on:
+# the cost of a refresh must not grow with them (D-130). Older ones stay in the Documents list,
+# the customer's history and the download of everything the business keeps.
+ORDERS_DAYS = 30
+ORDERS_SHOWN = 1000
+_OPEN = (
+    "(o.status in ('new', 'confirmed', 'ready') "
+    "or (o.payment = 'unpaid' and o.status <> 'cancelled'))"
+)
+
+
 async def list_orders(conn: asyncpg.Connection) -> list[dict]:
     orders = await conn.fetch(
         "select o.id, o.number, o.status, o.payment, o.total, o.created_at, o.fulfil_on, "
@@ -917,16 +930,23 @@ async def list_orders(conn: asyncpg.Connection) -> list[dict]:
         "         as price_group_default "
         "from orders o join contacts c on c.id = o.contact_id "
         "left join price_groups g on g.id = o.price_group_id "
-        "left join users u on u.id = o.assigned_to order by o.number desc"
+        "left join users u on u.id = o.assigned_to "
+        f"where o.created_at >= now() - make_interval(days => $1) or {_OPEN} "
+        "order by o.number desc limit $2",
+        ORDERS_DAYS, ORDERS_SHOWN,
     )
+    ids = [o["id"] for o in orders]
     items = await conn.fetch(
         "select order_id, name, price, quantity, variant_name, options, sku, custom, discount, "
         "       unit, unit_shown "
-        "from order_items"
+        "from order_items where order_id = any($1)",
+        ids,
     )
     given: dict[UUID, list[dict]] = {}
     if any(o["discount_total"] for o in orders):
-        for d in await conn.fetch("select * from order_discounts order by sort"):
+        for d in await conn.fetch(
+            "select * from order_discounts where order_id = any($1) order by sort", ids
+        ):
             given.setdefault(d["order_id"], []).append(discounts.snapshot(d))
     by_order: dict[UUID, list[dict]] = {}
     for item in items:

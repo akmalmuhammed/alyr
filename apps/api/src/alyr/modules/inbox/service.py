@@ -32,30 +32,62 @@ def _assignee(row) -> dict | None:
     return {"id": str(row["assigned_to"]), "name": row["assignee_name"]}
 
 
-async def conversations(
+# How many conversations the inbox lists at most: the ones with the newest messages. A shop that
+# has traded for a year has thousands of customers; the list is read every few seconds by every
+# open tab, so its cost must not grow with them (D-130). An older conversation comes back to the
+# top when either side writes again.
+CONVERSATIONS_SHOWN = 300
+
+# Customers who have written, filtered by status and by who they are assigned to. Only customers
+# who have written: a reminder run must not fill the inbox.
+_WHO = (
+    "c.role = 'customer' and c.last_inbound_at is not null "
+    "and ($1 = 'all' or c.inbox_status = $1) "
+    "and ($2 = 'any' or ($2 = 'none' and c.assigned_to is null) "
+    "     or ($2 = 'me' and c.assigned_to = $3))"
+)
+
+
+async def unread_count(
     conn: asyncpg.Connection, status: str = "open", assigned: str = "any",
     me: UUID | None = None,
+) -> int:
+    """How many conversations have a message from the customer nobody has read yet. Read off the
+    two times the database keeps on each customer (migration 0090), so it is one pass over an
+    index, not a look at every message."""
+    return await conn.fetchval(
+        f"select count(*)::int from contacts c where {_WHO} "
+        "and c.last_in_message_at > coalesce(c.inbox_read_at, '-infinity')",
+        status, assigned, me,
+    )
+
+
+async def conversations(
+    conn: asyncpg.Connection, status: str = "open", assigned: str = "any",
+    me: UUID | None = None, limit: int = CONVERSATIONS_SHOWN,
 ) -> list[dict]:
-    """Customers who have written to the shop, newest activity first."""
+    """Customers who have written to the shop, newest activity first: at most `limit`."""
     rows = await conn.fetch(
         "select c.id, c.name, c.phone, c.username, c.inbox_status, c.assistant_paused, "
         f"      c.consent_service, {_WINDOW} as window_open, "
         "       c.last_inbound_at + interval '24 hours' as window_closes_at, "
         "       last.body, last.direction, last.kind, last.status, last.created_at, "
         "       c.assigned_to, u.name as assignee_name, "
-        "       (select count(*) from messages m where m.contact_id = c.id "
-        "          and m.direction = 'in' "
-        "          and m.created_at > coalesce(c.inbox_read_at, '-infinity'))::int as unread "
-        "from contacts c left join users u on u.id = c.assigned_to "
+        # Counted only for a conversation that has something unread, which the two times kept on
+        # the customer say without looking at a message (most are read).
+        "       case when c.last_in_message_at > coalesce(c.inbox_read_at, '-infinity') then "
+        "         (select count(*) from messages m where m.contact_id = c.id "
+        "            and m.direction = 'in' "
+        "            and m.created_at > coalesce(c.inbox_read_at, '-infinity'))::int "
+        "         else 0 end as unread "
+        # The newest conversations come off an index; only they are looked at further.
+        f"from (select * from contacts c where {_WHO} and c.last_message_at is not null "
+        "      order by c.last_message_at desc, c.id limit $4) c "
+        "left join users u on u.id = c.assigned_to "
         "join lateral (select body, direction, kind, status, created_at from messages m "
         "              where m.contact_id = c.id order by created_at desc limit 1) last on true "
-        # Only customers who have written: a reminder run must not fill the inbox.
-        "where c.role = 'customer' and c.last_inbound_at is not null "
-        "  and ($1 = 'all' or c.inbox_status = $1) "
-        "  and ($2 = 'any' or ($2 = 'none' and c.assigned_to is null) "
-        "       or ($2 = 'me' and c.assigned_to = $3)) "
         "order by last.created_at desc",
-        status, assigned, me,
+        status, assigned, me, limit,
     )
     return [
         {
@@ -73,6 +105,22 @@ async def conversations(
         }
         for r in rows
     ]
+
+
+async def listing(
+    conn: asyncpg.Connection, status: str = "open", assigned: str = "any",
+    me: UUID | None = None,
+) -> dict:
+    """The inbox list: the newest conversations, and how many in all wait for a first look.
+    `more` is there, and true, only when older conversations are not listed."""
+    rows = await conversations(conn, status, assigned, me, CONVERSATIONS_SHOWN + 1)
+    out = {
+        "conversations": rows[:CONVERSATIONS_SHOWN],
+        "unread": await unread_count(conn, status, assigned, me),
+    }
+    if len(rows) > CONVERSATIONS_SHOWN:
+        out["more"] = True
+    return out
 
 
 async def thread(conn: asyncpg.Connection, contact_id: UUID) -> dict | None:
