@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The break-glass for ALYR's own staff accounts on Google Cloud in Doha (ALY-125, D-135, D-136).
-# NOT APPLIED: nothing here has been run against the production project. Run it on the founder's
-# machine, signed in with `gcloud auth login` as an owner of the project, when the founder says go.
+# APPLIED 31 Oct 2026: the job exists on the production project (image = the commit the API runs).
+# Run it on the founder's machine, signed in with `gcloud auth login` as an owner of the project.
 #
 #   infra/gcp/staff-access.sh plan <tag>             print what `deploy` would do, calling nothing (the default)
 #   infra/gcp/staff-access.sh deploy <tag>           make the Cloud Run job `alyr-staff-access`
@@ -75,13 +75,25 @@ deploy_job() { # tag
 }
 
 run_job() { # the job's arguments, after python -m alyr.staff_breakglass
-  local args="python@-m@alyr.staff_breakglass" a
+  local args="python|-m|alyr.staff_breakglass" a
   for a in "$@"; do
-    case "$a" in *@*) echo "staff-access: '@' cannot be used in an argument" >&2; exit 1 ;; esac
-    args="$args@$a"
+    case "$a" in *"|"*) echo "staff-access: '|' cannot be used in an argument" >&2; exit 1 ;; esac
+    args="$args|$a"
   done
-  # `^@^` makes @ the list separator, because a reason may have commas in it.
-  g run jobs execute "$JOB" --region="$REGION" --args="^@^$args" --wait
+  # `^|^` makes | the list separator, because a reason may have commas in it and an email has an @.
+  g run jobs execute "$JOB" --region="$REGION" --args="^|^$args" --wait
+}
+
+show_answer() { # everything the last execution printed (its JSON is logged a line at a time)
+  local exec out try
+  exec="$(g run jobs executions list --job="$JOB" --region="$REGION" --limit=1 --format='value(name)' | tr -d '\r')"
+  for try in 1 2 3 4 5; do
+    out="$(g logging read "resource.type=\"cloud_run_job\" AND resource.labels.job_name=\"$JOB\" AND labels.\"run.googleapis.com/execution_name\"=\"$exec\"" \
+      --order=asc --freshness=1d --format='value(textPayload)' | tr -d '\r' | grep -v '^$' || true)"
+    case "$out" in *"Container called exit"*) break ;; esac
+    sleep 5 # Google's log lags the execution by a few seconds
+  done
+  echo "$out"
 }
 
 show_logs() {
@@ -115,18 +127,18 @@ case "${1:-plan}" in
 
   status)
     run_job status "${2:?usage: staff-access.sh status <email>}"
-    show_logs 1
+    show_answer
     ;;
 
   ready)
     run_job ready
-    show_logs 1
+    show_answer
     ;;
 
   require)
     echo "Checking that nobody on the staff list would be locked out..."
     run_job ready
-    show_logs 1
+    show_answer
     cat <<'TEXT'
 This makes the second factor REQUIRED for the whole back office (/ops and /api/admin): every ALYR
 staff sign-in must then pass its authenticator code or a recovery code, and a member of staff with
@@ -150,19 +162,19 @@ TEXT
   clear-lock)
     email="${2:?usage: staff-access.sh clear-lock <email> <reason>}"; shift 2
     run_job clear-lock "$email" "$(reason_of "$@")"
-    show_logs 1
+    show_answer
     ;;
 
   reset-factor)
     email="${2:?usage: staff-access.sh reset-factor <email> <reason>}"; shift 2
     run_job reset-factor "$email" "$(reason_of "$@")"
-    show_logs 1
+    show_answer
     ;;
 
   open-enrolment)
     email="${2:?usage: staff-access.sh open-enrolment <email> <reason>}"; shift 2
     run_job open-enrolment "$email" "$(reason_of "$@")"
-    show_logs 1
+    show_answer
     ;;
 
   logs) show_logs "${2:-5}" ;;
