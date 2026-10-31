@@ -81,12 +81,20 @@ export function checkClosure(first: string, last: string, today: string): Closur
   return null;
 }
 
-/** "1–5 Nov", "1 Nov", with the year when it is not this year's; Western digits in Arabic. */
+/** "1–5 Nov", "1 Nov", "30 Nov – 2 Dec", with the year when it is not this year's; Western digits
+ * in Arabic. Written from the day, the month and the year as the browser names them, not by
+ * `formatRange`, whose wording and spaces differ between versions of the browser's own data
+ * (Node on Linux wrote "1 – 5 Nov" where it is "1–5 Nov" on Windows). */
 export function rangeText(first: string, last: string, lang: "en" | "ar", today: string): string {
   const at = (d: string) => new Date(`${d}T12:00:00Z`);
+  const locale = lang === "ar" ? "ar-u-nu-latn" : "en-GB";
+  const part = (d: string, options: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat(locale, { ...options, timeZone: "UTC" }).format(at(d));
   const withYear = first.slice(0, 4) !== today.slice(0, 4) || last.slice(0, 4) !== today.slice(0, 4);
-  const format = new Intl.DateTimeFormat(lang === "ar" ? "ar-u-nu-latn" : "en-GB", {
-    day: "numeric", month: "short", ...(withYear ? { year: "numeric" } : {}), timeZone: "UTC",
-  });
-  return first === last ? format.format(at(first)) : format.formatRange(at(first), at(last));
+  const one = (d: string) => `${part(d, { day: "numeric" })} ${part(d, { month: "short" })}${withYear ? ` ${part(d, { year: "numeric" })}` : ""}`;
+  if (first === last) return one(first);
+  if (first.slice(0, 7) === last.slice(0, 7)) {
+    return `${part(first, { day: "numeric" })}–${part(last, { day: "numeric" })} ${part(first, { month: "short" })}${withYear ? ` ${part(first, { year: "numeric" })}` : ""}`;
+  }
+  return `${one(first)} – ${one(last)}`;
 }
