@@ -24,6 +24,7 @@ const MAIN: NavItem[] = [
   { href: "/ops/requests", label: "Requests", icon: "asks" },
 ];
 const SETTINGS: NavItem[] = [
+  { href: "/ops/whatsapp", label: "WhatsApp lines", icon: "line" },
   { href: "/ops/usage", label: "Usage", icon: "usage" },
   { href: "/ops/prices", label: "Price list", icon: "price" },
   { href: "/ops/templates", label: "Templates", icon: "templates" },
@@ -39,6 +40,7 @@ const PATHS: Record<string, string> = {
   clients: "M16 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1 M9 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6 M22 19v-1a4 4 0 0 0-3-3.9 M16 4.1a3 3 0 0 1 0 5.8",
   asks: "M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2.1-5.6A8.5 8.5 0 1 1 21 11.5Z",
   onboarding: "M4 12h4l3 7 4-14 3 7h2",
+  line: "M5 12a7 7 0 0 1 14 0 M8.5 12a3.5 3.5 0 0 1 7 0 M12 12v8 M9 20h6",
   usage: "M5 20v-8 M12 20V5 M19 20v-5 M3 20h18",
   price: "M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z M7.5 7.5h.01",
   templates: "M4 4h7v7H4z M13 4h7v7h-7z M4 13h7v7H4z M16.5 13v7 M13 16.5h7",

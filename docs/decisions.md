@@ -83,11 +83,14 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-117 | The deletion is a daily Cloud Run job under the database owner: one business per transaction, through one door in the guards of issued documents, the business's row really deleted, photos emptied by the worker from a list the job leaves, a receipt of counts only | Proposed |
 | D-118 | What ALYR keeps when it erases a client is data in one file (`core/erase_rules.py`), with ALYR's reading of the law: its own billing records and audit log stay, the shop's receipts to its customers go; every line the lawyer may change is marked | Proposed (pending the lawyer, ALY-51) |
 | D-123 | The workspace's line-up is the public site's six products: ALYR Shelf (the Catalog, "with every product", never priced as an added product) and ALYR Docs (Documents, switched on per shop, no price named) join Chat, Bookings, Agent and Accounts; no quote, no shop and no Sunday report changes | Proposed |
+| D-124 | The terms of service, the refund policy and the pricing page are public in English and Arabic, linked from the footer of every page (Pricing also from the main navigation), and the pricing page shows its prices whatever the homepage's offer switch says: riyals by bank transfer, US dollars by card, no setup fee | Accepted |
 | D-119 | The public site can lead with "Try it free" (the self-serve sign-up) with "Book a check-up" beside it, behind a build-time switch that is off until the founder turns it on at publish time | Proposed |
 | D-121 | The owner is emailed once when ALYR publishes their price, ahead of the rest of the payment path: English or Arabic as they signed up, claimed on the quote so it never goes twice, nothing sent for a price they already saw or an address that cannot be real. The part of D-093 that shipped on its own | Proposed (the founder signs off the wording) |
 | D-122 | ALYR's own business keeps no test line: the "Try it" step says so and offers to skip, and the one-off first-admin job does not create one | Proposed |
+| D-145 | A shop's WhatsApp line is checked against Meta, tested with a message to the shop's own staff and kept on a trail; staff see every line on one screen (`/ops/whatsapp`, English and Arabic) | Proposed |
 | D-135 | ALYR staff sign-in: ten wrong codes in a day lock the account (the right code too, same words as any refusal), and every staff sign-in is written to the audit log with an email when the device or the address is new | Proposed |
 | D-136 | ALYR staff get a second factor in the app: an authenticator app (RFC 6238) with ten one-time recovery codes, enrolment before enforcement, enforcement behind `ALYR_STAFF_2FA` (off), a code that works once, a new session cookie after passing it, and a founder-run break-glass | Proposed |
+| D-125 | Requests from public authorities follow three written rules: check it is lawful, give the minimum, keep a record; how to challenge one waits for a lawyer | Accepted |
 | D-113 | The Cloudflare zone is hardened with what the Free plan offers and the state is written down: HTTPS only, minimum TLS 1.2, strict SSL, CAA, a trimmed SPF and response-header rules for the API and media host are live; the edge rate-limit rule waits because Free has only Block; no Access until Zero Trust is onboarded; DMARC stays `none` until the reports are read, never `reject` | Proposed |
 
 ---
@@ -2078,6 +2081,43 @@ Without it, analytics is off everywhere.
 
 ---
 
+---
+
+## D-124 · The terms, the refund policy and the pricing page are public; the pricing page shows its prices whatever the offer switch says
+**Date** 31 Oct 2026 · **Status** Accepted (the product lead, on the founder's instruction of 31 Oct 2026 to go ahead and do the right thing for the business; the open choices were settled in `docs/company/paddle/README.md`) · Linear ALY-301 · Follows D-074 (card payments through Paddle), D-092 (no setup fee) and D-034 (prices off the public site until the commercial registration)
+
+**The decision.**
+- **Three pages, each in English and Arabic:** `/terms` (terms of service), `/refund` (refund policy) and `/pricing`, with `/privacy` already live. Their words are `copyLegal.ts` and `copyPricing.ts`; the English is the final text of `docs/company/paddle/` (PR #222), the Arabic is formal Modern Standard Arabic and a draft until the native review (ALY-66). A Qatar-qualified lawyer reads them after they are live (ALY-51); changes follow as a new dated version, with the page's "Last updated" date.
+- **Linked from every page:** the footer carries Pricing, Terms, Refund policy and Privacy; the main navigation (and the phone menu) carries Pricing. Paddle's domain review looks for exactly these, and for the legal name `alyr software W.L.L.` to match the registration.
+- **The pricing page does not wait for the offer switch.** `NEXT_PUBLIC_ALYR_OFFER` stays off in production: the homepage's price section, the price in its hero facts and the product pages' price facts still need it, because that prepared copy still names a setup fee (D-092) and has not been re-read. `/pricing` is built whatever the switch says, and `scripts/site/allow/banned.json` ("pricePages") lets a price sit in that page's copy, built page and markdown copy and nowhere else.
+- **The figures are the back office's list-price defaults**, not older copy: QAR 449 a month for the first product (migrations 0015, 0017, 0018), QAR 50 for each product added (0018 set 150, 0049 and D-053 made it 50), USD 129 and USD 15 by card (0064, D-074), ALYR Agent and ALYR Shelf included, no setup fee (D-092). The page names no price for ALYR Docs (D-123: none is set).
+- **No Offer in the structured data.** The pricing page is a plain WebPage like the privacy policy; the price depends on the products a business chooses and a quote confirms it.
+
+**What this changes in D-034.** D-034 kept every price off the public site until the commercial registration. The registration was issued on 26 Oct 2026 and the founder chose to publish. The homepage's other price lines stay behind the switch until their copy is re-read against D-092.
+
+**Not said on purpose.** Whether the US dollar prices include or exclude sales tax: it is Paddle's setting for the product, not ours, and the page says only that Paddle "handles sales tax". Whether card payment is open to clients: it is built and off until the founder sets Paddle's live values; the page describes how payment works, and card becomes true on the page the day it is switched on.
+
+**Chosen over** switching the whole offer on (it would also publish the prepared setup-fee lines), a pricing page behind the switch (Paddle could not see it), and one language first (the founder's pages are bilingual).
+
+**Revisit when** the lawyer has read the pages, Paddle answers the domain review, ALYR Docs is priced, or the homepage's offer copy is brought in line with D-092 and the switch is turned on.
+
+---
+
+## D-125 · Requests from public authorities follow three written rules
+**Date** 31 Oct 2026 · **Status** Accepted (the founder, 31 Oct 2026) · Linear ALY-262 · Text: `docs/company/authority-requests.md`
+
+**Decision.** Any request from a public authority for personal data goes to the founder, who checks it is lawful before anything is handed over; ALYR gives only what the request names; and every request is recorded, outside this public repository.
+
+**Why now.** Meta's App Review asks which policies ALYR has for these requests. It had none, so ticking any would have been untrue. The founder chose to adopt three rules ALYR can keep, on the day of the submission.
+
+**What we told Meta.** Legality review, data minimisation and documentation are ticked. "Provisions for challenging these requests" is not: that needs a lawyer's advice (ALY-51, question 15 of the brief).
+
+**Chosen over** answering "None of the above", which was true and needed no document, but would have left ALYR with no answer on the day a first request arrives. Whether either answer affects Meta's approval is not known.
+
+**Revisit when** the lawyer has read it, or a first request arrives.
+
+---
+
 ## D-135 · ALYR staff sign-in: a daily cap on wrong codes, and a note and an email for every sign-in from somewhere new
 **Date** 31 Oct 2026 · **Status** Proposed (built and tested; the first of three parts of ALY-125, see D-136 and D-137) · Linear ALY-125 · Spec `specs/047-back-office-hardening/spec.md` · Migration 0095 · Builds on ALY-244 (five guesses a code), ALY-116 (five codes an email an hour)
 
@@ -2098,6 +2138,8 @@ Without it, analytics is off everywhere.
 **Chosen over** locking by address (the address is not trustworthy behind our own proxies and a mobile network moves), a cap that only slows (the audit asks for a lock), and a note only on a new device (an unknown address on a known device is the stolen-session case).
 
 **Revisit when** a second staff member exists, an owner account needs the same cap, or the lock is used against the founder once.
+
+---
 
 ---
 
@@ -2124,3 +2166,25 @@ Without it, analytics is off everywhere.
 **Chosen over** SMS (SIM swapping, and a Qatar sender ID is a project), a code by email as the second factor (the same mailbox), a separate sealing key (a secret to create, mount and rotate for one account), enforcing at sign-in instead of on `platform_admin` (several doors sign a person in; the dependency is the one place every back-office request passes), and "enrol on first use" when enforcement is on (it gives the first stranger with the mailbox their own phone).
 
 **Revisit when** a second member of staff exists (enrolment from the door needs the break-glass today), passkeys are wanted, or part 3 is applied (the check can then move into the database).
+
+---
+
+## D-145 · A shop's WhatsApp line is checked, tested and kept on a trail; staff see every line on one screen
+**Date** 31 Oct 2026 · **Status** Proposed (built and tested against a fake Meta; the first real check is the founder's, in the runbook) · Linear ALY-166 · Builds on D-050 and D-054 (attaching a number) · Spec 060
+
+**Decision.**
+- **Attaching a number is not the end.** After it, ALYR staff press **Check** (Meta is asked to read: the number, the account's numbers, the apps subscribed to its webhooks; ALYR's own records are read for a customer's message that arrived and one of ours that went out) and **Send test message**. A line reads `unchecked`, `problem`, `waiting` or `working`.
+- **The test goes only to the shop's own staff.** One ordinary text, through the outbound layer (hard rule 5), to a `staff` contact who linked their phone and wrote to this number in the last 24 hours. Staff are chosen because they agreed to be messaged by this shop and are the people who would notice; a customer is never offered, and nothing is sent to a customer to "test the line".
+- **A trail per line**, `whatsapp_line_events`: attached, detached, checked, test sent, with who did it. The app role can add to it, never change it. It holds states and counts, never a token, a customer's name or number, or words. The platform audit log still records each staff action; the trail is what a person reads per shop.
+- **One screen** (`/ops/whatsapp`, English and Arabic) for every line. The check itself sends nothing and changes nothing at Meta.
+- **Credentials do not move.** Numbers on ALYR's own account use the one system-user token in Secret Manager. A token for a shop's own account is spec 063's, and is sealed in the database with the key in Secret Manager, as a shop's payment keys are (D-072, `core/payment_keys.py`).
+
+**Why.** The first fifty shops cannot be looked after by opening fifty chats. The cheapest way to know a line works both ways is to receive one message from a person we trust and send one back, and the cheapest person to trust is the shop's own owner, whom the go-live flow already asks to link their phone.
+
+**Chosen over** a test to any phone number typed into the screen (it would put a message from a shop's number in front of someone who never agreed, and it would create a contact in the shop's records for ALYR's convenience), a test to the founder's own phone (it proves Meta delivers, not that this shop's line works with this shop's people), and a scheduled test (a message nobody asked for, every day).
+
+**Not decided here.** Registering a number through the API with a PIN (Meta documents it as API-only; ALYR does not do it for numbers added in WhatsApp Manager, which the first shops will be), and subscribing the app to an account (spec 063).
+
+**Revisit when** a number added in WhatsApp Manager stays unconnected until registered by the API, or when more than one number per shop is allowed.
+
+---

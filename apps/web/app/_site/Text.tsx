@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 // Amounts ("QAR 1,850", "449 ر.ق"), order and document numbers ("#1043", "رقم 1043",
 // "RC-0042") and the names ALYR and its products are kept whole: they sit in <bdi> so an
 // Arabic line never reorders them, and an amount never breaks across two lines.
-const KEEP = /([−+]?QAR\s?[\d,]+(?:\.\d+)?|[−+]?[\d,]+(?:\.\d+)?\s?ر\.ق|#\d{3,}|رقم\s\d+|\d+–\d+|\b[A-Z]{2,6}-\d{3,4}\b|ALYR(?: (?:Chat|Bookings|Agent|Accounts|Shelf|Docs))?)/g;
+const KEEP = /([−+]?QAR\s?[\d,]+(?:\.\d+)?|[−+]?USD\s?[\d,]+(?:\.\d+)?|[−+]?[\d,]+(?:\.\d+)?\s?ر\.ق|[\d,]+(?:\.\d+)?\s?دولاراً(?: أمريكياً)?|#\d{3,}|رقم\s\d+|\d+–\d+|\b[A-Z]{2,6}-\d{3,4}\b|ALYR(?: (?:Chat|Bookings|Agent|Accounts|Shelf|Docs))?)/g;
 
 // In an Arabic sentence, a run of Latin words (a sample customer's name, "Noor A.", or
 // "Marina Desk Co-working", a paper size, "A4") is kept whole too, with its own trailing full stop: otherwise
@@ -15,7 +15,7 @@ const RANGE = /^\d+–\d+$/;
 
 const kind = (part: string) =>
   RANGE.test(part) ? undefined
-    : /^[−+]?(QAR|[\d,])/.test(part) ? "money"
+    : /^[−+]?(QAR|USD|[\d,])/.test(part) ? "money"
     : /^(#|رقم|[A-Z]{2,6}-\d)/.test(part) ? "ref"
     : /^ALYR( |$)/.test(part) ? "pname"
     : undefined;

@@ -59,5 +59,7 @@ to try the day a number exists.
 
 ## Not here
 
+What comes after attaching (a check, a test message, the line's trail and one screen for every line) is spec 060.
+
 Registering a number through the API (`/register`), subscribing an account to webhooks, templates
 for the account (ALY-172) and Embedded Signup (ALY-39).

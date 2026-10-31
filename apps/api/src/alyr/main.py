@@ -43,6 +43,7 @@ from alyr.routes import admin as admin_routes
 from alyr.routes import admin_factor as admin_factor_routes
 from alyr.routes import admin_media as admin_media_routes
 from alyr.routes import admin_templates as admin_template_routes
+from alyr.routes import admin_whatsapp as admin_whatsapp_routes
 from alyr.routes import agent as agent_routes
 from alyr.routes import auth as auth_routes
 from alyr.routes import billing as billing_routes
@@ -322,6 +323,7 @@ def create_app() -> FastAPI:
     app.include_router(billing_routes.router)
     app.include_router(admin_media_routes.router)
     app.include_router(admin_template_routes.router)
+    app.include_router(admin_whatsapp_routes.router)
     app.include_router(media_routes.router)
     app.include_router(media_routes.public)
     app.include_router(onboarding_routes.router)
