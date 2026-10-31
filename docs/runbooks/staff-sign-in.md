@@ -52,9 +52,14 @@ reason for every change, and Google logs who started it.
 One time, to make the job (it has no schedule and does nothing until started):
 
 ```bash
-infra/gcp/staff-access.sh plan v0.x.y     # prints what deploy would do; calls nothing
-infra/gcp/staff-access.sh deploy v0.x.y   # the release tag the API is running
+infra/gcp/staff-access.sh plan <image tag>     # prints what deploy would do; calls nothing
+infra/gcp/staff-access.sh deploy <image tag>   # the tag of the image the API is running
 ```
+
+Images are tagged by commit, not by release: the tag is the full commit the API serves, which
+`gcloud run services describe alyr-api --region me-central1 --format='value(spec.template.spec.containers[0].image)'`
+prints after the colon (v0.3.3 was `50e6e6dc659f16dfb10e739454a1ba8272f95739`). A release name such as
+`v0.3.3` is not a tag in the registry, and the script stops with "image not found".
 
 Then, when needed:
 
