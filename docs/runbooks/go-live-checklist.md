@@ -25,6 +25,7 @@ customers use ALYR. From the 17 Oct 2026 audit (`docs/audit/2026-10-17.md`).
 - [ ] `main` is protected and requires the `ci` jobs; merged branches delete themselves; secret scanning and push protection are on
 - [ ] The Cloudflare token and account ID are environment secrets (`production`, and a narrower token in `preview`), the repository copies are deleted and the old token is rolled
 - [ ] One release has run end to end through `deploy-gcp` (gate, approval, deploy, health checks, tag `v0.x.y`) and the CHANGELOG has a cut section
+- [ ] After a release, `scripts/smoke-production.sh` passes (read only: the site in both languages, sign-in and sign-up up, the API healthy, security headers; `release.md`, "After the deploy"), and the `e2e` journeys have run green on `main` (ALY-122)
 - [ ] A rollback by traffic split has been rehearsed on the API, the web app and the worker, and a deploy afterwards served the new revision (`rollback.md`, "Rehearsal")
 
 ## Application

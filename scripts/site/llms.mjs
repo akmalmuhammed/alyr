@@ -124,7 +124,6 @@ function homeTwin(locale) {
   const doc = new Doc();
   header(doc, locale, "home", h.hero?.title, null);
   doc.p(h.hero?.eyebrow).p(h.hero?.lead);
-  doc.list(h.hero?.factsNoOffer ?? h.hero?.facts);
 
   if (h.why) {
     doc.h(2, h.why.title).p(h.why.lead);
@@ -134,8 +133,8 @@ function homeTwin(locale) {
   if (h.how) {
     doc.h(2, h.how.title).p(h.how.lead);
     doc.numbered(h.how.steps, titled);
-    doc.p(h.how.again).p(h.how.note);
-    if (h.how.need) doc.h(3, h.how.need.title).list(h.how.need.items);
+    doc.p(h.how.note);
+    if (h.how.need) doc.h(3, h.how.need.title).p(h.how.need.body);
     if (h.how.month) doc.h(3, h.how.month.title).list(h.how.month.items);
   }
   if (h.problems?.items) {

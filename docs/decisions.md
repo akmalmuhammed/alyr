@@ -88,13 +88,18 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-121 | The owner is emailed once when ALYR publishes their price, ahead of the rest of the payment path: English or Arabic as they signed up, claimed on the quote so it never goes twice, nothing sent for a price they already saw or an address that cannot be real. The part of D-093 that shipped on its own | Proposed (the founder signs off the wording) |
 | D-122 | ALYR's own business keeps no test line: the "Try it" step says so and offers to skip, and the one-off first-admin job does not create one | Proposed |
 | D-145 | A shop's WhatsApp line is checked against Meta, tested with a message to the shop's own staff and kept on a trail; staff see every line on one screen (`/ops/whatsapp`, English and Arabic) | Proposed |
+| D-150 | The homepage drops what made it look machine-made: buttons are their words with no icon or arrow (on every page), and on the homepage links are plain, labels are sentence case, and there is no facts list, no grid, no crosses, no ticks, no numbered badges; the idea of checking again is said in the last step | Proposed |
 | D-135 | ALYR staff sign-in: ten wrong codes in a day lock the account (the right code too, same words as any refusal), and every staff sign-in is written to the audit log with an email when the device or the address is new | Proposed |
 | D-125 | Requests from public authorities follow three written rules: check it is lawful, give the minimum, keep a record; how to challenge one waits for a lawyer | Accepted |
 | D-113 | The Cloudflare zone is hardened with what the Free plan offers and the state is written down: HTTPS only, minimum TLS 1.2, strict SSL, CAA, a trimmed SPF and response-header rules for the API and media host are live; the edge rate-limit rule waits because Free has only Block; no Access until Zero Trust is onboarded; DMARC stays `none` until the reports are read, never `reject` | Proposed |
-| D-140 | An owner or admin manages the services from the Bookings screen (add, change names, length, price, deposit and who does it, hide and show; one part of Set up bookings), checked in the page's words and again in the API, and a booking keeps the price it was made at (migration 0100) | Proposed |
-| D-141 | Opening hours are a week a day at a time with a break as two periods, and the shop or one person can have days off (`booking_closures`, migration 0101) that customers cannot book and that never cancel a booking | Proposed |
-| D-142 | The desk (walk-ins, moving and cancelling a booking) finds a customer the shop has instead of retyping them, shows the free times for a move, and says whether the customer was told, with the number to call when ALYR may not message them; staff cannot record a customer's consent for them | Proposed |
 | D-143 | The people and chairs screen says what each does and has ahead, refuses a retirement that would leave a service with nobody, and puts both lists in an order the owner chooses (the people's order is who "anyone" takes first) | Proposed |
+| D-142 | The desk (walk-ins, moving and cancelling a booking) finds a customer the shop has instead of retyping them, shows the free times for a move, and says whether the customer was told, with the number to call when ALYR may not message them; staff cannot record a customer's consent for them | Proposed |
+| D-141 | Opening hours are a week a day at a time with a break as two periods, and the shop or one person can have days off (`booking_closures`, migration 0101) that customers cannot book and that never cancel a booking | Proposed |
+| D-140 | An owner or admin manages the services from the Bookings screen (add, change names, length, price, deposit and who does it, hide and show; one part of Set up bookings), checked in the page's words and again in the API, and a booking keeps the price it was made at (migration 0100) | Proposed |
+| D-133 | The database tier, Cloud Run's size and high availability: what to buy, when, and what each step costs (the numbers of `docs/runbooks/capacity.md`) | Proposed |
+| D-132 | A process holds few database connections (4 for an API instance, 8 for the worker), gives up after 3 seconds and answers 503 with Retry-After; only so many documents are drawn at once; the worker keeps places for customers; the Sunday report can be spread but stays at nine | Accepted |
+| D-131 | What the workspace and the order page ask for again and again is kept three seconds and shared between tabs, thrown away by the shop's own writes; who is signed in and a shop's modules the same | Accepted |
+| D-130 | The inbox and the Orders screen read the newest rows off an index (a customer carries the times of their latest messages, kept by the database; the inbox lists 300 conversations, Orders the last 30 days and everything open), so a refresh costs the same in a shop's first week and its second year | Accepted |
 
 ---
 
@@ -2082,6 +2087,89 @@ Without it, analytics is off everywhere.
 
 **Revisit when** the founder prices Docs, ALY-143 (the accountant export, statements) or ALY-147 (ALYR's own invoices) is built and the words may grow, or Shelf is made included.
 
+
+---
+
+## D-130 · The inbox and the Orders screen read the newest rows off an index, so a refresh costs the same in a shop's first week and in its second year
+**Date** 31 Oct 2026 · **Status** Accepted (a performance fix with no change to what a shop sees until it has more than 300 open conversations or has traded for over 30 days; the instruction was to make ALYR serve 50 shops with headroom) · Linear ALY-266 (PERF-1), ALY-121 · Migrations 0090 and 0091 · Builds on D-076 (shop-first indexes) · Measured in `docs/runbooks/capacity.md`
+
+**Where we were.** 250 open workspace tabs (five in each of 50 shops) kept a 0.5-CPU database at its limit with no customer doing anything. The inbox list read every customer the shop had ever had, with the latest message and an unread count for each: 122 ms for a shop with 1,500 customers, growing with every customer. The Orders screen read every order and every line the shop had ever taken (no limit). The home's unread count and the team's waiting counts did the same. Each tab asks every 5 seconds.
+
+**The decision.**
+- **Each customer carries two times, kept by the database:** `contacts.last_message_at` (their latest message, either way) and `last_in_message_at` (their latest message to the shop). A trigger on `messages` sets them on insert and when messages move to another customer record (a merge, ALY-115), always to the later of the two. The migration fills them in for what exists (3 seconds for 900,000 messages).
+- **The inbox lists at most 300 conversations, the ones with the newest messages,** off the new index `contacts_inbox`. `more: true` is in the answer only when older ones are left out, so a shop under the cap gets exactly the answer it always got. A conversation with a new message in it is back at the top. "Waiting for a first look" (the number on the Inbox tab and the home card) is counted from the two times, for all conversations, not only the 300. The per-row unread count is worked out only for a conversation that has something unread.
+- **The Orders screen lists the orders of the last 30 days and every order still open** (new, confirmed, ready, or unpaid and not cancelled), at most 1,000, newest first; their lines and discounts are read for those orders only. Older finished orders stay in the Documents list, the customer's history, and the download of everything the business keeps. `orders_open` (migration 0091) finds the open ones without looking through the finished ones; `contacts_staff` finds staff phones.
+
+**Chosen over** keeping the screens as they were and buying a bigger database (the cost of a refresh would still grow with every customer and order, so the bigger database would fill up too), paging in the screens (a web change in two languages for a problem no shop has yet; the cap and `more` are there for it), a counter of unread messages on each customer (it can drift from the messages; the two times cannot), and deleting old messages (the privacy notice says a business's records are kept while it uses ALYR).
+
+**Revisit when** a shop has more than 300 open conversations in regular use (then a "show older" in the inbox, which the answer's `more` already supports), or an owner asks for orders older than 30 days on that screen.
+
+## D-131 · What the workspace asks for again and again is kept for three seconds and shared between tabs
+**Date** 31 Oct 2026 · **Status** Accepted (no change to what a shop sees; one setting turns it off) · Linear ALY-266 (PERF-1, PERF-6) · Builds on D-130 · Measured in `docs/runbooks/capacity.md`
+
+**Where we were.** Every open tab asked for its screen every 5 seconds and each ask ran its own queries and wrote its own answer: a shop's five tabs ran the same queries five times. Each signed-in request also took three database connections (who is signed in, whether the module is on, then the route's own), with four connections to a process (D-132), and writing out a list of 600 orders took more of the API's one CPU than reading it from the database did.
+
+**The decision.**
+- **`core/pollcache.py`.** The answer to a question (the route, its arguments, and the person's role or ID where the answer differs by it) is kept for `ALYR_POLL_CACHE_SECONDS` (3 in production, 0 on a developer machine). Tabs that ask while one is being worked out wait for it (single flight). What is kept is the JSON already written, so a kept answer costs no encoding. It is kept under the shop's ID only, in a bounded table (2,000 answers); a refusal or a failure is never kept.
+- **A change a person makes is never hidden from them.** Every write made through the API throws away that shop's kept answers once it is done. A change made elsewhere (a customer's message, the worker, another API instance) shows within the three seconds, which is less than a tab's own five.
+- **Used for** the inbox list and conversation, the orders list, ALYR Agent's view (15 seconds: it is a summary of the week), the workspace shell and home cards, readiness, and the customer's order page, an item, its live poll and its share preview. A link posted where thousands see it costs the database one run of the page, not one each. The key of the order page holds the customer from their signed link and how the link reads, so no one is ever given another's page.
+- **Who is signed in, and which modules a shop has on, are kept the same three seconds** (`core/shopcache.py`), per process. Signing out in a process ends the session in that process at once; a session ended or changed elsewhere (another instance, a person removed from the team) stops working within the three seconds. A made-up cookie or address is never kept.
+
+**Chosen over** a shared cache service (a new paid part, and a place customer data would sit outside the database), caching in the browser (it cannot be shared between the people of a shop, and the server cannot throw a browser's copy away), a longer time (a customer's message would show later), and asking less often (a web change; the tab's own interval is already 5 seconds).
+
+**Revisit when** an owner reports an answer that was behind (the time is one setting), or the API runs many instances (each keeps its own; a shop's tabs on two instances ask twice).
+
+## D-132 · A process holds few database connections, gives up quickly and says "busy" instead of waiting; only so many documents are drawn at once
+**Date** 31 Oct 2026 · **Status** Accepted (limits that do nothing below the load they are for; each is a setting) · Linear ALY-266 (PERF-5, PERF-8, PERF-9, PERF-10), ALY-121 · Builds on D-077 and D-078 · Measured in `docs/runbooks/capacity.md`
+
+**Where we were.** Ten connections to a process, no limit on the wait for one, no limit on a statement. Three API instances and a worker hold up to 40 of `db-g1-small`'s 50 connections, and a Cloud Run rollout runs the old and the new revision side by side (up to six API instances and two workers, 80 connections). Past the knee nothing was refused: at 35 order-page visits a second a typical request took 2 s and 19 in 20 took 5.5 s, with every request answered. Drawing a receipt held a connection and a CPU for its whole time: at eight a second a receipt took 5.3 s (6.8 s for 19 in 20) and every connection was held. A weekly report batch kept all five of the worker's places busy, so a customer's message that arrived during it waited for the batch.
+
+**The decision.**
+- **The budget:** `db_pool_max` 4 for an API process, `db_pool_max_worker` 8. 6 x 4 + 2 x 8 = 40 of the 47 the application may use (3 are Cloud SQL's), leaving room for the migration job, a person's psql and the nightly export. Raise them only with the database's limit.
+- **A request waits at most 3 seconds for a connection, and at most 24 may wait.** A request that cannot get one is answered **503 with `Retry-After: 2`** and a message in both languages (`code: "busy"`). The same answer goes for a statement PostgreSQL stopped (`statement_timeout` 15 s for the API, 120 s for the worker) or a transaction left idle over 60 seconds. A download of everything a business keeps lifts those limits for itself, and at most two run at once in a process, because it holds a connection for as long as the person takes to receive the file.
+- **More than 60 requests in progress in one process are answered 503 with `Retry-After: 1`** at once (`ShedWhenBusy`), except health checks and Meta's webhooks. Cloud Run is to be set to send more than that to an instance (`--concurrency 80`, and a request timeout of 60 s, not the platform's 300), so it is the process that says "busy", not a platform queue that holds a request until it times out. `infra/gcp/setup.sh` carries both flags; they reach production at the next full deploy, with the founder's yes.
+- **Drawing a document is admitted first** (`core/admission.py`): two at once, six waiting with no connection held, the rest told to try again. The routes that draw ask before they open a transaction. The hooks (a receipt when an order is paid) are not turned away: a skipped receipt for a paid order is worse than a slow one.
+- **The worker keeps places for customers:** a batch holds at most half the places (two of five) for background work, so a customer's message finds a free place instead of waiting for a batch of weekly reports.
+- **The claim picks its rows once.** `update jobs ... where id in (select ... for update skip locked limit N)` can, when the planner repeats the subquery for each row, update more than N rows. After a run of the test suite it did: the batch of "at most one report" became all eight that were due, and the rule above would have meant nothing. `core/jobs.py` now picks the rows in a `materialized` CTE, which PostgreSQL must run once. `test_job_lanes.py::test_customers_jobs_are_claimed_before_background_ones` caught it, after tests in a certain order.
+- **The Sunday report stays at nine** (the site says "at 9:00"). `ALYR_REPORT_SPREAD_MINUTES` spreads the reports over that many minutes after nine, by shop (a fixed share from the shop's ID). It is 0. Turn it on at about a hundred shops, after the site's words change to "on Sunday morning".
+
+**Chosen over** a connection pooler in front of Cloud SQL (a new part to run and pay for; managed pooling is on the scale-up list), a lock on every route (the cap on waiting does it), drawing documents after the commit (the paper's look would have to be copied onto each document; still open from D-078), and spreading the reports now (the promise on the site).
+
+**Revisit when** the database tier changes (then the budget), a second worker instance runs, or documents are on for many shops (then drawing after the commit).
+
+## D-133 · The database tier, Cloud Run's size and high availability: what to buy, when, and what each step costs (for the founder; nothing is applied)
+**Date** 31 Oct 2026 · **Status** Proposed (a paid change needs the founder's yes: the working agreement is free tiers until 10 customers, D-053 and `docs/stack.md`) · Linear ALY-266 (PERF-7), ALY-121 · Numbers from `docs/runbooks/capacity.md` · Builds on D-060 (Google Cloud in Doha)
+
+**What the measurements say.** With the changes of D-130 to D-132, today's database (`db-g1-small`, a shared half core) carries 50 shops with all five tabs of every shop looking, about half busy, with no room to spare; 100 tabs (20 shops of five, or 50 of two) keep it just over a quarter busy. 100 shops fit on a dedicated 2-vCPU database with three API instances, the database a third busy. A bigger database does nothing without the code changes (the old code on 2 vCPUs was still 3.5 s for a typical request), and more API instances do nothing while the database is the limit.
+
+**What each step costs a month.** Doha list prices. `docs/stack.md` records USD 34 for `db-g1-small` and USD 14, 14 and 37 for the API's idle instance, the web app and the worker. I could not read Google's Doha table (the page is built by script, and I did not use the founder's Google account to ask the billing catalog), so the dedicated-tier figures are the list rate of about USD 0.041 per vCPU-hour and 0.007 per GB-hour that Google publishes for the Enterprise edition in a US region, over 730 hours, times 1.33, the ratio between `docs/stack.md`'s Doha USD 34 and the US list price of the same machine. **Treat them as estimates within about 15% and check them in Google's pricing calculator for `me-central1` before agreeing.**
+
+| Step | A month | More than today | What it buys (measured) |
+|---|---|---|---|
+| Today: `db-g1-small`, shared half core, 1.7 GB | USD 34 | | 50 shops, thin; connection limit 50 |
+| `db-custom-1-3840`: one dedicated vCPU, 3.75 GB | about USD 65 | +31 | twice the sustained CPU: 50 shops at about a quarter of the database (worked out) |
+| `db-custom-2-7680`: two vCPU, 7.5 GB | about USD 131 | +97 | **100 shops, the database 35% busy (run)** |
+| High availability for either (a standby in another zone) | double the database line: about USD 130 or 262 | +65 or +131 more | survives the loss of a zone; **no capacity** |
+| Storage, 10 GB SSD growing about 7 GB a year | USD 2, then USD 1.4 a month more each year | | (twice that with high availability) |
+| API `--min-instances=2` | about USD 14 | +14 | no dropped request when the one instance restarts; no capacity |
+| API `--max-instances` 3 to 6 | USD 0 at rest | 0 | lets a busy hour use more than three; each instance costs about USD 40 for a month it runs all of |
+| A larger worker, or a second | USD 0 to 37 | | not needed: the worker is 18% busy at 11 messages a second |
+
+**The recommendation.**
+1. **Now, and until about 25 shops are live: change nothing paid.** Merge and deploy D-130 to D-132. The half core carries 20 shops' tabs at p95 0.11 s, which is the whole of the free-tier period (10 customers) with room.
+2. **Move to `db-custom-1-3840` (+USD 31 a month) when the first of these happens:** 25 shops are live; or the new alert "Database getting busy: CPU above 70% for 15 minutes" fires (apply `sql-cpu-warning.json` with `infra/gcp/monitoring.sh apply` first); or the API's 95th-percentile latency passes 1.5 s for ten minutes. It takes a restart of a minute or two; do it in the Friday 00:00 maintenance window and tell the shops the evening before.
+3. **Move to `db-custom-2-7680` (USD 131 a month, +97) at about 70 shops,** or the first time the 70% alert fires on the 1-vCPU machine. At that size also turn on `ALYR_REPORT_SPREAD_MINUTES` (after the site says "on Sunday morning").
+4. **Buy high availability when a paying client's agreement promises availability,** not before and not for speed. Ask the lawyer (ALY-51) whether the customer agreement does.
+5. **Cloud Run:** keep `--max-instances=3` for the API and set `--concurrency=80 --timeout=60` at the next deploy (already in `infra/gcp/setup.sh`; `gcloud run services update alyr-api --concurrency=80 --timeout=60` does it alone). Do not buy a second always-on API instance for capacity.
+
+**How to apply a step, when the founder says yes** (nothing here has been run): `gcloud sql instances patch alyr-db --tier=db-custom-1-3840` (or `-2-7680`), then `infra/gcp/setup.sh` is unchanged because it only creates the instance; update `docs/hosting.md` and `docs/stack.md` in the same pull request with the new size and price, and raise `db_pool_max` only after reading the instance's new `max_connections` (capacity.md, "The connection budget").
+
+**Open for the founder.** (1) Whether to buy step 2 early, at the first paying client, for the margin; (2) whether high availability is a promise the customer agreement makes; (3) the Doha prices, once checked.
+
+**Chosen over** moving to a managed Postgres elsewhere (data must stay in Qatar, D-060), a read replica (the load is the tabs' reads of fresh data, which a replica would lag), a connection pooler (connections are not the limit; CPU is), and buying the 2-vCPU machine now (USD 97 a month for headroom nobody is using yet).
+
+**Revisit when** pilot data replaces the model of `capacity.md` (150 chats and five tabs a shop), the first 10 customers are live, or the tab polling is replaced by something cheaper (then the whole table moves).
+
 ---
 
 ---
@@ -2232,3 +2320,23 @@ Without it, analytics is off everywhere.
 **Revisit when** a number added in WhatsApp Manager stays unconnected until registered by the API, or when more than one number per shop is allowed.
 
 ---
+
+## D-150 · The homepage drops what made it look machine-made
+
+**Date** 31 Oct 2026 · **Status** Proposed (the founder's complaint and the technical cofounder's rulings; built in a pull request, not merged or published) · Linear ALY-303, under ALY-302 · Amends D-048 and ALY-226 (the line back to Check and "Then we check again."), D-062 in one respect (below), and the design skills' rules for buttons, links, rules and labels
+
+The founder, 31 Oct 2026, of two screenshots of the homepage: "fix these items, it looks AI made and AI generated".
+
+**Decision.**
+- **A button is its words.** The Volt button and its outlined twin hold no icon and no corner arrow. It is one component, so this holds on every page. The 45° cut stays: the header's button shows it reads well with no arrow.
+- **On the homepage a link is its words with a line under them,** with no arrow, and the six product tiles have none either.
+- **On the homepage a label is sentence case in the page's own type.** Mono stays inside drawings of the product (and the agreement drawing, with the offer on). This is written for the homepage only, in `home.css`; the shared classes keep their mono for other pages.
+- **No construction marks on the homepage:** no faint grid behind the hero, no dot field on the Carbon plate, no crosses on section rules (only the homepage used them, so they are gone from `kit.css`), no dashed line as decoration, no ticks or numbered discs outside a drawing, no boxed count.
+- **The hero says it in words.** Two plain sentences that carry "we come to your shop in Qatar". The three-line facts list is gone from the page; its words stay in `copy.ts` for the social card only. The note under the button is one short line; the address stays in the closing call.
+- **Checking again is a sentence in the last step,** "Then we check again." The line drawn back to Check, its Volt tick and the floating mono line are gone.
+- **What we need from you is a sentence with the button under it.** The tally under One order is a sentence too, not a row of three big numbers, and the business tabs are names, not eight identical cards with icons.
+- **In the hero film, a window that steps back goes out on the fold's side instead of dimming** (`SHOTS` in `filmScript.ts`). A dimmed window was cut by the plate's diagonal into a grey triangle beside the text, at every width with a fold, for about a third of the loop. Nothing else in the film changes.
+
+**What this does not change.** The positioning, the headline, the claims and the Carbon and Volt look. It adds no gradient and no AI word.
+
+**Not done, for the founder to decide.** Other pages keep their mono labels and link arrows; the footer and the Products menu keep their mono labels, because they are shared. The cards under How we work stay, since the founder approved them on the Framer prototype.

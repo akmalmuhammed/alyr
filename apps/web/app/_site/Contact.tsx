@@ -1,4 +1,3 @@
-import { Icon } from "./brand";
 import { copy, type Locale } from "./copy";
 import { CONTACT_EMAIL, CONTACT_STATE, TRY_FREE_LIVE, TRY_FREE_URL, WHATSAPP_NUMBER } from "./site";
 import { rich } from "./Text";
@@ -25,8 +24,9 @@ export function contactLink(locale: Locale, message?: ContactMessage): string {
 }
 
 /** The Volt button with the 45° notch, or its outlined twin for a second way in further
- * down the page (`variant="line"`). Absent in the pending state: there is nothing to
- * press yet, so the page says so in words instead (`ContactPending`). */
+ * down the page (`variant="line"`): its words and nothing else, no icon and no arrow (the
+ * founder, 31 Oct 2026, D-150). Absent in the pending state: there is nothing to press yet, so
+ * the page says so in words instead (`ContactPending`). */
 export function ContactButton({
   locale, className, lean = false, id, variant = "volt", message, label, tone,
 }: {
@@ -41,21 +41,18 @@ export function ContactButton({
   return (
     <a
       id={id}
-      className={`btn btn-${variant} btn-notch${tone ? ` btn-${tone}` : ""}${className ? ` ${className}` : ""}`}
+      className={`btn btn-${variant}${tone ? ` btn-${tone}` : ""}${className ? ` ${className}` : ""}`}
       href={contactLink(locale, message)}
       data-lean={lean || undefined}
       data-cta={id ?? (variant === "line" ? "button-line" : "button")}
     >
-      <Icon name={CONTACT_STATE === "whatsapp" ? "chat" : "mail"} className="ico btn-glyph" />
       <span>{label ?? (CONTACT_STATE === "whatsapp" ? c.whatsapp : c.email)}</span>
-      <Icon name="arrow-up-right" className="ico ico-flip btn-arrow" />
     </a>
   );
 }
 
-/** "Try it free": the Volt button into the self-serve sign-up (TRY_FREE_URL). It has the same
- * shape as the contact button, without the envelope, because it opens a page and not a
- * message. Nothing when the switch is off (site.ts `TRY_FREE_LIVE`). `data-cta` counts the
+/** "Try it free": the Volt button into the self-serve sign-up (TRY_FREE_URL), the same button as
+ * the contact button. Nothing when the switch is off (site.ts `TRY_FREE_LIVE`). `data-cta` counts the
  * press with the other buttons (SiteAnalytics: channel "page"), so the funnel's first step is
  * known without a marker in the address. */
 export function TryFreeButton({
@@ -68,13 +65,12 @@ export function TryFreeButton({
   if (!TRY_FREE_LIVE) return null;
   return (
     <a
-      className={`btn btn-volt btn-notch${className ? ` ${className}` : ""}`}
+      className={`btn btn-volt${className ? ` ${className}` : ""}`}
       href={TRY_FREE_URL}
       data-lean={lean || undefined}
       data-cta={cta}
     >
       <span>{copy[locale].tryFree.action}</span>
-      <Icon name="arrow-up-right" className="ico ico-flip btn-arrow" />
     </a>
   );
 }
@@ -127,12 +123,13 @@ export function ContactPending({ locale, className }: { locale: Locale; classNam
   );
 }
 
-/** The line under a contact button: who replies, and in the email state the address too.
+/** The line under a contact button: who replies, and in the email state the address too
+ * (`address={false}` leaves it to the closing call: the homepage's opening keeps one short line).
  * The WhatsApp line not being open yet is said once, in the questions, not here. */
-export function ContactNote({ locale, className }: { locale: Locale; className?: string }) {
+export function ContactNote({ locale, className, address = true }: { locale: Locale; className?: string; address?: boolean }) {
   const c = copy[locale].contact;
   if (CONTACT_STATE === "pending") return <ContactPending locale={locale} className={className} />;
-  if (CONTACT_STATE === "email") {
+  if (CONTACT_STATE === "email" && address) {
     return (
       <p className={`contact-note${className ? ` ${className}` : ""}`}>
         {rich(c.replyShort)} <ContactAddress locale={locale} />
