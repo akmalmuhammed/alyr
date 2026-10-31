@@ -13,11 +13,22 @@ import { T, type Lang, type Words } from "./copy";
 type State = "unchecked" | "problem" | "waiting" | "working";
 type Check = { key: string; ok: boolean | null; value: string; error?: string };
 type Test = { status: string; error: string; at: string; by: string; ok: boolean };
+type Tpl = {
+  name: string; language: string; category: string; status: string; meta_status: string;
+  reason: string; advice: string; held: string; in_catalogue: boolean;
+};
+type TplPlan = { name: string; language: string; action: string; reason: string };
+type TplView = {
+  rows: Tpl[]; plan: TplPlan[]; submit_on: boolean;
+  counts: { wanted: number; by_status: Record<string, number>; held: number; extra: number };
+  results?: { name: string; language: string; result: string; note: string }[];
+};
 type LineRow = {
   business_id: string; name: string; slug: string; number_id: string; waba_id: string;
   display_phone: string; attached_at: string | null; attached_by: string; state: State;
   checked_at: string | null; checks: Check[]; test: Test | null; last_inbound_at: string | null;
   staff_numbers: number;
+  templates?: { wanted: number; by_status: Record<string, number>; problems: number };
 };
 type Tester = { id: string; label: string; phone: string; window_open: boolean };
 type Event = { at: string; kind: string; ok: boolean | null; actor: string; detail: Record<string, unknown> };
@@ -26,6 +37,23 @@ type Lines = { lines: LineRow[]; counts: Record<State, number> };
 
 const PILL: Record<State, string> = { working: "active", problem: "bad", waiting: "wait", unchecked: "idle" };
 const KEY = "alyr-ops-lang";
+const TPL_PILL: Record<string, string> = {
+  approved: "active", submitted: "wait", draft: "idle", deleted: "idle",
+  rejected: "bad", paused: "bad", flagged: "bad", disabled: "bad",
+};
+const PROBLEM = ["rejected", "paused", "flagged", "disabled"];
+
+// The detail of a template event on the trail: which template, and where it now stands.
+function eventNote(e: { kind: string; detail: Record<string, unknown> }): string {
+  const d = e.detail;
+  if (e.kind === "template") {
+    const where = (d.status ?? d.category ?? "") as string;
+    return `${d.name ?? ""} · ${String(d.language ?? "").toUpperCase()} · ${where}${d.reason ? ` (${d.reason})` : ""}`;
+  }
+  if (e.kind === "templates_synced") return `${d.approved ?? 0}/${d.wanted ?? 0}`;
+  if (e.kind === "templates_submitted") return `${d.submitted ?? 0}`;
+  return "";
+}
 
 function when(iso: string | null, lang: Lang, never: string): string {
   if (!iso) return never;
@@ -48,6 +76,8 @@ export default function WhatsappLines() {
   const [show, setShow] = useState<State | "all">("all");
   const [open, setOpen] = useState("");
   const [detail, setDetail] = useState<Detail | null>(null);
+  const [tpl, setTpl] = useState<TplView | null>(null);
+  const [showAll, setShowAll] = useState(false);
   const [busy, setBusy] = useState("");
   const [who, setWho] = useState("");
   const [said, setSaid] = useState("");
@@ -62,6 +92,8 @@ export default function WhatsappLines() {
   const read = useCallback(async (id: string) => {
     const answer = await api<Detail>(`/api/admin/businesses/${id}/whatsapp/line`);
     if (answer.ok) { setDetail(answer.data); setWho((now) => now || answer.data.testers.find((t) => t.window_open)?.id || ""); }
+    const templates = await api<TplView>(`/api/admin/businesses/${id}/whatsapp/templates`);
+    if (templates.ok) setTpl((now) => (now?.results ? { ...templates.data, results: now.results } : templates.data));
   }, []);
 
   useEffect(() => {
@@ -80,9 +112,21 @@ export default function WhatsappLines() {
     try { localStorage.setItem(KEY, next); } catch { /* the choice is only remembered when storage works */ }
   }
   function toggle(id: string) {
-    setSaid(""); setWho("");
+    setSaid(""); setWho(""); setTpl(null); setShowAll(false);
     if (open === id) { setOpen(""); setDetail(null); return; }
     setOpen(id); setDetail(null); read(id);
+  }
+  async function templates(id: string, what: "sync" | "submit") {
+    setBusy(what); setError(""); setSaid("");
+    const answer = await api<TplView>(`/api/admin/businesses/${id}/whatsapp/templates/${what}`, "POST", what === "submit" ? { names: [] } : undefined);
+    setBusy("");
+    if (!answer.ok) return setError(answer.error);
+    setTpl(answer.data);
+    if (what === "submit") {
+      const results = answer.data.results ?? [];
+      setSaid(w.tpl.submitted(results.filter((r) => r.result !== "refused").length, results.filter((r) => r.result === "refused").length));
+    }
+    await load();
   }
   async function run(id: string, what: "check" | "test") {
     setBusy(what); setError(""); setSaid("");
@@ -122,7 +166,7 @@ export default function WhatsappLines() {
       {error && <p className="sh-note" role="alert">{error}</p>}
       {data && lines.length === 0 ? <p className="sh-note">{w.none}</p> : rows.length === 0 ? <p className="sh-note">{data ? w.nothingHere : ""}</p> : (
         <div className="tablewrap ops-list wl-table"><table>
-          <thead><tr><th>{w.business}</th><th>{w.line}</th><th>{w.state}</th><th>{w.lastCheck}</th><th>{w.lastMessage}</th><th /></tr></thead>
+          <thead><tr><th>{w.business}</th><th>{w.line}</th><th>{w.state}</th><th>{w.lastCheck}</th><th>{w.lastMessage}</th><th>{w.templatesColumn}</th><th /></tr></thead>
           <tbody>
             {rows.map((l) => (
               <Fragment key={l.business_id}>
@@ -132,6 +176,12 @@ export default function WhatsappLines() {
                   <td data-label={w.state}><span className={`sh-pill ${PILL[l.state]}`}>{w.states[l.state]}</span></td>
                   <td data-label={w.lastCheck}>{when(l.checked_at, lang, w.never)}</td>
                   <td data-label={w.lastMessage}>{l.last_inbound_at ? when(l.last_inbound_at, lang, w.never) : w.notYet}</td>
+                  <td data-label={w.templatesColumn}>
+                    {l.templates ? <>
+                      <span dir="ltr">{l.templates.by_status.approved ?? 0}/{l.templates.wanted}</span>
+                      {l.templates.problems > 0 && <> <span className="sh-pill bad">{w.tpl.problems(l.templates.problems)}</span></>}
+                    </> : null}
+                  </td>
                   <td className="r">
                     <button className="btn small" type="button" disabled={busy !== ""} onClick={() => { toggle(l.business_id); }} aria-expanded={open === l.business_id}>
                       {open === l.business_id ? w.close : w.details}
@@ -140,7 +190,7 @@ export default function WhatsappLines() {
                 </tr>
                 {open === l.business_id && (
                   <tr className="norow">
-                    <td colSpan={6}>
+                    <td colSpan={7}>
                       <div className="wl-detail">
                         <div className="wl-actions">
                           <button className="btn small" type="button" disabled={busy !== ""} onClick={() => run(l.business_id, "check")}>
@@ -188,6 +238,70 @@ export default function WhatsappLines() {
                             {l.test.error && <> · {w.failedPrefix} {l.test.error}</>}
                           </p>
                         )}
+                        <h3>{w.tpl.title}</h3>
+                        <p className="sh-note">{w.tpl.help}</p>
+                        {tpl && (
+                          <div className="wl-tpl">
+                            <p className="wl-tpl-counts">
+                              <b>{w.tpl.approved(tpl.counts.by_status.approved ?? 0, tpl.counts.wanted)}</b>
+                              {(tpl.counts.by_status.submitted ?? 0) > 0 && <> · {w.tpl.review(tpl.counts.by_status.submitted)}</>}
+                              {(tpl.counts.by_status.draft ?? 0) - tpl.counts.held > 0 && <> · {w.tpl.draft((tpl.counts.by_status.draft ?? 0) - tpl.counts.held)}</>}
+                              {tpl.counts.held > 0 && <> · {w.tpl.held(tpl.counts.held)}</>}
+                              {tpl.counts.extra > 0 && <> · {w.tpl.extra(tpl.counts.extra)}</>}
+                            </p>
+                            <div className="wl-actions">
+                              <button className="btn small" type="button" disabled={busy !== ""} onClick={() => templates(l.business_id, "sync")}>
+                                {busy === "sync" ? w.tpl.reading : w.tpl.read}
+                              </button>
+                              {tpl.submit_on && (
+                                <button className="btn small ghost" type="button" disabled={busy !== "" || tpl.plan.every((p) => p.action !== "create" && p.action !== "edit")}
+                                  onClick={() => templates(l.business_id, "submit")}>
+                                  {busy === "submit" ? w.tpl.submitting : w.tpl.submit}
+                                </button>
+                              )}
+                            </div>
+                            {!tpl.submit_on && <p className="sh-note">{w.tpl.submitOff}</p>}
+                            {tpl.rows.some((r) => PROBLEM.includes(r.status)) && <>
+                              <h4>{w.tpl.need}</h4>
+                              <ul className="wl-tpl-problems">
+                                {tpl.rows.filter((r) => PROBLEM.includes(r.status)).map((r) => (
+                                  <li key={`${r.name}:${r.language}`}>
+                                    <span dir="ltr"><b>{r.name}</b> · {r.language.toUpperCase()}</span>
+                                    <span className="sh-pill bad">{w.tpl.statuses[r.status]}</span>
+                                    <small>{r.reason && <>{w.tpl.why}: <bdi>{r.reason}</bdi></>}{r.advice && <> · {w.tpl.advice}: <bdi>{r.advice}</bdi></>}</small>
+                                  </li>
+                                ))}
+                              </ul>
+                            </>}
+                            <h4>{w.tpl.plan}</h4>
+                            {tpl.plan.length === 0 ? <p className="sh-note">{w.tpl.planNone}</p> : (
+                              <ul className="wl-tpl-plan">
+                                {tpl.plan.map((p) => (
+                                  <li key={`${p.name}:${p.language}`}>
+                                    <span dir="ltr">{p.name} · {p.language.toUpperCase()}</span>
+                                    <small>{w.tpl.actions[p.action] ?? p.action}</small>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                            <button className="btn small ghost" type="button" aria-expanded={showAll} onClick={() => setShowAll(!showAll)}>{w.tpl.all} ({tpl.rows.length})</button>
+                            {showAll && (
+                              <div className="tablewrap wl-tpl-all"><table>
+                                <thead><tr><th>{w.tpl.columns.name}</th><th>{w.tpl.columns.language}</th><th>{w.tpl.columns.category}</th><th>{w.tpl.columns.status}</th></tr></thead>
+                                <tbody>
+                                  {tpl.rows.map((r) => (
+                                    <tr key={`${r.name}:${r.language}`} className="norow">
+                                      <td dir="ltr">{r.name}{r.in_catalogue ? "" : ` · ${w.tpl.extraRow}`}</td>
+                                      <td dir="ltr">{r.language.toUpperCase()}</td>
+                                      <td dir="ltr">{r.category}</td>
+                                      <td><span className={`sh-pill ${TPL_PILL[r.status] ?? ""}`}>{w.tpl.statuses[r.status] ?? r.status}</span></td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table></div>
+                            )}
+                          </div>
+                        )}
                         <h3>{w.trail}</h3>
                         {detail?.line?.business_id === l.business_id && (
                           detail.events.length === 0 ? <p className="sh-note">{w.noTrail}</p> : (
@@ -196,6 +310,7 @@ export default function WhatsappLines() {
                                 <li key={n}>
                                   <b>{w.events[e.kind] ?? e.kind}</b>
                                   {e.ok !== null && <> · {e.ok ? w.okWord.true : w.okWord.false}</>}
+                                  {eventNote(e) && <span dir="ltr"> · {eventNote(e)}</span>}
                                   <small> · {when(e.at, lang, w.never)}{e.actor ? ` · ${w.by} ${e.actor}` : ""}</small>
                                 </li>
                               ))}

@@ -108,6 +108,10 @@ class Settings(BaseSettings):
     # The Meta app's ID. Only `templates_sync` needs it, to upload the sample image a
     # template with an image header is reviewed with (Resumable Upload API).
     meta_app_id: str = ""
+    # Whether ALYR may submit a message template to Meta for a shop (specs/061, D-146). Off: the
+    # back office shows what would be submitted and reads what Meta has, and nothing is sent.
+    # Submitting is a Meta-facing action the founder approves; switching this on is that approval.
+    template_submit: bool = False
 
     # The weekly report card (ALY-99). Off: outside the 24-hour window the report goes as
     # the text-only `weekly_report` template, and REPORT brings the card. On (once Meta

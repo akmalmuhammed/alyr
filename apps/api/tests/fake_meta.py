@@ -37,6 +37,18 @@ class FakeMeta:
         # path -> (status, code, message): a call to that path is refused this way
         self.refuse: dict[str, tuple[int, int, str]] = {}
         self.sent: list[dict] = []
+        # waba id -> the templates Meta has on it: {id, name, language, status, category,
+        # rejected_reason}. `created` and `edited` are what ALYR sent; `uploads` the sample files.
+        self.templates: dict[str, list[dict]] = {}
+        self.created: list[dict] = []
+        self.edited: list[tuple[str, list]] = []
+        self.uploads: list[str] = []
+        # Meta pages its lists; a small page forces the code to follow the cursor.
+        self.page_size = 200
+        # After this many created templates Meta answers "too many requests" (code 4).
+        self.rate_limit_after: int | None = None
+        # (name, language) -> (status, code, message): creating that template is refused.
+        self.refuse_template: dict[tuple[str, str], tuple[int, int, str]] = {}
 
     # ── what Meta "has" ──────────────────────────────────────────────────────────────────
 
@@ -55,6 +67,16 @@ class FakeMeta:
             account["numbers"].append(number_id)
             if subscribed and self.app_id not in account["apps"]:
                 account["apps"].append(self.app_id)
+
+    def add_template(
+        self, waba_id: str, name: str, language: str = "en", status: str = "APPROVED",
+        category: str = "UTILITY", reason: str = "NONE",
+    ) -> str:
+        found = self.templates.setdefault(waba_id, [])
+        template_id = str(900000 + sum(len(v) for v in self.templates.values()))
+        found.append({"id": template_id, "name": name, "language": language, "status": status,
+                      "category": category, "rejected_reason": reason})
+        return template_id
 
     def paths(self) -> list[str]:
         return [path for _, path, _, _ in self.calls]
@@ -97,12 +119,57 @@ class FakeMeta:
             return httpx.Response(200, json={"data": [
                 {"whatsapp_business_api_data": {"id": app, "name": "alyr", "link": ""}}
                 for app in account["apps"]]})
+        if method == "GET" and len(parts) == 2 and parts[1] == "message_templates":
+            if parts[0] not in self.wabas and parts[0] not in self.templates:
+                return error(400, 100, "Unsupported get request. Object does not exist")
+            everything = self.templates.get(parts[0], [])
+            size = min(int(query.get("limit", 25)), self.page_size)
+            start = int(query.get("after", 0) or 0)
+            page = everything[start:start + size]
+            more = start + size < len(everything)
+            paging = {"cursors": {"after": str(start + size)}}
+            if more:
+                paging["next"] = "https://graph.facebook.com/next-page-never-fetched"
+            return httpx.Response(200, json={"data": page, "paging": paging})
+        if method == "POST" and len(parts) == 2 and parts[1] == "message_templates":
+            return self.create(parts[0], body)
+        if method == "POST" and len(parts) == 2 and parts[1] == "uploads":
+            self.uploads.append(query.get("file_name", ""))
+            return httpx.Response(200, json={"id": f"upload:{len(self.uploads)}"})
+        if method == "POST" and len(parts) == 1 and parts[0].startswith("upload:"):
+            return httpx.Response(200, json={"h": f"handle-for-{parts[0]}"})
+        if method == "POST" and len(parts) == 1:
+            for found in self.templates.values():
+                for template in found:
+                    if template["id"] == parts[0]:
+                        self.edited.append((parts[0], body.get("components", [])))
+                        template["status"] = "PENDING"
+                        return httpx.Response(200, json={"success": True})
         if method == "POST" and len(parts) == 2 and parts[1] == "messages":
             self.sent.append(body)
             return httpx.Response(200, json={"messages": [{"id": f"wamid.fake{len(self.sent)}"}]})
         if method == "POST" and len(parts) == 2 and parts[1] == "media":
             return httpx.Response(200, json={"id": "media-fake"})
         return error(404, 100, f"the fake Meta does not know {method} /{'/'.join(parts)}")
+
+    def create(self, waba_id: str, body: dict) -> httpx.Response:
+        key = (body.get("name", ""), body.get("language", ""))
+        if waba_id not in self.wabas and waba_id not in self.templates:
+            return error(400, 100, "Unsupported post request. Object does not exist")
+        if self.rate_limit_after is not None and len(self.created) >= self.rate_limit_after:
+            return error(400, 4, "Application request limit reached")
+        if key in self.refuse_template:
+            return error(*self.refuse_template[key])
+        if any((t["name"], t["language"]) == key for t in self.templates.get(waba_id, [])):
+            return error(400, 100, "Content in This Language Already Exists")
+        if not (body.get("components") and body.get("category") in (
+                "UTILITY", "MARKETING", "AUTHENTICATION")):
+            return error(400, 100, "Invalid parameter")
+        self.created.append(body)
+        template_id = self.add_template(
+            waba_id, key[0], key[1], status="PENDING", category=body["category"])
+        return httpx.Response(200, json={
+            "id": template_id, "status": "PENDING", "category": body["category"]})
 
     def install(self, monkeypatch) -> "FakeMeta":
         real = httpx.AsyncClient

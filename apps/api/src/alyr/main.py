@@ -20,6 +20,7 @@ from alyr.core.payments import Payments
 from alyr.core.storage import check_store, make_store
 from alyr.core.welcome import JOB as ACCOUNT_EMAIL
 from alyr.core.welcome import AccountMail
+from alyr.core.whatsapp_events import AccountEvents
 from alyr.db import Database
 from alyr.gateways import registry as payment_gateways
 from alyr.modules import report
@@ -132,6 +133,8 @@ def create_app() -> FastAPI:
     app.state.inbound = InboundHandler(
         app.state.db, app.state.outbound, settings.public_web_url, app.state.media
     )
+    # What Meta says about a WhatsApp account, not a message: templates, limits, restrictions.
+    app.state.account_events = AccountEvents(app.state.db)
 
     app.state.jobs = JobRunner(
         app.state.db, settings.jobs_backoff_seconds, settings.jobs_concurrency

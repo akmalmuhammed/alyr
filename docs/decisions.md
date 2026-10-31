@@ -87,6 +87,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-121 | The owner is emailed once when ALYR publishes their price, ahead of the rest of the payment path: English or Arabic as they signed up, claimed on the quote so it never goes twice, nothing sent for a price they already saw or an address that cannot be real. The part of D-093 that shipped on its own | Proposed (the founder signs off the wording) |
 | D-122 | ALYR's own business keeps no test line: the "Try it" step says so and offers to skip, and the one-off first-admin job does not create one | Proposed |
 | D-145 | A shop's WhatsApp line is checked against Meta, tested with a message to the shop's own staff and kept on a trail; staff see every line on one screen (`/ops/whatsapp`, English and Arabic) | Proposed |
+| D-146 | The status of each of ALYR's templates on each shop's account is kept per shop from Meta (read on request, and by Meta's notices); submitting to Meta is off until the founder allows it; a template waiting for his go is held and never sent | Proposed |
 | D-113 | The Cloudflare zone is hardened with what the Free plan offers and the state is written down: HTTPS only, minimum TLS 1.2, strict SSL, CAA, a trimmed SPF and response-header rules for the API and media host are live; the edge rate-limit rule waits because Free has only Block; no Access until Zero Trust is onboarded; DMARC stays `none` until the reports are read, never `reject` | Proposed |
 
 ---
@@ -2092,5 +2093,25 @@ Without it, analytics is off everywhere.
 **Not decided here.** Registering a number through the API with a PIN (Meta documents it as API-only; ALYR does not do it for numbers added in WhatsApp Manager, which the first shops will be), and subscribing the app to an account (spec 063).
 
 **Revisit when** a number added in WhatsApp Manager stays unconnected until registered by the API, or when more than one number per shop is allowed.
+
+---
+
+## D-146 · Template status is kept per shop from Meta; submitting to Meta is off until the founder allows it; a template waiting for his go is never sent
+**Date** 31 Oct 2026 · **Status** Proposed (built and tested against a fake Meta; no real submission) · Linear ALY-172 · Spec 061 · Builds on D-145
+
+**Decision.**
+- **Where each of ALYR's 76 templates stands, on each shop's account, is kept per shop** (`whatsapp_templates`) and shown on `/ops` → WhatsApp lines: not submitted, in review, approved, rejected (with Meta's reason and recommendation), paused, flagged, disabled. It is read from Meta on request and kept current by Meta's `message_template_status_update` and `template_category_update` notices, which are written for every shop whose number is on the account they name.
+- **Reading is free; submitting is the founder's.** The only call that writes to Meta's template API is behind `ALYR_TEMPLATE_SUBMIT`, off by default; while off it refuses and nothing is sent. What it would send is always shown first. Turning the setting on is the founder's approval of a Meta-facing action.
+- **A template written but not cleared is `held`.** The eight the code's own comments said were "NOT submitted to Meta: that is the founder's go" are now marked in `core/templates.py` (`held=HELD`), and neither the back office nor `templates_sync --create` will submit them. The founder lifts a hold by deleting the marker.
+- **A template Meta recategorises is warned of.** A utility template Meta calls marketing is billed and limited as marketing and would, by ALYR's own rule, need marketing consent; the notice is on the line's trail as a warning. ALYR does not change its own category on Meta's say-so.
+- **No new wording.** Nothing in `core/templates.py` was written or reworded; the Arabic is still unreviewed (ALY-66).
+
+**Why.** The founder cannot run a command on a laptop per shop, and cannot tell from outside which of the 76 templates a shop is missing. The inventory answers that; keeping it per shop keeps row-level security the plain rule while the truth lives at the account.
+
+**Chosen over** one global table per account (a second kind of table with its own isolation story, for the saving of copying a few dozen short rows per shop), submitting on first attach (the founder's yes is per Meta-facing action, D-007, and the Arabic has not been read by a native speaker), and storing the wording Meta approved (a second copy of wording that would drift from `core/templates.py`).
+
+**Not decided here.** When to switch submitting on, which held templates to release and when, and whether to submit the Arabic before ALY-66. All are the founder's.
+
+**Revisit when** the founder switches submitting on, Meta changes its template statuses or limits, or a second language is added.
 
 ---

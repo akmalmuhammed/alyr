@@ -2,7 +2,8 @@
 
     uv run python -m alyr.templates_sync            # show status only
     uv run python -m alyr.templates_sync --create   # also submit the ones Meta lacks,
-                                                    # and resubmit refused ones as now worded
+                                                    # and resubmit refused ones as now worded,
+                                                    # except those held for the founder's go
 
 Templates belong to a WhatsApp Business Account, so this runs once per account. Meta
 reviews each one; most utility templates are approved within minutes.
@@ -103,6 +104,10 @@ async def main(create: bool) -> int:
             for lang, text in (("en", template.en), ("ar", template.ar)):
                 on_meta = found.get((name, lang))
                 status = on_meta["status"] if on_meta else "not on Meta"
+                if template.held and create and (on_meta is None or status == "REJECTED"):
+                    # Written and waiting for the founder's go (`Template.held`): never sent.
+                    print(f"{name:28} {lang}  HELD: {template.held}")
+                    continue
                 needs_upload = create and template.header in ("image", "document") and (
                     on_meta is None or status == "REJECTED")
                 if needs_upload:

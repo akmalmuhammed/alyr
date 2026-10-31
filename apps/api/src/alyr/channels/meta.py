@@ -141,6 +141,39 @@ def parse_statuses(payload: dict) -> list[DeliveryStatus]:
     return found
 
 
+@dataclass(frozen=True)
+class AccountEvent:
+    """One change Meta reports about a WhatsApp Business Account (not about a message): a
+    template's status, a number's limit, an account restriction. `waba_id` is the account the
+    notice is about (`entry.id`); `value` is Meta's own payload for the field, untouched, and
+    `core/whatsapp_events.py` reads it. Fields checked against Meta's webhook reference pages,
+    31 Oct 2026 (linked from docs/runbooks/whatsapp-line.md)."""
+
+    waba_id: str
+    field: str
+    value: dict
+    time: int = 0
+
+
+ACCOUNT_FIELDS = frozenset({
+    "message_template_status_update", "template_category_update", "message_template_quality_update",
+    "phone_number_quality_update", "phone_number_name_update", "account_update", "account_alerts",
+    "account_review_update",
+})
+
+
+def parse_account_events(payload: dict) -> list[AccountEvent]:
+    found: list[AccountEvent] = []
+    for entry in payload.get("entry", []):
+        for change in entry.get("changes", []):
+            field, value = change.get("field", ""), change.get("value")
+            if field in ACCOUNT_FIELDS and isinstance(value, dict) and entry.get("id"):
+                found.append(AccountEvent(
+                    waba_id=str(entry["id"]), field=field, value=value,
+                    time=int(entry.get("time") or 0)))
+    return found
+
+
 def to_graph_payload(message: OutboundMessage, address: Address) -> dict:
     base: dict = {"messaging_product": "whatsapp", "recipient_type": "individual"}
     # Meta takes a phone number in `to`, or a business-scoped user ID in `recipient`.
@@ -249,7 +282,8 @@ def describe_error(error: Exception) -> str:
     if isinstance(error, httpx.HTTPStatusError):
         try:
             body = error.response.json()["error"]
-            code, text = int(body.get("code", 0)), str(body.get("message", ""))[:200]
+            code = int(body.get("code", 0))
+            text = str(body.get("error_user_msg") or body.get("message", ""))[:200]
         except (ValueError, KeyError, TypeError):
             return f"Meta answered error {error.response.status_code}"
         if code == 190:
@@ -368,6 +402,59 @@ class MetaChannel:
             for entry in answer.get("data", [])
             if entry.get("whatsapp_business_api_data", {}).get("id")
         ]
+
+    # ── message templates of an account (spec 061) ──────────────────────────────────────────
+    # Checked against Meta's template management page, 31 Oct 2026: the list takes `fields`,
+    # `limit` and paging; creating is POST /{waba-id}/message_templates with `name`,
+    # `language`, `category` and `components`; editing is POST /{template-id} with `components`
+    # (only an approved, rejected or paused template can be edited).
+
+    async def list_templates(self, waba_id: str) -> list[dict]:
+        found: list[dict] = []
+        after = ""
+        for _ in range(20):
+            page = await self._read(f"{waba_id}/message_templates", {
+                "fields": "id,name,language,status,category,rejected_reason", "limit": 200,
+            } | ({"after": after} if after else {}))
+            found += page.get("data", [])
+            after = page.get("paging", {}).get("cursors", {}).get("after", "")
+            if not (after and page.get("paging", {}).get("next")):
+                break
+        return found
+
+    async def _write(self, path: str, body: dict) -> dict:
+        response = await self._http().post(
+            f"{self._base}/{path}", headers={"Authorization": f"Bearer {self._token}"},
+            json=body, timeout=30,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    async def create_template(self, waba_id: str, body: dict) -> dict:
+        """Submit a new template. Answers `id`, `status` (PENDING) and `category`."""
+        return await self._write(f"{waba_id}/message_templates", body)
+
+    async def edit_template(self, template_id: str, components: list[dict]) -> dict:
+        return await self._write(template_id, {"components": components})
+
+    async def upload_template_sample(
+        self, app_id: str, filename: str, data: bytes, content_type: str
+    ) -> str:
+        """The handle Meta reviews a template's sample header with (Resumable Upload API, as
+        `templates_sync.header_handle` has always done it): start an upload session on the app,
+        then send the file's bytes. Meta's guide, checked 17 Oct 2026."""
+        headers = {"Authorization": f"Bearer {self._token}"}
+        started = await self._http().post(
+            f"{self._base}/{app_id}/uploads", headers=headers,
+            params={"file_name": filename, "file_length": len(data), "file_type": content_type},
+        )
+        started.raise_for_status()
+        sent = await self._http().post(
+            f"{self._base}/{started.json()['id']}", content=data,
+            headers={"Authorization": f"OAuth {self._token}", "file_offset": "0"},
+        )
+        sent.raise_for_status()
+        return sent.json()["h"]
 
     async def download_media(self, media_id: str, max_bytes: int) -> tuple[bytes, str]:
         """Fetch a file that was sent to us. Two requests, checked against Meta's media

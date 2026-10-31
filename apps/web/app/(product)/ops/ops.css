@@ -225,6 +225,14 @@
 .wl-pick span { font-size: var(--ui-small); color: var(--ink-2); }
 .wl-pick select { min-height: 44px; }
 .wl .btn { min-height: 44px; }
+.wl-tpl { display: grid; gap: 10px; }
+.wl-tpl h4 { margin: 6px 0 0; font-size: var(--ui-small); font-weight: 600; color: var(--ink-2); }
+.wl-tpl-counts { margin: 0; font-size: var(--ui-body-sm); }
+.wl-tpl-problems, .wl-tpl-plan { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 18rem; overflow: auto; }
+.wl-tpl-problems li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; font-size: var(--ui-body-sm); }
+.wl-tpl-problems small, .wl-tpl-plan small { color: var(--ink-3); }
+.wl-tpl-plan li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: var(--ui-body-sm); }
+.wl-tpl-all { max-height: 24rem; overflow: auto; }
 @media (max-width: 56rem) {
   .wl-table td[data-label]::before { content: attr(data-label); display: block; font-size: var(--ui-caption); color: var(--ink-3); }
   .wl-checks li { grid-template-columns: 1.4rem minmax(0, 1fr); }
