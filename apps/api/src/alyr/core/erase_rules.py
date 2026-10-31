@@ -96,9 +96,11 @@ RULES: dict[str, Rule] = {
         "memberships", "sessions", "staff_link_codes",
     ),
     **_delete(
-        "the business's WhatsApp number and set-up, its switches, the funnel record of its own "
-        "sign-up and its weekly reports",
-        "channel_numbers", "whatsapp_setup", "tenant_modules", "onboarding_events",
+        "the business's WhatsApp number and set-up, the trail of what happened to its line "
+        "(states and counts, never a customer's words), its switches, the funnel record of its "
+        "own sign-up and its weekly reports",
+        "channel_numbers", "whatsapp_setup", "whatsapp_line_events", "whatsapp_line_state",
+        "tenant_modules", "onboarding_events",
         "onboarding_reminders", "onboarding_steps", "setup_requests", "weekly_reports",
     ),
     **_delete(
@@ -187,6 +189,7 @@ RULES: dict[str, Rule] = {
         "price_items": "ALYR's price list",
         "rate_hits": "counts of requests by a hash of the address; they expire by themselves",
         "schema_migrations": "which migrations ran",
+        "staff_known": "the devices and addresses ALYR's own staff signed in from, as hashes",
         "terms_versions": "the texts ALYR published; the same for every client",
         "today_snoozes": "items ALYR's staff set aside; they expire by themselves",
         "worker_heartbeats": "the worker's check-ins",
