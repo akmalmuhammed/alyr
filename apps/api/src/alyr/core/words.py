@@ -26,6 +26,10 @@ PICKUPS: Noun = (("pickup", "pickups"), ("استلام واحد", "استلام�
 CHATS: Noun = (("chat", "chats"), ("محادثة واحدة", "محادثتان", "محادثات", "محادثة"))
 PATIENTS: Noun = (("patient", "patients"), ("مراجع واحد", "مراجعان", "مراجعين", "مراجعاً"))
 TIMES: Noun = (("time", "times"), ("مرة واحدة", "مرتان", "مرات", "مرة"))
+WRONG_CODES: Noun = (
+    ("wrong sign-in code", "wrong sign-in codes"),
+    ("رمز دخول خاطئ واحد", "رمزا دخول خاطئان", "رموز دخول خاطئة", "رمز دخول خاطئ"),
+)
 STEPS: Noun = (("setup step", "setup steps"), ("خطوة واحدة", "خطوتان", "خطوات", "خطوة"))
 
 

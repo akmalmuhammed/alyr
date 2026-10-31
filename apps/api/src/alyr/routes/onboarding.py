@@ -18,6 +18,7 @@ from alyr.core import (
     pricing,
     ratelimit,
     readiness,
+    staff_security,
     subscription,
     terms,
     whatsapp_setup,
@@ -161,6 +162,8 @@ async def verify(body: EmailCode, request: Request, response: Response) -> dict:
     session = await auth.session_for(db, body.email)
     if session is not None:
         _cookie(response, session)
+        # The same door for ALYR staff as /api/auth/verify: a note, and an email if new (ALY-125).
+        await staff_security.record_sign_in(db, request, auth.clean_email(body.email))
         return {"status": "signed_in"}
     if not signup_open():
         raise HTTPException(status_code=403, detail="sign-up is not open yet")
