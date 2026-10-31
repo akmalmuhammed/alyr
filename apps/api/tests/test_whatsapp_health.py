@@ -27,6 +27,14 @@ def office(client_factory):
     return client_factory()
 
 
+@pytest.fixture(autouse=True)
+def _no_health_left_behind():
+    """The alert counts every critical line in the database; leave none behind (see
+    tests/test_whatsapp_line.py)."""
+    yield
+    owner_sql("delete from whatsapp_line_health")
+
+
 @pytest.fixture
 def meta(monkeypatch):
     return FakeMeta().install(monkeypatch)
