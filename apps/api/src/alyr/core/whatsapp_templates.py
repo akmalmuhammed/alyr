@@ -121,25 +121,36 @@ async def stored(conn: asyncpg.Connection, line: whatsapp_line.Line) -> list[asy
     )
 
 
+def _blocked(name: str, language: str, settings: Settings) -> str:
+    """Why a template with a sample header cannot be sent from here: the sample image is not in
+    this build (the API's image holds only apps/api; `templates_sync` from a checkout has it), or
+    the Meta app's ID, which the upload needs, is not set. Empty when nothing stops it."""
+    template = CATALOGUE[name]
+    if template.header not in ("image", "document"):
+        return ""
+    if not templates_sync.sample_available(template, language):
+        return "needs_sample"
+    return "" if settings.meta_app_id else "needs_app_id"
+
+
 def plan(
     rows: list[dict], settings: Settings, only: set[tuple[str, str]] | None = None
 ) -> list[dict]:
     """What a submission would do for each template ALYR needs, and why it would not:
     `create` (Meta has none), `edit` (Meta refused it; it is sent again as now worded),
-    `held` (the founder has not cleared it), `needs_app_id` (it has a sample header and the Meta
-    app's ID is not set), or `nothing` (Meta already has it, in any state)."""
+    `held` (the founder has not cleared it), `needs_sample` (its sample image is not in this
+    build), `needs_app_id` (it has a sample header and the Meta app's ID is not set), or `nothing`
+    (Meta already has it, in any state)."""
     out = []
     for r in rows:
         if not r["in_catalogue"] or (only is not None and (r["name"], r["language"]) not in only):
             continue
         if r["status"] == "draft":
             action = ("held" if r["held"]
-                      else "needs_app_id" if r["needs_sample"] and not settings.meta_app_id
-                      else "create")
+                      else _blocked(r["name"], r["language"], settings) or "create")
         elif r["status"] == "rejected":
-            sample = bool(CATALOGUE[r["name"]].header)
             action = ("held" if r["held"]
-                      else "needs_app_id" if sample and not settings.meta_app_id else "edit")
+                      else _blocked(r["name"], r["language"], settings) or "edit")
         else:
             action = "nothing"
         out.append({"name": r["name"], "language": r["language"], "category": r["category"],
@@ -267,6 +278,8 @@ async def send(
             "components": components})
     except httpx.HTTPError as error:
         return Outcome(name, language, "refused", describe_error(error)), None
+    except FileNotFoundError as error:
+        return Outcome(name, language, "refused", str(error)), None
     return Outcome(name, language, "submitted"), answer
 
 

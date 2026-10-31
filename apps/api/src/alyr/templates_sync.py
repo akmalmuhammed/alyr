@@ -23,7 +23,21 @@ from alyr import document_samples
 from alyr.config import get_settings
 from alyr.core.templates import CATALOGUE, Template
 
-ROOT = Path(__file__).resolve().parents[4]
+_PARENTS = Path(__file__).resolve().parents
+# The repository's root, where the sample images a template with a header is reviewed with are
+# kept. The API's image holds only apps/api, so there is no such folder there and `parents` is
+# shorter: ROOT is then None, the module still imports (the back office uses it), and a template
+# that needs a sample image says so instead of crashing the container (found by the image check,
+# 31 Oct 2026).
+ROOT = _PARENTS[4] if len(_PARENTS) > 4 else None
+
+
+def sample_available(template: Template, lang: str) -> bool:
+    """Whether this build holds the sample a template's header is reviewed with. A document is drawn
+    by the documents engine, so it always does; a picture is a file in the repository."""
+    if template.header == "document":
+        return True
+    return ROOT is not None and (ROOT / template.header_sample.format(lang=lang)).is_file()
 
 
 def _refusal(answer: dict) -> str | None:
@@ -39,10 +53,12 @@ def sample_file(template: Template, lang: str) -> tuple[str, bytes]:
     in the repository; a sample document is drawn by the documents engine (a made-up bakery's
     receipt, invoice or credit note: `alyr.document_samples`), so no PDF is kept in the
     repository."""
-    path = ROOT / template.header_sample.format(lang=lang)
+    path = Path(template.header_sample.format(lang=lang))
     if template.header == "document":
         return path.name, document_samples.draw_all()[path.name]
-    return path.name, path.read_bytes()
+    if not sample_available(template, lang):
+        raise FileNotFoundError(f"the sample image {path.name} is not in this build")
+    return path.name, (ROOT / path).read_bytes()
 
 
 async def header_handle(http: httpx.AsyncClient, graph: str, app_id: str, token: str,

@@ -448,3 +448,34 @@ def test_the_command_line_tool_does_not_submit_a_held_template(meta, monkeypatch
     assert sent and not sent & set(HELD)
     assert "HELD" in capsys.readouterr().out
     assert whatsapp_templates.WANTED
+
+
+# ── the API's image holds only apps/api ────────────────────────────────────────────────────
+
+
+def test_the_command_line_tool_imports_where_there_is_no_repository_around_it(monkeypatch):
+    """In the API's container the file is /app/src/alyr/templates_sync.py: no fifth parent.
+    Importing it crashed the container at start-up (CI's image check, 31 Oct 2026); now ROOT is
+    None and the templates with a sample picture say so."""
+    path = templates_sync.__file__
+    source = open(path, encoding="utf-8").read()
+    namespace = {"__file__": "/app/src/alyr/templates_sync.py", "__name__": "image_check"}
+    exec(compile(source, path, "exec"), namespace)  # noqa: S102 - the module's own source
+    assert namespace["ROOT"] is None
+    card = CATALOGUE["weekly_report_card"]
+    assert namespace["sample_available"](card, "en") is False
+    assert namespace["sample_available"](CATALOGUE["document_receipt"], "en") is True
+
+
+def test_a_template_whose_sample_picture_is_not_in_the_build_is_not_sent_from_here(
+    client, office, meta, monkeypatch
+):
+    allow_submitting(monkeypatch, app_id="1071845795713841")
+    monkeypatch.setattr(templates_sync, "ROOT", None)
+    tenant, _, _ = new_business(client)
+    attach(office, meta, tenant)
+    plan = {(p["name"], p["language"]): p["action"] for p in view(office, tenant)["plan"]}
+    assert plan[("weekly_report_card", "en")] == "needs_sample"
+    answer = submit(office, tenant, ["weekly_report_card"])
+    assert answer.status_code == 200 and answer.json()["results"] == []
+    assert meta.created == [] and meta.uploads == []
