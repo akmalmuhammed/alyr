@@ -17,6 +17,7 @@ import asyncpg
 import httpx
 
 from alyr.channels.meta import MetaChannel
+from alyr.core import whatsapp_line
 
 NUMBER_ID = re.compile(r"[0-9]{5,20}")
 WABA_ID = re.compile(r"([0-9]{5,20})?")
@@ -56,14 +57,23 @@ async def attach(
         )
     except asyncpg.UniqueViolationError as error:
         raise AttachError(error.message) from error
+    # The line's own trail (spec 060): who attached which number to which account, and what
+    # Meta said it was. The number's verified name is the shop's public name, not a secret.
+    await whatsapp_line.record(conn, number_id, "attached", by, True, {
+        "waba_id": waba_id, "meta_status": status, "verified_name": info.get("verified_name", ""),
+    })
     return {"number_id": number_id, "waba_id": waba_id, "display_phone": shown,
             "verified_name": info.get("verified_name", "")}
 
 
-async def detach(conn: asyncpg.Connection, tenant_id) -> str | None:
+async def detach(conn: asyncpg.Connection, tenant_id, by: str = "") -> str | None:
     """Take the business's Meta number off. Its messages stop reaching it and nothing is sent
     from the number; the private test line stays. Returns the number ID that was removed."""
-    return await conn.fetchval("select admin_detach_whatsapp_number($1)", tenant_id)
+    removed = await conn.fetchval("select admin_detach_whatsapp_number($1)", tenant_id)
+    if removed is not None:
+        await whatsapp_line.forget(conn, removed)
+        await whatsapp_line.record(conn, removed, "detached", by, None)
+    return removed
 
 
 def _why(error: httpx.HTTPStatusError) -> str:

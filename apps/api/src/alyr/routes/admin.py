@@ -855,7 +855,7 @@ async def detach_number(
 ) -> dict:
     """Take the business's Meta number off (a wrong number, or a move). The test line stays."""
     async with _in_business(request, business_id) as conn:
-        removed = await whatsapp_attach.detach(conn, business_id)
+        removed = await whatsapp_attach.detach(conn, business_id, _by(staff))
         if removed is None:
             raise HTTPException(status_code=404, detail="this business has no WhatsApp number")
         await backoffice.audit(

@@ -25,6 +25,14 @@ Anything else belongs to another lane. If a task needs it, keep the change small
 
 Last updated 30 Oct 2026 (Cloudflare edge and DNS hardening, ALY-116 first layer, branch `claude/cf-edge-dns-hardening-ae84c8`; and the production database's backups, restore and secrets audited, ALY-34, branch `claude/aly-34-backups-restore-2b913c`), on top of 29 Oct 2026 (the visitor's address for the rate limits, ALY-265, branch `aly-ratelimit-trusted-client-ip`) and 24 Oct 2026 (site tooling, branch `aly-site-tooling`, `docs/site-audit/05-tooling-log.md`).
 
+- **A shop's WhatsApp line is checked, tested and kept on a trail (ALY-166, spec 060, D-145), in a pull request.**
+  After a number is attached, `/ops` → WhatsApp lines (English and Arabic) lists every line and lets staff
+  Check it against Meta (reads only) and send one test message to the shop's own staff through the outbound
+  layer; each attach, check and test is on the line's trail. Built against a fake Meta. **Waiting on the
+  founder (Needs Akmal):** the first real attach and check, with the one step in Meta
+  (`docs/runbooks/whatsapp-line.md`). Not done: templates on the shop's account (ALY-172), quality and
+  limits from Meta's webhooks, Embedded Signup (ALY-39).
+
 - **Cloudflare edge and DNS of alyr.qa hardened (ALY-116 first layer, CLD-7, CLD-18, D-113), live since 30 Oct,
   recorded in a pull request.** Always Use HTTPS, minimum TLS 1.2, SSL Full (strict), CAA for the three CAs
   Cloudflare issues from, SPF without the retired Email Routing include, and response-header rules that give the

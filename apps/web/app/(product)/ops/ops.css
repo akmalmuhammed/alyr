@@ -203,3 +203,30 @@
 .ops-terms ul { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; font-size: var(--ui-body-sm); }
 .ops-terms code { font-family: var(--font-ui-mono); font-size: var(--ui-small); }
 .ops-terms-open { color: var(--warn); }
+
+/* WhatsApp lines (ALY-166, specs/060): one screen, English or Arabic, mirrored with dir=rtl on its root. */
+.wl { display: grid; gap: 18px; }
+.wl-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.wl-detail { display: grid; gap: 10px; padding: 6px 0 10px; }
+.wl-detail h3 { margin: 8px 0 0; font-size: var(--ui-small); font-weight: 600; color: var(--ink-2); font-family: var(--font-ui-mono); text-transform: uppercase; letter-spacing: 0.06em; }
+[dir="rtl"] .wl-detail h3 { font-family: var(--font-ui-arabic); text-transform: none; letter-spacing: 0; }
+.wl-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.wl-checks, .wl-trail { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.wl-checks li { display: grid; grid-template-columns: 1.4rem minmax(10rem, 16rem) minmax(0, 1fr); gap: 8px; align-items: baseline; font-size: var(--ui-body-sm); }
+.wl-checks li span:last-child { color: var(--ink-2); overflow-wrap: anywhere; }
+.wl-checks li.bad span:last-child { color: var(--bad); font-weight: 500; }
+.wl-mark { font-weight: 600; }
+.wl-checks li.ok .wl-mark { color: var(--ok); }
+.wl-checks li.bad .wl-mark { color: var(--bad); }
+.wl-trail li { font-size: var(--ui-body-sm); }
+.wl-trail small { color: var(--ink-3); }
+.wl-test { margin: 0; font-size: var(--ui-body-sm); }
+.wl-pick { display: grid; gap: 4px; min-width: 14rem; }
+.wl-pick span { font-size: var(--ui-small); color: var(--ink-2); }
+.wl-pick select { min-height: 44px; }
+.wl .btn { min-height: 44px; }
+@media (max-width: 56rem) {
+  .wl-table td[data-label]::before { content: attr(data-label); display: block; font-size: var(--ui-caption); color: var(--ink-3); }
+  .wl-checks li { grid-template-columns: 1.4rem minmax(0, 1fr); }
+  .wl-checks li span:last-child { grid-column: 2; }
+}
