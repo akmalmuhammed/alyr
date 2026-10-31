@@ -1,0 +1,5 @@
+container             cpu avg  cpu peak  mem peak MiB   (100 = one core)
+alyrscale-api1              3        25            92
+alyrscale-pg               12        50          1077
+alyrscale-worker           16        78           200
+database connections: average 11, peak 11
