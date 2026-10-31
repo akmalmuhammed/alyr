@@ -216,24 +216,44 @@ async def storefront(
     customer_link.keep_private(response)
     shop = await _shop(request, slug)
     link, state = customer_link.state(x_order_link or t, shop["id"], links.ORDER)
-    # The page only reads (ALY-275): PostgreSQL refuses a write here. One transaction, one
-    # connection, and the shop's features read once (ALY-276).
-    async with request.app.state.db.tenant(shop["id"], readonly=True) as conn:
-        customer = await _identify(conn, link)
-        if link is not None and customer is None:
-            state = "invalid"
-        contact_id = link.contact_id if customer is not None and link is not None else None
-        feats = await features.load(conn)
-        group = await price_groups.group_of(conn, contact_id)
-        data = await page.page(
-            conn, request.app.state.media, contact_id, q=q, category=category,
-            offset=offset, limit=limit, feats=feats, group=group,
-        )
-        # What the shop's type says about its page (the section's name, the layout, how a
-        # sold-out item looks); null for a shop without the Catalog (ALY-107).
-        catalog_on = feats.catalog
-        hints = await template.public(conn, feats) if catalog_on else None
-        pricing = await _pricing(conn, feats, group)
+
+    async def compute() -> dict:
+        shown = state
+        # The page only reads (ALY-275): PostgreSQL refuses a write here. One transaction, one
+        # connection, and the shop's features read once (ALY-276).
+        async with request.app.state.db.tenant(shop["id"], readonly=True) as conn:
+            customer = await _identify(conn, link)
+            if link is not None and customer is None:
+                shown = "invalid"
+            contact_id = link.contact_id if customer is not None and link is not None else None
+            feats = await features.load(conn)
+            group = await price_groups.group_of(conn, contact_id)
+            data = await page.page(
+                conn, request.app.state.media, contact_id, q=q, category=category,
+                offset=offset, limit=limit, feats=feats, group=group,
+            )
+            # What the shop's type says about its page (the section's name, the layout, how a
+            # sold-out item looks); null for a shop without the Catalog (ALY-107).
+            catalog_on = feats.catalog
+            hints = await template.public(conn, feats) if catalog_on else None
+            pricing = await _pricing(conn, feats, group)
+        return _storefront(shop, link, shown, table, data, catalog_on, hints, pricing, customer)
+
+    # Visitors who ask for the same page within a moment share one run (core/pollcache.py): a
+    # link posted where thousands see it costs the database one run of the page, not one each.
+    # Everything the answer depends on is in the question: the customer, how their link reads,
+    # the page asked for. The stock shown may be a few seconds old; checkout reads it again.
+    answer = await request.app.state.poll.get_json(
+        shop["id"],
+        ("store", q, category, offset, limit, link.contact_id if link else None, state,
+         links.clean_table(link.table if link is not None and link.table else table)),
+        compute)
+    # (The headers set on `response` above are dropped when a route hands back its own Response.)
+    customer_link.keep_private(answer)
+    return answer
+
+
+def _storefront(shop, link, state, table, data, catalog_on, hints, pricing, customer) -> dict:
     items = data["items"]
     return {
         "shop": {
@@ -265,14 +285,21 @@ async def one_item(
     customer_link.keep_private(response)
     shop = await _shop(request, slug)
     link, _ = customer_link.state(x_order_link or t, shop["id"], links.ORDER)
-    async with request.app.state.db.tenant(shop["id"], readonly=True) as conn:
-        customer = await _identify(conn, link)
-        row = await page.one(
-            conn, request.app.state.media, item_id, link.contact_id if customer else None
-        )
-    if row is None:
-        raise HTTPException(status_code=404, detail="item not found")
-    return {"item": row}
+
+    async def compute() -> dict:
+        async with request.app.state.db.tenant(shop["id"], readonly=True) as conn:
+            customer = await _identify(conn, link)
+            row = await page.one(
+                conn, request.app.state.media, item_id, link.contact_id if customer else None
+            )
+        if row is None:  # a refusal is not kept (core/pollcache.py)
+            raise HTTPException(status_code=404, detail="item not found")
+        return {"item": row}
+
+    answer = await request.app.state.poll.get_json(
+        shop["id"], ("store-item", item_id, link.contact_id if link else None), compute)
+    customer_link.keep_private(answer)
+    return answer
 
 
 @router.post("/{slug}/live")
@@ -281,9 +308,14 @@ async def live(slug: str, body: Live, request: Request) -> dict:
     while the page is open and in front. Small on purpose."""
     shop = await _shop(request, slug)
     link, _ = customer_link.state(body.token, shop["id"], links.ORDER)
-    async with request.app.state.db.tenant(shop["id"], readonly=True) as conn:
-        customer = await _identify(conn, link)
-        return await page.live(conn, body.ids, link.contact_id if customer else None)
+
+    async def compute() -> dict:
+        async with request.app.state.db.tenant(shop["id"], readonly=True) as conn:
+            customer = await _identify(conn, link)
+            return await page.live(conn, body.ids, link.contact_id if customer else None)
+
+    return await request.app.state.poll.get_json(
+        shop["id"], ("store-live", tuple(body.ids), link.contact_id if link else None), compute)
 
 
 @router.get("/{slug}/share")
@@ -296,14 +328,19 @@ async def share(
     always the normal prices, and the same for everyone."""
     shop = await _shop(request, slug)
     base = get_settings().public_web_url.rstrip("/")
-    async with request.app.state.db.tenant(shop["id"], readonly=True) as conn:
-        found = await page.one(conn, request.app.state.media, item) if item else None
-        listing = None
-        if found is None:
-            listing = await page.page(
-                conn, request.app.state.media, None, category=category, limit=12
-            )
-    return _preview(shop, base, found, listing, category)
+
+    async def compute() -> dict:
+        async with request.app.state.db.tenant(shop["id"], readonly=True) as conn:
+            found = await page.one(conn, request.app.state.media, item) if item else None
+            listing = None
+            if found is None:
+                listing = await page.page(
+                    conn, request.app.state.media, None, category=category, limit=12
+                )
+        return _preview(shop, base, found, listing, category)
+
+    return await request.app.state.poll.get_json(
+        shop["id"], ("store-share", item, category), compute)
 
 
 def _absolute(base: str, url: str) -> str:
