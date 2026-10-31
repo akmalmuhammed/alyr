@@ -86,6 +86,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-119 | The public site can lead with "Try it free" (the self-serve sign-up) with "Book a check-up" beside it, behind a build-time switch that is off until the founder turns it on at publish time | Proposed |
 | D-121 | The owner is emailed once when ALYR publishes their price, ahead of the rest of the payment path: English or Arabic as they signed up, claimed on the quote so it never goes twice, nothing sent for a price they already saw or an address that cannot be real. The part of D-093 that shipped on its own | Proposed (the founder signs off the wording) |
 | D-122 | ALYR's own business keeps no test line: the "Try it" step says so and offers to skip, and the one-off first-admin job does not create one | Proposed |
+| D-135 | ALYR staff sign-in: ten wrong codes in a day lock the account (the right code too, same words as any refusal), and every staff sign-in is written to the audit log with an email when the device or the address is new | Proposed |
 | D-113 | The Cloudflare zone is hardened with what the Free plan offers and the state is written down: HTTPS only, minimum TLS 1.2, strict SSL, CAA, a trimmed SPF and response-header rules for the API and media host are live; the edge rate-limit rule waits because Free has only Block; no Access until Zero Trust is onboarded; DMARC stays `none` until the reports are read, never `reject` | Proposed |
 
 ---
@@ -2073,3 +2074,26 @@ Without it, analytics is off everywhere.
 **Chosen over** making Shelf `included` (a false statement for shops without a catalog), leaving the products unregistered and showing them only on the site (the founder found the gap on the Products screen), and a price item at QAR 0 for Shelf (the trap above).
 
 **Revisit when** the founder prices Docs, ALY-143 (the accountant export, statements) or ALY-147 (ALYR's own invoices) is built and the words may grow, or Shelf is made included.
+
+---
+
+## D-135 · ALYR staff sign-in: a daily cap on wrong codes, and a note and an email for every sign-in from somewhere new
+**Date** 31 Oct 2026 · **Status** Proposed (built and tested; the first of three parts of ALY-125, see D-136 and D-137) · Linear ALY-125 · Spec `specs/047-back-office-hardening/spec.md` · Migration 0095 · Builds on ALY-244 (five guesses a code), ALY-116 (five codes an email an hour)
+
+**The decision.**
+- **The cap.** For an email on the `platform_admins` list, every wrong code of the last 24 hours counts, over all codes. At 10 the account refuses every code, the right one too, until the oldest wrong code is a day old. The refusal has the same words and status as any wrong code, so a visitor cannot tell a locked staff account from an ordinary mistake. Counted in `rate_hits` (bucket `staff-wrong-code`), inside the transaction that holds the code's row, behind an advisory lock for the account, so parallel guesses cannot all see nine.
+- **The announcement, once, when the cap is reached.** An entry `staff.locked` in the audit log, an email to the person (both languages, the time it lifts in Doha time) and an alert to ALYR's channels (`core/alerts.notify`: counts only, never the address).
+- **A note of every staff sign-in, whichever door** (`/api/auth/verify` and the sign-up door `/api/onboarding/verify`). `staff.sign_in` in the audit log with a short device phrase ("Chrome on Windows"), the address the edge vouched for, and whether each is new. A device or an address this person has not signed in from before also sends them an email. "Seen before" lives in `staff_known` as SHA-256 hashes; the address is shown in the audit entry only.
+- **Writing the note never refuses a sign-in.** A mail provider that is down is logged, and the audit entry says `send_failed`.
+
+**Why.** The back office reads every client's data and its only door was one emailed six-digit code. The guess budget was about 600 a day on one account; at ten it is ten. The alert gives the founder the minute it happens, not the next audit.
+
+**Costs and risks, said plainly.**
+- **The cap can be used against the founder.** Someone who asks for codes and gets them wrong ten times keeps the founder from signing in with a code for a day (a rolling day: each wrong code ages out after 24 hours, so a patient attacker can keep it up). It gives them no access. The way through is `docs/runbooks/staff-sign-in.md`: the founder-run, logged break-glass script clears the lock. The second factor (D-136) makes a lock less of a loss, not a smaller one.
+- **A new address is noisy when the founder travels or the phone changes networks.** One email each time; the audit entry is the record.
+- **The addresses are the edge's.** Where the API cannot vouch for an address (`ALYR_CLIENT_IP_KEYS` mismatch) it is shown as "unknown", and only the device decides what is new.
+- **Only staff are capped.** Every other account keeps the older limits (SEC-2 asks for the same cap for owners; the follow-up is to count the same bucket for every email, with a higher number).
+
+**Chosen over** locking by address (the address is not trustworthy behind our own proxies and a mobile network moves), a cap that only slows (the audit asks for a lock), and a note only on a new device (an unknown address on a known device is the stolen-session case).
+
+**Revisit when** a second staff member exists, an owner account needs the same cap, or the lock is used against the founder once.
