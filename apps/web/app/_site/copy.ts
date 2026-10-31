@@ -18,6 +18,8 @@ import { shelfAr, shelfEn, type ShelfPage } from "./copyShelf";
 import { guideMeta, guidesAr, guidesEn, type GuidesCopy } from "./copyGuides";
 import { sectorMeta, sectorsAr, sectorsEn, type SectorsCopy } from "./copySectors";
 import { privacyAr, privacyEn, type PrivacyPage } from "./copyPrivacy";
+import { refundAr, refundEn, termsAr, termsEn, type LegalPage } from "./copyLegal";
+import { pricingAr, pricingEn, type PricingPage } from "./copyPricing";
 import { filmAr, filmEn, type HeroFilmWords } from "./copyFilm";
 
 export type { HeroFilmWords };
@@ -533,10 +535,15 @@ export type Copy = {
   meta: Record<PageKey, Meta>;
   company: CompanyPage;
   privacy: PrivacyPage;
+  /** The terms of service, the refund policy and the pricing page (ALY-301; copyLegal.ts, copyPricing.ts). */
+  terms: LegalPage;
+  refund: LegalPage;
+  pricing: PricingPage;
   skip: string;
   nav: {
-    products: string; business: string; how: string; questions: string; price: string;
+    products: string; business: string; how: string; questions: string; pricing: string;
     other: string; home: string; menu: string; sections: string; productsMenu: string; company: string; privacy: string;
+    terms: string; refund: string;
   };
   /** The suite, in its fixed order: the Products menu, the footer, the rows on each page. */
   products: {
@@ -608,6 +615,18 @@ export type Copy = {
 
 const en: Copy = {
   meta: {
+    terms: {
+      title: "Terms of service · ALYR",
+      description: "The terms for using ALYR: who we are, what we sell, price and payment, stopping, your data, liability and the law that applies. ALYR is run by alyr software W.L.L., Qatar.",
+    },
+    refund: {
+      title: "Refund policy · ALYR",
+      description: "When ALYR refunds you, how the money comes back by card or bank transfer, and how to ask. Your first month is refunded if the agreed result is missed.",
+    },
+    pricing: {
+      title: "Pricing · ALYR",
+      description: "What ALYR costs each month: by bank transfer in Qatari riyals or by card in US dollars. Month to month, no setup fee, no commission.",
+    },
     privacy: {
       title: "Privacy policy · ALYR",
       description: "What data ALYR holds, why, who else sees it, how long it is kept and how to ask for it to be deleted. ALYR is run by alyr software W.L.L., Qatar.",
@@ -658,6 +677,9 @@ const en: Copy = {
   },
   skip: "Skip to content",
   privacy: privacyEn,
+  terms: termsEn,
+  refund: refundEn,
+  pricing: pricingEn,
   company: {
     eyebrow: "Company details",
     title: "Who is behind ALYR",
@@ -679,10 +701,12 @@ const en: Copy = {
     products: "Products",
     company: "Company details",
     privacy: "Privacy",
+    terms: "Terms",
+    refund: "Refund policy",
     business: "By business",
     how: "How we work",
     questions: "Questions",
-    price: "Price",
+    pricing: "Pricing",
     other: "العربية",
     home: "ALYR home",
     menu: "Menu",
@@ -2972,6 +2996,18 @@ const en: Copy = {
 
 const ar: Copy = {
   meta: {
+    terms: {
+      title: "شروط الخدمة · ALYR",
+      description: "شروط استخدام ALYR: من نحن، وما نبيعه، والسعر والدفع، والإيقاف، وبياناتك، والمسؤولية، والقانون الواجب التطبيق. تدير ALYR شركة alyr software ذ.م.م. في قطر.",
+    },
+    refund: {
+      title: "سياسة الاسترداد · ALYR",
+      description: "متى تعيد ALYR إليك المبلغ، وكيف يعود بالبطاقة أو بالتحويل المصرفي، وكيف تطلب ذلك. يُسترد شهرك الأول إذا لم تتحقق النتيجة المتفق عليها.",
+    },
+    pricing: {
+      title: "الأسعار · ALYR",
+      description: "كم تكلّف ALYR كل شهر: بالتحويل المصرفي بالريال القطري أو بالبطاقة بالدولار الأمريكي. اشتراك شهري، بلا رسوم تجهيز وبلا عمولة.",
+    },
     privacy: {
       title: "سياسة الخصوصية · ALYR",
       description: "البيانات التي تحتفظ بها ALYR، ولماذا، ومن يطّلع عليها، وكم تُحفظ، وكيف تطلب حذفها. تديرها شركة alyr software ذ.م.م. في قطر.",
@@ -3022,6 +3058,9 @@ const ar: Copy = {
   },
   skip: "انتقل إلى المحتوى",
   privacy: privacyAr,
+  terms: termsAr,
+  refund: refundAr,
+  pricing: pricingAr,
   company: {
     eyebrow: "بيانات الشركة",
     title: "من وراء ALYR",
@@ -3043,10 +3082,12 @@ const ar: Copy = {
     products: "المنتجات",
     company: "بيانات الشركة",
     privacy: "الخصوصية",
+    terms: "الشروط",
+    refund: "سياسة الاسترداد",
     business: "حسب نشاطك",
     how: "كيف نعمل",
     questions: "أسئلة",
-    price: "السعر",
+    pricing: "الأسعار",
     other: "English",
     home: "الصفحة الرئيسية لـ ALYR",
     menu: "القائمة",
