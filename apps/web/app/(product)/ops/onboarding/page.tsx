@@ -6,6 +6,7 @@
 // business as its owner would see it. Each business's WhatsApp setup (ALY-217) shows what
 // its way needs, and staff say where ALYR is with connecting it.
 
+import Link from "next/link";
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { api } from "../api";
 import FunnelView from "./Funnel";
@@ -162,6 +163,7 @@ export default function OnboardingBoard() {
                             <b>Meta number attached</b>
                             <span dir="ltr">{b.number.display_phone || b.number.number_id}</span>
                             <small>ID <span dir="ltr">{b.number.number_id}</span> · by {b.number.attached_by}</small>
+                            <Link className="ops-link" href={`/ops/whatsapp?business=${b.id}`}>Check the line</Link>
                             <button className="btn small ghost" type="button" onClick={() => detach(b.id)}>Detach</button>
                           </div>
                         ) : (

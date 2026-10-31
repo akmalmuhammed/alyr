@@ -14,7 +14,7 @@ from uuid import UUID
 
 import asyncpg
 
-from alyr.core import ratelimit
+from alyr.core import ratelimit, staff_security
 from alyr.db import Database
 
 log = logging.getLogger("alyr.auth")
@@ -104,8 +104,17 @@ async def check_code(db: Database, email: str, code: str) -> None:
     far more than MAX_GUESSES codes (ALY-244)."""
     email = clean_email(email)
     refused = AuthError("that code is wrong or has expired")
+    # Set when this wrong code was the one that reached ALYR staff's daily cap (ALY-125).
+    locked_now = 0
     async with db.unscoped() as conn:
         async with conn.transaction():
+            # A member of ALYR staff has a cap on wrong codes per day, over all their codes; it
+            # refuses the right code too, with the same words as any other refusal.
+            staff = await staff_security.is_staff(conn, email)
+            if staff:
+                await staff_security.take_turn(conn, email)
+                if await staff_security.is_locked(conn, email):
+                    raise refused
             row = await conn.fetchrow(
                 "select id, code_hash, attempts from login_codes "
                 "where email = $1 and not used and expires_at > now() "
@@ -121,7 +130,13 @@ async def check_code(db: Database, email: str, code: str) -> None:
                 await conn.execute(
                     "update login_codes set attempts = attempts + 1 where id = $1", row["id"]
                 )
+                if staff:
+                    wrong = await staff_security.record_wrong(conn, email)
+                    if wrong >= staff_security.WRONG_CODES_PER_DAY:
+                        locked_now = wrong
         # Raised after the transaction block, so the count above is committed, not undone.
+        if locked_now:
+            await staff_security.announce_lock(db, email, locked_now)
         raise refused
 
 

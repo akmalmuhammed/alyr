@@ -21,6 +21,8 @@ const ACTION: Record<string, string> = {
   "quote.publish": "Published a quote to the owner", "quote.unpublish": "Took a quote back to draft",
   "quote.withdraw": "Withdrew a quote", "today.snoozed": "Set a Today item aside",
   "today.unsnoozed": "Brought a Today item back", "staff.added": "Added staff", "staff.removed": "Removed staff",
+  "staff.sign_in": "Signed in to the back office",
+  "staff.locked": "Paused sign-in after wrong codes",
 };
 
 function summary(entry: Entry) {
@@ -42,6 +44,12 @@ function summary(entry: Entry) {
   if (entry.action === "today.snoozed") return `${entry.subject_id} for ${d.days} day(s)`;
   if (entry.action === "promise.saved") return (d.after as { en?: string } | undefined)?.en ?? "";
   if (entry.action === "client.saved") return `${d.name}${d.price_mode ? `, price ${d.price_mode}` : ""}`;
+  if (entry.action === "staff.sign_in") {
+    const where = [d.device, d.address].filter(Boolean).join(" · ");
+    const fresh = [d.new_device && "new device", d.new_address && "new address"].filter(Boolean).join(", ");
+    return `${entry.subject_id}: ${where}${fresh ? ` (${fresh})` : ""}`;
+  }
+  if (entry.action === "staff.locked") return `${entry.subject_id}: ${d.wrong_codes} wrong codes in ${d.window_hours} hours`;
   if (entry.subject_type === "staff") return entry.subject_id;
   return Object.keys(d).length ? JSON.stringify(d).slice(0, 140) : "";
 }
