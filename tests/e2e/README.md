@@ -54,7 +54,7 @@ several times in an hour can: the seeded staff email asks for a code on every ru
 setup runs it first:
 
 ```bash
-export E2E_RESET_LIMITS_CMD='psql postgresql://alyr:alyr_local@localhost:5432/alyr -c "delete from rate_hits; delete from login_codes"'
+export E2E_RESET_LIMITS_CMD='docker compose exec -T postgres psql -U alyr -d alyr -c "delete from rate_hits; delete from login_codes"'
 ```
 
 Never point this at a database that holds anything but demo data.
