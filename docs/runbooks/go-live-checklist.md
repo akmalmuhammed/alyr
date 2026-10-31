@@ -30,6 +30,8 @@ customers use ALYR. From the 17 Oct 2026 audit (`docs/audit/2026-10-17.md`).
 
 ## Application
 - [ ] Rate limits on sign-in codes, sign-up and public pages (ALY-116, built; the per-address part is on only once the edge signs the visitor's address and the API is told to read it: ALY-265, steps and check in `client-address.md`; Cloudflare in front: HTTPS only, TLS 1.2 and header rules are live since 30 Oct, the rate-limit rule is prepared and waits for a yes: `cloudflare-edge.md`)
+- [ ] ALYR staff sign-in (ALY-125, `staff-sign-in.md`): the cap on wrong codes and the new-sign-in email are live (D-135); the founder has set up the authenticator app, kept the ten recovery codes, and run `infra/gcp/staff-access.sh ready` then `require` (D-136); a private-window sign-in to `/ops` stops at the prompt
+- [ ] The back office and the worker on their own database logins, the guard enforced (ALY-125 part 3, SEC-5, `database-roles.md`): `roles.sh create`, `move`, then `enforce`, with the checks between each step
 - [ ] Staff roles: agents cannot change prices, services, hours or send bulk reminders (audit issue)
 - [ ] Contact merge keeps consent records (audit issue)
 - [x] Security headers on the web app (CSP, HSTS, frame-ancestors, nosniff) and an Origin check on signed-in changes (ALY-118); on the public site: `_headers` has HSTS, nosniff, frame-ancestors, base-uri, object-src; Cloudflare's header rules for `api` and `media` are live (`cloudflare-edge.md`)

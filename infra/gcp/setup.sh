@@ -68,7 +68,10 @@ DRY_RUN="${ALYR_DRY_RUN:-}"
 ACCESSOR=roles/secretmanager.secretAccessor
 MIGRATE_SECRETS=(migration-url database-url)
 # Secrets a later step may mount on the API; bound only once they exist (ALY-265).
-OPTIONAL_RUNTIME_SECRETS=(client-ip-key)
+OPTIONAL_RUNTIME_SECRETS=(client-ip-key admin-database-url worker-database-url)
+# Secrets the migration job may also read once they exist: the addresses of the two logins whose
+# roles it makes (ALY-125 part 3, `roles.sh create`).
+OPTIONAL_MIGRATE_SECRETS=(admin-database-url worker-database-url)
 runtime_secrets() { local pair; for pair in "${SECRETS[@]}"; do echo "${pair#*=}"; done; }
 
 change() { # what it does (shown), then the gcloud arguments
@@ -112,6 +115,9 @@ access_grant() {
     if secret_exists "$s"; then grant_secret "$s" alyr-run; fi
   done
   for s in "${MIGRATE_SECRETS[@]}"; do grant_secret "$s" alyr-migrate; done
+  for s in "${OPTIONAL_MIGRATE_SECRETS[@]}"; do
+    if secret_exists "$s"; then grant_secret "$s" alyr-migrate; fi
+  done
   # GitHub's deploy updates the migration job's image, which needs the right to run as its account.
   if exists g iam service-accounts describe "$(sa alyr-migrate)" &&
      ! policy_has roles/iam.serviceAccountUser "serviceAccount:$(sa alyr-deploy)" iam service-accounts get-iam-policy "$(sa alyr-migrate)"; then
@@ -175,6 +181,31 @@ api_reads_edge_address() {
   local live
   live="$(value run services describe alyr-api --region="$REGION" --format=json 2>/dev/null || true)"
   case "$live" in *'"ALYR_CLIENT_IP_HEADER"'*) return 0 ;; *) return 1 ;; esac
+}
+
+# The two logins of ALY-125 part 3 (docs/runbooks/database-roles.md): the API's back-office work on
+# `alyr_admin` (ALYR_ADMIN_DATABASE_URL), the worker on `alyr_worker` (its ALYR_DATABASE_URL). `roles.sh
+# move` sets them; a full deploy (`apps`) replaces every secret, so it asks the live services and
+# keeps what is there. Without this a laptop deploy would put both back on the application login,
+# and, with the guard enforced, the back office would stop working.
+api_uses_admin_login() {
+  local live
+  live="$(value run services describe alyr-api --region="$REGION" --format=json 2>/dev/null || true)"
+  case "$live" in *'"admin-database-url"'*) return 0 ;; *) return 1 ;; esac
+}
+worker_uses_own_login() {
+  local live
+  live="$(value run worker-pools describe alyr-worker --region="$REGION" --format=json 2>/dev/null || true)"
+  case "$live" in *'"worker-database-url"'*) return 0 ;; *) return 1 ;; esac
+}
+
+# Whether the live API requires the second factor of ALYR's staff (ALY-125, D-136). It is set by
+# `staff-access.sh require` and removed by `unrequire`. A full deploy (`apps`) replaces every
+# setting, so without this a laptop deploy would quietly turn the requirement off.
+api_requires_second_factor() {
+  local live
+  live="$(value run services describe alyr-api --region="$REGION" --format=json 2>/dev/null || true)"
+  case "$live" in *'"ALYR_STAFF_2FA"'*) return 0 ;; *) return 1 ;; esac
 }
 
 case "${1:-}" in
@@ -464,10 +495,14 @@ for s in json.load(sys.stdin).get('data', []):
     access_grant   # each account reads its own secrets before anything is deployed with them
 
     echo "Migrations first..."
+    migrate_secrets="ALYR_MIGRATION_URL=migration-url:latest,ALYR_DATABASE_URL=database-url:latest"
+    # The two logins' addresses, once they exist (roles.sh create), so the job can make their roles.
+    if secret_exists admin-database-url; then migrate_secrets="$migrate_secrets,ALYR_ADMIN_DATABASE_URL=admin-database-url:latest"; fi
+    if secret_exists worker-database-url; then migrate_secrets="$migrate_secrets,ALYR_WORKER_DATABASE_URL=worker-database-url:latest"; fi
     # Runs as alyr-migrate, the only account that reads the database owner's address (ALY-268).
     g run jobs deploy alyr-migrate --region="$REGION" --image="$images/alyr-api:$tag" \
       --args=python,-m,alyr.migrate --service-account="$(sa alyr-migrate)" "${private_net[@]}" \
-      --set-env-vars=ALYR_ENV=production --set-secrets="ALYR_MIGRATION_URL=migration-url:latest,ALYR_DATABASE_URL=database-url:latest" \
+      --set-env-vars=ALYR_ENV=production --set-secrets="$migrate_secrets" \
       --cpu=1 --memory=1Gi --max-retries=0 --task-timeout=10m
     g run jobs execute alyr-migrate --region="$REGION" --wait
 
@@ -480,6 +515,20 @@ for s in json.load(sys.stdin).get('data', []):
       echo "Keeping the API's visitor-address settings."
     fi
 
+    worker_secrets="$(secrets_flag)"
+    if api_uses_admin_login; then
+      api_secrets="$api_secrets,ALYR_ADMIN_DATABASE_URL=admin-database-url:latest"
+      echo "Keeping the API's back-office login."
+    fi
+    if worker_uses_own_login; then
+      worker_secrets="${worker_secrets//ALYR_DATABASE_URL=database-url:latest/ALYR_DATABASE_URL=worker-database-url:latest}"
+      echo "Keeping the worker on its own login."
+    fi
+    if api_requires_second_factor; then
+      api_env="$api_env,ALYR_STAFF_2FA=true"
+      echo "Keeping the second factor required for ALYR staff."
+    fi
+
     echo "The API, the worker and the web app..."
     g run deploy alyr-api --region="$REGION" --image="$images/alyr-api:$tag" --args=api --port=8080 \
       --cpu=1 --memory=1Gi --min-instances=1 --max-instances=3 --concurrency=80 --timeout=60 --cpu-boost \
@@ -488,7 +537,7 @@ for s in json.load(sys.stdin).get('data', []):
     g run worker-pools deploy alyr-worker --region="$REGION" --image="$images/alyr-api:$tag" \
       --args=worker --instances=1 --cpu="${ALYR_WORKER_CPU:-1}" --memory="${ALYR_WORKER_MEMORY:-512Mi}" \
       --service-account="$(sa alyr-run)" "${private_net[@]}" \
-      --set-env-vars="$(env_flag)" --set-secrets="$(secrets_flag)"
+      --set-env-vars="$(env_flag)" --set-secrets="$worker_secrets"
     g run deploy alyr-web --region="$REGION" --image="$images/alyr-web:$tag" --port=3000 \
       --cpu=1 --memory=512Mi --min-instances=1 --max-instances=3 --cpu-boost \
       --service-account="$(sa alyr-web)" --allow-unauthenticated \

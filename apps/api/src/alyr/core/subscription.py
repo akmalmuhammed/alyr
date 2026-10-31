@@ -32,7 +32,7 @@ from zoneinfo import ZoneInfo
 import asyncpg
 
 from alyr.config import Settings, get_settings
-from alyr.core import access, jobs, mail, pricing
+from alyr.core import access, jobs, mail, pricing, roles
 from alyr.core.normalise import fmt_qar
 from alyr.db import Database
 
@@ -346,7 +346,7 @@ async def _claim(
 async def _cancel_at_provider(db: Database, checkout_id: UUID, business_id: UUID) -> None:
     """Queue the cancelling of a card subscription at Paddle, once: the job is queued for the
     business the checkout was made from, in the same transaction that marks it."""
-    async with db.tenant(business_id) as conn:
+    async with roles.privileged(db).tenant(business_id) as conn:
         await conn.execute("select set_config('app.platform_admin', 'on', true)")
         marked = await conn.fetchval(
             "update card_checkouts set subscription_status = 'canceling', updated_at = now() "

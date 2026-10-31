@@ -2,3 +2,7 @@
 # shared history). Each line is the fingerprint from the CI log; say why beside it.
 # A setting's name and value in the go-live runbook (ALYR_PADDLE_ENVIRONMENT=live), not a key.
 6e9101952051a737c3cc635619eedebced70336c:docs/runbooks/go-live-checklist.md:generic-api-key:41
+# The laptop deploy's line that keeps the second-factor setting (ALY-125 part 2): a setting's name and the
+# word true, not a key. Its commit, and the commit that first explained it in this file:
+3ab41a465bc2e6206148328b4ae6421fb95b6e89:infra/gcp/setup.sh:generic-api-key:493
+81d1c6924439fe5ea1497cff7ad851ea227513f2:.gitleaksignore:generic-api-key:5

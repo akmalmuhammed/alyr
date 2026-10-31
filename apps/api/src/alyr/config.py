@@ -21,6 +21,16 @@ class Settings(BaseSettings):
     # backup role is created.
     backup_url: str = ""
 
+    # Separate database logins for the back office and for the worker (ALY-125 part 3, SEC-5,
+    # D-137, docs/runbooks/database-roles.md). Empty: everything uses `database_url`, as before.
+    # `admin_database_url` is the login the API uses for work that declares itself the back office
+    # (the back-office routes, billing, the audit log); the worker's own login is simply its
+    # `database_url`. `worker_database_url` is read only by migrations, to create that role.
+    # Secrets (Secret Manager in production). The role names must be `alyr_admin` and
+    # `alyr_worker`.
+    admin_database_url: str = ""
+    worker_database_url: str = ""
+
     # Run queued jobs inside the API process after each request. Convenient locally
     # and in tests. In production set this to false and run `python -m alyr.worker`.
     jobs_inline: bool = True
@@ -273,6 +283,14 @@ class Settings(BaseSettings):
     erase_stopped_clients: bool = False
     erase_after_days: int = 60
     erase_max_per_run: int = 3
+
+    # The second factor for ALYR's own staff (ALY-125, D-136). OFF: staff may set up an
+    # authenticator app and use it, and nothing asks for it. ON: every back-office route refuses
+    # a staff sign-in that has not passed the factor, and a member of staff with none cannot
+    # enrol by themselves (the break-glass opens enrolment). Switch it on only after the founder
+    # has enrolled and kept the recovery codes (docs/runbooks/staff-sign-in.md); take the setting
+    # off again and it is as if it never was.
+    staff_2fa: bool = False
 
     # Per shop, to start (D-039; our estimate). A cap stops new items or photos with a
     # clear message and never deletes anything.

@@ -47,6 +47,7 @@ from alyr.modules.orders import staff_alert
 from alyr.modules.orders.service import EXPIRE_JOB
 from alyr.routes import account as account_routes
 from alyr.routes import admin as admin_routes
+from alyr.routes import admin_factor as admin_factor_routes
 from alyr.routes import admin_media as admin_media_routes
 from alyr.routes import admin_templates as admin_template_routes
 from alyr.routes import admin_whatsapp as admin_whatsapp_routes
@@ -113,8 +114,12 @@ def create_app() -> FastAPI:
         # Nor one that would keep photos on a disk the cloud wipes (ALY-63).
         check_store(settings, app.state.media.store)
         await app.state.db.connect()
+        if app.state.db.admin is not None:
+            await app.state.db.admin.connect()
         yield
         await close_channels(app)
+        if app.state.db.admin is not None:
+            await app.state.db.admin.close()
         await app.state.db.close()
 
     # Interactive API docs only on a developer machine; elsewhere they map our surface
@@ -143,6 +148,20 @@ def create_app() -> FastAPI:
     app.state.poll = PollCache(poll_cache_seconds(settings))
     app.state.shops = ShopCache(poll_cache_seconds(settings))
     app.state.sessions = SessionCache(poll_cache_seconds(settings))
+    # A second login for the work that declares itself the back office (ALY-125 part 3, D-137):
+    # `core/roles.privileged(db)` finds it. Without an address there is one login, as before.
+    # It holds ONE connection under the same limits (D-132): six API instances in a rollout
+    # already hold 24 of Cloud SQL's 47 and the worker 16, so a second pool of the default ten
+    # would break the budget the day the roles are enforced. Count again before raising it.
+    app.state.db.admin = None
+    if settings.admin_database_url:
+        app.state.db.admin = Database(settings.admin_database_url)
+        app.state.db.admin.configure(
+            pool_max=1, acquire_timeout=settings.db_acquire_timeout_seconds,
+            max_waiting=settings.db_max_waiting,
+            statement_timeout_ms=settings.db_statement_timeout_ms,
+            idle_in_transaction_ms=settings.db_idle_in_transaction_ms,
+        )
     app.state.outbound = Outbound(
         {
             "simulator": SimulatorChannel(),
@@ -254,6 +273,8 @@ def create_app() -> FastAPI:
     qty.install_json(app)
     if settings.jobs_inline:
         app.state.db.after_commit = app.state.jobs.drain
+        if app.state.db.admin is not None:
+            app.state.db.admin.after_commit = app.state.jobs.drain
 
     @app.get("/health")
     async def health() -> dict:
@@ -365,6 +386,7 @@ def create_app() -> FastAPI:
     app.include_router(agent_routes.router)
     app.include_router(reports_routes.router)
     app.include_router(admin_routes.router)
+    app.include_router(admin_factor_routes.router)
     app.include_router(billing_routes.router)
     app.include_router(admin_media_routes.router)
     app.include_router(admin_template_routes.router)
