@@ -87,7 +87,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-121 | The owner is emailed once when ALYR publishes their price, ahead of the rest of the payment path: English or Arabic as they signed up, claimed on the quote so it never goes twice, nothing sent for a price they already saw or an address that cannot be real. The part of D-093 that shipped on its own | Proposed (the founder signs off the wording) |
 | D-122 | ALYR's own business keeps no test line: the "Try it" step says so and offers to skip, and the one-off first-admin job does not create one | Proposed |
 | D-113 | The Cloudflare zone is hardened with what the Free plan offers and the state is written down: HTTPS only, minimum TLS 1.2, strict SSL, CAA, a trimmed SPF and response-header rules for the API and media host are live; the edge rate-limit rule waits because Free has only Block; no Access until Zero Trust is onboarded; DMARC stays `none` until the reports are read, never `reject` | Proposed |
-| D-140 | An owner or admin manages the services from the Bookings screen (add, change names, length, price, deposit and who does it, hide and show; one part of Set up bookings), checked in the page's words and again in the API, and a booking keeps the price it was made at (migration 0100) | Accepted |
+| D-140 | An owner or admin manages the services from the Bookings screen (add, change names, length, price, deposit and who does it, hide and show; one part of Set up bookings), checked in the page's words and again in the API, and a booking keeps the price it was made at (migration 0100) | Proposed |
 
 ---
 
@@ -2076,7 +2076,7 @@ Without it, analytics is off everywhere.
 **Revisit when** the founder prices Docs, ALY-143 (the accountant export, statements) or ALY-147 (ALYR's own invoices) is built and the words may grow, or Shelf is made included.
 
 ## D-140 · An owner or admin manages the services from the Bookings screen, and a booking keeps the price it was made at
-**Date** 31 Oct 2026 · **Status** Accepted (built and tested; nothing deployed) · Linear ALY-259, stage 1 · Builds on D-084 (people and chairs, deposits) and D-069 (resources)
+**Date** 31 Oct 2026 · **Status** Proposed (built and tested; nothing deployed; waiting for the founder's yes) · Linear ALY-259, stage 1 · Builds on D-084 (people and chairs, deposits) and D-069 (resources)
 
 **The decision.**
 - **Services have a screen.** In the Bookings tab an owner or admin opens **Set up bookings**, which takes the place of the day until they go back (it is one part at a time: Services, People, Deposits). Services lists every service, hidden ones too, with its length, price, deposit and the number of bookings still to come. The owner can add a service, change its names (English and Arabic), length, price, deposit and which people or chairs do it, hide it from the booking page and show it again. This was API only; the earlier audit expected every salon to ask for it in the first week.
