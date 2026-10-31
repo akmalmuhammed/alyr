@@ -18,6 +18,7 @@ Checked 7 October 2026. Free tiers change often; re-check a row before relying o
 | What for | Tool | Free allowance | What staying free costs us | Swap to | Swap when | Status |
 |---|---|---|---|---|---|---|
 | Source and CI | GitHub Free | Private repos, 2,000 CI minutes a month | Cannot enforce branch protection on a private repo | GitHub Team | A second developer joins | In use |
+| Browser journey tests | Playwright (`@playwright/test`, Apache-2.0) with its own Chromium, in `tests/e2e`, run by the `e2e` workflow (ALY-122) | Free: a development tool, nothing of it ships; CI minutes are free on a public repository | A few minutes of CI per push and a 120 MB browser download; its own lock file, so the web app's dependencies and image do not change | — | The suite outgrows two parallel workers, or a second browser must be proved (Firefox, Safari) | In use |
 | Tasks | Linear Free | 250 issues, 2 teams | Hard cap; we are at 54 | Linear Basic, or archive done issues | About 200 active issues | In use |
 | Development | Docker Desktop, local PostgreSQL 16 and Redis 7 | Unlimited | None | — | — | In use |
 | WhatsApp test traffic | Meta test number | Free; up to 5 recipient phones | Cannot message real customers | Merchant's own number via Embedded Signup | Phase 2 exit test | Planned |
