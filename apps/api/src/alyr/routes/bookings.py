@@ -374,15 +374,47 @@ async def cancel(
     staff: Staff = Depends(current_staff),
 ) -> dict:
     async with request.app.state.db.tenant(staff.tenant_id) as conn:
-        if not await service.cancel(
+        done = await service.cancel_booking(
             conn, request.app.state.outbound, booking_id, actor=team.actor_of(staff),
             refund=body.refund if body else None,
-        ):
-            raise HTTPException(status_code=404, detail="booking not found or already finished")
-        state = await conn.fetchval(
-            "select deposit_state from bookings where id = $1", booking_id
         )
-    return {"status": "cancelled", "deposit_state": state}
+        if done is None:
+            raise HTTPException(status_code=404, detail="booking not found or already finished")
+    return {"status": "cancelled", **done}
+
+
+@router.get("/bookings/customers")
+async def booking_customers(
+    request: Request, q: str = Query(default="", max_length=60),
+    tenant_id: UUID = Depends(current_tenant),
+) -> dict:
+    """Customers of the shop matching a name or part of a number, for the desk to choose one."""
+    async with request.app.state.db.tenant(tenant_id) as conn:
+        return {"customers": await service.find_customers(conn, q)}
+
+
+@router.get("/bookings/{booking_id}/times")
+async def booking_times(
+    booking_id: UUID, day: date, request: Request, resource_id: UUID | None = None,
+    tenant_id: UUID = Depends(current_tenant),
+) -> dict:
+    """Free start times on a day for a booking being moved: its own service, the person or
+    chair asked for or anyone, and its own time not counted against it. Staff may still choose
+    any other minute; these are the times the page would offer."""
+    async with request.app.state.db.tenant(tenant_id) as conn:
+        found = await conn.fetchrow(
+            "select service_id from bookings where id = $1 and status = 'booked'", booking_id
+        )
+        if found is None:
+            raise HTTPException(status_code=404, detail="booking not found")
+        try:
+            free = await service.free_times(
+                conn, found["service_id"], day, resource_id, ignore_booking=booking_id
+            )
+        except service.BookingError:
+            free = []  # the service has been hidden since: nothing to suggest, staff can still type
+        closed = await service.shop_closed_on(conn, day)
+    return {"day": day.isoformat(), "times": [t.isoformat() for t in free], "closed": closed}
 
 
 @router.post("/bookings/{booking_id}/move")

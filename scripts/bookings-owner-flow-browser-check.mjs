@@ -59,6 +59,10 @@ const W = AR
     closureAdded: "تمت إضافة أيام الإجازة", standing: "المحجوز: 1", seeDay: "فتح اليوم", removeClosure: "إزالة",
     closureRemoved: "أُزيلت أيام الإجازة", closedFor: "مغلق: عيد الفطر", closedOn: "المحل مغلق في هذا اليوم", sunday: "الأحد",
     reasonText: "عيد الفطر", whole: "المحل كله",
+    addWalkIn: "إضافة حضور مباشر", endsAt: "ينتهي", addBooking: "إضافة الحجز", bookingAdded: "تمت إضافة الحجز",
+    toldSent: "يُبلَّغ العميل عبر واتساب", notAgreed: "لم يوافق بعد على رسائل واتساب", tellYourself: "أبلغه بنفسك",
+    nowAt: "الآن", move: "تغيير الموعد", movedDone: "تم تغيير الموعد.", cancel: "إلغاء", confirmCancel: "إلغاء الحجز",
+    cancelledDone: "تم الإلغاء.", close: "إغلاق",
   }
   : {
     setup: "Set up bookings", back: "Back to the day", services: "Services", addService: "Add a service", addSave: "Add service",
@@ -72,6 +76,10 @@ const W = AR
     closureAdded: "Days off added", standing: "Still booked: 1", seeDay: "Open the day", removeClosure: "Remove",
     closureRemoved: "Day off removed", closedFor: "Closed: Eid al-Fitr", closedOn: "The shop is closed this day", sunday: "Sunday",
     reasonText: "Eid al-Fitr", whole: "The whole shop",
+    addWalkIn: "Add a walk-in", endsAt: "Ends", addBooking: "Add booking", bookingAdded: "Booking added",
+    toldSent: "The customer is told on WhatsApp", notAgreed: "has not agreed to WhatsApp messages yet", tellYourself: "Tell them yourself",
+    nowAt: "Now", move: "Move", movedDone: "Moved.", cancel: "Cancel", confirmCancel: "Cancel the booking",
+    cancelledDone: "Cancelled.", close: "Close",
   };
 
 // A booking link for one customer, signed with the development key, as the chat would send it.
@@ -406,6 +414,117 @@ try {
       await until("document.querySelectorAll('.bk-closure').length === 1", "one day off left");
       check((await text()).includes(W.closureRemoved), "it says the day off was removed");
       check(Number(sql(`select count(*) from booking_closures where tenant_id = '${tenant}' and resource_id is null`)) === 0, "the shop's closure is gone");
+    });
+  }
+
+  if (stage(3)) {
+    const cardButton = (customer, label, what = '') => `(() => { const card = [...document.querySelectorAll('.bk-card')].find((c) => c.textContent.includes(${JSON.stringify(customer)}) && c.textContent.includes(${JSON.stringify(what)})); return card && [...card.querySelectorAll('button')].find((x) => x.textContent.trim() === ${JSON.stringify(label)}); })()`;
+    const toBookingDay = async () => {
+      await b.go(`${BASE}/app/bookings`, 1500);
+      await until("!!document.querySelector('.bk')", "the Bookings screen");
+      for (let i = 0; i < 14 && !(await js("document.querySelectorAll('.bk-card').length > 0")); i += 1) {
+        await click("document.querySelectorAll('.bk-nav button')[2]", 600);
+      }
+      await until("document.querySelectorAll('.bk-card').length > 0", "the day with the booking");
+    };
+    // Mona wrote to the shop first, so ALYR may message her; Rana (typed in below) never has.
+    sql(`update contacts set consent_service = 'granted' where id = '${contact}'`);
+
+    await run("desk: a walk-in for a customer the shop already has, found by name", async () => {
+      await b.view(1440, 900, false, "light");
+      await toBookingDay();
+      await click(`[...document.querySelectorAll('.bk-barbtns button')].find((x) => x.textContent.trim() === ${JSON.stringify(W.addWalkIn)})`, 500);
+      await until("!!document.getElementById('bk-add-name')", "the walk-in form");
+      await fill("#bk-add-name", "Mon");
+      await until("document.querySelectorAll('.bk-match').length > 0", "the matching customers");
+      check((await js("document.querySelector('.bk-match').textContent")).includes("Mona Test"), "typing a few letters finds the customer the shop has");
+      await shot("18-walk-in-find-1440");
+      await click("document.querySelector('.bk-match')", 400);
+      check((await js("!!document.querySelector('.bk-picked') && !document.getElementById('bk-add-name')")), "the customer is chosen: no name or number to type");
+      await setValue("#bk-add-time", "15:00");
+      check((await text()).includes(W.endsAt), "the form says when the visit ends");
+      await shot("19-walk-in-chosen-1440");
+      await click(buttonByText(W.addBooking), 1600);
+      await until(`document.body.innerText.includes(${JSON.stringify(W.bookingAdded)})`, "the added message");
+      check(!(await text()).includes(W.toldSent), "a walk-in says nothing about a message: the customer is standing there");
+      const row = sql(`select walk_in, contact_id = '${contact}' from bookings where tenant_id = '${tenant}' and status = 'booked' and walk_in`);
+      check(row === "t|t", `the walk-in is Mona's, written down as a walk-in (${row})`);
+      check(Number(sql(`select count(*) from messages where contact_id = '${contact}' and payload->>'template' = 'booking_confirmed'`)) === 0, "no confirmation was sent for a walk-in");
+    });
+
+    await run("desk: a booking by phone for a new customer, who cannot be messaged yet", async () => {
+      await click(`[...document.querySelectorAll('.bk-barbtns button')].find((x) => x.textContent.trim() === ${JSON.stringify(W.addWalkIn)})`, 500);
+      await until("!!document.getElementById('bk-add-name')", "the form");
+      await fill("#bk-add-name", "Rana Newcomer");
+      await fill("#bk-add-phone", "55512345");
+      await setValue("#bk-add-time", "16:30");
+      await click("document.querySelector('.bk-check input')", 300);
+      await until("!!document.querySelector('.bk-warn')", "the warning");
+      const warning = await js("document.querySelector('.bk-warn').textContent");
+      check(warning.includes(W.notAgreed) && warning.includes(W.tellYourself), "before it is added, the form says this customer cannot be messaged yet");
+      await shot("20-phone-booking-warning-1440");
+      await click(buttonByText(W.addBooking), 1600);
+      await until(`document.body.innerText.includes(${JSON.stringify(W.bookingAdded)})`, "the added message");
+      const said = await text();
+      check(said.includes(W.notAgreed) && said.includes("97455512345"), "afterwards it says nothing was sent and gives the number to call");
+      check(sql(`select count(*) from contacts where tenant_id = '${tenant}' and phone = '97455512345'`) === "1", "the new customer is kept");
+      check(sql(`select status from messages m join contacts c on c.id = m.contact_id where c.tenant_id = '${tenant}' and c.phone = '97455512345' and m.payload->>'template' = 'booking_confirmed'`) === "blocked", "the confirmation is on the record as not sent");
+    });
+
+    await run("desk: move a booking to a free time, the customer is told", async () => {
+      await toBookingDay();
+      await click(cardButton("Mona Test", W.move, AR ? "تشذيب الحاجبين" : "Eyebrow threading"), 500);
+      await until("document.querySelectorAll('.bk-chip').length > 0", "the free times");
+      const now = await js("document.querySelector('.bk-form.inline .bk-quiet').textContent");
+      check(now.includes(W.nowAt), `the form says where the booking is now (${now})`);
+      check((await js("document.querySelectorAll('.bk-chip').length")) > 3, "free times are offered as buttons");
+      await shot("21-move-free-times-1440");
+      const before = sql(`select starts_at from bookings where tenant_id = '${tenant}' and service_name = 'Eyebrow threading'`);
+      await click("document.querySelectorAll('.bk-chip')[3]", 300);
+      check((await js("document.querySelectorAll('.bk-chip')[3].getAttribute('aria-pressed')")) === "true", "the chosen time is marked");
+      const chosen = await js("document.querySelector('.bk-form.inline input[type=time]').value");
+      await click(buttonByText(W.save), 1600);
+      await until(`document.body.innerText.includes(${JSON.stringify(W.toldSent)})`, "the told message");
+      check((await text()).includes(W.movedDone), "it says the booking moved, and that the customer is told on WhatsApp");
+      const after = sql(`select starts_at from bookings where tenant_id = '${tenant}' and service_name = 'Eyebrow threading'`);
+      check(after !== before && sql(`select to_char(starts_at at time zone 'Asia/Qatar', 'HH24:MI') from bookings where tenant_id = '${tenant}' and service_name = 'Eyebrow threading'`) === chosen, `it moved to the time that was chosen (${chosen})`);
+      check(Number(sql(`select count(*) from messages where contact_id = '${contact}' and payload->>'template' = 'booking_moved' and status <> 'blocked'`)) === 1, "the move notice is on its way to the customer");
+    });
+
+    await run("desk: moving or cancelling for a customer who cannot be messaged says so first and after", async () => {
+      await toBookingDay();
+      await click(cardButton("Rana Newcomer", W.move), 500);
+      await until("!!document.querySelector('.bk-form.inline .bk-warn')", "the warning on the move");
+      check((await js("document.querySelector('.bk-form.inline .bk-warn').textContent")).includes("97455512345"), "the move form already shows the number to call");
+      await b.view(390, 844, true, "light");
+      await noSideScroll("move form 390");
+      await touchTargets("move form 390");
+      await shot("22-move-form-390");
+      await b.view(1440, 900, false, "light");
+      await click(buttonByText(W.close), 300);
+      await click(cardButton("Rana Newcomer", W.cancel), 500);
+      await until("!!document.querySelector('.bk-form.inline .bk-warn')", "the warning on the cancel");
+      await click(buttonByText(W.confirmCancel), 1600);
+      await until(`document.body.innerText.includes(${JSON.stringify(W.cancelledDone)})`, "the cancelled message");
+      const said = await text();
+      check(said.includes(W.notAgreed) && said.includes(W.tellYourself) && said.includes("97455512345"), "after the cancel it says the customer was not messaged and gives the number");
+      check(sql(`select status from bookings b join contacts c on c.id = b.contact_id where c.tenant_id = '${tenant}' and c.phone = '97455512345'`) === "cancelled", "the booking is cancelled all the same");
+      await shot("23-cancelled-not-told-1440");
+    });
+
+    await run("desk: the phone-width forms, light and dark", async () => {
+      for (const scheme of ["light", "dark"]) {
+        await b.view(390, 844, true, scheme);
+        await toBookingDay();
+        await click(`[...document.querySelectorAll('.bk-barbtns button')].find((x) => x.textContent.trim() === ${JSON.stringify(W.addWalkIn)})`, 500);
+        await until("!!document.getElementById('bk-add-name')", "the form");
+        await fill("#bk-add-name", "Mon");
+        await until("document.querySelectorAll('.bk-match').length > 0", "the matches");
+        await noSideScroll(`walk-in form 390 ${scheme}`);
+        await touchTargets(`walk-in form 390 ${scheme}`);
+        await shot(`24-walk-in-390-${scheme}`);
+        if (scheme === "dark") await axe("desk-dark");
+      }
     });
   }
 

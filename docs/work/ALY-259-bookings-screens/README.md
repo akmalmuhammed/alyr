@@ -26,3 +26,14 @@ Pictures of each stage's screens, taken by `scripts/bookings-owner-flow-browser-
 | `en-11-hours-390-light`, `ar-11-hours-390-light` | the week on a phone, a break on Sunday |
 | `en-12-days-off-390-dark`, `ar-12-days-off-390-light` | the add-days-off form on a phone |
 | `en-16-booking-page-closed-390` | the customer's booking page on a closed day: it says why |
+
+## Stage 3: the desk (D-142)
+
+| Picture | Shows |
+|---|---|
+| `en-18-walk-in-find-1440` | typing three letters finds the customer the shop has |
+| `en-20-phone-booking-warning-1440`, `ar-20-phone-booking-warning-1440` | a booking by phone for a new customer: the form says before it is added that nothing can be sent |
+| `en-21-move-free-times-1440` | moving a booking: where it is now and the free times as buttons |
+| `en-22-move-form-390` | the move form on a phone, the number to call shown |
+| `en-23-cancelled-not-told-1440` | after a cancel for a customer who cannot be messaged: nothing was sent, the number to call |
+| `en-24-walk-in-390-dark` | the walk-in form on a phone, dark, with the matching customer under the name |

@@ -1,6 +1,6 @@
 # Spec 043: The bookings setup screens (services first)
 
-Status: stage 1 (services) built on branch `aly-259-bookings-services` and stage 2 (opening hours and days off) on `aly-259-bookings-hours`, stacked on it (Linear ALY-259), one pull request each, not merged. Decisions: D-140, D-141. Later stages (walk-ins and moving a booking with the customer told, the people and chairs polish) add to this spec in their own pull requests. Builds on spec 026 (resources, D-069) and spec 033 (people and chairs, deposits, the day view, D-084).
+Status: stage 1 (services) built on branch `aly-259-bookings-services` and stage 2 (opening hours and days off) on `aly-259-bookings-hours`, stacked on it (Linear ALY-259), one pull request each, not merged. Decisions: D-140, D-141. Stage 3 (the desk: walk-ins and moving a booking, with the customer told) is on `aly-259-bookings-desk`, stacked on stage 2 (D-142); the people and chairs polish (stage 4) adds to this spec in its own pull request. Builds on spec 026 (resources, D-069) and spec 033 (people and chairs, deposits, the day view, D-084).
 
 ## Where we start
 
@@ -38,7 +38,7 @@ Every word is in `bookingsCopy.ts`, English and Arabic against one type. The for
 
 ## Not built in this stage
 
-- **Opening hours and days off** (stage 2, below), **walk-ins and moving a booking with the customer told** (stage 3, the routes exist), **adding and retiring a person or chair** (stage 4, the routes exist).
+- **Opening hours and days off** (stage 2, below), **walk-ins and moving a booking with the customer told** (stage 3, below), **adding and retiring a person or chair** (stage 4, the routes exist).
 - **Reordering services.** They are shown in the order they were added.
 - **An audit trail of settings.** Nothing in the activity record says who changed a service or a price (D-140).
 - **A photo or a description for a service.**
@@ -96,3 +96,51 @@ What a day off does:
 - `tests/test_booking_hours_closures.py` (18): a break is two periods and nothing is offered in it; overlapping periods are refused and the old week stays; a person's own week can have a break; a closed day offers nothing and says why; nobody can book it even with a time taken before; a range, taking one away, one that has begun; a booking inside a closure stays and is counted; staff can still write a visit on a closed day; a person on leave is not offered and the other chair still is; the refusals; only days to come are listed; the day view says closed; the booking page lists the shop's closed days and never a person's leave; closures follow the shop's own calendar day (a shop 14 hours ahead of UTC); agents refused; another shop cannot see or remove them. A mutation check: take the closure test out of the engine and four of them fail.
 - `bookingsWeekLogic.test.mjs` (9): a week as seven days and back, a break, the day named in a refusal, the same hours every day, a day off's dates.
 - `scripts/bookings-owner-flow-browser-check.mjs --stages 1,2`: the owner puts a break on Sunday (an overlap is refused in words naming the day), adds a day off on the day of a customer's booking (it says one booking is still booked, the booking stays, the day view says closed and why), the customer's page says the shop is closed that day and why, one person's leave, and taking the closure away. English and Arabic, 1440, 390 and 320 px, light and dark, axe, 44 px targets, no sideways scroll.
+
+## Stage 3: the desk, walk-ins and moving a booking (D-142)
+
+The routes existed (spec 033); the forms were bare: a name and a number typed every time, a move by typing a time and hoping, and "the customer is told" said whether or not they were. Stage 3 keeps every route and changes what staff see. The forms are in `BookingsDeskForms.tsx` and the small functions in `bookingsDeskLogic.ts`. Any staff member can use them, agents too.
+
+### Writing a visit down
+
+**Add a walk-in** opens a form with the service, the person or chair (Anyone free by default), the time (this minute by default, any minute allowed, never a taken person) and a line under it saying when the visit ends. The customer is **found, or made**:
+
+- **Found.** Typing two letters of a name, or three digits of a number, lists the shop's customers who match, under the name field (`GET /api/bookings/customers?q=`: name or part of the number, at most six, never the owner's own test customers, wildcard characters read as plain text). Choosing one fills the booking in their name; **Use someone else** puts the fields back.
+- **Made.** A new name and number (a number is needed: every customer record can be reached, so a record without one cannot exist). A number that is already the shop's is found, not duplicated. Qatar's eight digits get 974.
+- **Here now** (ticked by default) writes a walk-in down and sends nothing: the customer is standing there. Unticked, it is a booking by phone: the customer is sent the confirmation by the notice that already exists (`booking_confirmed`) and a reminder is queued.
+
+### Moving a booking
+
+**Move** shows where the booking is now ("Now 10:00 with Chair 2"), a day, a person or chair, and the **free times** for that booking's service on that day for that person or anyone (`GET /api/bookings/{id}/times?day=&resource_id=`: the engine's free times, the booking's own time not counted against it, the day's closure said when there is one) as buttons. Choosing one fills the time; **Or write any other time** still takes any minute, the way a walk-in can. A refused move (the person is taken then) says so in words and changes nothing. The customer is told by `booking_moved`.
+
+### Cancelling
+
+**Cancel** is as before (a paid deposit is kept or refunded by the shop's rule, or by the shop's choice), and the customer is told by `booking_cancelled`, or `booking_cancelled_deposit` when there is a deposit to say something about (written in D-084, not yet submitted to Meta: inside the customer's 24-hour window it goes as a plain message, outside it waits for the template).
+
+### Was the customer told
+
+Moving, cancelling and writing down a booking by phone answer with `told: {sent, reason, phone}`. The outbound layer takes a message or refuses it (hard rule 5), so the screen says which:
+
+| | The screen says |
+|---|---|
+| Taken (`sent`) | "Moved. The customer is told on WhatsApp." (the delivery itself can still fail later: that shows on the Not sent screen) |
+| Refused: `no_consent` (a customer typed in at the desk, who has never written) | "The customer has not agreed to WhatsApp messages yet, so nothing was sent. Tell them yourself: 9745…" |
+| Refused: `opted_out` (they said stop) | "The customer asked not to be messaged, so nothing was sent. Tell them yourself." |
+| Refused: `billing_paused` (ALYR's sending for the shop is paused) | "…cannot be messaged while ALYR's messages for this shop are paused…" |
+| A walk-in | nothing: no message was meant to be sent |
+
+**Before** the action the form says the same where the customer cannot be messaged (`consent` comes with every booking in the day view), so staff know to call before they press. **The move or the cancel always happens**: a message that cannot go never holds the shop up, and the refused message is on the record as blocked (and on the Not sent screen).
+
+### Not built in stage 3
+
+- **Recording that a customer agreed on the phone.** A customer typed in at the desk has not agreed to messages, so a phone booking for them sends no confirmation and no reminder until they write first. Letting staff record "agreed by phone" is a consent record made on someone's behalf: it needs the founder's decision, and probably the lawyer's, so nothing is built (D-142).
+- **A walk-in with no number.** The identity layer needs a number (or a WhatsApp ID) for every customer.
+- **A deposit link for a booking staff made.** Staff bookings ask no deposit (spec 033).
+- **Finding a customer in any Arabic spelling** (the order page folds them; the desk's search is plain text, either language).
+- **Moving several bookings at once**, for example when a person is off: each is moved on its own.
+
+### Checks (stage 3)
+
+- `tests/test_bookings_desk.py` (18): a move says the customer was told, and says it was not (never agreed, said stop) with the number; the move happens anyway; the same for a cancel and for a booking by phone for a new customer; a walk-in sends nothing and says nothing; the list carries where consent stands; a booking being moved does not block its own time; the times follow the person asked for; a closed day is said; a time the screen offered is taken; any other minute is allowed; finding a customer by name and by part of the number; one character, blanks and wildcards find nobody; test customers are not offered; an agent can do all of it; another shop sees nothing and can move or cancel nothing.
+- `bookingsDeskLogic.test.mjs` (6): a visit's end, the sentences in both languages (reasons, the number, Western digits in Arabic), a reason nobody wrote words for.
+- `scripts/bookings-owner-flow-browser-check.mjs --stages 1,2,3`: a walk-in for a customer found by typing three letters, a booking by phone for a new customer (warned before, told nothing was sent after, the confirmation on the record as blocked), a move to a chosen free time with the customer told, a move and a cancel for a customer who cannot be messaged (the number shown before and after, the cancel done all the same), the forms at 390 px light and dark. English and Arabic, axe, 44 px targets, no sideways scroll.

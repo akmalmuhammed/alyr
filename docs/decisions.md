@@ -89,6 +89,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-113 | The Cloudflare zone is hardened with what the Free plan offers and the state is written down: HTTPS only, minimum TLS 1.2, strict SSL, CAA, a trimmed SPF and response-header rules for the API and media host are live; the edge rate-limit rule waits because Free has only Block; no Access until Zero Trust is onboarded; DMARC stays `none` until the reports are read, never `reject` | Proposed |
 | D-140 | An owner or admin manages the services from the Bookings screen (add, change names, length, price, deposit and who does it, hide and show; one part of Set up bookings), checked in the page's words and again in the API, and a booking keeps the price it was made at (migration 0100) | Proposed |
 | D-141 | Opening hours are a week a day at a time with a break as two periods, and the shop or one person can have days off (`booking_closures`, migration 0101) that customers cannot book and that never cancel a booking | Proposed |
+| D-142 | The desk (walk-ins, moving and cancelling a booking) finds a customer the shop has instead of retyping them, shows the free times for a move, and says whether the customer was told, with the number to call when ALYR may not message them; staff cannot record a customer's consent for them | Proposed |
 
 ---
 
@@ -2107,3 +2108,19 @@ Without it, analytics is off everywhere.
 **Chosen over** cancelling the bookings inside a new closure (an owner adding Eid should never find customers cancelled by a settings screen); instants for the first and last day (the day would move with the server's zone); a closure that overrides staff as well (the shop could not write down a regular's visit on a day it is closed to everyone else).
 
 **Revisit when** a pilot salon asks for special hours on one date, repeating closures, or a message to the customers of a day it closes.
+
+## D-142 · The desk finds a customer the shop has, shows the free times for a move, and says whether the customer was told; staff cannot record a customer's consent for them
+**Date** 31 Oct 2026 · **Status** Proposed (built and tested; nothing deployed; one question for the founder, below) · Linear ALY-259, stage 3 · Builds on D-084, D-141 and hard rule 5
+
+**The decision.**
+- **A customer the shop has is chosen, not retyped.** The walk-in form searches the shop's customers by name or part of a number (two letters, three digits; at most six; the owner's test customers never) and writes the booking in that customer's name. A new customer is still made from a name and a number.
+- **A move shows the times it can take.** The booking's own service, on the day and for the person or chair asked for or anyone, from the same free-times engine the booking page uses, with the booking's own time not counted against it and a closed day said. Any other minute can still be typed: staff may, as for a walk-in.
+- **The screen says what became of the message.** Moving, cancelling and a booking by phone return `told: {sent, reason, phone}` from the outbound layer's own answer, and the screen says it in plain words: told on WhatsApp, or not, why, and the number to call. The same is said before the action, from the customer's consent. The move or cancel always happens: a message that cannot go never holds a shop up.
+- **No new template.** Every message uses what exists: `booking_confirmed`, `booking_moved`, `booking_cancelled` and, for a cancel that says something about a deposit, `booking_cancelled_deposit` (written in D-084, not submitted to Meta; inside the 24-hour window it goes as a plain message).
+- **Staff cannot record a customer's consent for them.** A customer typed in at the desk has not agreed to messages (hard rule 5: consent before sending), so a booking by phone for them sends no confirmation or reminder until they write first. The form and the answer say so and give the number. This is the honest state of things, not the ideal one: a salon that takes a booking by phone would like to confirm it by WhatsApp.
+
+**Open for the founder (and probably the lawyer, ALY-51).** Whether staff may record "the customer agreed on the phone to booking messages" as a consent record (source: staff, with the wording they were told), so a phone booking can be confirmed and reminded. It is a consent made on someone's behalf; ALYR does not do it today and nothing here builds it.
+
+**Chosen over** saying "the customer is told" whatever happened (what the screen said before: false for any customer typed in at the desk); recording consent when staff tick a box (a legal question that is not ours to settle by a checkbox); a "send a message anyway" button (hard rule 5 has no such door); a new template for a phone booking (Meta's approval is the founder's).
+
+**Revisit when** the founder answers the consent question, a template for phone bookings is approved, or a pilot salon asks for a walk-in with no number.

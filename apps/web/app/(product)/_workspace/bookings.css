@@ -118,3 +118,15 @@
 [dir="rtl"] .bk { line-height: var(--leading-arabic-body); }
 /* A thumb needs 44 px: every button of the day view grows on a phone and a touch screen. */
 @media (max-width: 56rem), (pointer: coarse) { .bk .btn { height: auto; min-height: 44px; } }
+
+/* ── the desk: finding a customer, free times for a move ── */
+.bk-findwrap { display: grid; gap: var(--space-2); align-content: start; min-width: 0; }
+.bk-matches { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.bk-match { height: auto; min-height: 44px; flex-wrap: wrap; justify-content: flex-start; text-align: start; white-space: normal; }
+.bk-picked { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-inline-start: 2px solid var(--ok); background: var(--surface); border-radius: var(--radius-sm); }
+.bk-picked p { font-size: var(--ui-body-sm); overflow-wrap: anywhere; }
+.bk-free { display: grid; gap: var(--space-1); min-width: 0; }
+.bk-chips { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.bk-chip { min-width: 4.5rem; font-variant-numeric: tabular-nums; }
+.bk-chip[aria-pressed="true"] { background: var(--text); color: var(--canvas); box-shadow: none; }
+.bk .bk-chip[aria-pressed="true"]:hover { background: var(--text); }

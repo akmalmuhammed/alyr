@@ -419,11 +419,13 @@ async def has_resources(conn: asyncpg.Connection) -> bool:
 
 
 async def free_times(
-    conn: asyncpg.Connection, service_id: UUID, day: date, resource_id: UUID | None = None
+    conn: asyncpg.Connection, service_id: UUID, day: date, resource_id: UUID | None = None,
+    ignore_booking: UUID | None = None,
 ) -> list[datetime]:
     """Start times on `day` (the shop's calendar day) when this service can be booked: a
     resource that does it is working then and free, or `resource_id` is, when one is asked
-    for. Each resource's times start from its own opening on the shop's 30-minute step."""
+    for. Each resource's times start from its own opening on the shop's 30-minute step.
+    `ignore_booking` leaves one booking out, so a booking being moved does not block itself."""
     minutes = await conn.fetchval(
         "select duration_minutes from services where id = $1 and active", service_id
     )
@@ -447,11 +449,12 @@ async def free_times(
               and s < now() + make_interval(days => $5)
               and not exists (
                   select 1 from bookings b where b.status = 'booked'
+                    and b.id is distinct from $6::uuid
                     and tstzrange(b.starts_at, b.ends_at)
                         && tstzrange(s, s + make_interval(mins => $2)))
             order by s
             """,
-            day, minutes, SLOT_STEP_MINUTES, LEAD_MINUTES, MAX_DAYS_AHEAD,
+            day, minutes, SLOT_STEP_MINUTES, LEAD_MINUTES, MAX_DAYS_AHEAD, ignore_booking,
         )
         return [r["starts_at"] for r in rows]
     rows = await conn.fetch(
@@ -465,11 +468,13 @@ async def free_times(
           and s < now() + make_interval(days => $5)
           and not exists (
               select 1 from bookings b where b.status = 'booked' and b.resource_id = w.rid
+                and b.id is distinct from $8::uuid
                 and tstzrange(b.starts_at, b.ends_at)
                     && tstzrange(s, s + make_interval(mins => $2)))
         order by 1
         """,
         day, minutes, SLOT_STEP_MINUTES, LEAD_MINUTES, MAX_DAYS_AHEAD, service_id, resource_id,
+        ignore_booking,
     )
     return [r["starts_at"] for r in rows]
 
@@ -771,12 +776,25 @@ async def _customer(conn: asyncpg.Connection, contact_id: UUID) -> asyncpg.Recor
     return contact
 
 
+async def _told(conn: asyncpg.Connection, contact_id: UUID, result) -> dict:
+    """What staff need to know about a message to a customer: whether the outbound layer took it,
+    and when it did not (the customer said stop, never agreed to messages, ALYR's sending for the
+    shop is paused), why and where to reach them, so staff tell them themselves."""
+    sent = result.blocked is None
+    return {
+        "sent": sent, "reason": result.blocked,
+        "phone": None if sent else await conn.fetchval(
+            "select phone from contacts where id = $1", contact_id
+        ),
+    }
+
+
 async def _confirm(
     conn: asyncpg.Connection, outbound: Outbound, booking_id: UUID, number: int,
     contact: asyncpg.Record, starts_at: datetime,
-) -> str:
+) -> tuple[str, dict]:
     """Tell the customer the booking is confirmed and queue the reminder. Returns the time
-    as the customer reads it."""
+    as the customer reads it, and whether the customer was told (`_told`)."""
     arabic = contact["lang"] == "ar"
     when = await when_text(conn, starts_at, arabic)
     shop = await shop_name(conn, arabic)
@@ -787,11 +805,11 @@ async def _confirm(
         else f"Booking {number} confirmed at {shop}: {what}, {when}. "
              "To cancel, send \"my booking\"."
     )
-    await outbound.send(conn, templates.notice(
+    sent = await outbound.send(conn, templates.notice(
         contact["id"], "booking_confirmed", contact["lang"], body, number, shop, what, when,
     ))
     await schedule_reminder(conn, booking_id, starts_at)
-    return when
+    return when, await _told(conn, contact["id"], sent)
 
 
 async def create_booking(
@@ -831,7 +849,7 @@ async def create_booking(
         )
         out["when_text"] = await when_text(conn, starts_at, contact["lang"] == "ar")
     else:
-        out["when_text"] = await _confirm(conn, outbound, booking_id, number, contact, starts_at)
+        out["when_text"], _ = await _confirm(conn, outbound, booking_id, number, contact, starts_at)
     return out
 
 
@@ -860,13 +878,16 @@ async def staff_booking(
          "resource": named["name"] if named else None, "by_staff": True,
          "walk_in": walk_in or None},
     )
+    told = None
     if walk_in:
         when = await when_text(conn, starts_at, contact["lang"] == "ar")
     else:
-        when = await _confirm(conn, outbound, booking_id, number, contact, starts_at)
+        when, told = await _confirm(conn, outbound, booking_id, number, contact, starts_at)
     return {"id": str(booking_id), "number": number, "when_text": when,
             "starts_at": starts_at.isoformat(), "service": service["name"],
-            "resource": named["name"] if named else None, "walk_in": walk_in}
+            "resource": named["name"] if named else None, "walk_in": walk_in,
+            # None for a walk-in: the customer is standing there and nothing was sent.
+            "told": told}
 
 
 async def walk_in_customer(
@@ -892,13 +913,44 @@ async def walk_in_customer(
     )
 
 
+async def find_customers(conn: asyncpg.Connection, query: str, limit: int = 6) -> list[dict]:
+    """Customers of the shop whose name or phone number holds what was typed, for the desk to
+    choose one instead of typing them again. Two characters at least; the owner's own test
+    customers are left out."""
+    text = query.strip()
+    digits = "".join(ch for ch in text if ch.isdigit())
+    if len(text) < 2:
+        return []
+    rows = await conn.fetch(
+        "select id, name, phone, lang, consent_service from contacts "
+        "where role = 'customer' and (wa_user_id is null or wa_user_id not like 'TEST.%') "
+        "  and (name ilike '%' || $1 || '%' or (length($2) >= 3 and phone like '%' || $2 || '%')) "
+        "order by (name ilike $1 || '%') desc, name limit $3",
+        text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_"), digits, limit,
+    )
+    return [
+        {"id": str(r["id"]), "name": r["name"], "phone": r["phone"], "lang": r["lang"],
+         "consent": r["consent_service"]}
+        for r in rows
+    ]
+
+
 async def cancel(
     conn: asyncpg.Connection, outbound: Outbound, booking_id: UUID, notify: bool = True,
     actor: Actor = team.CUSTOMER, refund: bool | None = None,
 ) -> bool:
+    """Cancel a booking that has not been finished; False if there was none to cancel."""
+    return await cancel_booking(conn, outbound, booking_id, notify, actor, refund) is not None
+
+
+async def cancel_booking(
+    conn: asyncpg.Connection, outbound: Outbound, booking_id: UUID, notify: bool = True,
+    actor: Actor = team.CUSTOMER, refund: bool | None = None,
+) -> dict | None:
     """Cancel a booking that has not been finished. The time becomes free again. A deposit
     still waiting is no longer asked; a paid one is kept or refunded by the rule the booking
-    was made under (`deposits.on_cancel`), unless staff say to refund it."""
+    was made under (`deposits.on_cancel`), unless staff say to refund it. Returns what became of
+    the deposit and whether the customer was told, or None if there was no such booking."""
     from alyr.modules.bookings import deposits
 
     # The pay link first, in the order a payment arriving takes its locks.
@@ -909,7 +961,7 @@ async def cancel(
         booking_id,
     )
     if row is None:
-        return False
+        return None
     state = deposits.on_cancel(row, refund)
     await conn.execute(
         "update bookings set status = 'cancelled', deposit_state = $2, hold_until = null "
@@ -922,6 +974,7 @@ async def cancel(
          "deposit": state if row["deposit"] else None,
          "amount": fmt_qar(row["deposit"]) if row["deposit"] else None},
     )
+    told = None
     if notify:
         arabic = await conn.fetchval(
             "select lang = 'ar' from contacts where id = $1", row["contact_id"]
@@ -934,7 +987,7 @@ async def cancel(
                 f"تم إلغاء حجزك رقم {row['number']} ({when}). {outcome}" if arabic
                 else f"Booking {row['number']} ({when}) has been cancelled. {outcome}"
             )
-            await outbound.send(conn, templates.notice(
+            sent = await outbound.send(conn, templates.notice(
                 row["contact_id"], "booking_cancelled_deposit", lang, body,
                 row["number"], when, outcome,
             ))
@@ -943,10 +996,11 @@ async def cancel(
                 f"تم إلغاء حجزك رقم {row['number']} ({when})." if arabic
                 else f"Booking {row['number']} ({when}) has been cancelled."
             )
-            await outbound.send(conn, templates.notice(
+            sent = await outbound.send(conn, templates.notice(
                 row["contact_id"], "booking_cancelled", lang, body, row["number"], when,
             ))
-    return True
+        told = await _told(conn, row["contact_id"], sent)
+    return {"deposit_state": state, "told": told}
 
 
 async def reschedule(
@@ -996,7 +1050,7 @@ async def reschedule(
         f"تم تغيير موعد حجزك رقم {current['number']} إلى {when_with}." if arabic
         else f"Booking {current['number']} has been moved to {when_with}."
     )
-    await outbound.send(conn, templates.notice(
+    sent = await outbound.send(conn, templates.notice(
         current["contact_id"], "booking_moved", "ar" if arabic else "en", body,
         current["number"], when_with,
     ))
@@ -1005,7 +1059,8 @@ async def reschedule(
     ):
         await schedule_reminder(conn, booking_id, starts_at)
     return {"id": str(booking_id), "when_text": when, "starts_at": starts_at.isoformat(),
-            "resource": named["name"] if named else None}
+            "resource": named["name"] if named else None,
+            "told": await _told(conn, current["contact_id"], sent)}
 
 
 async def set_outcome(
@@ -1053,7 +1108,7 @@ async def list_bookings(
         select b.id, b.number, b.service_id, b.service_name, b.starts_at, b.ends_at, b.status,
                b.note, b.walk_in, b.deposit, b.deposit_state, b.hold_until,
                b.price, s.name_ar as service_name_ar,
-               c.id as contact_id, c.name as customer, c.phone,
+               c.id as contact_id, c.name as customer, c.phone, c.consent_service as consent,
                b.assigned_to, u.name as assignee,
                b.resource_id, res.name as resource_name, res.name_ar as resource_name_ar,
                res.kind as resource_kind,
@@ -1090,6 +1145,9 @@ async def list_bookings(
             "day": r["day"].isoformat(),
             "when_text": r["when_text"], "status": r["status"], "note": r["note"],
             "customer": r["customer"], "contact_id": str(r["contact_id"]), "phone": r["phone"],
+            # Whether ALYR may message this customer (they wrote first, or agreed): a move or a
+            # cancel tells them by WhatsApp only when it is "granted".
+            "consent": r["consent"],
             "assigned": {"id": str(r["assigned_to"]), "name": r["assignee"]}
             if r["assigned_to"] else None,
             # Which chair, person or room holds it; null for a shop with no resources.
