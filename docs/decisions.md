@@ -86,6 +86,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-119 | The public site can lead with "Try it free" (the self-serve sign-up) with "Book a check-up" beside it, behind a build-time switch that is off until the founder turns it on at publish time | Proposed |
 | D-121 | The owner is emailed once when ALYR publishes their price, ahead of the rest of the payment path: English or Arabic as they signed up, claimed on the quote so it never goes twice, nothing sent for a price they already saw or an address that cannot be real. The part of D-093 that shipped on its own | Proposed (the founder signs off the wording) |
 | D-122 | ALYR's own business keeps no test line: the "Try it" step says so and offers to skip, and the one-off first-admin job does not create one | Proposed |
+| D-145 | A shop's WhatsApp line is checked against Meta, tested with a message to the shop's own staff and kept on a trail; staff see every line on one screen (`/ops/whatsapp`, English and Arabic) | Proposed |
 | D-113 | The Cloudflare zone is hardened with what the Free plan offers and the state is written down: HTTPS only, minimum TLS 1.2, strict SSL, CAA, a trimmed SPF and response-header rules for the API and media host are live; the edge rate-limit rule waits because Free has only Block; no Access until Zero Trust is onboarded; DMARC stays `none` until the reports are read, never `reject` | Proposed |
 
 ---
@@ -2073,3 +2074,23 @@ Without it, analytics is off everywhere.
 **Chosen over** making Shelf `included` (a false statement for shops without a catalog), leaving the products unregistered and showing them only on the site (the founder found the gap on the Products screen), and a price item at QAR 0 for Shelf (the trap above).
 
 **Revisit when** the founder prices Docs, ALY-143 (the accountant export, statements) or ALY-147 (ALYR's own invoices) is built and the words may grow, or Shelf is made included.
+
+## D-145 · A shop's WhatsApp line is checked, tested and kept on a trail; staff see every line on one screen
+**Date** 31 Oct 2026 · **Status** Proposed (built and tested against a fake Meta; the first real check is the founder's, in the runbook) · Linear ALY-166 · Builds on D-050 and D-054 (attaching a number) · Spec 060
+
+**Decision.**
+- **Attaching a number is not the end.** After it, ALYR staff press **Check** (Meta is asked to read: the number, the account's numbers, the apps subscribed to its webhooks; ALYR's own records are read for a customer's message that arrived and one of ours that went out) and **Send test message**. A line reads `unchecked`, `problem`, `waiting` or `working`.
+- **The test goes only to the shop's own staff.** One ordinary text, through the outbound layer (hard rule 5), to a `staff` contact who linked their phone and wrote to this number in the last 24 hours. Staff are chosen because they agreed to be messaged by this shop and are the people who would notice; a customer is never offered, and nothing is sent to a customer to "test the line".
+- **A trail per line**, `whatsapp_line_events`: attached, detached, checked, test sent, with who did it. The app role can add to it, never change it. It holds states and counts, never a token, a customer's name or number, or words. The platform audit log still records each staff action; the trail is what a person reads per shop.
+- **One screen** (`/ops/whatsapp`, English and Arabic) for every line. The check itself sends nothing and changes nothing at Meta.
+- **Credentials do not move.** Numbers on ALYR's own account use the one system-user token in Secret Manager. A token for a shop's own account is spec 063's, and is sealed in the database with the key in Secret Manager, as a shop's payment keys are (D-072, `core/payment_keys.py`).
+
+**Why.** The first fifty shops cannot be looked after by opening fifty chats. The cheapest way to know a line works both ways is to receive one message from a person we trust and send one back, and the cheapest person to trust is the shop's own owner, whom the go-live flow already asks to link their phone.
+
+**Chosen over** a test to any phone number typed into the screen (it would put a message from a shop's number in front of someone who never agreed, and it would create a contact in the shop's records for ALYR's convenience), a test to the founder's own phone (it proves Meta delivers, not that this shop's line works with this shop's people), and a scheduled test (a message nobody asked for, every day).
+
+**Not decided here.** Registering a number through the API with a PIN (Meta documents it as API-only; ALYR does not do it for numbers added in WhatsApp Manager, which the first shops will be), and subscribing the app to an account (spec 063).
+
+**Revisit when** a number added in WhatsApp Manager stays unconnected until registered by the API, or when more than one number per shop is allowed.
+
+---

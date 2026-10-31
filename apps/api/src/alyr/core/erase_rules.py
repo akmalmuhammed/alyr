@@ -96,9 +96,11 @@ RULES: dict[str, Rule] = {
         "memberships", "sessions", "staff_link_codes",
     ),
     **_delete(
-        "the business's WhatsApp number and set-up, its switches, the funnel record of its own "
-        "sign-up and its weekly reports",
-        "channel_numbers", "whatsapp_setup", "tenant_modules", "onboarding_events",
+        "the business's WhatsApp number and set-up, the trail of what happened to its line "
+        "(states and counts, never a customer's words), its switches, the funnel record of its "
+        "own sign-up and its weekly reports",
+        "channel_numbers", "whatsapp_setup", "whatsapp_line_events", "whatsapp_line_state",
+        "tenant_modules", "onboarding_events",
         "onboarding_reminders", "onboarding_steps", "setup_requests", "weekly_reports",
     ),
     **_delete(
