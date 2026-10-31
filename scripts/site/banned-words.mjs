@@ -22,6 +22,9 @@
 // Prices are allowed only behind NEXT_PUBLIC_ALYR_OFFER=on:
 // - in the copy, a price may sit only in a line the offer switch hides;
 // - in a build made with the offer off, no price may appear, and no line the switch hides.
+// The one exception is the pricing page (ALY-301), which shows its prices whatever the switch
+// says: allow/banned.json "pricePages" names its copy (pricing.**), its built pages and its
+// markdown copies, and excuses nothing else.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -33,6 +36,8 @@ const honestyFile = join(REPO, ".claude/skills/alyr-design/honesty.md");
 const config = JSON.parse(readFileSync(join(import.meta.dirname, "banned-words.json"), "utf8"));
 const allow = JSON.parse(readFileSync(join(import.meta.dirname, "allow/banned.json"), "utf8"));
 const problems = [];
+const pricePages = allow.pricePages;
+const pricePagesUsed = { copy: false, files: new Set(), sections: new Set() };
 
 // ------------------------------------------------------------------ the words
 
@@ -135,7 +140,10 @@ for (const locale of ["en", "ar"]) {
     }
     const gated = offerOnly(path, parents);
     (gated ? offerStrings : shownStrings).add(text.trim());
-    if (!gated) {
+    // The pricing page's own words may hold prices (allow/banned.json "pricePages").
+    const priced = pricePages.copy.some((pattern) => matchPath(path, pattern));
+    if (priced) pricePagesUsed.copy = true;
+    if (!gated && !priced) {
       for (const re of prices) {
         for (const m of text.matchAll(re)) {
           if (!allowedHit(m[0], text, "copy")) {
@@ -254,13 +262,35 @@ if (!onlyCopy) {
     const name = relative(out, file).replaceAll("\\", "/");
     const raw = readFileSync(file, "utf8");
     const text = normalize(file.endsWith(".html") ? pageText(raw) : raw);
+    // llms-full.txt holds every markdown copy; the price check leaves out the pricing page's own
+    // two, and reads the rest. (The word check reads all of it.)
+    let priceText = text;
+    if (name === "llms-full.txt") {
+      const blocks = text.split(/\n---\n\n(?=<!-- )/);
+      priceText = blocks
+        .filter((block) => {
+          const head = block.split("\n", 1)[0];
+          const address = head.match(/^<!-- (\S+) -->$/)?.[1];
+          const section = address && pricePages.sections.find((s) => new URL(address).pathname === s);
+          if (section) pricePagesUsed.sections.add(section);
+          return !section;
+        })
+        .join("\n---\n\n");
+    }
     for (const t of terms) {
       for (const m of text.matchAll(t.re)) {
         const around = window(text, m.index, m[0].length);
         if (!allowedHit(t.term, around, "html")) problems.push(`out-site/${name}: "${m[0].trim()}" (${t.why}) in "…${around.trim()}…"`);
       }
     }
-    if (offer === "off") checkPrices(`out-site/${name}`, text, window);
+    if (offer === "off") {
+      if (pricePages.files.includes(name)) {
+        pricePagesUsed.files.add(name);
+        checkPrices(`out-site/${name}`, text, window, { shapes: false });
+      } else {
+        checkPrices(`out-site/${name}`, priceText, window);
+      }
+    }
   }
   if (offer === "off") {
     // Only the scripts a public page loads: `.next/static` also holds the product's own chunks
@@ -276,8 +306,8 @@ if (!onlyCopy) {
   }
 }
 
-function checkPrices(name, text, window) {
-  for (const re of prices) {
+function checkPrices(name, text, window, { shapes = true } = {}) {
+  for (const re of shapes ? prices : []) {
     for (const m of text.matchAll(re)) {
       const around = window(text, m.index, m[0].length);
       if (!allowedHit(m[0], around, "html")) problems.push(`${name}: a price ("${m[0]}") in a build made with the offer off: "…${around.trim()}…"`);
@@ -290,6 +320,14 @@ function checkPrices(name, text, window) {
 }
 
 // ------------------------------------------------------------------ the result
+
+// The pricing page's allowance must be in use, or it is stale (copy without prices, a build
+// without those files).
+if (!pricePagesUsed.copy) problems.push("allow/banned.json: pricePages.copy matches no copy; remove it");
+if (!onlyCopy && offer === "off") {
+  for (const file of pricePages.files) if (!pricePagesUsed.files.has(file)) problems.push(`allow/banned.json: pricePages.files lists ${file}, which the build does not have`);
+  for (const section of pricePages.sections) if (!pricePagesUsed.sections.has(section)) problems.push(`allow/banned.json: pricePages.sections lists ${section}, which llms-full.txt does not hold`);
+}
 
 for (const entry of [...allow.words, ...allow.offerOnly]) {
   if (!used.has(entry)) problems.push(`allow/banned.json: the entry for "${entry.term ?? entry.path}" no longer matches anything; remove it`);
