@@ -514,8 +514,7 @@ async def _bookings(conn, f: Facts, span, last, chart) -> None:
     f.completed_30, f.no_shows_30 = row["completed_30"], row["no_shows_30"]
     f.priced = bool(await conn.fetchval("select exists (select 1 from services where price > 0)"))
     f.booked_value_ahead = await conn.fetchval(
-        "select coalesce(sum(s.price), 0)::bigint from bookings b join services s on s.id = "
-        "b.service_id "
+        "select coalesce(sum(b.price), 0)::bigint from bookings b "
         "where b.status = 'booked' and b.starts_at >= $1 and b.starts_at < $1::timestamptz + "
         "interval '7 days'",
         now,

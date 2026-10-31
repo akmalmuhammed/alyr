@@ -455,8 +455,10 @@ def test_the_release_and_a_payment_meet_and_the_release_wins(client, monkeypatch
 
 def test_cancelling_in_good_time_refunds_a_paid_deposit_and_late_keeps_it(client):
     _, _, early = paid_booking(client)
-    done = client.post(f"/api/bookings/{early['id']}/cancel")
-    assert done.json() == {"status": "cancelled", "deposit_state": "refund_due"}
+    done = client.post(f"/api/bookings/{early['id']}/cancel").json()
+    assert (done["status"], done["deposit_state"]) == ("cancelled", "refund_due")
+    # The answer also says whether the customer was told (stage 3, D-142): this one wrote first.
+    assert done["told"]["sent"] is True
     assert "The shop will refund your deposit of QAR 50" in conversation(client)[-1]["body"]
 
     _, _, late = paid_booking(client)

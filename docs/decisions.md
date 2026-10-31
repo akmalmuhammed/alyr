@@ -92,10 +92,14 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-135 | ALYR staff sign-in: ten wrong codes in a day lock the account (the right code too, same words as any refusal), and every staff sign-in is written to the audit log with an email when the device or the address is new | Proposed |
 | D-125 | Requests from public authorities follow three written rules: check it is lawful, give the minimum, keep a record; how to challenge one waits for a lawyer | Accepted |
 | D-113 | The Cloudflare zone is hardened with what the Free plan offers and the state is written down: HTTPS only, minimum TLS 1.2, strict SSL, CAA, a trimmed SPF and response-header rules for the API and media host are live; the edge rate-limit rule waits because Free has only Block; no Access until Zero Trust is onboarded; DMARC stays `none` until the reports are read, never `reject` | Proposed |
-| D-130 | The inbox and the Orders screen read the newest rows off an index (a customer carries the times of their latest messages, kept by the database; the inbox lists 300 conversations, Orders the last 30 days and everything open), so a refresh costs the same in a shop's first week and its second year | Accepted |
-| D-131 | What the workspace and the order page ask for again and again is kept three seconds and shared between tabs, thrown away by the shop's own writes; who is signed in and a shop's modules the same | Accepted |
-| D-132 | A process holds few database connections (4 for an API instance, 8 for the worker), gives up after 3 seconds and answers 503 with Retry-After; only so many documents are drawn at once; the worker keeps places for customers; the Sunday report can be spread but stays at nine | Accepted |
+| D-143 | The people and chairs screen says what each does and has ahead, refuses a retirement that would leave a service with nobody, and puts both lists in an order the owner chooses (the people's order is who "anyone" takes first) | Proposed |
+| D-142 | The desk (walk-ins, moving and cancelling a booking) finds a customer the shop has instead of retyping them, shows the free times for a move, and says whether the customer was told, with the number to call when ALYR may not message them; staff cannot record a customer's consent for them | Proposed |
+| D-141 | Opening hours are a week a day at a time with a break as two periods, and the shop or one person can have days off (`booking_closures`, migration 0101) that customers cannot book and that never cancel a booking | Proposed |
+| D-140 | An owner or admin manages the services from the Bookings screen (add, change names, length, price, deposit and who does it, hide and show; one part of Set up bookings), checked in the page's words and again in the API, and a booking keeps the price it was made at (migration 0100) | Proposed |
 | D-133 | The database tier, Cloud Run's size and high availability: what to buy, when, and what each step costs (the numbers of `docs/runbooks/capacity.md`) | Proposed |
+| D-132 | A process holds few database connections (4 for an API instance, 8 for the worker), gives up after 3 seconds and answers 503 with Retry-After; only so many documents are drawn at once; the worker keeps places for customers; the Sunday report can be spread but stays at nine | Accepted |
+| D-131 | What the workspace and the order page ask for again and again is kept three seconds and shared between tabs, thrown away by the shop's own writes; who is signed in and a shop's modules the same | Accepted |
+| D-130 | The inbox and the Orders screen read the newest rows off an index (a customer carries the times of their latest messages, kept by the database; the inbox lists 300 conversations, Orders the last 30 days and everything open), so a refresh costs the same in a shop's first week and its second year | Accepted |
 
 ---
 
@@ -2225,6 +2229,75 @@ Without it, analytics is off everywhere.
 **Chosen over** locking by address (the address is not trustworthy behind our own proxies and a mobile network moves), a cap that only slows (the audit asks for a lock), and a note only on a new device (an unknown address on a known device is the stolen-session case).
 
 **Revisit when** a second staff member exists, an owner account needs the same cap, or the lock is used against the founder once.
+
+---
+
+## D-140 · An owner or admin manages the services from the Bookings screen, and a booking keeps the price it was made at
+**Date** 31 Oct 2026 · **Status** Proposed (built and tested; nothing deployed; waiting for the founder's yes) · Linear ALY-259, stage 1 · Builds on D-084 (people and chairs, deposits) and D-069 (resources)
+
+**The decision.**
+- **Services have a screen.** In the Bookings tab an owner or admin opens **Set up bookings**, which takes the place of the day until they go back (it is one part at a time: Services, People, Deposits). Services lists every service, hidden ones too, with its length, price, deposit and the number of bookings still to come. The owner can add a service, change its names (English and Arabic), length, price, deposit and which people or chairs do it, hide it from the booking page and show it again. This was API only; the earlier audit expected every salon to ask for it in the first week.
+- **It is all one request, checked twice.** The page checks the form in its own language before sending (`bookingsServiceForm.ts`); the API checks it again, as a whole: a service is made with its deposit and its people in one transaction (nothing is half made), and a change is checked against the price the service will have, so a price cannot be lowered under a fixed deposit, and a share of the price needs a price (`deposit_needs_price`). A blank name is refused (`bad_name`); a shop may list up to 100 services (`too_many_services`).
+- **Hiding is not deleting.** A hidden service leaves the booking page and cannot be booked; the bookings it has stay on their time, and the screen says how many before the owner confirms. Nothing is ever deleted from this screen, so a booking always has its service.
+- **A booking keeps its price (migration 0100).** Every reader of a booking's price (what is left to pay, the receipt or invoice made from the booking, the Agent's value of the week ahead) read the service's price today, while the deposit was already worked out when the booking was made. With a screen that changes prices that would have moved a customer's bill after they booked. `bookings.price` is filled by a database trigger when an insert gives none, so every way a booking is made keeps it (the booking page, staff, the seeds), and the three readers now read `bookings.price`. Existing bookings are given their service's price at the migration.
+- **The deposit's own words moved.** The per-service deposit list in the setup is gone; each service's deposit is set in its own form. The shop's deposit rule and the review request stay in the Deposits part.
+
+**Not decided here, left for the founder.** Nothing is added to the activity record for a change of service or price (the record's subjects are conversation, order, booking and account; a settings subject is a migration and a wider change), so an owner cannot yet see who changed a price. The order of services is fixed (the order they were added); a way to reorder them is not built.
+
+**Chosen over** reading the price from the service and warning the owner ("a price change applies to bookings not yet paid"), which would have told them about a trap instead of closing it; a trigger-free column set in `_insert` alone, which the seeds and any future insert would each have had to remember; asking the owner for dirhams (the unit the API stores): the form takes QAR, as an owner thinks of a price, and reads "12.5" as 1250 dirhams from the text, never through a float.
+
+**Revisit when** a pilot owner asks for reordering or an audit trail of settings, or when a service needs a photo (not built).
+
+---
+
+## D-141 · Opening hours have a screen and a break is two periods; the shop, or one person, can have days off that customers cannot book and that never cancel a booking
+**Date** 31 Oct 2026 · **Status** Proposed (built and tested; nothing deployed; waiting for the founder's yes) · Linear ALY-259, stage 2 · Builds on D-140 and D-084
+
+**The decision.**
+- **The week is edited a day at a time** in the Hours part of Set up bookings, for the shop and, with the same editor, for one person or chair. A day has one or more periods; a break in the middle of the day is two, with a gap. Two periods of one day may not overlap (`bad_hours_overlap`), and the API checks before it deletes, so a refused week leaves the old one in place.
+- **A day off is a range of the shop's own calendar days** (`booking_closures`: first day, last day, for the whole shop or one resource, a reason in each language). Calendar days, not instants, for the reason opening hours are: "the 5th" must mean the shop's 5th whatever the server's clock says. A closure is made and removed, never edited; at most 366 days in one and 200 not yet over.
+- **Customers cannot book a closed day; staff still can.** The engine takes a closed day out of `free_times` and out of `_working` (which `_pick_resource` also reads), so an old list of times cannot book it; a person on leave is not offered while the other chair still is. Staff may write a visit down on a closed day, as they may outside opening hours: a regular who comes by on Eid is the shop's call, not the engine's.
+- **A closure never cancels or moves a booking.** Those inside it stay booked; the screen counts them, says so, and opens the day so the owner moves or cancels each, the customer told by the paths that already exist. Cancelling a customer's visit is the owner's decision each time, never a side effect of a settings change.
+- **The booking page says why, and only for the whole shop.** A closed day reads "The shop is closed this day: Eid al-Fitr" in the customer's language. A person's leave is never listed on the page and its reason is never shown to customers: their times are not offered, nothing more.
+
+**Not decided here.** A message to customers who already booked a day that is then closed (the owner moves each, and the usual move or cancel message goes); special hours on one date; shifts across midnight (a period closes by 23:59); repeating closures.
+
+**Chosen over** cancelling the bookings inside a new closure (an owner adding Eid should never find customers cancelled by a settings screen); instants for the first and last day (the day would move with the server's zone); a closure that overrides staff as well (the shop could not write down a regular's visit on a day it is closed to everyone else).
+
+**Revisit when** a pilot salon asks for special hours on one date, repeating closures, or a message to the customers of a day it closes.
+
+---
+
+## D-142 · The desk finds a customer the shop has, shows the free times for a move, and says whether the customer was told; staff cannot record a customer's consent for them
+**Date** 31 Oct 2026 · **Status** Proposed (built and tested; nothing deployed; one question for the founder, below) · Linear ALY-259, stage 3 · Builds on D-084, D-141 and hard rule 5
+
+**The decision.**
+- **A customer the shop has is chosen, not retyped.** The walk-in form searches the shop's customers by name or part of a number (two letters, three digits; at most six; the owner's test customers never) and writes the booking in that customer's name. A new customer is still made from a name and a number.
+- **A move shows the times it can take.** The booking's own service, on the day and for the person or chair asked for or anyone, from the same free-times engine the booking page uses, with the booking's own time not counted against it and a closed day said. Any other minute can still be typed: staff may, as for a walk-in.
+- **The screen says what became of the message.** Moving, cancelling and a booking by phone return `told: {sent, reason, phone}` from the outbound layer's own answer, and the screen says it in plain words: told on WhatsApp, or not, why, and the number to call. The same is said before the action, from the customer's consent. The move or cancel always happens: a message that cannot go never holds a shop up.
+- **No new template.** Every message uses what exists: `booking_confirmed`, `booking_moved`, `booking_cancelled` and, for a cancel that says something about a deposit, `booking_cancelled_deposit` (written in D-084, not submitted to Meta; inside the 24-hour window it goes as a plain message).
+- **Staff cannot record a customer's consent for them.** A customer typed in at the desk has not agreed to messages (hard rule 5: consent before sending), so a booking by phone for them sends no confirmation or reminder until they write first. The form and the answer say so and give the number. This is the honest state of things, not the ideal one: a salon that takes a booking by phone would like to confirm it by WhatsApp.
+
+**Open for the founder (and probably the lawyer, ALY-51).** Whether staff may record "the customer agreed on the phone to booking messages" as a consent record (source: staff, with the wording they were told), so a phone booking can be confirmed and reminded. It is a consent made on someone's behalf; ALYR does not do it today and nothing here builds it.
+
+**Chosen over** saying "the customer is told" whatever happened (what the screen said before: false for any customer typed in at the desk); recording consent when staff tick a box (a legal question that is not ours to settle by a checkbox); a "send a message anyway" button (hard rule 5 has no such door); a new template for a phone booking (Meta's approval is the founder's).
+
+**Revisit when** the founder answers the consent question, a template for phone bookings is approved, or a pilot salon asks for a walk-in with no number.
+
+---
+
+## D-143 · The people and chairs screen says what each does and has ahead, refuses a retirement that would strand a service, and lets the owner put the people and the services in order
+**Date** 31 Oct 2026 · **Status** Proposed (built and tested; nothing deployed; waiting for the founder's yes) · Linear ALY-259, stage 4 · Builds on D-084, D-069, D-140
+
+**The decision.**
+- **A person's row says what they do and what they have ahead.** "Does every service" or the services' names, and the number of bookings still to come with them, from the same facts the engine uses (who does a service, and the bookings by resource). Who does a service stays set on the service: one place to change it, shown from both sides.
+- **Retiring someone never strands a service.** Not taking bookings keeps what they have and stops new ones. A retirement that would leave a service the owner had limited to them with nobody is refused, naming the services, because the booking page would go on offering a service nobody can take. This is a refusal, not a warning: a warning only moves the surprise to a customer. The last active one still cannot be retired.
+- **The order is the owner's.** The people's order is the day view's columns, the booking page's list and who "anyone" takes first (the engine already did: the first free one in the shop's order); the services' order is the booking page's list. Both are set by sending the whole list once each, so two staff members reordering at once cannot produce a half order (the second is refused with `bad_order` and reloads).
+- **The first one added is said to take the bookings already made**, with the number, because until then they were all in the shop's one lane and the move is not visible.
+
+**Chosen over** a warning instead of a refusal when a service would have nobody (see above); a "move this booking" arrow for the owner's up and down (a drag order is nicer and needs a library and a keyboard alternative anyway: buttons are 44 px, named, and work with a keyboard and a screen reader); renumbering one place at a time (a gap or two people with the same place is what the whole-list form cannot make).
+
+**Revisit when** a pilot salon has more than a dozen people or chairs (a drag order or sections may then pay for itself), or wants assignment by least busy rather than by order.
 
 ---
 

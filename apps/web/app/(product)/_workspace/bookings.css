@@ -59,29 +59,58 @@
 .bk-field { display: grid; gap: var(--space-1); min-width: 0; font-size: var(--ui-small); color: var(--text-muted); }
 .bk-field.wide { grid-column: 1 / -1; }
 .bk-field small { font-size: var(--ui-caption); }
-.bk-field input, .bk-field select, .bk-week input { min-width: 0; width: 100%; min-height: 44px; padding: 0 var(--space-2); border: var(--rule-hairline) solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font: inherit; font-size: var(--ui-input); }
-.bk-field input:focus-visible, .bk-field select:focus-visible, .bk-week input:focus-visible, .bk-check input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.bk-field input, .bk-field select, .bk-week input[type="time"] { min-width: 0; width: 100%; min-height: 44px; padding: 0 var(--space-2); border: var(--rule-hairline) solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font: inherit; font-size: var(--ui-input); }
+.bk-field input:focus-visible, .bk-field select:focus-visible, .bk-week input[type="time"]:focus-visible, .bk-check input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .bk-check { display: flex; align-items: center; gap: var(--space-2); min-height: 44px; font-size: var(--ui-body-sm); color: var(--text); cursor: pointer; }
 .bk-check input { width: 1.25em; height: 1.25em; flex: none; accent-color: var(--text); }
 .bk-choices { margin: 0; padding: 0; border: 0; display: grid; gap: 0; }
 .bk-choices legend { padding: 0 0 var(--space-1); font-size: var(--ui-small); color: var(--text-muted); }
 
-/* ── setup ── */
-.bk-setup { display: grid; gap: var(--space-2); justify-items: start; padding-block-start: var(--space-3); border-block-start: var(--rule-hairline) solid var(--line); }
-.bk-setup > div { width: 100%; }
-.bk-setup-body { display: grid; gap: var(--space-4); }
+/* ── setup: one part at a time (services, people and chairs, deposits and reviews) ── */
+.bk-barbtns { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.bk-setup-body { display: grid; gap: var(--space-3); min-width: 0; }
+.bk-setup-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); padding-block-end: var(--space-2); border-block-end: var(--rule-hairline) solid var(--line); }
 .bk-setup-body h2 { margin: 0; font-size: var(--ui-title-sm); font-weight: var(--weight-semibold); }
+.bk-parts { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, max-content); gap: 0 var(--space-4); border-block-end: var(--rule-hairline) solid var(--line); }
+@media (max-width: 40rem) { .bk-parts { grid-auto-columns: minmax(0, 1fr); gap: 0 var(--space-1); } .bk-partbtn { text-align: center; } }
+.bk-partbtn { min-height: 44px; padding: 0 var(--space-1); border: 0; border-block-end: 2px solid transparent; background: transparent; color: var(--text-muted); font: inherit; font-size: var(--ui-body-sm); font-weight: var(--weight-medium); cursor: pointer; }
+.bk-partbtn:hover { color: var(--text); }
+.bk-partbtn[aria-pressed="true"] { color: var(--text); border-block-end-color: var(--text); font-weight: var(--weight-semibold); }
+.bk-partbtn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.bk-warn { padding: var(--space-2) var(--space-3); border-inline-start: 2px solid var(--warn); font-size: var(--ui-small); line-height: var(--leading-ui); }
+
+/* ── services ── */
+.bk-service { gap: var(--space-2); }
+.bk-service.is-hidden .bk-service-name b { color: var(--text-muted); }
+.bk-service-head { display: grid; gap: var(--space-1); min-width: 0; }
+.bk-service-name { font-size: var(--ui-body); overflow-wrap: anywhere; }
+.bk-facts { display: flex; flex-wrap: wrap; gap: 0 var(--space-3); font-size: var(--ui-small); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+/* A button's ring is a shadow: give it room so a container's edge does not cut it. */
+.bk-person > .bk-acts { padding-inline: 2px; }
+.bk-grid.start { align-items: start; }
+@media (min-width: 56rem) {
+  .bk-services { grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: var(--space-2) var(--space-5); align-items: start; }
+  .bk-services > .bk-service:has(.bk-form) { grid-column: 1 / -1; }
+}
+.bk-doers { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: 0 var(--space-3); padding-inline-start: var(--space-4); }
+.bk-empty .btn { margin-block-start: var(--space-2); }
 .bk-part { display: grid; gap: var(--space-2); min-width: 0; }
 .bk-part h3 { margin: 0; font-size: var(--ui-body); font-weight: var(--weight-semibold); }
 .bk-people { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
 .bk-person { display: grid; gap: var(--space-1); padding-block: var(--space-2); border-block-end: var(--rule-hairline) solid var(--line); min-width: 0; }
-.bk-svc { align-self: center; font-size: var(--ui-body-sm); overflow-wrap: anywhere; }
 .bk-addperson { padding-block-start: var(--space-2); }
-.bk-week { display: grid; gap: var(--space-1); }
-.bk-wday { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); }
+.bk-week { display: grid; gap: 0; min-width: 0; }
+.bk-wday { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0 var(--space-3); padding-block: var(--space-1); border-block-end: var(--rule-hairline) solid var(--line); }
 .bk-wday .bk-check { min-width: 9rem; }
-.bk-span { display: inline-flex; align-items: center; gap: var(--space-2); }
-.bk-span input { width: auto; }
+.bk-wday.is-off .bk-check span { color: var(--text-muted); }
+.bk-closedday { align-self: center; }
+.bk-spans { display: grid; gap: var(--space-1); min-width: 0; }
+.bk-span { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.bk-span input[type="time"] { width: auto; }
+.bk-iconbtn { min-width: 44px; padding-inline: 0; }
+.bk-addspan { margin-inline-start: var(--space-2); }
+.bk-standing { color: var(--warn); }
+.bk-closure .bk-service-head { gap: var(--space-1); }
 .bk-preview { padding: var(--space-2) var(--space-3); border-inline-start: 2px solid var(--line-strong); font-size: var(--ui-small); line-height: var(--leading-ui); }
 .bk-preview span { display: block; font-family: var(--font-ui-mono); font-size: var(--ui-micro); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--text-muted); }
 [dir="rtl"] .bk-preview span { font-family: var(--font-ui-arabic); letter-spacing: 0; text-transform: none; font-size: var(--ui-caption); }
@@ -89,3 +118,21 @@
 [dir="rtl"] .bk { line-height: var(--leading-arabic-body); }
 /* A thumb needs 44 px: every button of the day view grows on a phone and a touch screen. */
 @media (max-width: 56rem), (pointer: coarse) { .bk .btn { height: auto; min-height: 44px; } }
+
+/* ── the desk: finding a customer, free times for a move ── */
+.bk-findwrap { display: grid; gap: var(--space-2); align-content: start; min-width: 0; }
+.bk-matches { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.bk-match { height: auto; min-height: 44px; flex-wrap: wrap; justify-content: flex-start; text-align: start; white-space: normal; }
+.bk-picked { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-inline-start: 2px solid var(--ok); background: var(--surface); border-radius: var(--radius-sm); }
+.bk-picked p { font-size: var(--ui-body-sm); overflow-wrap: anywhere; }
+.bk-free { display: grid; gap: var(--space-1); min-width: 0; }
+.bk-chips { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.bk-chip { min-width: 4.5rem; font-variant-numeric: tabular-nums; }
+.bk-chip[aria-pressed="true"] { background: var(--text); color: var(--canvas); box-shadow: none; }
+.bk .bk-chip[aria-pressed="true"]:hover { background: var(--text); }
+
+/* ── people and chairs: what each does, in order ── */
+.bk-personhead { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); min-width: 0; }
+.bk-person.is-hidden .bk-service-name b { color: var(--text-muted); }
+.bk-order { display: inline-flex; gap: var(--space-1); flex: none; }
+.bk-order .bk-iconbtn:disabled { opacity: 0.4; cursor: default; }
