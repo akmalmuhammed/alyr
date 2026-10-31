@@ -19,6 +19,7 @@ type Period = { weekday: number; opens: string; closes: string };
 type Resource = {
   id: string; name: string; name_ar: string; kind: "person" | "place"; active: boolean;
   services: string[]; hours: Period[]; today: Period[]; off: boolean;
+  leave: { reason: string; reason_ar: string } | null;
 };
 type Service = { id: string; name: string; name_ar: string; duration_minutes: number };
 export type DayBooking = {
@@ -30,7 +31,7 @@ export type DayBooking = {
 };
 type DayView = {
   day: string; today: string; timezone: string; hours: Period[]; resources: Resource[];
-  bookings: DayBooking[]; services: Service[];
+  bookings: DayBooking[]; services: Service[]; closed: { reason: string; reason_ar: string } | null;
 };
 type Panel = { kind: "move" | "cancel"; id: string } | null;
 
@@ -117,13 +118,18 @@ export function BookingsDay({ lang, canManage }: { lang: Lang; canManage: boolea
 
   const columns = useMemo(() => {
     if (!view) return [];
+    const why = (c: { reason: string; reason_ar: string }) => t.closedFor((lang === "ar" && c.reason_ar) || c.reason);
     if (view.resources.length === 0) {
-      return [{ id: LANE, title: t.allBookings, sub: view.hours.length ? span(view.hours) : t.shopClosed, off: false, bookings: view.bookings }];
+      return [{
+        id: LANE, title: t.allBookings,
+        sub: view.closed ? why(view.closed) : view.hours.length ? span(view.hours) : t.shopClosed,
+        off: view.closed !== null, bookings: view.bookings,
+      }];
     }
     return view.resources.map((r) => ({
       id: r.id,
       title: resourceName(r, lang),
-      sub: r.off ? t.dayOff : r.today.length ? span(r.today) : t.shopClosed,
+      sub: view.closed ? why(view.closed) : r.leave ? why(r.leave) : r.off ? t.dayOff : r.today.length ? span(r.today) : t.shopClosed,
       off: r.off || r.today.length === 0,
       bookings: view.bookings.filter((b) => b.resource?.id === r.id),
     }));
@@ -152,7 +158,8 @@ export function BookingsDay({ lang, canManage }: { lang: Lang; canManage: boolea
   if (setup) {
     return (
       <section className="bk" aria-label={t.setup}>
-        <BookingsSetup lang={lang} start={setup} onChanged={load} onClose={() => setSetup(null)} />
+        <BookingsSetup lang={lang} start={setup} onChanged={load}
+          onClose={(to) => { setSetup(null); if (to) setDay(to); }} />
       </section>
     );
   }

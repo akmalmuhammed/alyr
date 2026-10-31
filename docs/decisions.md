@@ -88,6 +88,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-122 | ALYR's own business keeps no test line: the "Try it" step says so and offers to skip, and the one-off first-admin job does not create one | Proposed |
 | D-113 | The Cloudflare zone is hardened with what the Free plan offers and the state is written down: HTTPS only, minimum TLS 1.2, strict SSL, CAA, a trimmed SPF and response-header rules for the API and media host are live; the edge rate-limit rule waits because Free has only Block; no Access until Zero Trust is onboarded; DMARC stays `none` until the reports are read, never `reject` | Proposed |
 | D-140 | An owner or admin manages the services from the Bookings screen (add, change names, length, price, deposit and who does it, hide and show; one part of Set up bookings), checked in the page's words and again in the API, and a booking keeps the price it was made at (migration 0100) | Proposed |
+| D-141 | Opening hours are a week a day at a time with a break as two periods, and the shop or one person can have days off (`booking_closures`, migration 0101) that customers cannot book and that never cancel a booking | Proposed |
 
 ---
 
@@ -2090,3 +2091,19 @@ Without it, analytics is off everywhere.
 **Chosen over** reading the price from the service and warning the owner ("a price change applies to bookings not yet paid"), which would have told them about a trap instead of closing it; a trigger-free column set in `_insert` alone, which the seeds and any future insert would each have had to remember; asking the owner for dirhams (the unit the API stores): the form takes QAR, as an owner thinks of a price, and reads "12.5" as 1250 dirhams from the text, never through a float.
 
 **Revisit when** a pilot owner asks for reordering or an audit trail of settings, or when a service needs a photo (not built).
+
+## D-141 · Opening hours have a screen and a break is two periods; the shop, or one person, can have days off that customers cannot book and that never cancel a booking
+**Date** 31 Oct 2026 · **Status** Proposed (built and tested; nothing deployed; waiting for the founder's yes) · Linear ALY-259, stage 2 · Builds on D-140 and D-084
+
+**The decision.**
+- **The week is edited a day at a time** in the Hours part of Set up bookings, for the shop and, with the same editor, for one person or chair. A day has one or more periods; a break in the middle of the day is two, with a gap. Two periods of one day may not overlap (`bad_hours_overlap`), and the API checks before it deletes, so a refused week leaves the old one in place.
+- **A day off is a range of the shop's own calendar days** (`booking_closures`: first day, last day, for the whole shop or one resource, a reason in each language). Calendar days, not instants, for the reason opening hours are: "the 5th" must mean the shop's 5th whatever the server's clock says. A closure is made and removed, never edited; at most 366 days in one and 200 not yet over.
+- **Customers cannot book a closed day; staff still can.** The engine takes a closed day out of `free_times` and out of `_working` (which `_pick_resource` also reads), so an old list of times cannot book it; a person on leave is not offered while the other chair still is. Staff may write a visit down on a closed day, as they may outside opening hours: a regular who comes by on Eid is the shop's call, not the engine's.
+- **A closure never cancels or moves a booking.** Those inside it stay booked; the screen counts them, says so, and opens the day so the owner moves or cancels each, the customer told by the paths that already exist. Cancelling a customer's visit is the owner's decision each time, never a side effect of a settings change.
+- **The booking page says why, and only for the whole shop.** A closed day reads "The shop is closed this day: Eid al-Fitr" in the customer's language. A person's leave is never listed on the page and its reason is never shown to customers: their times are not offered, nothing more.
+
+**Not decided here.** A message to customers who already booked a day that is then closed (the owner moves each, and the usual move or cancel message goes); special hours on one date; shifts across midnight (a period closes by 23:59); repeating closures.
+
+**Chosen over** cancelling the bookings inside a new closure (an owner adding Eid should never find customers cancelled by a settings screen); instants for the first and last day (the day would move with the server's zone); a closure that overrides staff as well (the shop could not write down a regular's visit on a day it is closed to everyone else).
+
+**Revisit when** a pilot salon asks for special hours on one date, repeating closures, or a message to the customers of a day it closes.

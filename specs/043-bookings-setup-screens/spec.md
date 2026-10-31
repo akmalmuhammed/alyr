@@ -1,6 +1,6 @@
 # Spec 043: The bookings setup screens (services first)
 
-Status: stage 1 (services) built on branch `aly-259-bookings-services` (Linear ALY-259), one pull request, not merged. Decision: D-140. Later stages (opening hours and days off, walk-ins and moving a booking with the customer told, the people and chairs polish) add to this spec in their own pull requests. Builds on spec 026 (resources, D-069) and spec 033 (people and chairs, deposits, the day view, D-084).
+Status: stage 1 (services) built on branch `aly-259-bookings-services` and stage 2 (opening hours and days off) on `aly-259-bookings-hours`, stacked on it (Linear ALY-259), one pull request each, not merged. Decisions: D-140, D-141. Later stages (walk-ins and moving a booking with the customer told, the people and chairs polish) add to this spec in their own pull requests. Builds on spec 026 (resources, D-069) and spec 033 (people and chairs, deposits, the day view, D-084).
 
 ## Where we start
 
@@ -8,7 +8,7 @@ Specs 026 and 033 gave a salon, barber, spa, clinic or home-services shop the en
 
 ## Who and where
 
-Owners and admins only (the routes use `require_manager`; agent-role staff read the list and nothing else). The Bookings tab's bar has **Set up bookings** beside **Add a walk-in**. It opens the setup in place of the day, with **Back to the day**. The setup is one part at a time, as buttons under the title: **Services**, **People**, **Deposits** (stage 2 adds **Hours**). A shop with no services is told so on the day view and in the walk-in form, with a button to add the first (an agent is told to ask the owner).
+Owners and admins only (the routes use `require_manager`; agent-role staff read the list and nothing else). The Bookings tab's bar has **Set up bookings** beside **Add a walk-in**. It opens the setup in place of the day, with **Back to the day**. The setup is one part at a time, as buttons under the title: **Services**, **Hours** (stage 2), **People**, **Deposits**. A shop with no services is told so on the day view and in the walk-in form, with a button to add the first (an agent is told to ask the owner).
 
 ## Services
 
@@ -38,7 +38,7 @@ Every word is in `bookingsCopy.ts`, English and Arabic against one type. The for
 
 ## Not built in this stage
 
-- **Opening hours, days off and holidays** (stage 2), **walk-ins and moving a booking with the customer told** (stage 3, the routes exist), **adding and retiring a person or chair** (stage 4, the routes exist).
+- **Opening hours and days off** (stage 2, below), **walk-ins and moving a booking with the customer told** (stage 3, the routes exist), **adding and retiring a person or chair** (stage 4, the routes exist).
 - **Reordering services.** They are shown in the order they were added.
 - **An audit trail of settings.** Nothing in the activity record says who changed a service or a price (D-140).
 - **A photo or a description for a service.**
@@ -51,3 +51,48 @@ Every word is in `bookingsCopy.ts`, English and Arabic against one type. The for
 - `bookingsServiceForm.test.mjs` (11): prices read from text without a float, Arabic digits, what is refused, the form turned into the request.
 - `scripts/bookings-owner-flow-browser-check.mjs`: a new salon signs up through the real sign-up API; the owner adds a service with a deposit (every refusal in words), changes the price, hides and shows it; a customer books it on `/b/<slug>`; the owner sees it on the day. English and Arabic, 1440, 390 and 320 px, light and dark, axe, 44 px targets, no sideways scroll.
 - `scripts/bookings-day-browser-check.mjs` follows the new setup layout.
+
+## Stage 2: opening hours and days off (D-141, migration 0101)
+
+### Opening hours
+
+The **Hours** part shows the shop's week, a day at a time, Sunday first (`BookingsWeek.tsx`, `bookingsWeekLogic.ts`). A day is open or not; an open day has one or more periods, each a time to a time, and a **break in the middle of the day is two periods**. **Same hours every day** copies the first open day to the week (nothing is saved until Save hours). The same editor is used for one person's or chair's own hours under **People** (it starts from the shop's hours when they have none of their own, so a person who works the shop's hours but not on Thursdays is a few clicks, not a blank week).
+
+| Action | API | Notes |
+|---|---|---|
+| Read the shop's week | `GET /api/hours` | periods, as before |
+| Replace the shop's week | `PUT /api/hours` | the whole week at once |
+| Replace one person's or chair's week | `PUT /api/resources/{id}/hours` | an empty week means they work the shop's hours |
+
+Checked on the page (the day is named in the message) and again in the API: every period closes after it opens (`bad_hours`) and two periods of one day do not overlap (`bad_hours_overlap`; touching, one closing at 13:00 as the next opens, is allowed). The API checks before it deletes, so a refused week leaves the old one. Free times, the booking page and the day view follow at once: they read the same hours.
+
+### Days off
+
+A **day off** is a range of the shop's own calendar days, first to last inclusive, for **the whole shop** (Eid, a holiday, a closure) or for **one person or chair** (their leave). `booking_closures` (migration 0101; forced row-level security; made and removed, never edited; a person's own closures go with the person if they are ever deleted). The days are the shop's days, like opening hours, so a closure on the 5th is the 5th in the shop's time zone whatever the server's clock says.
+
+| Action | API | Who |
+|---|---|---|
+| List the ones not over yet, soonest first | `GET /api/closures` | any staff |
+| Add | `POST /api/closures` (`first`, `last`, `resource_id`, `reason`, `reason_ar`) | owner, admin |
+| Remove | `DELETE /api/closures/{id}` | owner, admin |
+
+What a day off does:
+
+- **Customers cannot book it.** `free_times` offers nothing on a closed day (the whole shop's, or the person's own), and the same check sits behind picking a person or chair, so an old list of times cannot book it either. A person on leave is not offered while the other chair still is.
+- **Staff still can.** A staff member can write a visit down on a closed day (a regular who comes by on Eid), the way they can outside opening hours today; the day view shows the day as closed.
+- **It never cancels or moves a booking.** Bookings already inside it stay booked. Adding a day off says how many are still booked inside it, each one in the list shows the count, and **Open the day** goes to the first of those days in the day view, where the owner moves or cancels them (the customer is told, by the paths that exist).
+- **The booking page says why.** A closed day shows "The shop is closed this day: Eid al-Fitr. Try another day." (the reason in the customer's language when the owner wrote both; without a reason, no colon). The page's data lists the whole shop's closed days (`closed_days`, and `closed` on a day's times); a person's leave is never listed there, and its reason is never shown to customers: that person's times are simply not offered.
+- **The day view says closed.** A shop with people shows each column as "Closed: reason" (or "Day off" for a person whose own week leaves the day out); a shop with none shows its one lane that way.
+- **Limits.** At most 366 days in one closure, 200 not yet over in all, a last day that is not before the first, and not wholly in the past (`bad_closure`, `too_many_closures`, `closure_past`).
+
+### Not built in stage 2
+
+- **Special hours on one date** (open late on one Thursday), **buffers between visits**, **shifts across midnight** (a period closes by 23:59), **repeating closures** (Eid moves, so each is added when it is known).
+- **Changing a day off**: remove it and add it again.
+- **A message to customers who already booked** a day that is then closed. The owner moves or cancels each, and the customer is told by the same paths as any move or cancel (stage 3 checks them).
+
+### Checks (stage 2)
+
+- `tests/test_booking_hours_closures.py` (18): a break is two periods and nothing is offered in it; overlapping periods are refused and the old week stays; a person's own week can have a break; a closed day offers nothing and says why; nobody can book it even with a time taken before; a range, taking one away, one that has begun; a booking inside a closure stays and is counted; staff can still write a visit on a closed day; a person on leave is not offered and the other chair still is; the refusals; only days to come are listed; the day view says closed; the booking page lists the shop's closed days and never a person's leave; closures follow the shop's own calendar day (a shop 14 hours ahead of UTC); agents refused; another shop cannot see or remove them. A mutation check: take the closure test out of the engine and four of them fail.
+- `bookingsWeekLogic.test.mjs` (9): a week as seven days and back, a break, the day named in a refusal, the same hours every day, a day off's dates.
+- `scripts/bookings-owner-flow-browser-check.mjs --stages 1,2`: the owner puts a break on Sunday (an overlap is refused in words naming the day), adds a day off on the day of a customer's booking (it says one booking is still booked, the booking stays, the day view says closed and why), the customer's page says the shop is closed that day and why, one person's leave, and taking the closure away. English and Arabic, 1440, 390 and 320 px, light and dark, axe, 44 px targets, no sideways scroll.

@@ -54,6 +54,11 @@ const W = AR
     needPrice: "النسبة من السعر تحتاج إلى سعر", added: "تمت إضافة الخدمة", saved: "تم حفظ الخدمة", hidden: "أُخفيت الخدمة",
     shown: "الخدمة ظاهرة الآن", hiddenTag: "مخفية", booked: "تم تأكيد", edit: "تعديل", minutes: "دقيقة", qar: "ر.ق",
     onlyThese: "هؤلاء فقط", needWho: "اختر موظفاً أو كرسياً واحداً على الأقل", addPerson: "إضافة", chooseWho: "اختر من يخدمك",
+    addSpan: "إضافة فترة", saveHours: "حفظ الساعات", hoursSaved: "تم حفظ ساعات العمل", overlap: "فترتان تتداخلان",
+    sameDays: "الساعات نفسها كل يوم", addClosure: "إضافة أيام إجازة", closureSave: "إضافة", chooseDays: "اختر اليومين",
+    closureAdded: "تمت إضافة أيام الإجازة", standing: "المحجوز: 1", seeDay: "فتح اليوم", removeClosure: "إزالة",
+    closureRemoved: "أُزيلت أيام الإجازة", closedFor: "مغلق: عيد الفطر", closedOn: "المحل مغلق في هذا اليوم", sunday: "الأحد",
+    reasonText: "عيد الفطر", whole: "المحل كله",
   }
   : {
     setup: "Set up bookings", back: "Back to the day", services: "Services", addService: "Add a service", addSave: "Add service",
@@ -62,6 +67,11 @@ const W = AR
     needPrice: "A share of the price needs the service to have a price", added: "Service added", saved: "Service saved", hidden: "Hidden. Customers no longer see it",
     shown: "Shown on the booking page", hiddenTag: "Hidden", booked: "confirmed", edit: "Edit", minutes: "min", qar: "QAR",
     onlyThese: "Only these", needWho: "Choose at least one person or chair", addPerson: "Add", chooseWho: "Choose who",
+    addSpan: "Add hours", saveHours: "Save hours", hoursSaved: "Opening hours saved", overlap: "Two periods overlap",
+    sameDays: "Same hours every day", addClosure: "Add days off", closureSave: "Add", chooseDays: "Choose both days",
+    closureAdded: "Days off added", standing: "Still booked: 1", seeDay: "Open the day", removeClosure: "Remove",
+    closureRemoved: "Day off removed", closedFor: "Closed: Eid al-Fitr", closedOn: "The shop is closed this day", sunday: "Sunday",
+    reasonText: "Eid al-Fitr", whole: "The whole shop",
   };
 
 // A booking link for one customer, signed with the development key, as the chat would send it.
@@ -101,6 +111,10 @@ const run = async (name, fn) => {
     try { await shot(`99-${name.replace(/\W+/g, "-")}-stopped`); } catch { /* the page is gone */ }
   }
 };
+/** A time or a date box takes its value, not typed characters: set it the way the browser does. */
+async function setValue(selector, value) {
+  await js(`(() => { const el = document.querySelector(${JSON.stringify(selector)}); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, ${JSON.stringify(value)}); el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+}
 /** Fill a field the way a person does: focus it, replace what is there, type. */
 async function fill(selector, value) {
   await click(`document.querySelector(${JSON.stringify(selector)})`, 80);
@@ -152,7 +166,7 @@ try {
     const expected = Number(sql(`select count(*) from services where tenant_id = '${tenant}'`));
     check(count === expected, `every service of the sign-up is listed (${count} of ${expected})`);
     const parts = await js("[...document.querySelectorAll('.bk-partbtn')].map((x) => x.getAttribute('aria-pressed'))");
-    check(parts[0] === "true" && parts.length === 3, "the setup has three parts and opens on the services");
+    check(parts[0] === "true" && parts.length === 4, "the setup has four parts and opens on the services");
     await shot("02-services-1440");
     await noSideScroll("services 1440");
     await axe("services");
@@ -212,7 +226,7 @@ try {
   });
 
   await run("services: who does it, once the shop lists two chairs", async () => {
-    await click("document.querySelectorAll('.bk-partbtn')[1]", 600);
+    await click("document.querySelectorAll('.bk-partbtn')[2]", 600);
     await until("!!document.getElementById('bk-new-n')", "the people part");
     for (const chair of ["Chair 1", "Chair 2"]) {
       await fill("#bk-new-n", chair);
@@ -292,6 +306,109 @@ try {
     await shot("08-owner-sees-booking-1440");
   });
 
+  if (stage(2)) {
+    const shopToday = () => sql(`select (now() at time zone 'Asia/Qatar')::date`);
+    const bookedDay = () => sql(`select (starts_at at time zone 'Asia/Qatar')::date from bookings where tenant_id = '${tenant}' order by starts_at limit 1`);
+
+    await run("hours: a break on Sunday, refused when the periods overlap", async () => {
+      await b.view(1440, 900, false, "light");
+      await b.go(`${BASE}/app/bookings`, 1500);
+      await until("!!document.querySelector('.bk')", "the Bookings screen");
+      await click(buttonByText(W.setup), 900);
+      await click("document.querySelectorAll('.bk-partbtn')[1]", 700);
+      await until("!!document.getElementById('bk-shop-week-0-o0')", "the week");
+      check((await js("document.querySelectorAll('.bk-wday').length")) === 7, "the week has seven days");
+      await shot("11-hours-1440");
+      await noSideScroll("hours 1440");
+      await axe("hours");
+      // Sunday: 10:00-13:00 and 16:00-22:00, a break between.
+      await click(`document.querySelector('[aria-label="${AR ? "إضافة فترة يوم الأحد" : "Add hours on Sunday"}"]')`, 300);
+      await until("!!document.getElementById('bk-shop-week-0-o1')", "a second period");
+      await setValue("#bk-shop-week-0-o0", "10:00");
+      await setValue("#bk-shop-week-0-c0", "13:00");
+      await setValue("#bk-shop-week-0-o1", "12:00");
+      await setValue("#bk-shop-week-0-c1", "22:00");
+      await click(`document.querySelector('#bk-shop-week-0-c1').closest('form').querySelector('button[type=submit]')`, 400);
+      const words = await text();
+      check(words.includes(W.overlap) && words.includes(W.sunday), "overlapping periods are refused in words, naming the day");
+      await shot("12-hours-overlap-1440");
+      await setValue("#bk-shop-week-0-o1", "16:00");
+      await click(`document.querySelector('#bk-shop-week-0-c1').closest('form').querySelector('button[type=submit]')`, 1200);
+      await until(`document.body.innerText.includes(${JSON.stringify(W.hoursSaved)})`, "the saved message");
+      const rows = sql(`select opens::text || '-' || closes::text from business_hours where tenant_id = '${tenant}' and weekday = 0 order by opens`).split("\n");
+      check(rows.join(" ") === "10:00:00-13:00:00 16:00:00-22:00:00", `Sunday is saved with its break (${rows.join(" ")})`);
+      await click(buttonByText(W.sameDays), 300);
+      check((await js("[...document.querySelectorAll('.bk-wday input[type=checkbox]')].every((x) => x.checked)")), "same hours every day opens every day");
+    });
+
+    await run("days off: the day of the booking, which stays, and the day view says closed", async () => {
+      await b.go(`${BASE}/app/bookings`, 1500);
+      await until("!!document.querySelector('.bk')", "the Bookings screen");
+      await click(buttonByText(W.setup), 900);
+      await click("document.querySelectorAll('.bk-partbtn')[1]", 700);
+      await until("!!document.getElementById('bk-closure-add')", "the days-off part");
+      check((await js("document.querySelectorAll('.bk-closure').length")) === 0, "a new shop has no days off, and the slot says what goes there");
+      await click("document.getElementById('bk-closure-add')", 300);
+      await click(buttonByText(W.closureSave), 300);
+      check((await text()).includes(W.chooseDays), "no dates are refused in words");
+      const day = bookedDay();
+      await setValue("#bk-closure-first", day);
+      await fill("#bk-closure-reason", "Eid al-Fitr");
+      await fill("#bk-closure-reason-ar", "عيد الفطر");
+      await shot("13-add-closure-1440");
+      await click(buttonByText(W.closureSave), 1400);
+      await until("document.querySelectorAll('.bk-closure').length === 1", "the day off in the list");
+      const said = await text();
+      check(said.includes(W.closureAdded) && said.includes(W.standing), "it says one booking is still booked on that day");
+      check(Number(sql(`select count(*) from bookings where tenant_id = '${tenant}' and status = 'booked'`)) === 1, "the booking is still booked");
+      await shot("14-closure-added-1440");
+      await click(buttonByText(W.seeDay), 1500);
+      await until("document.querySelectorAll('.bk-col').length > 0 || document.querySelectorAll('.bk-card').length > 0", "the day view");
+      const view = await text();
+      check(view.includes(W.closedFor), `the day view says the shop is closed and why (${W.closedFor})`);
+      check((await js("document.querySelectorAll('.bk-card').length")) > 0, "the booking is still on that day");
+      await shot("15-day-closed-1440");
+      check(Number(sql(`select count(*) from booking_closures where tenant_id = '${tenant}'`)) === 1, "one closure is stored");
+    });
+
+    await run("days off: the customer is told the shop is closed that day", async () => {
+      await b.view(390, 844, true, "light");
+      await b.go(link(), 1600);
+      await until("document.querySelectorAll('.cx-choice').length > 0", "the services");
+      await click("[...document.querySelectorAll('.cx-choice')].find((x) => x.textContent.includes('Eyebrow') || x.textContent.includes('تشذيب'))", 600);
+      const offset = Number(sql(`select '${bookedDay()}'::date - '${shopToday()}'::date`));
+      await click(`document.querySelectorAll('.cx-day')[${offset}]`, 900);
+      await until("document.querySelectorAll('.cx-note').length > 0", "the closed note");
+      const note = await text();
+      check(note.includes(W.closedOn) && note.includes(W.reasonText), "the page says the shop is closed that day and why");
+      check((await js("document.querySelectorAll('.cx-time').length")) === 0, "no times are offered");
+      await noSideScroll("booking page closed day 390");
+      await shot("16-booking-page-closed-390");
+    });
+
+    await run("days off: one person's leave, then taking the shop's closure away", async () => {
+      await b.view(1440, 900, false, "light");
+      await b.go(`${BASE}/app/bookings`, 1500);
+      await until("!!document.querySelector('.bk')", "the Bookings screen");
+      await click(buttonByText(W.setup), 900);
+      await click("document.querySelectorAll('.bk-partbtn')[1]", 700);
+      await until("!!document.getElementById('bk-closure-add')", "the days-off part");
+      await click("document.getElementById('bk-closure-add')", 300);
+      const later = sql(`select (now() at time zone 'Asia/Qatar')::date + 10`);
+      await setValue("#bk-closure-first", later);
+      await js("(() => { const s = document.getElementById('bk-closure-who'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, [...s.options].find((o) => o.textContent.includes('Chair 1')).value); s.dispatchEvent(new Event('change', { bubbles: true })); })()");
+      await click(buttonByText(W.closureSave), 1400);
+      await until("document.querySelectorAll('.bk-closure').length === 2", "the second day off");
+      check(sql(`select r.name from booking_closures c join booking_resources r on r.id = c.resource_id where c.tenant_id = '${tenant}'`) === "Chair 1", "the leave is Chair 1's");
+      await shot("17-two-closures-1440");
+      // Take the shop's closure away: the booking day is open again.
+      await click(`document.querySelector('[aria-label^="${W.removeClosure}"][aria-label*="${W.whole}"]')`, 1200);
+      await until("document.querySelectorAll('.bk-closure').length === 1", "one day off left");
+      check((await text()).includes(W.closureRemoved), "it says the day off was removed");
+      check(Number(sql(`select count(*) from booking_closures where tenant_id = '${tenant}' and resource_id is null`)) === 0, "the shop's closure is gone");
+    });
+  }
+
   await run("phone width, light and dark: no sideways scroll, 44 px targets", async () => {
     for (const scheme of ["light", "dark"]) {
       await b.view(390, 844, true, scheme);
@@ -308,6 +425,18 @@ try {
       await touchTargets(`add service form 390 ${scheme}`);
       await shot(`10-add-service-390-${scheme}`);
       if (scheme === "dark") await axe("services-dark");
+      if (stage(2)) {
+        await click("document.querySelectorAll('.bk-partbtn')[1]", 700);
+        await until("!!document.getElementById('bk-shop-week-0-o0')", "the week");
+        await noSideScroll(`hours 390 ${scheme}`);
+        await touchTargets(`hours 390 ${scheme}`);
+        await shot(`11-hours-390-${scheme}`);
+        await click("document.getElementById('bk-closure-add')", 400);
+        await until("!!document.getElementById('bk-closure-first')", "the days-off form");
+        await noSideScroll(`days off form 390 ${scheme}`);
+        await touchTargets(`days off form 390 ${scheme}`);
+        await shot(`12-days-off-390-${scheme}`);
+      }
     }
     await b.view(320, 700, true, "light");
     await b.go(`${BASE}/app/bookings`, 1500);

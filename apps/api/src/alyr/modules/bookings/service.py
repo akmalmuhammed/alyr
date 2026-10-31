@@ -240,8 +240,29 @@ async def _write_periods(
             ) from error
 
 
+def _check_week(periods: list[tuple[int, str, str]]) -> None:
+    """A week the engine can use: each period closes after it opens, and two periods of one
+    day do not overlap (a midday break is two periods with a gap between them). Times are
+    "HH:MM", so they sort as text."""
+    by_day: dict[int, list[tuple[str, str]]] = {}
+    for weekday, opens, closes in periods:
+        if closes <= opens:
+            raise BookingError(
+                "bad_hours", "Each working period needs a day and a closing time after opening."
+            )
+        by_day.setdefault(weekday, []).append((opens, closes))
+    for spans in by_day.values():
+        spans.sort()
+        for (_, closes), (opens, _) in zip(spans, spans[1:], strict=False):
+            if opens < closes:
+                raise BookingError(
+                    "bad_hours_overlap", "Two periods on one day cannot overlap."
+                )
+
+
 async def set_hours(conn: asyncpg.Connection, periods: list[tuple[int, str, str]]) -> None:
     """Replace the whole week's opening hours. Each period is (weekday, opens, closes)."""
+    _check_week(periods)
     await conn.execute("delete from business_hours")
     await _write_periods(conn, "business_hours", periods)
 
@@ -254,9 +275,100 @@ async def set_resource_hours(
         "select exists (select 1 from booking_resources where id = $1)", resource_id
     ):
         return False
+    _check_week(periods)
     await conn.execute("delete from resource_hours where resource_id = $1", resource_id)
     await _write_periods(conn, "resource_hours", periods, resource_id)
     return True
+
+
+# ------------------------------------------------------------------------ days off
+
+MAX_CLOSURES = 200
+MAX_CLOSURE_DAYS = 366
+
+
+async def shop_today(conn: asyncpg.Connection) -> date:
+    """Today on the shop's own calendar."""
+    return await conn.fetchval(f"select (now() at time zone {_TZ})::date")
+
+
+def _closure(row) -> dict:
+    return {
+        "id": str(row["id"]), "first": row["first_day"].isoformat(),
+        "last": row["last_day"].isoformat(), "reason": row["reason"],
+        "reason_ar": row["reason_ar"],
+        "resource": {
+            "id": str(row["resource_id"]), "name": row["resource_name"],
+            "name_ar": row["resource_name_ar"],
+        } if row["resource_id"] else None,
+        # Bookings still booked inside it: a closure never cancels one, the shop moves them.
+        "standing": row["standing"],
+    }
+
+
+_CLOSURE_ROWS = f"""
+    select c.id, c.resource_id, c.first_day, c.last_day, c.reason, c.reason_ar,
+           r.name as resource_name, r.name_ar as resource_name_ar,
+           (select count(*)::int from bookings b where b.status = 'booked'
+              and (b.starts_at at time zone {_TZ})::date between c.first_day and c.last_day
+              and (c.resource_id is null or b.resource_id = c.resource_id)) as standing
+    from booking_closures c left join booking_resources r on r.id = c.resource_id
+"""
+
+
+async def list_closures(conn: asyncpg.Connection) -> list[dict]:
+    """The days off that are not over yet, soonest first: the whole shop's (a holiday) and one
+    person's or chair's (their leave)."""
+    rows = await conn.fetch(
+        _CLOSURE_ROWS + "where c.last_day >= $1 order by c.first_day, c.created_at",
+        await shop_today(conn),
+    )
+    return [_closure(r) for r in rows]
+
+
+async def add_closure(
+    conn: asyncpg.Connection, first: date, last: date, resource_id: UUID | None,
+    reason: str, reason_ar: str,
+) -> dict:
+    """Close the shop, or one person or chair, from `first` to `last` (shop calendar days,
+    both included). Bookings already inside stay booked; the answer counts them."""
+    if last < first or (last - first).days >= MAX_CLOSURE_DAYS:
+        raise BookingError(
+            "bad_closure", "Choose a first day, and a last day that is the same or later "
+            "and within a year."
+        )
+    today = await shop_today(conn)
+    if last < today:
+        raise BookingError("closure_past", "That time has already passed.")
+    if resource_id is not None and not await conn.fetchval(
+        "select exists (select 1 from booking_resources where id = $1)", resource_id
+    ):
+        raise BookingError("unknown_resource", "That person or chair is not available.")
+    if await conn.fetchval(
+        "select count(*) from booking_closures where last_day >= $1", today
+    ) >= MAX_CLOSURES:
+        raise BookingError("too_many_closures", f"A shop can list up to {MAX_CLOSURES} days off.")
+    closure_id = await conn.fetchval(
+        "insert into booking_closures (resource_id, first_day, last_day, reason, reason_ar) "
+        "values ($1, $2, $3, $4, $5) returning id",
+        resource_id, first, last, reason.strip(), reason_ar.strip(),
+    )
+    return _closure(await conn.fetchrow(_CLOSURE_ROWS + "where c.id = $1", closure_id))
+
+
+async def remove_closure(conn: asyncpg.Connection, closure_id: UUID) -> bool:
+    return await conn.execute(
+        "delete from booking_closures where id = $1", closure_id
+    ) == "DELETE 1"
+
+
+async def shop_closed_on(conn: asyncpg.Connection, day: date) -> dict | None:
+    """Why the whole shop is closed on this day, if it is: {reason, reason_ar}."""
+    row = await conn.fetchrow(
+        "select reason, reason_ar from booking_closures where resource_id is null "
+        "and $1::date between first_day and last_day order by created_at limit 1", day,
+    )
+    return {"reason": row["reason"], "reason_ar": row["reason_ar"]} if row else None
 
 
 def _eligible(service: str, wanted: str) -> str:
@@ -273,20 +385,31 @@ def _eligible(service: str, wanted: str) -> str:
     """
 
 
+def _shut(day: str, rid: str) -> str:
+    """SQL for "the shop is closed that day, or this resource is off": a day in `booking_closures`
+    for the whole shop or for the resource (D-141). `day` is a query parameter, or an expression
+    that gives the shop's calendar day."""
+    return f"""exists (select 1 from booking_closures c
+                where {day}::date between c.first_day and c.last_day
+                  and (c.resource_id is null or c.resource_id = {rid}))"""
+
+
 def _working(day: str) -> str:
     """SQL for when each eligible resource works on the shop's calendar day `day` (a query
-    parameter number): its own hours if it has any, else the shop's opening hours. Needs a
-    CTE called `eligible` before it."""
+    parameter number): its own hours if it has any, else the shop's opening hours; nothing on
+    a day the shop or the resource is closed (D-141). Needs a CTE called `eligible` before it."""
     dow = f"extract(dow from {day}::date)::int"
     return f"""
         select e.id as rid, ({day}::date + rh.opens) at time zone {_TZ} as opens_at,
                ({day}::date + rh.closes) at time zone {_TZ} as closes_at
         from eligible e join resource_hours rh on rh.resource_id = e.id and rh.weekday = {dow}
+        where not {_shut(day, "e.id")}
         union all
         select e.id, ({day}::date + h.opens) at time zone {_TZ},
                ({day}::date + h.closes) at time zone {_TZ}
         from eligible e join business_hours h on h.weekday = {dow}
         where not exists (select 1 from resource_hours rh where rh.resource_id = e.id)
+          and not {_shut(day, "e.id")}
     """
 
 
@@ -318,6 +441,8 @@ async def free_times(
                      (($1::date + h.closes) at time zone {_TZ}) - make_interval(mins => $2),
                      make_interval(mins => $3)) s
             where h.weekday = extract(dow from $1::date)::int
+              and not exists (select 1 from booking_closures c where c.resource_id is null
+                              and $1::date between c.first_day and c.last_day)
               and s > now() + make_interval(mins => $4)
               and s < now() + make_interval(days => $5)
               and not exists (
@@ -996,11 +1121,22 @@ async def day_view(conn: asyncpg.Connection, day: date) -> dict:
         r for r in await list_resources(conn)
         if r["active"] or r["id"] in used
     ]
+    closed = await shop_closed_on(conn, day)
+    leave = {
+        str(r["resource_id"]): {"reason": r["reason"], "reason_ar": r["reason_ar"]}
+        for r in await conn.fetch(
+            "select resource_id, reason, reason_ar from booking_closures "
+            "where resource_id is not null and $1::date between first_day and last_day "
+            "order by created_at desc", day,
+        )
+    }
     for r in resources:
         own = [p for p in r["hours"] if p["weekday"] == weekday]
-        r["today"] = own if r["hours"] else shop_periods
-        r["off"] = bool(r["hours"]) and not own
-    return {"day": day.isoformat(), "weekday": weekday, "hours": shop_periods,
+        r["leave"] = leave.get(r["id"])
+        shut = closed is not None or r["leave"] is not None
+        r["today"] = [] if shut else (own if r["hours"] else shop_periods)
+        r["off"] = shut or (bool(r["hours"]) and not own)
+    return {"day": day.isoformat(), "weekday": weekday, "hours": shop_periods, "closed": closed,
             "resources": resources, "bookings": bookings}
 
 

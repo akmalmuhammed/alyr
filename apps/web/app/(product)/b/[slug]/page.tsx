@@ -56,6 +56,7 @@ const T = {
     payDeposit: "Pay the deposit",
     withWhom: (name: string, place: boolean) => (place ? `, ${name}` : ` with ${name}`),
     noTimes: "No free times on this day. Try another day.",
+    closedOn: (reason: string) => (reason ? `The shop is closed this day: ${reason}. Try another day.` : "The shop is closed this day. Try another day."),
     note: "Anything we should know? (optional)", confirm: "Confirm booking",
     booked: (n: number) => `Booking ${n} confirmed`,
     backToChat: "You can go back to WhatsApp. We sent the details there and will remind you before the visit.",
@@ -78,6 +79,7 @@ const T = {
     payDeposit: "ادفع العربون",
     withWhom: (name: string, place: boolean) => (place ? `، ${name}` : ` مع ${name}`),
     noTimes: "لا توجد أوقات متاحة في هذا اليوم. جرّب يوماً آخر.",
+    closedOn: (reason: string) => (reason ? `المحل مغلق في هذا اليوم: ${reason}. جرّب يوماً آخر.` : "المحل مغلق في هذا اليوم. جرّب يوماً آخر."),
     note: "هل من ملاحظة؟ (اختياري)", confirm: "تأكيد الحجز",
     booked: (n: number) => `تم تأكيد الحجز رقم ${n}`,
     backToChat: "يمكنك العودة إلى واتساب. أرسلنا التفاصيل هناك وسنذكّرك قبل الموعد.",
@@ -117,6 +119,8 @@ function BookingForm() {
   const [resourceId, setResourceId] = useState("");
   const [day, setDay] = useState("");
   const [times, setTimes] = useState<string[] | null>(null);
+  // Why the whole shop is closed on the chosen day, when it is (D-141).
+  const [closed, setClosed] = useState<{ reason: string; reason_ar: string } | null>(null);
   const [start, setStart] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -146,8 +150,10 @@ function BookingForm() {
     let current = true;
     fetch(`/api/book/${slug}/times?service_id=${serviceId}&day=${day}${resourceId ? `&resource_id=${resourceId}` : ""}`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((data: { times: string[] }) => { if (current) setTimes(data.times); })
-      .catch(() => { if (current) setTimes([]); });
+      .then((data: { times: string[]; closed: { reason: string; reason_ar: string } | null }) => {
+        if (current) { setClosed(data.closed); setTimes(data.times); }
+      })
+      .catch(() => { if (current) { setClosed(null); setTimes([]); } });
     return () => { current = false; };
   }, [slug, serviceId, day, resourceId]);
 
@@ -328,7 +334,9 @@ function BookingForm() {
         <section className="cx-section">
           <h2><span className={`cx-step ${start ? "done" : ""}`}>{step(3)}</span>{t.time}</h2>
           {times === null && <div className="cx-times" aria-hidden="true">{[0, 1, 2, 3, 4, 5].map((i) => <span key={i} className="cx-skel" />)}</div>}
-          {times?.length === 0 && <p className="cx-note">{t.noTimes}</p>}
+          {times?.length === 0 && (
+            <p className="cx-note">{closed ? t.closedOn((lang === "ar" && closed.reason_ar) || closed.reason) : t.noTimes}</p>
+          )}
           {times && times.length > 0 && (
             <div className="cx-times" role="radiogroup" aria-label={t.time}>
               {times.map((value) => (

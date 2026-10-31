@@ -8,47 +8,41 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { termsSentence, type DepositTerms } from "../_customer/deposit";
+import { send } from "./bookingsApi";
+import { BookingsHours } from "./BookingsHours";
 import { BookingsServices } from "./BookingsServices";
 import { BOOKINGS, type BookingsCopy, type Lang } from "./bookingsCopy";
 import type { ServiceRow } from "./bookingsServiceForm";
+import { WeekEditor } from "./BookingsWeek";
 
-type Period = { weekday: number; opens: string; closes: string };
+import type { Period } from "./bookingsWeekLogic";
 type Resource = { id: string; name: string; name_ar: string; kind: "person" | "place"; active: boolean; hours: Period[] };
-export type Part = "services" | "people" | "rules";
-const PARTS: Part[] = ["services", "people", "rules"];
+export type Part = "services" | "hours" | "people" | "rules";
+const PARTS: Part[] = ["services", "hours", "people", "rules"];
 type Settings = DepositTerms & { review: { on: boolean; link: string } };
 
-async function send(url: string, method: string, body: unknown): Promise<string> {
-  try {
-    const response = await fetch(url, { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-    if (response.ok) return "";
-    const data = await response.json().catch(() => ({}));
-    const detail = data?.detail;
-    return (typeof detail === "object" && detail?.code) || "generic";
-  } catch {
-    return "generic";
-  }
-}
-
 export function BookingsSetup({ lang, start = "services", onChanged, onClose }: {
-  lang: Lang; start?: Part; onChanged: () => void; onClose: () => void;
+  lang: Lang; start?: Part; onChanged: () => void; onClose: (day?: string) => void;
 }) {
   const t = BOOKINGS[lang];
   const [resources, setResources] = useState<Resource[] | null>(null);
   const [services, setServices] = useState<ServiceRow[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [shopHours, setShopHours] = useState<Period[]>([]);
   const [part, setPart] = useState<Part>(start);
   const [said, setSaid] = useState("");
 
   const load = useCallback(async () => {
-    const [r, s, g] = await Promise.all([
+    const [r, s, g, h] = await Promise.all([
       fetch("/api/resources", { cache: "no-store" }).then((x) => x.json()),
       fetch("/api/services", { cache: "no-store" }).then((x) => x.json()),
       fetch("/api/bookings/settings", { cache: "no-store" }).then((x) => x.json()),
-    ]).catch(() => [null, null, null]);
+      fetch("/api/hours", { cache: "no-store" }).then((x) => x.json()),
+    ]).catch(() => [null, null, null, null]);
     if (r) setResources(r.resources);
     if (s) setServices(s.services);
     if (g) setSettings(g);
+    if (h) setShopHours(h.periods);
   }, []);
 
   useEffect(() => {
@@ -57,7 +51,7 @@ export function BookingsSetup({ lang, start = "services", onChanged, onClose }: 
   }, [load]);
 
   async function save(url: string, method: string, body: unknown, done?: string): Promise<string> {
-    const code = await send(url, method, body);
+    const { code } = await send(url, method, body);
     setSaid(code ? (code === "last_resource" ? t.lastOne : t.errors[code] ?? t.errors.generic) : done ?? t.saved);
     if (!code) {
       await load();
@@ -71,7 +65,7 @@ export function BookingsSetup({ lang, start = "services", onChanged, onClose }: 
     <div className="bk-setup-body">
       <div className="bk-setup-top">
         <h2>{t.setup}</h2>
-        <button type="button" className="btn" onClick={onClose}>{t.setupBack}</button>
+        <button type="button" className="btn" onClick={() => onClose()}>{t.setupBack}</button>
       </div>
       <div className="bk-parts" role="group" aria-label={t.partsLabel}>
         {PARTS.map((p) => (
@@ -85,12 +79,16 @@ export function BookingsSetup({ lang, start = "services", onChanged, onClose }: 
         <BookingsServices t={t} lang={lang} services={services} people={resources} save={save} />
       )}
 
+      {part === "hours" && (
+        <BookingsHours t={t} lang={lang} people={resources} say={setSaid} changed={onChanged} openDay={onClose} />
+      )}
+
       {part === "people" && (
         <section className="bk-part" aria-labelledby="bk-people">
           <h3 id="bk-people">{t.people}</h3>
           <p className="bk-quiet">{t.peopleHint}</p>
           <ul className="bk-people">
-            {resources.map((r) => <PersonRow key={r.id} r={r} t={t} save={save} />)}
+            {resources.map((r) => <PersonRow key={r.id} r={r} t={t} save={save} shopHours={shopHours} />)}
           </ul>
           <AddPerson t={t} save={save} />
         </section>
@@ -109,15 +107,11 @@ export function BookingsSetup({ lang, start = "services", onChanged, onClose }: 
 
 type Save = (url: string, method: string, body: unknown, done?: string) => Promise<string>;
 
-function PersonRow({ r, t, save }: { r: Resource; t: BookingsCopy; save: Save }) {
+function PersonRow({ r, t, save, shopHours }: { r: Resource; t: BookingsCopy; save: Save; shopHours: Period[] }) {
   const [name, setName] = useState(r.name);
   const [nameAr, setNameAr] = useState(r.name_ar);
   const [kind, setKind] = useState(r.kind);
   const [own, setOwn] = useState(r.hours.length > 0);
-  const [week, setWeek] = useState(() => Array.from({ length: 7 }, (_, d) => {
-    const p = r.hours.find((h) => h.weekday === d);
-    return { on: Boolean(p), opens: p?.opens ?? "10:00", closes: p?.closes ?? "20:00" };
-  }));
   const id = `bk-r-${r.id}`;
   return (
     <li className="bk-person">
@@ -145,31 +139,8 @@ function PersonRow({ r, t, save }: { r: Resource; t: BookingsCopy; save: Save })
         <span>{own ? t.ownHours : t.shopHours}</span>
       </label>
       {own && (
-        <form className="bk-week" onSubmit={(e) => {
-          e.preventDefault();
-          void save(`/api/resources/${r.id}/hours`, "PUT", {
-            periods: week.flatMap((d, weekday) => (d.on ? [{ weekday, opens: d.opens, closes: d.closes }] : [])),
-          });
-        }}>
-          {week.map((d, weekday) => (
-            <div key={weekday} className="bk-wday">
-              <label className="bk-check">
-                <input type="checkbox" checked={d.on} onChange={(e) => setWeek(week.map((x, i) => (i === weekday ? { ...x, on: e.target.checked } : x)))} />
-                <span>{t.weekdays[weekday]}</span>
-              </label>
-              {d.on && (
-                <span className="bk-span" dir="ltr">
-                  <label className="bk-visually" htmlFor={`${id}-o${weekday}`}>{t.from} {t.weekdays[weekday]}</label>
-                  <input id={`${id}-o${weekday}`} type="time" value={d.opens} onChange={(e) => setWeek(week.map((x, i) => (i === weekday ? { ...x, opens: e.target.value } : x)))} />
-                  <span aria-hidden="true">–</span>
-                  <label className="bk-visually" htmlFor={`${id}-c${weekday}`}>{t.to} {t.weekdays[weekday]}</label>
-                  <input id={`${id}-c${weekday}`} type="time" value={d.closes} onChange={(e) => setWeek(week.map((x, i) => (i === weekday ? { ...x, closes: e.target.value } : x)))} />
-                </span>
-              )}
-            </div>
-          ))}
-          <div className="bk-acts"><button type="submit" className="btn small">{t.saveHours}</button></div>
-        </form>
+        <WeekEditor t={t} idp={`${id}-w`} periods={r.hours.length ? r.hours : shopHours} saveLabel={t.saveHours}
+          onSave={(periods) => save(`/api/resources/${r.id}/hours`, "PUT", { periods }, t.saved)} />
       )}
     </li>
   );

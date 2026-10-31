@@ -152,9 +152,9 @@ try {
     await click(`[...document.querySelectorAll('.bk-barbtns > button')].find((x) => x.textContent.includes(${JSON.stringify(W.setup)}))`, 1200);
     await until("!!document.querySelector('.bk-setup-body h2')", "the setup panel");
     check((await js("document.querySelectorAll('.bk-service').length")) >= 3, "the services are listed");
-    await click("document.querySelectorAll('.bk-partbtn')[1]", 600);
-    check((await js("document.querySelectorAll('.bk-person').length")) >= 3, "the people are listed");
     await click("document.querySelectorAll('.bk-partbtn')[2]", 600);
+    check((await js("document.querySelectorAll('.bk-person').length")) >= 3, "the people are listed");
+    await click("document.querySelectorAll('.bk-partbtn')[3]", 600);
     check((await text()).toLowerCase().includes(AR ? "ما يقرؤه العميل" : "the customer reads"), "the rule shows the customer's sentence");
     await shot("05-setup-1440");
     await noSideScroll("setup 1440");

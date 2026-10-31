@@ -14,3 +14,15 @@ Pictures of each stage's screens, taken by `scripts/bookings-owner-flow-browser-
 | `en-10-add-service-390-dark` | the add form on a phone, dark |
 | `ar-05c-who-does-it-390` | who does it on a phone, Arabic |
 | `en-06-booking-page-390` | the customer's booking page offering the service the owner added |
+
+## Stage 2: opening hours and days off (D-141)
+
+| Picture | Shows |
+|---|---|
+| `en-11-hours-1440`, `ar-11-hours-1440` | the week a day at a time, English and Arabic (right to left) |
+| `en-12-hours-overlap-1440` | two periods that overlap, refused in words that name the day |
+| `en-14-closure-added-1440` | a day off added on the day of a booking: the screen says one booking is still booked |
+| `ar-15-day-closed-1440` | the day view of that day: the shop is closed and why, the booking is still there |
+| `en-11-hours-390-light`, `ar-11-hours-390-light` | the week on a phone, a break on Sunday |
+| `en-12-days-off-390-dark`, `ar-12-days-off-390-light` | the add-days-off form on a phone |
+| `en-16-booking-page-closed-390` | the customer's booking page on a closed day: it says why |

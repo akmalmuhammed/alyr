@@ -114,6 +114,18 @@ class Week(BaseModel):
     periods: list[Period] = Field(max_length=28)
 
 
+class NewClosure(BaseModel):
+    first: date = Field(description="The first day closed, on the shop's own calendar")
+    last: date = Field(description="The last day closed, the same as the first for one day")
+    resource_id: UUID | None = Field(
+        default=None, description="One person or chair's time off; none closes the whole shop"
+    )
+    reason: str = Field(
+        default="", max_length=120, description="Shown to customers on a whole-shop closure"
+    )
+    reason_ar: str = Field(default="", max_length=120)
+
+
 class Outcome(BaseModel):
     status: str
 
@@ -226,10 +238,17 @@ async def booking_page(
                 state = "invalid"  # a link whose customer is gone
         # So a customer who cannot book here can be sent to the shop's chat.
         whatsapp = await conn.fetchval("select whatsapp_number from shop_settings") or ""
+        # The days the whole shop is closed, so the page can say why a day has no times. A
+        # person's own time off is not shown: that person's times are simply not offered.
+        closed = [c for c in await service.list_closures(conn) if c["resource"] is None]
     return {
         "shop": {"name": shop["name"], "name_ar": shop["name_ar"],
                  "timezone": shop["timezone"], "whatsapp": whatsapp},
         "services": services, "resources": resources, "deposit_terms": terms,
+        "closed_days": [
+            {"first": c["first"], "last": c["last"], "reason": c["reason"],
+             "reason_ar": c["reason_ar"]} for c in closed
+        ],
         # Card payments go live with the shop's own payment provider; until then the pay link
         # opens ALYR's test page, and the page says so.
         "payments_live": False,
@@ -248,9 +267,10 @@ async def times(
     try:
         async with request.app.state.db.tenant(shop["id"]) as conn:
             free = await service.free_times(conn, service_id, day, resource_id)
+            closed = await service.shop_closed_on(conn, day)
     except service.BookingError as error:
         raise _refuse(error) from error
-    return {"day": day.isoformat(), "times": [t.isoformat() for t in free]}
+    return {"day": day.isoformat(), "times": [t.isoformat() for t in free], "closed": closed}
 
 
 @public.post("/{slug}",
@@ -445,6 +465,47 @@ async def assign(
     if not found:
         raise HTTPException(status_code=404, detail="booking not found")
     return {"assigned_to": str(body.user_id) if body.user_id else None}
+
+
+@router.get("/closures")
+async def closures(request: Request, tenant_id: UUID = Depends(current_tenant)) -> dict:
+    """The shop's days off that are not over: holidays and closures, and a person's or chair's
+    time off, each with the bookings still standing inside it."""
+    async with request.app.state.db.tenant(tenant_id) as conn:
+        return {
+            "today": (await service.shop_today(conn)).isoformat(),
+            "closures": await service.list_closures(conn),
+        }
+
+
+@router.post("/closures", dependencies=[Depends(require_manager)])
+async def add_closure(
+    body: NewClosure, request: Request, tenant_id: UUID = Depends(current_tenant)
+) -> dict:
+    try:
+        async with request.app.state.db.tenant(tenant_id) as conn:
+            made = await service.add_closure(
+                conn, body.first, body.last, body.resource_id, body.reason, body.reason_ar
+            )
+            return {
+                "closure": made, "today": (await service.shop_today(conn)).isoformat(),
+                "closures": await service.list_closures(conn),
+            }
+    except service.BookingError as error:
+        raise _refuse(error) from error
+
+
+@router.delete("/closures/{closure_id}", dependencies=[Depends(require_manager)])
+async def remove_closure(
+    closure_id: UUID, request: Request, tenant_id: UUID = Depends(current_tenant)
+) -> dict:
+    async with request.app.state.db.tenant(tenant_id) as conn:
+        if not await service.remove_closure(conn, closure_id):
+            raise HTTPException(status_code=404, detail="day off not found")
+        return {
+            "today": (await service.shop_today(conn)).isoformat(),
+            "closures": await service.list_closures(conn),
+        }
 
 
 @router.get("/services")
