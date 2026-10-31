@@ -1,0 +1,52 @@
+/* The terms of service and the refund policy (LegalPage.tsx) and the pricing page
+   (PricingPage.tsx), ALY-301. They use the privacy policy's type: .co, .co-* and .pv-* in
+   site.css. Only what those do not cover is here, and only these three pages load it. */
+
+/* a link inside running text is underlined, so it is not told apart by colour alone */
+.pv-section a:not(.link) {
+  text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .2em; overflow-wrap: anywhere;
+}
+.pv-section a:not(.link):hover { text-decoration-thickness: 2px; }
+
+/* the terms: the list of sections, then clause numbers that hang beside their text */
+.lg-toc { max-width: 44rem; margin: 0 0 .5rem; padding: 1rem 0 1.25rem; border-block: 1px solid var(--line); }
+.lg-toc-k { margin: 0 0 .5rem; font-family: var(--mono); font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
+[lang="ar"] .lg-toc-k { font-family: var(--arabic); letter-spacing: 0; text-transform: none; font-size: .8125rem; }
+.lg-toc ol { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr)); gap: 0 1.5rem; }
+.lg-toc a { display: flex; align-items: center; min-height: 2.75rem; color: var(--text); }
+.lg-toc a:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .2em; }
+.lg-n { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.lg-toc .lg-n { margin-inline-end: .375rem; }
+.lg-section .lg-clause { display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 0 .5rem; }
+.lg-c { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+/* the pricing page: the plan as a table of the two ways to pay */
+.pr-section { max-width: 52rem; }
+.pr-table { width: 100%; margin: 0 0 .875rem; border-collapse: collapse; }
+.pr-table th, .pr-table td { padding: 1rem .75rem; text-align: start; vertical-align: top; border-bottom: 1px solid var(--line); }
+.pr-table th:first-child, .pr-table td:first-child { padding-inline-start: 0; }
+.pr-table th:last-child, .pr-table td:last-child { padding-inline-end: 0; }
+.pr-table thead th { padding-block: .625rem; border-bottom-color: var(--line-strong); font-size: .875rem; font-weight: 600; color: var(--text); }
+.pr-table thead th:first-child { color: var(--text-muted); font-weight: 400; }
+.pr-ch, .pr-cc, .pr-rn, .pr-rd, .pr-amt, .pr-per { display: block; }
+.pr-cc, .pr-per { font-weight: 400; font-size: .8125rem; color: var(--text-muted); }
+.pr-rn { font-weight: 600; line-height: 1.35; }
+.pr-rd { margin-top: .125rem; font-size: .875rem; font-weight: 400; line-height: 1.45; color: var(--text-muted); }
+.pr-amt { font-size: 1.25rem; font-weight: 600; line-height: 1.3; font-variant-numeric: tabular-nums; }
+[lang="ar"] .pr-amt { font-size: 1.1875rem; line-height: 1.5; }
+.pr-table tbody th { width: 46%; }
+.pr-examples tbody th { width: 46%; }
+.pr-examples .pr-amt { font-size: 1.0625rem; font-weight: 500; }
+.pr-confirm { color: var(--text-muted); }
+.pr-h3 { margin: 2rem 0 .25rem; font-size: 1rem; font-weight: 600; }
+/* .co-row's dd is a grid (for a value and its note); here the value is running text, and a
+   product name or an amount inside it must stay in the line, not become a row of its own */
+.pr-facts dd { display: block; font-size: 1rem; font-weight: 400; line-height: 1.6; }
+.pr .pr-section > p:last-child { margin-bottom: 0; }
+
+@media (max-width: 40rem) {
+  .pr-table th, .pr-table td { padding-inline: .5rem; }
+  .pr-table tbody th { width: 40%; }
+  .pr-amt { font-size: 1.0625rem; }
+  [lang="ar"] .pr-amt { font-size: 1rem; }
+}

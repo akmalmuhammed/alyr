@@ -293,7 +293,7 @@ styles `pages.css`; routes `/for/[sector]` and `/guides/[guide]` with `generateS
 ## Don't
 
 - Put a word in a component, including `aria-label`s, alt text and captions.
-- Show a price, a coming product, AI wording or a must-not-claim line.
+- Show a price (outside `/pricing`, which shows its own whatever the offer switch says: ALY-301, D-124), a coming product, AI wording or a must-not-claim line.
 - Style a bare element from a container (`.top-nav a` once broke the Products menu), or
   reuse the Agent's `ag-` class prefix in a site drawing.
 - Add a second Volt button, a carousel, a pop-up, a cookie banner, a logo wall, a counter,

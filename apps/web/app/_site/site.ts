@@ -96,6 +96,13 @@ export const PATHS = {
   company: { en: "/company", ar: "/ar/company" },
   // Not a product: the privacy policy (ALY-68); Meta's app settings point here.
   privacy: { en: "/privacy", ar: "/ar/privacy" },
+  // Not products: the terms of service, the refund policy and the pricing page (ALY-301). Paddle,
+  // ALYR's card-payment provider (D-074), reviews these before it lets a checkout open from the
+  // domain. They are built whatever the offer switch says (OFFER_LIVE): the pricing page
+  // carries its own prices, and the homepage's price section stays behind the switch.
+  terms: { en: "/terms", ar: "/ar/terms" },
+  refund: { en: "/refund", ar: "/ar/refund" },
+  pricing: { en: "/pricing", ar: "/ar/pricing" },
   ...sectorPaths,
   guides: { en: "/guides", ar: "/ar/guides" },
   ...guidePaths,
@@ -107,12 +114,17 @@ export type PageKey = keyof typeof PATHS;
 export const sectorPage = (key: SectorKey) => `for-${key}` as const;
 export const guidePage = (key: GuideKey) => `guide-${key}` as const;
 
+/** The pages that are not products, sectors or guides: a plain page with the homepage's social
+ * card and no closing call of its own (build-site.sh's `plain=` list is the same). */
+export const PLAIN = ["company", "privacy", "terms", "refund", "pricing"] as const;
+export type PlainKey = (typeof PLAIN)[number];
+
 /** What kind of page a key is, for the structured data and the machine copies. */
 export function pageKind(page: PageKey):
   | { kind: "home" } | { kind: "product"; key: ProductKey } | { kind: "sector"; key: SectorKey }
-  | { kind: "guides" } | { kind: "guide"; key: GuideKey } | { kind: "plain"; key: "company" | "privacy" } {
+  | { kind: "guides" } | { kind: "guide"; key: GuideKey } | { kind: "plain"; key: PlainKey } {
   if (page === "home") return { kind: "home" };
-  if (page === "company" || page === "privacy") return { kind: "plain", key: page };
+  if ((PLAIN as readonly string[]).includes(page)) return { kind: "plain", key: page as PlainKey };
   if (page === "guides") return { kind: "guides" };
   if (page.startsWith("for-")) return { kind: "sector", key: page.slice(4) as SectorKey };
   if (page.startsWith("guide-")) return { kind: "guide", key: page.slice(6) as GuideKey };
