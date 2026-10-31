@@ -33,6 +33,7 @@ SLOT_STEP_MINUTES = 30
 LEAD_MINUTES = 30
 REMIND_BEFORE = timedelta(hours=2)
 MAX_DAYS_AHEAD = 60
+MAX_SERVICES = 100
 # Staff may enter a visit that has already started (a walk-in written down afterwards), up to
 # this long ago.
 STAFF_LOOK_BACK = timedelta(hours=12)
@@ -76,23 +77,83 @@ _SERVICE_COLUMNS = (
 )
 
 
-async def list_services(conn: asyncpg.Connection, only_active: bool = False) -> list[dict]:
+async def list_services(
+    conn: asyncpg.Connection, only_active: bool = False, detail: bool = False
+) -> list[dict]:
+    """The shop's services in their order. `detail` is for the workspace's own screen: who does
+    each one (`resource_ids`, empty for everyone who takes bookings) and how many bookings
+    still to come are on it (`upcoming`). The booking page asks for neither."""
     rows = await conn.fetch(
         f"select {_SERVICE_COLUMNS} from services "
         "where active or not $1 order by sort, created_at",
         only_active,
     )
-    return [_service(r) for r in rows]
+    out = [_service(r) for r in rows]
+    if detail:
+        who: dict[str, list[str]] = {}
+        for link in await conn.fetch("select service_id, resource_id from service_resources"):
+            who.setdefault(str(link["service_id"]), []).append(str(link["resource_id"]))
+        ahead = {
+            str(r["service_id"]): r["n"]
+            for r in await conn.fetch(
+                "select service_id, count(*)::int as n from bookings "
+                "where status = 'booked' and ends_at > now() group by 1"
+            )
+        }
+        for one in out:
+            one["resource_ids"] = who.get(one["id"], [])
+            one["upcoming"] = ahead.get(one["id"], 0)
+    return out
+
+
+def _clean_name(name: str) -> str:
+    name = name.strip()
+    if not name:
+        raise BookingError("bad_name", "A service needs a name.")
+    return name
+
+
+def _check_deposit(kind: str, value: int, price: int) -> int:
+    """The deposit a service may ask, as it is stored: none, a share of the price from 1% to
+    100%, or a fixed amount from QAR 1 and, when the service has a price, not above it."""
+    if kind == "none":
+        return 0
+    if kind == "percent":
+        if not 1 <= value <= 100:
+            raise BookingError("bad_deposit", "A deposit share is between 1% and 100%.")
+        if not price:
+            raise BookingError(
+                "deposit_needs_price", "A share of the price needs the service to have a price."
+            )
+        return value
+    if value < 100:
+        raise BookingError("bad_deposit", "A fixed deposit is at least QAR 1.")
+    if price and value > price:
+        raise BookingError("bad_deposit", "A deposit cannot be more than the service's price.")
+    return value
 
 
 async def add_service(
-    conn: asyncpg.Connection, name: str, name_ar: str, duration_minutes: int, price: int
+    conn: asyncpg.Connection, name: str, name_ar: str, duration_minutes: int, price: int,
+    deposit_kind: str = "none", deposit_value: int = 0, resource_ids: list[UUID] | None = None,
 ) -> str:
+    """Add a service, with its deposit and the people or chairs that do it if they are known.
+    The caller's transaction makes it all or nothing."""
+    name = _clean_name(name)
+    value = _check_deposit(deposit_kind, deposit_value, price)
+    if await conn.fetchval("select count(*) from services") >= MAX_SERVICES:
+        raise BookingError(
+            "too_many_services", f"A shop can list up to {MAX_SERVICES} services."
+        )
     service_id = await conn.fetchval(
-        "insert into services (name, name_ar, duration_minutes, price, sort) "
-        "values ($1, $2, $3, $4, (select coalesce(max(sort), 0) + 1 from services)) returning id",
-        name.strip(), name_ar.strip(), duration_minutes, price,
+        "insert into services (name, name_ar, duration_minutes, price, deposit_kind, "
+        "    deposit_value, sort) "
+        "values ($1, $2, $3, $4, $5, $6, (select coalesce(max(sort), 0) + 1 from services)) "
+        "returning id",
+        name, name_ar.strip(), duration_minutes, price, deposit_kind, value,
     )
+    if resource_ids:
+        await set_service_resources(conn, service_id, resource_ids)
     return str(service_id)
 
 
@@ -100,37 +161,41 @@ async def update_service(
     conn: asyncpg.Connection, service_id: UUID, name: str | None, name_ar: str | None,
     duration_minutes: int | None, price: int | None,
     deposit_kind: str | None = None, deposit_value: int | None = None,
+    resource_ids: list[UUID] | None = None,
 ) -> bool:
-    """Change a service's name, length, price or deposit. Bookings already made keep the name
-    and the deposit they were made with."""
-    if deposit_kind is not None:
-        value = 0 if deposit_kind == "none" else (deposit_value or 0)
-        if deposit_kind == "percent" and not 1 <= value <= 100:
-            raise BookingError("bad_deposit", "A deposit share is between 1% and 100%.")
-        if deposit_kind == "fixed":
-            if value < 100:
-                raise BookingError("bad_deposit", "A fixed deposit is at least QAR 1.")
-            current = await conn.fetchval("select price from services where id = $1", service_id)
-            final = price if price is not None else current
-            if final and value > final:
-                raise BookingError(
-                    "bad_deposit", "A deposit cannot be more than the service's price."
-                )
-    else:
-        value = None
-    updated = await conn.execute(
-        "update services set name = coalesce(nullif($2, ''), name), "
-        "name_ar = coalesce($3, name_ar), duration_minutes = coalesce($4, duration_minutes), "
-        "price = coalesce($5, price), deposit_kind = coalesce($6, deposit_kind), "
-        "deposit_value = coalesce($7, deposit_value) where id = $1",
-        service_id, name.strip() if name is not None else None,
-        name_ar.strip() if name_ar is not None else None, duration_minutes, price,
-        deposit_kind, value,
+    """Change a service's name, length, price, deposit or who does it (an empty list: all of
+    them). Bookings already made keep the name, the price and the deposit they were made with.
+    The deposit is checked against the price the service will have, so a price cannot be
+    lowered under a fixed deposit."""
+    current = await conn.fetchrow(
+        "select price, deposit_kind, deposit_value from services where id = $1 for update",
+        service_id,
     )
-    return updated == "UPDATE 1"
+    if current is None:
+        return False
+    final_price = price if price is not None else current["price"]
+    kind = deposit_kind if deposit_kind is not None else current["deposit_kind"]
+    value = _check_deposit(
+        kind,
+        (deposit_value or 0) if deposit_kind is not None else current["deposit_value"],
+        final_price,
+    )
+    await conn.execute(
+        "update services set name = coalesce($2, name), name_ar = coalesce($3, name_ar), "
+        "duration_minutes = coalesce($4, duration_minutes), price = coalesce($5, price), "
+        "deposit_kind = $6, deposit_value = $7 where id = $1",
+        service_id, _clean_name(name) if name is not None else None,
+        name_ar.strip() if name_ar is not None else None, duration_minutes, price,
+        kind, value,
+    )
+    if resource_ids is not None:
+        await set_service_resources(conn, service_id, resource_ids)
+    return True
 
 
 async def set_service_active(conn: asyncpg.Connection, service_id: UUID, active: bool) -> bool:
+    """Hide a service from the booking page, or show it again. Bookings already made on it
+    stay where they are."""
     updated = await conn.execute(
         "update services set active = $2 where id = $1", service_id, active
     )
@@ -844,7 +909,7 @@ async def list_bookings(
         f"""
         select b.id, b.number, b.service_id, b.service_name, b.starts_at, b.ends_at, b.status,
                b.note, b.walk_in, b.deposit, b.deposit_state, b.hold_until,
-               s.price, s.name_ar as service_name_ar,
+               b.price, s.name_ar as service_name_ar,
                c.id as contact_id, c.name as customer, c.phone,
                b.assigned_to, u.name as assignee,
                b.resource_id, res.name as resource_name, res.name_ar as resource_name_ar,

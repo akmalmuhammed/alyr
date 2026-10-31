@@ -3,12 +3,14 @@
 // The Bookings day view (ALY-27, D-084, spec 033): one column per person or chair (one list
 // for a shop with none), each booking a card with what staff do next: came, didn't come,
 // move, cancel, and a deposit to mark refunded. A walk-in or a booking taken by phone is
-// added from the same screen. Everything goes through the API, which writes the activity
-// record. Words in `bookingsCopy.ts`; money from `_customer/price.ts`.
+// added from the same screen. Owners and admins open the setup (services, people and chairs,
+// deposits and reviews) from the bar; it takes the place of the day until they go back.
+// Everything goes through the API, which writes the activity record. Words in
+// `bookingsCopy.ts`; money from `_customer/price.ts`.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatPrice } from "../_customer/price";
-import { BookingsSetup } from "./BookingsSetup";
+import { BookingsSetup, type Part } from "./BookingsSetup";
 import { BOOKINGS, type BookingsCopy, type Lang } from "./bookingsCopy";
 import { nowIn, shift, zonedIso } from "./bookingsTime";
 import "./bookings.css";
@@ -91,7 +93,7 @@ export function BookingsDay({ lang, canManage }: { lang: Lang; canManage: boolea
   const [adding, setAdding] = useState(false);
   const [said, setSaid] = useState("");
   const [error, setError] = useState("");
-  const [setup, setSetup] = useState(false);
+  const [setup, setSetup] = useState<Part | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -147,6 +149,14 @@ export function BookingsDay({ lang, canManage }: { lang: Lang; canManage: boolea
   const active = view.resources.filter((r) => r.active);
   const shown = day ?? view.day;
 
+  if (setup) {
+    return (
+      <section className="bk" aria-label={t.setup}>
+        <BookingsSetup lang={lang} start={setup} onChanged={load} onClose={() => setSetup(null)} />
+      </section>
+    );
+  }
+
   return (
     <section className="bk" aria-labelledby="bk-day-title">
       <div className="bk-bar">
@@ -161,17 +171,35 @@ export function BookingsDay({ lang, canManage }: { lang: Lang; canManage: boolea
           <h2 id="bk-day-title" className="bk-title">{dayTitle(shown, lang)}</h2>
           <span className="bk-count num">{t.count(view.bookings.filter((b) => b.status !== "cancelled").length)}</span>
         </div>
-        <button type="button" className="btn volt" aria-expanded={adding} onClick={() => { setAdding(!adding); setError(""); }}>{t.add}</button>
+        <div className="bk-barbtns">
+          {canManage && <button type="button" className="btn" onClick={() => setSetup("services")}>{t.setup}</button>}
+          <button type="button" className="btn volt" aria-expanded={adding} onClick={() => { setAdding(!adding); setError(""); }}>{t.add}</button>
+        </div>
       </div>
       {offline && <p className="bk-quiet" role="status">{t.offline}</p>}
       <p className="bk-said" role="status" aria-live="polite">{said}</p>
 
-      {adding && (
+      {adding && view.services.length === 0 && (
+        <div className="bk-form" role="status">
+          <p>{canManage ? t.needService : t.needServiceAgent}</p>
+          <div className="bk-acts">
+            {canManage && <button type="button" className="btn primary" onClick={() => setSetup("services")}>{t.addFirst}</button>}
+            <button type="button" className="btn ghost" onClick={() => setAdding(false)}>{t.close}</button>
+          </div>
+        </div>
+      )}
+      {adding && view.services.length > 0 && (
         <AddBooking t={t} lang={lang} view={view} active={active} day={shown} zone={zone}
           onDone={async (body) => { const ok = await act("/api/bookings", body, t.added); if (ok) setAdding(false); }}
           onClose={() => setAdding(false)} error={error} />
       )}
 
+      {view.services.length === 0 && (
+        <div className="bk-empty">
+          <p>{t.noServices}</p>
+          {canManage && <button type="button" className="btn small" onClick={() => setSetup("services")}>{t.addFirst}</button>}
+        </div>
+      )}
       {view.resources.length === 0 && <p className="bk-quiet">{t.oneLane}</p>}
 
       <div className="bk-cols">
@@ -229,14 +257,6 @@ export function BookingsDay({ lang, canManage }: { lang: Lang; canManage: boolea
         ))}
       </div>
       {view.bookings.some((b) => b.deposit) && <p className="bk-quiet">{t.standIn}</p>}
-
-      {canManage && (
-        <div className="bk-setup">
-          <button type="button" className="btn" aria-expanded={setup} aria-controls="bk-setup" onClick={() => setSetup(!setup)}>{t.setup}</button>
-          <p className="bk-quiet">{t.setupHint}</p>
-          {setup && <div id="bk-setup"><BookingsSetup lang={lang} onChanged={load} /></div>}
-        </div>
-      )}
     </section>
   );
 }

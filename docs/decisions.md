@@ -87,6 +87,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-121 | The owner is emailed once when ALYR publishes their price, ahead of the rest of the payment path: English or Arabic as they signed up, claimed on the quote so it never goes twice, nothing sent for a price they already saw or an address that cannot be real. The part of D-093 that shipped on its own | Proposed (the founder signs off the wording) |
 | D-122 | ALYR's own business keeps no test line: the "Try it" step says so and offers to skip, and the one-off first-admin job does not create one | Proposed |
 | D-113 | The Cloudflare zone is hardened with what the Free plan offers and the state is written down: HTTPS only, minimum TLS 1.2, strict SSL, CAA, a trimmed SPF and response-header rules for the API and media host are live; the edge rate-limit rule waits because Free has only Block; no Access until Zero Trust is onboarded; DMARC stays `none` until the reports are read, never `reject` | Proposed |
+| D-140 | An owner or admin manages the services from the Bookings screen (add, change names, length, price, deposit and who does it, hide and show; one part of Set up bookings), checked in the page's words and again in the API, and a booking keeps the price it was made at (migration 0100) | Accepted |
 
 ---
 
@@ -2073,3 +2074,19 @@ Without it, analytics is off everywhere.
 **Chosen over** making Shelf `included` (a false statement for shops without a catalog), leaving the products unregistered and showing them only on the site (the founder found the gap on the Products screen), and a price item at QAR 0 for Shelf (the trap above).
 
 **Revisit when** the founder prices Docs, ALY-143 (the accountant export, statements) or ALY-147 (ALYR's own invoices) is built and the words may grow, or Shelf is made included.
+
+## D-140 · An owner or admin manages the services from the Bookings screen, and a booking keeps the price it was made at
+**Date** 31 Oct 2026 · **Status** Accepted (built and tested; nothing deployed) · Linear ALY-259, stage 1 · Builds on D-084 (people and chairs, deposits) and D-069 (resources)
+
+**The decision.**
+- **Services have a screen.** In the Bookings tab an owner or admin opens **Set up bookings**, which takes the place of the day until they go back (it is one part at a time: Services, People, Deposits). Services lists every service, hidden ones too, with its length, price, deposit and the number of bookings still to come. The owner can add a service, change its names (English and Arabic), length, price, deposit and which people or chairs do it, hide it from the booking page and show it again. This was API only; the earlier audit expected every salon to ask for it in the first week.
+- **It is all one request, checked twice.** The page checks the form in its own language before sending (`bookingsServiceForm.ts`); the API checks it again, as a whole: a service is made with its deposit and its people in one transaction (nothing is half made), and a change is checked against the price the service will have, so a price cannot be lowered under a fixed deposit, and a share of the price needs a price (`deposit_needs_price`). A blank name is refused (`bad_name`); a shop may list up to 100 services (`too_many_services`).
+- **Hiding is not deleting.** A hidden service leaves the booking page and cannot be booked; the bookings it has stay on their time, and the screen says how many before the owner confirms. Nothing is ever deleted from this screen, so a booking always has its service.
+- **A booking keeps its price (migration 0100).** Every reader of a booking's price (what is left to pay, the receipt or invoice made from the booking, the Agent's value of the week ahead) read the service's price today, while the deposit was already worked out when the booking was made. With a screen that changes prices that would have moved a customer's bill after they booked. `bookings.price` is filled by a database trigger when an insert gives none, so every way a booking is made keeps it (the booking page, staff, the seeds), and the three readers now read `bookings.price`. Existing bookings are given their service's price at the migration.
+- **The deposit's own words moved.** The per-service deposit list in the setup is gone; each service's deposit is set in its own form. The shop's deposit rule and the review request stay in the Deposits part.
+
+**Not decided here, left for the founder.** Nothing is added to the activity record for a change of service or price (the record's subjects are conversation, order, booking and account; a settings subject is a migration and a wider change), so an owner cannot yet see who changed a price. The order of services is fixed (the order they were added); a way to reorder them is not built.
+
+**Chosen over** reading the price from the service and warning the owner ("a price change applies to bookings not yet paid"), which would have told them about a trap instead of closing it; a trigger-free column set in `_insert` alone, which the seeds and any future insert would each have had to remember; asking the owner for dirhams (the unit the API stores): the form takes QAR, as an owner thinks of a price, and reads "12.5" as 1250 dirhams from the text, never through a float.
+
+**Revisit when** a pilot owner asks for reordering or an audit trail of settings, or when a service needs a photo (not built).

@@ -419,7 +419,7 @@ async def booking_payments(conn: asyncpg.Connection, booking_id: UUID,
 async def booking_parts(conn: asyncpg.Connection, booking_id: UUID):
     return await conn.fetchrow(
         "select b.id, b.number, b.status, b.contact_id, b.service_name, "
-        "s.name_ar as service_name_ar, s.price, c.name, c.phone, c.lang, c.email "
+        "s.name_ar as service_name_ar, b.price, c.name, c.phone, c.lang, c.email "
         "from bookings b join services s on s.id = b.service_id "
         "join contacts c on c.id = b.contact_id where b.id = $1", booking_id,
     )

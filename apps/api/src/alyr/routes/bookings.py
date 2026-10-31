@@ -63,6 +63,10 @@ class ServiceChange(BaseModel):
         default=None, ge=0, le=10_000_000,
         description="Dirhams for a fixed deposit, 1 to 100 for a percentage of the price",
     )
+    resource_ids: list[UUID] | None = Field(
+        default=None, max_length=50,
+        description="The people or chairs that do it; empty means all, none leaves it as it is",
+    )
 
 
 class NewService(BaseModel):
@@ -70,6 +74,12 @@ class NewService(BaseModel):
     name_ar: str = Field(default="", max_length=120)
     duration_minutes: int = Field(ge=5, le=600)
     price: int = Field(default=0, ge=0, description="In dirhams: 100 is QAR 1")
+    deposit_kind: Literal["none", "fixed", "percent"] = "none"
+    deposit_value: int = Field(default=0, ge=0, le=10_000_000)
+    resource_ids: list[UUID] = Field(
+        default_factory=list, max_length=50,
+        description="The people or chairs that do it; empty means all of them",
+    )
 
 
 class NewResource(BaseModel):
@@ -434,18 +444,24 @@ async def assign(
 
 @router.get("/services")
 async def services(request: Request, tenant_id: UUID = Depends(current_tenant)) -> dict:
+    """Every service, hidden ones too, each with who does it and the bookings still to come."""
     async with request.app.state.db.tenant(tenant_id) as conn:
-        return {"services": await service.list_services(conn)}
+        return {"services": await service.list_services(conn, detail=True)}
 
 
 @router.post("/services", dependencies=[Depends(require_manager)])
 async def add_service(
     body: NewService, request: Request, tenant_id: UUID = Depends(current_tenant)
 ) -> dict:
-    async with request.app.state.db.tenant(tenant_id) as conn:
-        return {"id": await service.add_service(
-            conn, body.name, body.name_ar, body.duration_minutes, body.price
-        )}
+    try:
+        async with request.app.state.db.tenant(tenant_id) as conn:
+            new_id = await service.add_service(
+                conn, body.name, body.name_ar, body.duration_minutes, body.price,
+                body.deposit_kind, body.deposit_value, body.resource_ids,
+            )
+            return {"id": new_id, "services": await service.list_services(conn, detail=True)}
+    except service.BookingError as error:
+        raise _refuse(error) from error
 
 
 @router.patch("/services/{service_id}", dependencies=[Depends(require_manager)])
@@ -457,10 +473,10 @@ async def change_service(
         async with request.app.state.db.tenant(tenant_id) as conn:
             if not await service.update_service(
                 conn, service_id, body.name, body.name_ar, body.duration_minutes, body.price,
-                body.deposit_kind, body.deposit_value,
+                body.deposit_kind, body.deposit_value, body.resource_ids,
             ):
                 raise HTTPException(status_code=404, detail="service not found")
-            return {"services": await service.list_services(conn)}
+            return {"services": await service.list_services(conn, detail=True)}
     except service.BookingError as error:
         raise _refuse(error) from error
 
@@ -473,7 +489,7 @@ async def set_active(
     async with request.app.state.db.tenant(tenant_id) as conn:
         if not await service.set_service_active(conn, service_id, body.active):
             raise HTTPException(status_code=404, detail="service not found")
-    return {"active": body.active}
+        return {"active": body.active, "services": await service.list_services(conn, detail=True)}
 
 
 def _managers_only(staff: Staff) -> None:

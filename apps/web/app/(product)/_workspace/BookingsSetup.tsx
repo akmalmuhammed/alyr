@@ -1,17 +1,21 @@
 "use client";
 
-// Setting up bookings, for an owner or admin (ALY-27, D-084, spec 033): the people and chairs
-// and their own working hours, a deposit per service, the shop's deposit rule (with the
-// sentence the customer will read), and the review request. Agents never see this panel, and
-// the API refuses them anyway. Words in `bookingsCopy.ts`.
+// Setting up bookings, for an owner or admin (ALY-27, D-084, spec 033; ALY-259, D-140, spec 043):
+// the services (`BookingsServices.tsx`), the people and chairs and their own working hours, the
+// shop's deposit rule (with the sentence the customer will read) and the review request. One
+// part at a time, so a phone is not a page of forms. Agents never see this panel, and the API
+// refuses them anyway. Words in `bookingsCopy.ts`.
 
 import { useCallback, useEffect, useState } from "react";
 import { termsSentence, type DepositTerms } from "../_customer/deposit";
+import { BookingsServices } from "./BookingsServices";
 import { BOOKINGS, type BookingsCopy, type Lang } from "./bookingsCopy";
+import type { ServiceRow } from "./bookingsServiceForm";
 
 type Period = { weekday: number; opens: string; closes: string };
 type Resource = { id: string; name: string; name_ar: string; kind: "person" | "place"; active: boolean; hours: Period[] };
-type Service = { id: string; name: string; name_ar: string; price: number; deposit_kind: "none" | "fixed" | "percent"; deposit_value: number };
+export type Part = "services" | "people" | "rules";
+const PARTS: Part[] = ["services", "people", "rules"];
 type Settings = DepositTerms & { review: { on: boolean; link: string } };
 
 async function send(url: string, method: string, body: unknown): Promise<string> {
@@ -26,11 +30,14 @@ async function send(url: string, method: string, body: unknown): Promise<string>
   }
 }
 
-export function BookingsSetup({ lang, onChanged }: { lang: Lang; onChanged: () => void }) {
+export function BookingsSetup({ lang, start = "services", onChanged, onClose }: {
+  lang: Lang; start?: Part; onChanged: () => void; onClose: () => void;
+}) {
   const t = BOOKINGS[lang];
   const [resources, setResources] = useState<Resource[] | null>(null);
-  const [services, setServices] = useState<Service[]>([]);
+  const [services, setServices] = useState<ServiceRow[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [part, setPart] = useState<Part>(start);
   const [said, setSaid] = useState("");
 
   const load = useCallback(async () => {
@@ -49,9 +56,9 @@ export function BookingsSetup({ lang, onChanged }: { lang: Lang; onChanged: () =
     return () => clearTimeout(first);
   }, [load]);
 
-  async function save(url: string, method: string, body: unknown): Promise<string> {
+  async function save(url: string, method: string, body: unknown, done?: string): Promise<string> {
     const code = await send(url, method, body);
-    setSaid(code ? (code === "last_resource" ? t.lastOne : t.errors[code] ?? t.errors.generic) : t.saved);
+    setSaid(code ? (code === "last_resource" ? t.lastOne : t.errors[code] ?? t.errors.generic) : done ?? t.saved);
     if (!code) {
       await load();
       onChanged();
@@ -62,33 +69,45 @@ export function BookingsSetup({ lang, onChanged }: { lang: Lang; onChanged: () =
   if (!resources || !settings) return <p className="bk-quiet" role="status">{t.loading}</p>;
   return (
     <div className="bk-setup-body">
-      <h2>{t.setup}</h2>
+      <div className="bk-setup-top">
+        <h2>{t.setup}</h2>
+        <button type="button" className="btn" onClick={onClose}>{t.setupBack}</button>
+      </div>
+      <div className="bk-parts" role="group" aria-label={t.partsLabel}>
+        {PARTS.map((p) => (
+          <button key={p} type="button" className="bk-partbtn" aria-pressed={part === p}
+            onClick={() => { setPart(p); setSaid(""); }}>{t.parts[p]}</button>
+        ))}
+      </div>
       <p className="bk-said" role="status" aria-live="polite">{said}</p>
 
-      <section className="bk-part" aria-labelledby="bk-people">
-        <h3 id="bk-people">{t.people}</h3>
-        <p className="bk-quiet">{t.peopleHint}</p>
-        <ul className="bk-people">
-          {resources.map((r) => <PersonRow key={r.id} r={r} t={t} save={save} />)}
-        </ul>
-        <AddPerson t={t} save={save} />
-      </section>
+      {part === "services" && (
+        <BookingsServices t={t} lang={lang} services={services} people={resources} save={save} />
+      )}
 
-      <section className="bk-part" aria-labelledby="bk-deposits">
-        <h3 id="bk-deposits">{t.deposits}</h3>
-        <p className="bk-quiet">{t.depositsHint}</p>
-        <ul className="bk-people">
-          {services.map((s) => <DepositRow key={s.id} s={s} t={t} lang={lang} save={save} />)}
-        </ul>
-      </section>
+      {part === "people" && (
+        <section className="bk-part" aria-labelledby="bk-people">
+          <h3 id="bk-people">{t.people}</h3>
+          <p className="bk-quiet">{t.peopleHint}</p>
+          <ul className="bk-people">
+            {resources.map((r) => <PersonRow key={r.id} r={r} t={t} save={save} />)}
+          </ul>
+          <AddPerson t={t} save={save} />
+        </section>
+      )}
 
-      <RuleForm t={t} lang={lang} settings={settings} save={save} />
-      <ReviewForm t={t} settings={settings} save={save} />
+      {part === "rules" && (
+        <>
+          <p className="bk-quiet">{t.depositsMoved}</p>
+          <RuleForm t={t} lang={lang} settings={settings} save={save} />
+          <ReviewForm t={t} settings={settings} save={save} />
+        </>
+      )}
     </div>
   );
 }
 
-type Save = (url: string, method: string, body: unknown) => Promise<string>;
+type Save = (url: string, method: string, body: unknown, done?: string) => Promise<string>;
 
 function PersonRow({ r, t, save }: { r: Resource; t: BookingsCopy; save: Save }) {
   const [name, setName] = useState(r.name);
@@ -176,35 +195,6 @@ function AddPerson({ t, save }: { t: BookingsCopy; save: Save }) {
         </select></label>
       <div className="bk-acts"><button type="submit" className="btn small">{t.addPerson}</button></div>
     </form>
-  );
-}
-
-function DepositRow({ s, t, lang, save }: { s: Service; t: BookingsCopy; lang: Lang; save: Save }) {
-  const [kind, setKind] = useState(s.deposit_kind);
-  const [value, setValue] = useState(s.deposit_kind === "fixed" ? String(s.deposit_value / 100) : s.deposit_kind === "percent" ? String(s.deposit_value) : "");
-  const id = `bk-d-${s.id}`;
-  return (
-    <li className="bk-person">
-      <form className="bk-grid" onSubmit={(e) => {
-        e.preventDefault();
-        const number = Number(value || 0);
-        void save(`/api/services/${s.id}`, "PATCH", {
-          deposit_kind: kind,
-          deposit_value: kind === "fixed" ? Math.round(number * 100) : kind === "percent" ? Math.round(number) : 0,
-        });
-      }}>
-        <p className="bk-svc"><b><bdi>{lang === "ar" && s.name_ar ? s.name_ar : s.name}</bdi></b></p>
-        <label className="bk-field" htmlFor={`${id}-k`}><span>{t.deposits}</span>
-          <select id={`${id}-k`} value={kind} onChange={(e) => setKind(e.target.value as Service["deposit_kind"])}>
-            {(["none", "fixed", "percent"] as const).map((k) => <option key={k} value={k}>{t.depositKind[k]}</option>)}
-          </select></label>
-        {kind !== "none" && (
-          <label className="bk-field" htmlFor={`${id}-v`}><span>{kind === "fixed" ? t.amountQar : t.percent}</span>
-            <input id={`${id}-v`} type="number" inputMode="decimal" min={kind === "fixed" ? 1 : 1} max={kind === "percent" ? 100 : undefined} step={kind === "fixed" ? "0.5" : "1"} value={value} onChange={(e) => setValue(e.target.value)} required dir="ltr" /></label>
-        )}
-        <div className="bk-acts"><button type="submit" className="btn small">{t.save}</button></div>
-      </form>
-    </li>
   );
 }
 
