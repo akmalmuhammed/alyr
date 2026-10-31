@@ -190,6 +190,7 @@ RULES: dict[str, Rule] = {
         "staff_known": "the devices and addresses ALYR's own staff signed in from, as hashes",
         "staff_factors": "ALYR's own staff's authenticator secrets, sealed",
         "staff_recovery_codes": "ALYR's own staff's recovery codes, as keyed hashes",
+        "role_guard": "whether the database roles' guard is enforced: one row",
         "terms_versions": "the texts ALYR published; the same for every client",
         "today_snoozes": "items ALYR's staff set aside; they expire by themselves",
         "worker_heartbeats": "the worker's check-ins",

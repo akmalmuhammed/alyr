@@ -21,6 +21,16 @@ class Settings(BaseSettings):
     # backup role is created.
     backup_url: str = ""
 
+    # Separate database logins for the back office and for the worker (ALY-125 part 3, SEC-5,
+    # D-137, docs/runbooks/database-roles.md). Empty: everything uses `database_url`, as before.
+    # `admin_database_url` is the login the API uses for work that declares itself the back office
+    # (the back-office routes, billing, the audit log); the worker's own login is simply its
+    # `database_url`. `worker_database_url` is read only by migrations, to create that role.
+    # Secrets (Secret Manager in production). The role names must be `alyr_admin` and
+    # `alyr_worker`.
+    admin_database_url: str = ""
+    worker_database_url: str = ""
+
     # Run queued jobs inside the API process after each request. Convenient locally
     # and in tests. In production set this to false and run `python -m alyr.worker`.
     jobs_inline: bool = True

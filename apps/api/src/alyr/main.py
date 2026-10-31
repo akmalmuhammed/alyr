@@ -103,8 +103,12 @@ def create_app() -> FastAPI:
         # Nor one that would keep photos on a disk the cloud wipes (ALY-63).
         check_store(settings, app.state.media.store)
         await app.state.db.connect()
+        if app.state.db.admin is not None:
+            await app.state.db.admin.connect()
         yield
         await close_channels(app)
+        if app.state.db.admin is not None:
+            await app.state.db.admin.close()
         await app.state.db.close()
 
     # Interactive API docs only on a developer machine; elsewhere they map our surface
@@ -119,6 +123,11 @@ def create_app() -> FastAPI:
         log.warning(note)
     app.add_middleware(origin.OwnPagesOnly, settings=settings)
     app.state.db = Database(settings.database_url)
+    # A second login for the work that declares itself the back office (ALY-125 part 3, D-137):
+    # `core/roles.privileged(db)` finds it. Without an address there is one login, as before.
+    app.state.db.admin = (
+        Database(settings.admin_database_url) if settings.admin_database_url else None
+    )
     app.state.outbound = Outbound(
         {
             "simulator": SimulatorChannel(),
@@ -208,6 +217,8 @@ def create_app() -> FastAPI:
     qty.install_json(app)
     if settings.jobs_inline:
         app.state.db.after_commit = app.state.jobs.drain
+        if app.state.db.admin is not None:
+            app.state.db.admin.after_commit = app.state.jobs.drain
 
     @app.get("/health")
     async def health() -> dict:

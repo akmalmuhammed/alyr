@@ -24,7 +24,7 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi import Request
 
-from alyr.core import mail, ratelimit
+from alyr.core import mail, ratelimit, roles
 from alyr.db import Database
 
 log = logging.getLogger("alyr.staff_security")
@@ -144,7 +144,7 @@ async def _remember(conn, email: str, kind: str, value: str) -> bool:
 
 
 async def audit_event(db: Database, email: str, name: str, action: str, detail: dict) -> None:
-    async with db.unscoped() as conn, conn.transaction():
+    async with roles.privileged(db).unscoped() as conn, conn.transaction():
         # The audit log takes a row only from a connection that has declared the back office
         # (migration 0016); this is the same declaration the back office's own routes make.
         await conn.execute("select set_config('app.platform_admin', 'on', true)")

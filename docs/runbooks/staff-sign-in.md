@@ -141,5 +141,6 @@ arguments. Afterwards the audit log (`/ops` → Audit log, or `status`) says who
   and the same alerts. While the second factor is required they cannot enrol by themselves: run
   `open-enrolment` for them after adding them.
 - The database roles that keep the application from giving itself back-office rights (part 3 of
-  ALY-125, SEC-5): until they are applied, the second factor is a rule the application keeps.
+  ALY-125, SEC-5, `database-roles.md`): until they are applied, and even after, the second factor is
+  a rule the application keeps, because `sessions` stays open to the application's database role.
 - Passkeys, and a second factor for owners.

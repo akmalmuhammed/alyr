@@ -29,6 +29,7 @@ from alyr.core import (
     price_notice,
     pricing,
     readiness,
+    roles,
     second_factor,
     subscription,
     terms,
@@ -250,7 +251,7 @@ async def _admin_call(request: Request, sql: str, *args, fetch: str = "fetch"):
 async def _back_office(request: Request):
     """A connection, in one transaction, on which the API declares the caller is ALYR
     staff. Row-level security and the back-office functions check that declaration."""
-    async with request.app.state.db.unscoped() as conn, conn.transaction():
+    async with roles.privileged(request.app.state.db).unscoped() as conn, conn.transaction():
         await conn.execute("select set_config('app.platform_admin', 'on', true)")
         yield conn
 
