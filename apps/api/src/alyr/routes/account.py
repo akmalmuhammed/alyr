@@ -3,6 +3,7 @@ the switch between them, the email they sign in with, and the download of everyt
 business keeps in ALYR (owners only). See `core/account.py` and `core/export.py`."""
 
 import logging
+import weakref
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -13,6 +14,7 @@ from pydantic import BaseModel, Field
 from alyr.config import get_settings
 from alyr.core import account, auth, export, mail, ratelimit, team
 from alyr.core.auth import Staff
+from alyr.db import PoolBusy
 from alyr.routes.deps import current_staff
 
 log = logging.getLogger("alyr.account")
@@ -132,23 +134,35 @@ async def download(request: Request, staff: Staff = Depends(current_staff)) -> S
     if staff.role != "owner":
         raise HTTPException(status_code=403, detail="Only an owner can download all the data.")
     db = request.app.state.db
+    # A place for the download first, so a busy answer does not use up one of the hour's downloads.
+    slot = export.take_slot()
+    if slot is None:
+        raise PoolBusy(0.0, export.DOWNLOADS_AT_ONCE)
     try:
-        await ratelimit.hit(db, "data-export", str(staff.tenant_id), EXPORTS_PER_BUSINESS)
-    except ratelimit.TooManyRequests as error:
-        raise HTTPException(
-            status_code=429, detail="too many downloads; try again in an hour",
-            headers={"Retry-After": str(error.retry_after)},
-        ) from error
-    at = datetime.now(UTC)
-    async with db.tenant(staff.tenant_id) as conn:
-        slug = await conn.fetchval("select slug from tenants where id = $1", staff.tenant_id)
-        if staff.user_id is not None:
-            await team.record(conn, "team", staff.user_id, "data_exported", team.actor_of(staff))
-        await account.queue_export_notes(conn, staff.user_id)
+        try:
+            await ratelimit.hit(db, "data-export", str(staff.tenant_id), EXPORTS_PER_BUSINESS)
+        except ratelimit.TooManyRequests as error:
+            raise HTTPException(
+                status_code=429, detail="too many downloads; try again in an hour",
+                headers={"Retry-After": str(error.retry_after)},
+            ) from error
+        at = datetime.now(UTC)
+        async with db.tenant(staff.tenant_id) as conn:
+            slug = await conn.fetchval("select slug from tenants where id = $1", staff.tenant_id)
+            if staff.user_id is not None:
+                await team.record(
+                    conn, "team", staff.user_id, "data_exported", team.actor_of(staff))
+            await account.queue_export_notes(conn, staff.user_id)
+    except BaseException:
+        slot.release()
+        raise
     log.info("a business's data was downloaded")
     name = f"alyr-{slug or 'business'}-{at.astimezone(export.DOHA):%Y-%m-%d}.zip"
+    body = export.stream(db, request.app.state.media.store, staff.tenant_id, staff.name, at, slot)
+    # A stream that is thrown away before it starts never reaches its own `finally`.
+    weakref.finalize(body, slot.release)
     return StreamingResponse(
-        export.stream(db, request.app.state.media.store, staff.tenant_id, staff.name, at),
+        body,
         media_type="application/zip",
         headers={
             "Content-Disposition": f'attachment; filename="{name}"',

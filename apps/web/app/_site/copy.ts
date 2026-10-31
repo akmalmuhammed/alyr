@@ -303,21 +303,23 @@ type Home = {
     /** The social card's eyebrow only: the page shows none, its headline says who it is for (site audit R1). */
     eyebrow: string;
     title: [string, string];
-    /** The one paragraph beside the headline: the gap ALYR fills, and how (ALY-210). */
+    /** One or two plain sentences beside the headline: we come to you, then what we do. It also
+     * says the place, because the opening has no list of facts (ALY-303, D-150). */
     lead: string;
     /** The first step, on the main button: the check-up. */
     action: string;
     more: string;
+    /** The social card's facts only (app/opengraph-image): the page shows no list of facts since
+     * ALY-303. `factsNoOffer` is the card's while prices are off (`OFFER_LIVE`). */
     facts: string[];
-    /** The facts while prices are off the page (`OFFER_LIVE`). */
     factsNoOffer: string[];
     /** The film beside the headline (D-062, HeroFilm.tsx). */
     film: HeroFilmWords;
   };
-  /** One order followed from the first message to collection (FlowDiagram), and a count of
-   * who did what in it. */
+  /** One order followed from the first message to collection (FlowDiagram), and who did what
+   * in it, said as a sentence (ALY-303; its counts stay true to the steps). */
   see: FlowSet & {
-    tally: { label: string; items: { n: string; text: string }[] };
+    tally: string;
     link: string;
   };
   spotlight: {
@@ -354,20 +356,19 @@ type Home = {
     other: { id: string; tab: string; title: string; body: string; link: string };
   };
   /** How we work (ALY-210, as four cards with a moving scene since ALY-226): check, set up,
-   * see and improve, each a card with its title and two lines (`steps`), which starts again
-   * after the fourth (`again`, the line under the return line), and what the owner brings. */
+   * see and improve, each a card with its title and two lines (`steps`), the last saying that
+   * we check again, and what the owner brings. */
   how: {
     eyebrow?: string;
     title: string;
     lead: string;
     steps: Titled[];
-    again: string;
     /** The four scenes drawn in the cards (HowCards.tsx), for the sample bakery. */
     scenes: HowScenes;
     /** The set-up line, under the price (offer on). */
     note: string;
-    /** How little the owner has to bring. */
-    need: { title: string; items: string[] };
+    /** How little the owner has to bring, said in a sentence beside the button (ALY-303). */
+    need: { title: string; body: string };
   };
   price: {
     eyebrow: string;
@@ -897,8 +898,7 @@ const en: Copy = {
     hero: {
       eyebrow: "Technology for owner-run businesses in Qatar",
       title: ["The tech team your", "business never had."],
-      lead:
-        "We check how your business runs, set up what it needs and keep improving it with you. It is the work a large company has an IT team for.",
+      lead: "We come to your shop in Qatar and see how your business runs. Then we set up what it needs and keep improving it with you.",
       action: "Book a check-up",
       more: "See how we work",
       facts: ["We come to your shop, in Qatar", "From QAR 449 a month, no commission", "Arabic and English"],
@@ -907,8 +907,7 @@ const en: Copy = {
     },
     see: {
       title: "One order, from the first message to collection",
-      body:
-        "Follow Sara’s order at Qirfa Bakery: her ordinary WhatsApp chat, what ALYR does by itself, and your team’s screen, side by side.",
+      body: "Follow Sara’s order at Qirfa Bakery, from her WhatsApp chat to your team’s screen.",
       tabsLabel: "Examples",
       stepsLabel: "Steps",
       pause: "Pause",
@@ -1045,21 +1044,14 @@ const en: Copy = {
           ],
         },
       ],
-      tally: {
-        label: "In Sara’s order",
-        items: [
-          { n: "5", text: "messages ALYR sent her by itself" },
-          { n: "3", text: "presses by Yusuf: Confirm, Ready, Done" },
-          { n: "0", text: "orders copied out of a chat by hand" },
-        ],
-      },
+      tally: "In Sara’s order, ALYR sent 5 messages by itself and Yusuf pressed Confirm, Ready and Done. Nobody copied the order out of a chat by hand.",
       link: "See everything in ALYR Chat",
     },
     spotlight: {
       eyebrow: "ALYR Agent · With every product",
       title: "Every day, see what changed\nand what to do next.",
       body:
-        "ALYR Agent counts the orders, bookings, chats and credit already in your workspace. It puts waiting work first, compares your week with the same days last week, and suggests up to three things, each with its reason, for you to act on or set aside.",
+        "ALYR Agent counts what is already in your workspace and puts waiting work first. It compares your week with the same days last week. It suggests up to three things, each with its reason, for you to act on or set aside.",
       label: "The ALYR Agent home screen of the sample business you choose",
       calloutsLabel: "How to read it",
       callouts: [
@@ -1074,7 +1066,7 @@ const en: Copy = {
     suite: {
       title: "Six products in one workspace",
       body:
-        "Start with what hurts most today and add the next when you need it: the same customers, the same team, the same screen. ALYR Agent and ALYR Shelf come with every one.",
+        "Start with what hurts most today and add the next when you need it. Each one works on the same customers and the same screen. ALYR Agent and ALYR Shelf come with every one.",
       notes: [
         {
           title: "Every order has an owner.",
@@ -1396,7 +1388,7 @@ const en: Copy = {
         },
         {
           title: "We set up what fixes it.",
-          body: "We set up only what the check-up calls for. We load your items, set your hours and train your team at the counter.",
+          body: "We set up only what the check-up calls for, then train your team at the counter.",
         },
         {
           title: "You see your business on one screen.",
@@ -1404,10 +1396,9 @@ const en: Copy = {
         },
         {
           title: "We keep improving it with you.",
-          body: "ALYR Agent compares your week with the same days last week. We go over it with you and add what your business needs next.",
+          body: "ALYR Agent compares your week with the same days last week. We go over it with you and add what your business needs next. Then we check again.",
         },
       ],
-      again: "Then we check again.",
       scenes: {
         check: {
           label: "Sample check-up sheet of a fictional bakery. Four things checked at the counter are ticked, each with what was found.",
@@ -1450,11 +1441,7 @@ const en: Copy = {
       note: "We set ALYR up with each business ourselves, and agree your go-live date at the visit.",
       need: {
         title: "What we need from you",
-        items: [
-          "Your menu or price list: a photo, a PDF or an Excel sheet is fine",
-          "A phone or a computer at the counter for your team",
-          "An hour for the check-up, and time to train your team",
-        ],
+        body: "Your menu or price list (a photo of it is fine) and a phone or a computer at the counter. Then an hour for the check-up, and time to train your team.",
       },
     },
     price: {
@@ -1637,7 +1624,7 @@ const en: Copy = {
     },
     final: {
       title: "Book a check-up of your business.",
-      body: "Send us a message. A person from ALYR replies, visits your shop, and shows you what we would change first.",
+      body: "Send us a message. A person from ALYR replies, then comes to your shop to show you what we would change first.",
       action: "Book a check-up",
       short: "Check-up",
     },
@@ -3278,8 +3265,7 @@ const ar: Copy = {
     hero: {
       eyebrow: "التقنية للأنشطة التي يديرها أصحابها في قطر",
       title: ["فريق التقنية الذي", "لم يكن لدى مشروعك."],
-      lead:
-        "نفحص كيف يسير عملك، ونجهّز ما يحتاجه، ونواصل تحسينه معك. وهذا ما تكلّف به الشركات الكبيرة فريق التقنية لديها.",
+      lead: "نأتي إلى محلك في قطر ونرى كيف يسير عملك. ثم نجهّز ما يحتاجه، ونواصل تحسينه معك.",
       action: "احجز فحصاً لمشروعك",
       more: "شاهد طريقة عملنا",
       facts: ["نأتي إلى محلك في قطر", "من 449 ر.ق شهرياً، بلا عمولة", "بالعربية والإنجليزية"],
@@ -3288,8 +3274,7 @@ const ar: Copy = {
     },
     see: {
       title: "طلب واحد، من الرسالة الأولى إلى الاستلام",
-      body:
-        "تابع طلب سارة من مخبز قرفة: محادثتها العادية على واتساب، وما تفعله ALYR من تلقاء نفسها، وشاشة فريقك، جنباً إلى جنب.",
+      body: "تابع طلب سارة لدى مخبز قرفة، من محادثتها على واتساب إلى شاشة فريقك.",
       tabsLabel: "الأمثلة",
       stepsLabel: "الخطوات",
       pause: "إيقاف",
@@ -3426,21 +3411,14 @@ const ar: Copy = {
           ],
         },
       ],
-      tally: {
-        label: "في طلب سارة",
-        items: [
-          { n: "5", text: "رسائل أرسلتها ALYR إليها من تلقاء نفسها" },
-          { n: "3", text: "ضغطات من يوسف: تأكيد، جاهز، مكتمل" },
-          { n: "0", text: "طلبات نُسخت من محادثة باليد" },
-        ],
-      },
+      tally: "في طلب سارة، أرسلت ALYR إليها 5 رسائل من تلقاء نفسها، وضغط يوسف على تأكيد، ثم جاهز، ثم مكتمل. ولم ينسخ أحد الطلب من محادثة باليد.",
       link: "تعرّف على كل ما في ALYR Chat",
     },
     spotlight: {
       eyebrow: "ALYR Agent · مع كل منتج",
       title: "كل يوم، اعرف ما تغيّر\nوما الخطوة التالية.",
       body:
-        "يحسب ALYR Agent الطلبات والحجوزات والمحادثات والآجل الموجودة في مساحة عملك. يضع العمل المنتظر أولاً، ويقارن أسبوعك بالأيام نفسها من الأسبوع الماضي، ويقترح حتى ثلاثة أمور، لكل منها سببه، لتأخذ بها أو تؤجلها.",
+        "يحسب ALYR Agent ما هو موجود في مساحة عملك، ويضع العمل المنتظر أولاً. ويقارن أسبوعك بالأيام نفسها من الأسبوع الماضي. ويقترح حتى ثلاثة أمور، لكل منها سببه، لتأخذ بها أو تؤجلها.",
       label: "الشاشة الرئيسية لـ ALYR Agent للنشاط التوضيحي الذي تختاره",
       calloutsLabel: "كيف تقرؤها",
       callouts: [
@@ -3455,7 +3433,7 @@ const ar: Copy = {
     suite: {
       title: "ستة منتجات في مساحة عمل واحدة",
       body:
-        "ابدأ بما يؤلمك أكثر اليوم، وأضف التالي حين تحتاجه: العملاء أنفسهم، والفريق نفسه، والشاشة نفسها. ويأتي ALYR Agent وALYR Shelf مع كل منها.",
+        "ابدأ بما يؤلمك أكثر اليوم، وأضف التالي حين تحتاجه. وكلها تعمل على العملاء أنفسهم وفي الشاشة نفسها. ويأتي ALYR Agent وALYR Shelf مع كل منها.",
       notes: [
         {
           title: "لكل طلب مسؤول.",
@@ -3777,7 +3755,7 @@ const ar: Copy = {
         },
         {
           title: "نجهّز ما يحلّها.",
-          body: "نجهّز فقط ما يحتاجه الفحص. نُدخل أصنافك، ونضبط ساعات العمل، وندرّب فريقك عند الكاونتر.",
+          body: "نجهّز فقط ما يحتاجه الفحص، ثم ندرّب فريقك عند الكاونتر.",
         },
         {
           title: "ترى عملك في شاشة واحدة.",
@@ -3785,10 +3763,9 @@ const ar: Copy = {
         },
         {
           title: "نواصل تحسينه معك.",
-          body: "يقارن ALYR Agent أسبوعك بالأيام نفسها من الأسبوع الماضي. ونراجعه معك ونضيف ما يحتاجه عملك بعد ذلك.",
+          body: "يقارن ALYR Agent أسبوعك بالأيام نفسها من الأسبوع الماضي. ونراجعه معك ونضيف ما يحتاجه عملك بعد ذلك. ثم نفحص من جديد.",
         },
       ],
-      again: "ثم نفحص من جديد.",
       scenes: {
         check: {
           label: "ورقة فحص توضيحية لمخبز غير حقيقي. أربعة أمور فُحصت عند الكاونتر، ومع كل منها ما وُجد.",
@@ -3831,11 +3808,7 @@ const ar: Copy = {
       note: "نجهّز ALYR مع كل منشأة بأنفسنا، ونتفق معك على موعد بدء التشغيل خلال الزيارة.",
       need: {
         title: "ما نحتاجه منك",
-        items: [
-          "قائمتك أو قائمة أسعارك: صورة أو ملف PDF أو Excel تكفي",
-          "هاتف أو حاسوب عند الكاونتر لفريقك",
-          "ساعة للفحص، ووقت لتدريب فريقك",
-        ],
+        body: "قائمتك أو قائمة أسعارك، وتكفي صورة لها، مع هاتف أو حاسوب عند الكاونتر. ثم ساعة للفحص، ووقت لتدريب فريقك.",
       },
     },
     price: {
@@ -4018,7 +3991,7 @@ const ar: Copy = {
     },
     final: {
       title: "احجز فحصاً لمشروعك.",
-      body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ويزور محلك، ويريك ما سنغيّره أولاً.",
+      body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يأتي إلى محلك ليريك ما سنغيّره أولاً.",
       action: "احجز فحصاً لمشروعك",
       short: "احجز فحصاً",
     },

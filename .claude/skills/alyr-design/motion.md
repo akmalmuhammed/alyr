@@ -171,6 +171,11 @@ same as the figures above.
    a `:not()` inside the Agent figure's `:has()` rules, not the `:root:has(...)` ones; rewritten
    on 28 Oct 2026, and `scripts/site/has-check.mjs` in `pnpm site:check` keeps it out. The
    header's and product bar's states are now marks on `<html>`, the header and `<main>`.)
+   **A window that steps back stays only on the far side of the fold.** The plate's diagonal
+   cuts whatever reaches it, so a dimmed window left on the fold's side reads as a grey triangle
+   beside the hero's text (D-150, the founder's screenshot). `SHOTS` in `filmScript.ts` names
+   the one neighbour that stays dimmed in a close shot, and the rest are 0. A window crossing
+   the fold during a camera move is fine: it is moving and bright.
 4. **Pause holds the frame,** as a film does (the figures above finish their moves instead), and
    so does a click on the film; the control shows only on hover, focus or paused (D-071). The
    film starts at load, on the last moment before the fold closes (`STILL`), so it moves at once;
