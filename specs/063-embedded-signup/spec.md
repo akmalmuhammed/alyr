@@ -61,18 +61,20 @@ Migration 0108: `channel_credentials` (forced row-level security, deleted with t
 ## Rules
 
 - Off by default; a missing setting closes it, never opens it.
+- A business may try 20 times an hour (`429` with `Retry-After` after that): each try asks Meta to exchange a code with
+  ALYR's app secret.
 - A claim from the browser is never stored unless Meta shows it, with the business's own token, to be that token's.
 - A token is never in a log, an answer, the trail or the audit log. Nothing about a customer of the shop is involved.
 - Hard rule 4: only Meta's own pop-up and Cloud API. Hard rule 2: the owner's own action with Meta (docs/data-residency.md).
 
 ## Checked
 
-`tests/test_embedded_signup.py` (22 tests, the fake Meta, which refuses a token that does not own the asset it is used on):
+`tests/test_embedded_signup.py` (23 tests, the fake Meta, which refuses a token that does not own the asset it is used on):
 the flag and each missing piece; nothing offered or accepted while off; the public values for each way and no secret; owner
 only; a number on ALYR's account not this way; a full connection (exchange, read-back with the business's token, register with a
 PIN, subscribe, attach, health read); the token sealed, bound, and shown nowhere; coexistence not registering; later calls going
 with the business's own token and other shops with ALYR's, including a send; forged claims; an expired or reused code; Meta
-refusing to register or subscribe; a number that stays unconnected; a finish without a number; a number already taken and a second
+refusing to register or subscribe; a business that keeps failing told to wait; a number that stays unconnected; a finish without a number; a number already taken and a second
 number; detach removing credentials; cancel and error on the trail; the database refusing every shortcut; the lookup answering
 ciphertext only; token expiry; the channel's hook; the simulator's signature. `app/(product)/start/signup.test.mjs` (5): only
 facebook.com is believed.

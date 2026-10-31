@@ -17,11 +17,15 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from alyr.config import get_settings
-from alyr.core import readiness, whatsapp_setup, whatsapp_signup
+from alyr.core import ratelimit, readiness, whatsapp_setup, whatsapp_signup
 from alyr.core.auth import Staff
 from alyr.routes.deps import current_staff
 
 router = APIRouter(prefix="/api/whatsapp/signup", tags=["whatsapp"])
+
+# Each attempt asks Meta to exchange a code with the app's secret; a business that keeps failing
+# is told to wait, and Meta is not hammered with ALYR's app.
+ATTEMPTS_PER_BUSINESS = ratelimit.Limit(20, ratelimit.HOUR)
 
 
 class Complete(BaseModel):
@@ -69,6 +73,8 @@ async def complete(
     body: Complete, request: Request, staff: Staff = Depends(current_staff)
 ) -> dict:
     _owner(staff)
+    await ratelimit.check(
+        request, "whatsapp-signup", ATTEMPTS_PER_BUSINESS, subject=str(staff.tenant_id))
     way = await _way(request, staff)
     try:
         await whatsapp_signup.complete(

@@ -393,6 +393,18 @@ def test_closing_the_pop_up_or_an_error_in_it_is_noted_on_the_trail(es, client):
     assert client.post(f"{SIGNUP}/cancel", json={"event": "FINISH"}).status_code == 422
 
 
+def test_a_business_that_keeps_failing_is_told_to_wait_and_meta_is_not_asked_again(es, client):
+    new_business(client)
+    choose(client)
+    body, _ = grant(es)
+    for _attempt in range(20):
+        assert connect(client, body | {"code": "never-issued"}).status_code == 422
+    asked = len(es.calls)
+    stopped = connect(client, body | {"code": "never-issued"})
+    assert stopped.status_code == 429 and stopped.headers["retry-after"]
+    assert len(es.calls) == asked
+
+
 # ── the database's part ────────────────────────────────────────────────────────────────────
 
 
