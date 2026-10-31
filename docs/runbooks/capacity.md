@@ -7,23 +7,23 @@ Measured 31 Oct 2026 on a local copy of production's shape (`scripts/loadtest/`)
 - **50 shops fit on the production shape as it is today, with the changes in this pull request, and not with a lot to spare.** 250 workspace tabs open at once (five in each shop), 1.3 customer messages a second, 0.5 order-page visits a second and 0.3 receipts a second, on the half-core database and one API instance: a typical request takes **26 ms, 19 in 20 take under 0.37 s, and a customer waits 0.9 s (1.5 s at the 95th percentile) for the reply to be handed to WhatsApp.** The database is about half busy (29% of a machine whose limit is 50%), and the one API instance's CPU touches its limit now and then.
 - **The same load on the code before the change did not work:** a typical request took 11.8 s, 19 in 20 took under 21 s, and a customer waited 13 s (21 s) for a reply. Buying a bigger database alone would not have fixed it: on 2 vCPUs the old code, with the tabs alone, was still at 3.5 s and 7.7 s, because the API's one CPU was the limit.
 - **100 shops need a bigger database.** On a 2-vCPU dedicated database and three API instances, the 100-shop load (500 tabs, 2.6 messages a second, 1 visit and 0.6 receipts a second) took 29 ms for a typical request and 183 ms at the 95th percentile, replies 0.8 s (1.4 s), with the database 35% busy. On the half core it would not fit (250 tabs already take half of it; not run).
-- **The tabs are the load, not the customers.** 250 tabs ask for something 50 times a second, all day. Customers' messages, order pages and receipts at the 50-shop volume are each under a tenth of what one worker or one API instance can do.
+- **The tabs are the load, not the customers.** 250 tabs ask for something 50 times a second, all day. Customers' messages, order pages and receipts at the 50-shop volume are each about a tenth or less of what one worker or one API instance can do.
 - **Adding API instances does not help while the database is the limit; it makes it a little worse** (each instance keeps its own memory of answers, so the database is asked more often): two instances on the half core took 131 ms for a typical request against 29 ms for one. Move the database first (step 3 under "Scale up").
 - **When it is too much, the API now says so quickly** (503 with `Retry-After`) instead of queueing until the caller gives up: at 35 order-page visits a second the old code took 2 s for a typical request and 5.5 s at the 95th percentile with nothing refused; the new code took 0.15 s and 0.43 s and turned 2.7% of requests away at once.
 
 ## The load we plan for
 
-Per shop in a busy hour (our assumption, to be replaced by pilot data; the audit of 29 Oct used the same day):
+Per shop in a busy hour (our assumption, to be replaced by pilot data; 150 chats a day is the brief's, the rest is ours):
 
 | What | A day | The busy hour (15% of the day) | Per second, busy hour |
 |---|---|---|---|
 | Customer chats | 150, about 4 messages from the customer in each | 90 messages | 0.025 |
-| Order-page visits (about 4 requests each) | 70 | 10 | 0.003 |
-| Orders | 20 | 3 | |
-| Receipts and invoices | 5 | 0.75 | 0.0002 |
+| Order-page visits (about 4 requests each) | 50 | 7.5 | 0.002 |
+| Orders | 15 | 2 | |
+| Receipts and invoices | 4 | 0.6 | 0.0002 |
 | Workspace tabs open and being looked at | 5 | 5 | each asks for its screen every 5 s, the home every 15 s |
 
-So 50 shops in their busy hour are **1.3 messages a second, 0.15 order-page visits a second, 0.01 receipts a second and 250 tabs**, and 100 shops are twice that. The "mixed" test below runs 1.3 messages, 0.5 visits (three times the model) and 0.3 receipts (thirty times) a second beside the 250 tabs, to leave no doubt that nothing but the tabs matters. Three things sit on top: the Sunday report for every shop at once, a link posted where many people see it, and a rollout (the old and the new revision both connected).
+So 50 shops in their busy hour are **1.3 messages a second, 0.1 order-page visits a second, 0.01 receipts a second and 250 tabs**, and 100 shops are twice that. The "mixed" test below runs 1.3 messages, 0.5 visits (five times the model) and 0.3 receipts (thirty times) a second beside the 250 tabs, to leave no doubt that nothing but the tabs matters. Three things sit on top: the Sunday report for every shop at once, a link posted where many people see it, and a rollout (the old and the new revision both connected).
 
 The test assumes all five tabs of every shop are on a work screen at the same moment, which is harsher than real life (a hidden tab does not ask).
 
@@ -79,7 +79,7 @@ On 2 vCPUs the old code is limited by the API's one CPU, not the database.
 | Work | Before | After | Where its limit is |
 |---|---|---|---|
 | **Customer messages** (webhook in, reply sent) | up to about 11 messages/s, then replies wait 20 to 40 s (20 offered: 27 s typical, 43 s at the 95th) | the same ceiling: **about 11 to 12 a second** (20 offered: 21 s and 36 s) | The worker's five places at 300 ms a send; the worker is 18% busy. `ALYR_JOBS_CONCURRENCY` moves it (step 1). The 50-shop busy hour needs 1.3; 100 shops 2.6. |
-| **Order page**, 20 visits/s (about 80 requests/s) | 29 ms typical, 256 ms at the 95th | 39 ms, 252 ms | One API instance is at its CPU near 30 visits/s; past it the new code refuses (35/s: 145 ms and 426 ms, 2.7% refused; the old: 2.05 s and 5.5 s, nothing refused). The model needs 0.15 visits/s. |
+| **Order page**, 20 visits/s (about 80 requests/s) | 29 ms typical, 256 ms at the 95th | 39 ms, 252 ms | One API instance is at its CPU near 30 visits/s; past it the new code refuses (35/s: 145 ms and 426 ms, 2.7% refused; the old: 2.05 s and 5.5 s, nothing refused). The model needs 0.1 visits/s. |
 | **A link posted where many see it**, 30 visits/s to one shop's public page | 538 ms typical, 1.2 s at the 95th, database at its limit | **8 ms, 33 ms, database 7% busy** | A shop's public page is worked out once per 3 seconds and shared. |
 | **Receipts**, 3/s | 202 ms typical, 687 ms at the 95th | 162 ms, 342 ms | Drawing: about 5 a second per API instance. The model needs 0.01. |
 | **Receipts**, 8/s (a burst) | 5.3 s typical, 6.8 s at the 95th; every connection held while drawing | **0.73 s, 1.2 s, 8.6% told to try again** | Two are drawn at once, six wait, the rest are refused at once. |
@@ -94,7 +94,7 @@ What each part can do, measured, against what the model asks of it.
 | Workspace tabs, half-core database, one API | 250 tabs at p95 0.38 s, database half busy | 250 | 500 | **50 shops: fits, with little room.** 100: does not fit (twice the database it has; worked out from the 250-tab run, not run) |
 | Workspace tabs, 2-vCPU database, 2 to 3 APIs | 500 tabs at p95 0.18 s, database 35% busy, APIs 45% busy | 250 | 500 | 50 shops: ample. **100 shops: fits, with room for about a third more** |
 | Customer messages (the worker) | 11 to 12 a second | 1.3 | 2.6 | 9 times and 4.5 times the need |
-| Order-page visits, per API instance | about 30 a second | 0.15 | 0.3 | 200 and 100 times |
+| Order-page visits, per API instance | about 30 a second | 0.1 | 0.2 | 300 and 150 times |
 | A shop's link posted widely | 30 visits a second on one link, 7% of the database | | | no limit seen |
 | Receipts, per API instance | about 5 a second | 0.01 | 0.02 | 500 and 250 times |
 | Database connections | 40 of 47 in the worst rollout (budget below) | | | yes |
@@ -150,12 +150,12 @@ Measured on the test database after a month of the model for 50 shops (739 MB; a
 | Grows | 50 shops, a year | 100 shops, a year | Kept how long |
 |---|---|---|---|
 | Messages (about 5 MB a shop a month) | 3.1 GB | 6.2 GB | as long as the business uses ALYR (the privacy notice) |
-| Issued documents, if every shop issues 5 a day (a PDF is stored once, D-078) | 3.6 GB | 7.1 GB | by law, years |
+| Issued documents, if every shop issues 4 a day (a PDF is stored once, D-078) | 2.9 GB | 5.7 GB | by law, years |
 | Orders, customers, bookings, activity | 0.7 GB | 1.4 GB | as long as the business uses ALYR |
 | Finished jobs and handled message IDs | about 0.4 GB, and no more | about 0.8 GB, and no more | 30 days (D-075, `core/retention.py`) |
 | Report cards as pictures (`message_media`): only a report sent inside the owner's 24-hour window keeps one; none were kept in the 50-shop test | at most one picture a shop a week | the same | with the message |
 
-About 8 GB a year at 50 shops, 16 GB at 100. The disk is 10 GB and grows by itself (USD 0.23 a GB a month, so USD 2 a month for each 8 GB); the backups and the nightly export grow with it. What to watch is not the disk but the database size against its memory (1.7 GB on `db-g1-small`): when the data a refresh touches stops fitting in memory, reads go to disk and every number above gets worse. That is the same signal as the CPU alert and step 3 answers it. If space ever matters: finished jobs could be kept 7 days instead of 30 (`core/retention.py DONE_DAYS`, one number, a decision for the founder because D-075 chose 30), and old messages could move to monthly partitions.
+About 7 GB a year at 50 shops, 14 GB at 100. The disk is 10 GB and grows by itself (USD 0.23 a GB a month, so under USD 2 a month for each 7 GB); the backups and the nightly export grow with it. What to watch is not the disk but the database size against its memory (1.7 GB on `db-g1-small`): when the data a refresh touches stops fitting in memory, reads go to disk and every number above gets worse. That is the same signal as the CPU alert and step 3 answers it. If space ever matters: finished jobs could be kept 7 days instead of 30 (`core/retention.py DONE_DAYS`, one number, a decision for the founder because D-075 chose 30), and old messages could move to monthly partitions.
 
 ## What was not measured
 
@@ -164,7 +164,7 @@ About 8 GB a year at 50 shops, 16 GB at 100. The disk is 10 GB and grows by itse
 - **Disk.** The data fitted in memory (a 1.7 GB machine and 740 MB of data). When the data a refresh touches stops fitting, reads go to disk and every number above gets worse. This is not tested; it is why the database size is on the watch list.
 - **Meta.** Its real latency, its rate limits per number, a template send outside the 24-hour window, a media upload. The 300 ms was simulated.
 - **Longer runs.** Nothing ran for more than two minutes. A slow leak, autovacuum on large tables and months of growth are not covered.
-- **The web app.** The Next.js proxy was not in the path. Its own CPU (one instance, 512 MiB) was 37% at 150 shoppers in the audit of 29 Oct; it has not been measured at 250 tabs.
+- **The web app.** The Next.js proxy was not in the path, so its own CPU (one instance, 512 MiB) at 250 tabs and its handling of a 503 are not measured.
 - **The Meta webhook under pool pressure.** The change that lets it wait for a connection (D-132) is tested but was added after the runs; before it, 6% of the webhooks in one busy run were refused at the pool (Meta sends a refused one again).
 - **Photo uploads and imports, the connect API, outgoing webhooks, sign-in and sign-up, the booking, payment and tracking pages, the back office.** None was loaded.
 - **Two instances of the worker.** Jobs about one customer keep their order inside one process, not across two (D-077).

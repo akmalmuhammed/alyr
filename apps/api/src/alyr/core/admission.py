@@ -1,10 +1,10 @@
 """Let only so many through at once, and refuse the rest in a moment (D-132).
 
 Drawing a receipt takes about 0.15 s of a CPU and a database connection held for the whole of
-it (the number is taken in the same transaction). Ten receipts asked for at once held every
-connection of the process for seconds, and every other request waited behind them: the load
-test of 31 Oct 2026 measured a page that normally answers in 20 ms taking 7 s while a shop issued
-8 receipts a second. A route that draws asks here first, before it opens a transaction:
+it (the number is taken in the same transaction). Receipts asked for faster than they can be
+drawn pile up holding connections: in the load test of 31 Oct 2026, 8 a second took 5.3 s each
+(6.8 s for 19 in 20) with every connection held, and anything else in the process needing a
+connection waited behind them. A route that draws asks here first, before it opens a transaction:
 at most `running` draw at once, up to `waiting` more wait their turn with no connection held,
 and a request that would make the queue longer is answered 503 with Retry-After at once.
 """

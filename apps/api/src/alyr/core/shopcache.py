@@ -2,8 +2,8 @@
 
 Every page a customer opens (the order page, a booking page, a document, tracking) is asked for
 by the shop's address. Finding the shop and checking that its module is on took two database
-connections before the page's own: the load test of 31 Oct 2026 counted three per visit, and
-three is most of the work of a cheap page. A shop's address and the modules it has on change
+connections before the page's own: three for one visit, and three connections are most of the work
+of a cheap page. A shop's address and the modules it has on change
 rarely and by a person's hand, so they are kept for `seconds` (3 by default in production, off on
 a developer machine). An address that is not a shop is not kept: a stream of made-up addresses
 cannot fill it.

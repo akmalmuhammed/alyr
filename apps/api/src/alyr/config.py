@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     db_pool_max_worker: int = 8
     # How long a request waits for a free connection before it is answered 503 with Retry-After,
     # and how many may wait at once (more are refused at once). Better a quick "busy" than a
-    # page that hangs for the 30 seconds after which the caller gives up anyway.
+    # page that hangs until its caller gives up.
     db_acquire_timeout_seconds: float = 3.0
     db_max_waiting: int = 24
     # PostgreSQL stops a statement that runs longer than this (milliseconds) and a transaction that
@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     # More requests than this in progress in one API process are answered 503 with Retry-After
     # at once (core/admission.ShedWhenBusy). Cloud Run is set to send more than this at a time
     # (docs/runbooks/capacity.md), so it is this process that says "busy", not a queue that
-    # holds a request for half a minute. 0 means no limit.
+    # holds a request until it times out. 0 means no limit.
     max_in_flight: int = 60
 
     # How long the workspace's answers are kept and shared between tabs (core/pollcache.py, D-131).
