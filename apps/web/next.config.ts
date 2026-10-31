@@ -38,6 +38,17 @@ const billingPolicy = policy
   .replace("form-action 'self'", `form-action 'self' ${paddleHosts}`)
   .concat(`; frame-src https://buy.paddle.com https://sandbox-buy.paddle.com`);
 
+// The one page that opens Meta's Embedded Signup pop-up (ALY-39, spec 063): the Facebook SDK from
+// connect.facebook.net, Meta's pages in the pop-up and its frames, and calls to Graph. Only in a
+// build made for it (ALYR_EMBEDDED_SIGNUP=on at build time), so a build without the feature keeps
+// the policy above on every page.
+const embeddedSignup = process.env.ALYR_EMBEDDED_SIGNUP === "on";
+const facebookHosts = "https://www.facebook.com https://web.facebook.com https://graph.facebook.com";
+const signupPolicy = policy
+  .replace("script-src 'self' 'unsafe-inline'", "script-src 'self' 'unsafe-inline' https://connect.facebook.net")
+  .replace("connect-src 'self'", `connect-src 'self' ${facebookHosts}`)
+  .concat(`; frame-src https://www.facebook.com https://web.facebook.com`);
+
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
@@ -66,6 +77,9 @@ const nextConfig: NextConfig = {
     // A later entry overrides the same header of an earlier one, so /app/billing gets its own.
     return [
       { source: "/:path*", headers: securityHeaders },
+      ...(embeddedSignup && production
+        ? [{ source: "/start", headers: [{ key: "Content-Security-Policy", value: signupPolicy }] }]
+        : []),
       {
         source: "/app/billing",
         headers: [

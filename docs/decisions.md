@@ -88,11 +88,24 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-121 | The owner is emailed once when ALYR publishes their price, ahead of the rest of the payment path: English or Arabic as they signed up, claimed on the quote so it never goes twice, nothing sent for a price they already saw or an address that cannot be real. The part of D-093 that shipped on its own | Proposed (the founder signs off the wording) |
 | D-122 | ALYR's own business keeps no test line: the "Try it" step says so and offers to skip, and the one-off first-admin job does not create one | Proposed |
 | D-145 | A shop's WhatsApp line is checked against Meta, tested with a message to the shop's own staff and kept on a trail; staff see every line on one screen (`/ops/whatsapp`, English and Arabic) | Proposed |
+| D-150 | The homepage drops what made it look machine-made: buttons are their words with no icon or arrow (on every page), and on the homepage links are plain, labels are sentence case, and there is no facts list, no grid, no crosses, no ticks, no numbered badges; the idea of checking again is said in the last step | Proposed |
 | D-135 | ALYR staff sign-in: ten wrong codes in a day lock the account (the right code too, same words as any refusal), and every staff sign-in is written to the audit log with an email when the device or the address is new | Proposed |
 | D-136 | ALYR staff get a second factor in the app: an authenticator app (RFC 6238) with ten one-time recovery codes, enrolment before enforcement, enforcement behind `ALYR_STAFF_2FA` (off), a code that works once, a new session cookie after passing it, and a founder-run break-glass | Proposed |
 | D-137 | The back office and the worker are database logins, not a setting: `alyr_admin` and `alyr_worker` (members of `alyr_app`), a guard that also asks which login connected, off until the founder turns it on after both services have moved; `enforce` refuses unless both are connected; nothing applied to production | Proposed |
 | D-125 | Requests from public authorities follow three written rules: check it is lawful, give the minimum, keep a record; how to challenge one waits for a lawyer | Accepted |
+| D-146 | The status of each of ALYR's templates on each shop's account is kept per shop from Meta (read on request, and by Meta's notices); submitting to Meta is off until the founder allows it; a template waiting for his go is held and never sent | Proposed |
+| D-147 | A number's health comes from Meta's notices and a periodic read; a trouble with an account is one Today item and with a number one per shop; a flagged or restricted number reaches the founder's phone | Proposed |
+| D-148 | A business connects its own WhatsApp account through Meta's Embedded Signup from its sign-up screen, behind a flag that is off; the browser's code and session message are never believed; everything is done or nothing | Proposed |
+| D-149 | A business's own WhatsApp token is sealed in the database with the key in Secret Manager, and every call about its number is made with it | Proposed |
 | D-113 | The Cloudflare zone is hardened with what the Free plan offers and the state is written down: HTTPS only, minimum TLS 1.2, strict SSL, CAA, a trimmed SPF and response-header rules for the API and media host are live; the edge rate-limit rule waits because Free has only Block; no Access until Zero Trust is onboarded; DMARC stays `none` until the reports are read, never `reject` | Proposed |
+| D-143 | The people and chairs screen says what each does and has ahead, refuses a retirement that would leave a service with nobody, and puts both lists in an order the owner chooses (the people's order is who "anyone" takes first) | Proposed |
+| D-142 | The desk (walk-ins, moving and cancelling a booking) finds a customer the shop has instead of retyping them, shows the free times for a move, and says whether the customer was told, with the number to call when ALYR may not message them; staff cannot record a customer's consent for them | Proposed |
+| D-141 | Opening hours are a week a day at a time with a break as two periods, and the shop or one person can have days off (`booking_closures`, migration 0101) that customers cannot book and that never cancel a booking | Proposed |
+| D-140 | An owner or admin manages the services from the Bookings screen (add, change names, length, price, deposit and who does it, hide and show; one part of Set up bookings), checked in the page's words and again in the API, and a booking keeps the price it was made at (migration 0100) | Proposed |
+| D-133 | The database tier, Cloud Run's size and high availability: what to buy, when, and what each step costs (the numbers of `docs/runbooks/capacity.md`) | Proposed |
+| D-132 | A process holds few database connections (4 for an API instance, 8 for the worker), gives up after 3 seconds and answers 503 with Retry-After; only so many documents are drawn at once; the worker keeps places for customers; the Sunday report can be spread but stays at nine | Accepted |
+| D-131 | What the workspace and the order page ask for again and again is kept three seconds and shared between tabs, thrown away by the shop's own writes; who is signed in and a shop's modules the same | Accepted |
+| D-130 | The inbox and the Orders screen read the newest rows off an index (a customer carries the times of their latest messages, kept by the database; the inbox lists 300 conversations, Orders the last 30 days and everything open), so a refresh costs the same in a shop's first week and its second year | Accepted |
 
 ---
 
@@ -2080,6 +2093,89 @@ Without it, analytics is off everywhere.
 
 **Revisit when** the founder prices Docs, ALY-143 (the accountant export, statements) or ALY-147 (ALYR's own invoices) is built and the words may grow, or Shelf is made included.
 
+
+---
+
+## D-130 · The inbox and the Orders screen read the newest rows off an index, so a refresh costs the same in a shop's first week and in its second year
+**Date** 31 Oct 2026 · **Status** Accepted (a performance fix with no change to what a shop sees until it has more than 300 open conversations or has traded for over 30 days; the instruction was to make ALYR serve 50 shops with headroom) · Linear ALY-266 (PERF-1), ALY-121 · Migrations 0090 and 0091 · Builds on D-076 (shop-first indexes) · Measured in `docs/runbooks/capacity.md`
+
+**Where we were.** 250 open workspace tabs (five in each of 50 shops) kept a 0.5-CPU database at its limit with no customer doing anything. The inbox list read every customer the shop had ever had, with the latest message and an unread count for each: 122 ms for a shop with 1,500 customers, growing with every customer. The Orders screen read every order and every line the shop had ever taken (no limit). The home's unread count and the team's waiting counts did the same. Each tab asks every 5 seconds.
+
+**The decision.**
+- **Each customer carries two times, kept by the database:** `contacts.last_message_at` (their latest message, either way) and `last_in_message_at` (their latest message to the shop). A trigger on `messages` sets them on insert and when messages move to another customer record (a merge, ALY-115), always to the later of the two. The migration fills them in for what exists (3 seconds for 900,000 messages).
+- **The inbox lists at most 300 conversations, the ones with the newest messages,** off the new index `contacts_inbox`. `more: true` is in the answer only when older ones are left out, so a shop under the cap gets exactly the answer it always got. A conversation with a new message in it is back at the top. "Waiting for a first look" (the number on the Inbox tab and the home card) is counted from the two times, for all conversations, not only the 300. The per-row unread count is worked out only for a conversation that has something unread.
+- **The Orders screen lists the orders of the last 30 days and every order still open** (new, confirmed, ready, or unpaid and not cancelled), at most 1,000, newest first; their lines and discounts are read for those orders only. Older finished orders stay in the Documents list, the customer's history, and the download of everything the business keeps. `orders_open` (migration 0091) finds the open ones without looking through the finished ones; `contacts_staff` finds staff phones.
+
+**Chosen over** keeping the screens as they were and buying a bigger database (the cost of a refresh would still grow with every customer and order, so the bigger database would fill up too), paging in the screens (a web change in two languages for a problem no shop has yet; the cap and `more` are there for it), a counter of unread messages on each customer (it can drift from the messages; the two times cannot), and deleting old messages (the privacy notice says a business's records are kept while it uses ALYR).
+
+**Revisit when** a shop has more than 300 open conversations in regular use (then a "show older" in the inbox, which the answer's `more` already supports), or an owner asks for orders older than 30 days on that screen.
+
+## D-131 · What the workspace asks for again and again is kept for three seconds and shared between tabs
+**Date** 31 Oct 2026 · **Status** Accepted (no change to what a shop sees; one setting turns it off) · Linear ALY-266 (PERF-1, PERF-6) · Builds on D-130 · Measured in `docs/runbooks/capacity.md`
+
+**Where we were.** Every open tab asked for its screen every 5 seconds and each ask ran its own queries and wrote its own answer: a shop's five tabs ran the same queries five times. Each signed-in request also took three database connections (who is signed in, whether the module is on, then the route's own), with four connections to a process (D-132), and writing out a list of 600 orders took more of the API's one CPU than reading it from the database did.
+
+**The decision.**
+- **`core/pollcache.py`.** The answer to a question (the route, its arguments, and the person's role or ID where the answer differs by it) is kept for `ALYR_POLL_CACHE_SECONDS` (3 in production, 0 on a developer machine). Tabs that ask while one is being worked out wait for it (single flight). What is kept is the JSON already written, so a kept answer costs no encoding. It is kept under the shop's ID only, in a bounded table (2,000 answers); a refusal or a failure is never kept.
+- **A change a person makes is never hidden from them.** Every write made through the API throws away that shop's kept answers once it is done. A change made elsewhere (a customer's message, the worker, another API instance) shows within the three seconds, which is less than a tab's own five.
+- **Used for** the inbox list and conversation, the orders list, ALYR Agent's view (15 seconds: it is a summary of the week), the workspace shell and home cards, readiness, and the customer's order page, an item, its live poll and its share preview. A link posted where thousands see it costs the database one run of the page, not one each. The key of the order page holds the customer from their signed link and how the link reads, so no one is ever given another's page.
+- **Who is signed in, and which modules a shop has on, are kept the same three seconds** (`core/shopcache.py`), per process. Signing out in a process ends the session in that process at once; a session ended or changed elsewhere (another instance, a person removed from the team) stops working within the three seconds. A made-up cookie or address is never kept.
+
+**Chosen over** a shared cache service (a new paid part, and a place customer data would sit outside the database), caching in the browser (it cannot be shared between the people of a shop, and the server cannot throw a browser's copy away), a longer time (a customer's message would show later), and asking less often (a web change; the tab's own interval is already 5 seconds).
+
+**Revisit when** an owner reports an answer that was behind (the time is one setting), or the API runs many instances (each keeps its own; a shop's tabs on two instances ask twice).
+
+## D-132 · A process holds few database connections, gives up quickly and says "busy" instead of waiting; only so many documents are drawn at once
+**Date** 31 Oct 2026 · **Status** Accepted (limits that do nothing below the load they are for; each is a setting) · Linear ALY-266 (PERF-5, PERF-8, PERF-9, PERF-10), ALY-121 · Builds on D-077 and D-078 · Measured in `docs/runbooks/capacity.md`
+
+**Where we were.** Ten connections to a process, no limit on the wait for one, no limit on a statement. Three API instances and a worker hold up to 40 of `db-g1-small`'s 50 connections, and a Cloud Run rollout runs the old and the new revision side by side (up to six API instances and two workers, 80 connections). Past the knee nothing was refused: at 35 order-page visits a second a typical request took 2 s and 19 in 20 took 5.5 s, with every request answered. Drawing a receipt held a connection and a CPU for its whole time: at eight a second a receipt took 5.3 s (6.8 s for 19 in 20) and every connection was held. A weekly report batch kept all five of the worker's places busy, so a customer's message that arrived during it waited for the batch.
+
+**The decision.**
+- **The budget:** `db_pool_max` 4 for an API process, `db_pool_max_worker` 8. 6 x 4 + 2 x 8 = 40 of the 47 the application may use (3 are Cloud SQL's), leaving room for the migration job, a person's psql and the nightly export. Raise them only with the database's limit.
+- **A request waits at most 3 seconds for a connection, and at most 24 may wait.** A request that cannot get one is answered **503 with `Retry-After: 2`** and a message in both languages (`code: "busy"`). The same answer goes for a statement PostgreSQL stopped (`statement_timeout` 15 s for the API, 120 s for the worker) or a transaction left idle over 60 seconds. A download of everything a business keeps lifts those limits for itself, and at most two run at once in a process, because it holds a connection for as long as the person takes to receive the file.
+- **More than 60 requests in progress in one process are answered 503 with `Retry-After: 1`** at once (`ShedWhenBusy`), except health checks and Meta's webhooks. Cloud Run is to be set to send more than that to an instance (`--concurrency 80`, and a request timeout of 60 s, not the platform's 300), so it is the process that says "busy", not a platform queue that holds a request until it times out. `infra/gcp/setup.sh` carries both flags; they reach production at the next full deploy, with the founder's yes.
+- **Drawing a document is admitted first** (`core/admission.py`): two at once, six waiting with no connection held, the rest told to try again. The routes that draw ask before they open a transaction. The hooks (a receipt when an order is paid) are not turned away: a skipped receipt for a paid order is worse than a slow one.
+- **The worker keeps places for customers:** a batch holds at most half the places (two of five) for background work, so a customer's message finds a free place instead of waiting for a batch of weekly reports.
+- **The claim picks its rows once.** `update jobs ... where id in (select ... for update skip locked limit N)` can, when the planner repeats the subquery for each row, update more than N rows. After a run of the test suite it did: the batch of "at most one report" became all eight that were due, and the rule above would have meant nothing. `core/jobs.py` now picks the rows in a `materialized` CTE, which PostgreSQL must run once. `test_job_lanes.py::test_customers_jobs_are_claimed_before_background_ones` caught it, after tests in a certain order.
+- **The Sunday report stays at nine** (the site says "at 9:00"). `ALYR_REPORT_SPREAD_MINUTES` spreads the reports over that many minutes after nine, by shop (a fixed share from the shop's ID). It is 0. Turn it on at about a hundred shops, after the site's words change to "on Sunday morning".
+
+**Chosen over** a connection pooler in front of Cloud SQL (a new part to run and pay for; managed pooling is on the scale-up list), a lock on every route (the cap on waiting does it), drawing documents after the commit (the paper's look would have to be copied onto each document; still open from D-078), and spreading the reports now (the promise on the site).
+
+**Revisit when** the database tier changes (then the budget), a second worker instance runs, or documents are on for many shops (then drawing after the commit).
+
+## D-133 · The database tier, Cloud Run's size and high availability: what to buy, when, and what each step costs (for the founder; nothing is applied)
+**Date** 31 Oct 2026 · **Status** Proposed (a paid change needs the founder's yes: the working agreement is free tiers until 10 customers, D-053 and `docs/stack.md`) · Linear ALY-266 (PERF-7), ALY-121 · Numbers from `docs/runbooks/capacity.md` · Builds on D-060 (Google Cloud in Doha)
+
+**What the measurements say.** With the changes of D-130 to D-132, today's database (`db-g1-small`, a shared half core) carries 50 shops with all five tabs of every shop looking, about half busy, with no room to spare; 100 tabs (20 shops of five, or 50 of two) keep it just over a quarter busy. 100 shops fit on a dedicated 2-vCPU database with three API instances, the database a third busy. A bigger database does nothing without the code changes (the old code on 2 vCPUs was still 3.5 s for a typical request), and more API instances do nothing while the database is the limit.
+
+**What each step costs a month.** Doha list prices. `docs/stack.md` records USD 34 for `db-g1-small` and USD 14, 14 and 37 for the API's idle instance, the web app and the worker. I could not read Google's Doha table (the page is built by script, and I did not use the founder's Google account to ask the billing catalog), so the dedicated-tier figures are the list rate of about USD 0.041 per vCPU-hour and 0.007 per GB-hour that Google publishes for the Enterprise edition in a US region, over 730 hours, times 1.33, the ratio between `docs/stack.md`'s Doha USD 34 and the US list price of the same machine. **Treat them as estimates within about 15% and check them in Google's pricing calculator for `me-central1` before agreeing.**
+
+| Step | A month | More than today | What it buys (measured) |
+|---|---|---|---|
+| Today: `db-g1-small`, shared half core, 1.7 GB | USD 34 | | 50 shops, thin; connection limit 50 |
+| `db-custom-1-3840`: one dedicated vCPU, 3.75 GB | about USD 65 | +31 | twice the sustained CPU: 50 shops at about a quarter of the database (worked out) |
+| `db-custom-2-7680`: two vCPU, 7.5 GB | about USD 131 | +97 | **100 shops, the database 35% busy (run)** |
+| High availability for either (a standby in another zone) | double the database line: about USD 130 or 262 | +65 or +131 more | survives the loss of a zone; **no capacity** |
+| Storage, 10 GB SSD growing about 7 GB a year | USD 2, then USD 1.4 a month more each year | | (twice that with high availability) |
+| API `--min-instances=2` | about USD 14 | +14 | no dropped request when the one instance restarts; no capacity |
+| API `--max-instances` 3 to 6 | USD 0 at rest | 0 | lets a busy hour use more than three; each instance costs about USD 40 for a month it runs all of |
+| A larger worker, or a second | USD 0 to 37 | | not needed: the worker is 18% busy at 11 messages a second |
+
+**The recommendation.**
+1. **Now, and until about 25 shops are live: change nothing paid.** Merge and deploy D-130 to D-132. The half core carries 20 shops' tabs at p95 0.11 s, which is the whole of the free-tier period (10 customers) with room.
+2. **Move to `db-custom-1-3840` (+USD 31 a month) when the first of these happens:** 25 shops are live; or the new alert "Database getting busy: CPU above 70% for 15 minutes" fires (apply `sql-cpu-warning.json` with `infra/gcp/monitoring.sh apply` first); or the API's 95th-percentile latency passes 1.5 s for ten minutes. It takes a restart of a minute or two; do it in the Friday 00:00 maintenance window and tell the shops the evening before.
+3. **Move to `db-custom-2-7680` (USD 131 a month, +97) at about 70 shops,** or the first time the 70% alert fires on the 1-vCPU machine. At that size also turn on `ALYR_REPORT_SPREAD_MINUTES` (after the site says "on Sunday morning").
+4. **Buy high availability when a paying client's agreement promises availability,** not before and not for speed. Ask the lawyer (ALY-51) whether the customer agreement does.
+5. **Cloud Run:** keep `--max-instances=3` for the API and set `--concurrency=80 --timeout=60` at the next deploy (already in `infra/gcp/setup.sh`; `gcloud run services update alyr-api --concurrency=80 --timeout=60` does it alone). Do not buy a second always-on API instance for capacity.
+
+**How to apply a step, when the founder says yes** (nothing here has been run): `gcloud sql instances patch alyr-db --tier=db-custom-1-3840` (or `-2-7680`), then `infra/gcp/setup.sh` is unchanged because it only creates the instance; update `docs/hosting.md` and `docs/stack.md` in the same pull request with the new size and price, and raise `db_pool_max` only after reading the instance's new `max_connections` (capacity.md, "The connection budget").
+
+**Open for the founder.** (1) Whether to buy step 2 early, at the first paying client, for the margin; (2) whether high availability is a promise the customer agreement makes; (3) the Doha prices, once checked.
+
+**Chosen over** moving to a managed Postgres elsewhere (data must stay in Qatar, D-060), a read replica (the load is the tabs' reads of fresh data, which a replica would lag), a connection pooler (connections are not the limit; CPU is), and buying the 2-vCPU machine now (USD 97 a month for headroom nobody is using yet).
+
+**Revisit when** pilot data replaces the model of `capacity.md` (150 chats and five tabs a shop), the first 10 customers are live, or the tab polling is replaced by something cheaper (then the whole table moves).
+
 ---
 
 ---
@@ -2197,6 +2293,75 @@ Without it, analytics is off everywhere.
 
 ---
 
+## D-140 · An owner or admin manages the services from the Bookings screen, and a booking keeps the price it was made at
+**Date** 31 Oct 2026 · **Status** Proposed (built and tested; nothing deployed; waiting for the founder's yes) · Linear ALY-259, stage 1 · Builds on D-084 (people and chairs, deposits) and D-069 (resources)
+
+**The decision.**
+- **Services have a screen.** In the Bookings tab an owner or admin opens **Set up bookings**, which takes the place of the day until they go back (it is one part at a time: Services, People, Deposits). Services lists every service, hidden ones too, with its length, price, deposit and the number of bookings still to come. The owner can add a service, change its names (English and Arabic), length, price, deposit and which people or chairs do it, hide it from the booking page and show it again. This was API only; the earlier audit expected every salon to ask for it in the first week.
+- **It is all one request, checked twice.** The page checks the form in its own language before sending (`bookingsServiceForm.ts`); the API checks it again, as a whole: a service is made with its deposit and its people in one transaction (nothing is half made), and a change is checked against the price the service will have, so a price cannot be lowered under a fixed deposit, and a share of the price needs a price (`deposit_needs_price`). A blank name is refused (`bad_name`); a shop may list up to 100 services (`too_many_services`).
+- **Hiding is not deleting.** A hidden service leaves the booking page and cannot be booked; the bookings it has stay on their time, and the screen says how many before the owner confirms. Nothing is ever deleted from this screen, so a booking always has its service.
+- **A booking keeps its price (migration 0100).** Every reader of a booking's price (what is left to pay, the receipt or invoice made from the booking, the Agent's value of the week ahead) read the service's price today, while the deposit was already worked out when the booking was made. With a screen that changes prices that would have moved a customer's bill after they booked. `bookings.price` is filled by a database trigger when an insert gives none, so every way a booking is made keeps it (the booking page, staff, the seeds), and the three readers now read `bookings.price`. Existing bookings are given their service's price at the migration.
+- **The deposit's own words moved.** The per-service deposit list in the setup is gone; each service's deposit is set in its own form. The shop's deposit rule and the review request stay in the Deposits part.
+
+**Not decided here, left for the founder.** Nothing is added to the activity record for a change of service or price (the record's subjects are conversation, order, booking and account; a settings subject is a migration and a wider change), so an owner cannot yet see who changed a price. The order of services is fixed (the order they were added); a way to reorder them is not built.
+
+**Chosen over** reading the price from the service and warning the owner ("a price change applies to bookings not yet paid"), which would have told them about a trap instead of closing it; a trigger-free column set in `_insert` alone, which the seeds and any future insert would each have had to remember; asking the owner for dirhams (the unit the API stores): the form takes QAR, as an owner thinks of a price, and reads "12.5" as 1250 dirhams from the text, never through a float.
+
+**Revisit when** a pilot owner asks for reordering or an audit trail of settings, or when a service needs a photo (not built).
+
+---
+
+## D-141 · Opening hours have a screen and a break is two periods; the shop, or one person, can have days off that customers cannot book and that never cancel a booking
+**Date** 31 Oct 2026 · **Status** Proposed (built and tested; nothing deployed; waiting for the founder's yes) · Linear ALY-259, stage 2 · Builds on D-140 and D-084
+
+**The decision.**
+- **The week is edited a day at a time** in the Hours part of Set up bookings, for the shop and, with the same editor, for one person or chair. A day has one or more periods; a break in the middle of the day is two, with a gap. Two periods of one day may not overlap (`bad_hours_overlap`), and the API checks before it deletes, so a refused week leaves the old one in place.
+- **A day off is a range of the shop's own calendar days** (`booking_closures`: first day, last day, for the whole shop or one resource, a reason in each language). Calendar days, not instants, for the reason opening hours are: "the 5th" must mean the shop's 5th whatever the server's clock says. A closure is made and removed, never edited; at most 366 days in one and 200 not yet over.
+- **Customers cannot book a closed day; staff still can.** The engine takes a closed day out of `free_times` and out of `_working` (which `_pick_resource` also reads), so an old list of times cannot book it; a person on leave is not offered while the other chair still is. Staff may write a visit down on a closed day, as they may outside opening hours: a regular who comes by on Eid is the shop's call, not the engine's.
+- **A closure never cancels or moves a booking.** Those inside it stay booked; the screen counts them, says so, and opens the day so the owner moves or cancels each, the customer told by the paths that already exist. Cancelling a customer's visit is the owner's decision each time, never a side effect of a settings change.
+- **The booking page says why, and only for the whole shop.** A closed day reads "The shop is closed this day: Eid al-Fitr" in the customer's language. A person's leave is never listed on the page and its reason is never shown to customers: their times are not offered, nothing more.
+
+**Not decided here.** A message to customers who already booked a day that is then closed (the owner moves each, and the usual move or cancel message goes); special hours on one date; shifts across midnight (a period closes by 23:59); repeating closures.
+
+**Chosen over** cancelling the bookings inside a new closure (an owner adding Eid should never find customers cancelled by a settings screen); instants for the first and last day (the day would move with the server's zone); a closure that overrides staff as well (the shop could not write down a regular's visit on a day it is closed to everyone else).
+
+**Revisit when** a pilot salon asks for special hours on one date, repeating closures, or a message to the customers of a day it closes.
+
+---
+
+## D-142 · The desk finds a customer the shop has, shows the free times for a move, and says whether the customer was told; staff cannot record a customer's consent for them
+**Date** 31 Oct 2026 · **Status** Proposed (built and tested; nothing deployed; one question for the founder, below) · Linear ALY-259, stage 3 · Builds on D-084, D-141 and hard rule 5
+
+**The decision.**
+- **A customer the shop has is chosen, not retyped.** The walk-in form searches the shop's customers by name or part of a number (two letters, three digits; at most six; the owner's test customers never) and writes the booking in that customer's name. A new customer is still made from a name and a number.
+- **A move shows the times it can take.** The booking's own service, on the day and for the person or chair asked for or anyone, from the same free-times engine the booking page uses, with the booking's own time not counted against it and a closed day said. Any other minute can still be typed: staff may, as for a walk-in.
+- **The screen says what became of the message.** Moving, cancelling and a booking by phone return `told: {sent, reason, phone}` from the outbound layer's own answer, and the screen says it in plain words: told on WhatsApp, or not, why, and the number to call. The same is said before the action, from the customer's consent. The move or cancel always happens: a message that cannot go never holds a shop up.
+- **No new template.** Every message uses what exists: `booking_confirmed`, `booking_moved`, `booking_cancelled` and, for a cancel that says something about a deposit, `booking_cancelled_deposit` (written in D-084, not submitted to Meta; inside the 24-hour window it goes as a plain message).
+- **Staff cannot record a customer's consent for them.** A customer typed in at the desk has not agreed to messages (hard rule 5: consent before sending), so a booking by phone for them sends no confirmation or reminder until they write first. The form and the answer say so and give the number. This is the honest state of things, not the ideal one: a salon that takes a booking by phone would like to confirm it by WhatsApp.
+
+**Open for the founder (and probably the lawyer, ALY-51).** Whether staff may record "the customer agreed on the phone to booking messages" as a consent record (source: staff, with the wording they were told), so a phone booking can be confirmed and reminded. It is a consent made on someone's behalf; ALYR does not do it today and nothing here builds it.
+
+**Chosen over** saying "the customer is told" whatever happened (what the screen said before: false for any customer typed in at the desk); recording consent when staff tick a box (a legal question that is not ours to settle by a checkbox); a "send a message anyway" button (hard rule 5 has no such door); a new template for a phone booking (Meta's approval is the founder's).
+
+**Revisit when** the founder answers the consent question, a template for phone bookings is approved, or a pilot salon asks for a walk-in with no number.
+
+---
+
+## D-143 · The people and chairs screen says what each does and has ahead, refuses a retirement that would strand a service, and lets the owner put the people and the services in order
+**Date** 31 Oct 2026 · **Status** Proposed (built and tested; nothing deployed; waiting for the founder's yes) · Linear ALY-259, stage 4 · Builds on D-084, D-069, D-140
+
+**The decision.**
+- **A person's row says what they do and what they have ahead.** "Does every service" or the services' names, and the number of bookings still to come with them, from the same facts the engine uses (who does a service, and the bookings by resource). Who does a service stays set on the service: one place to change it, shown from both sides.
+- **Retiring someone never strands a service.** Not taking bookings keeps what they have and stops new ones. A retirement that would leave a service the owner had limited to them with nobody is refused, naming the services, because the booking page would go on offering a service nobody can take. This is a refusal, not a warning: a warning only moves the surprise to a customer. The last active one still cannot be retired.
+- **The order is the owner's.** The people's order is the day view's columns, the booking page's list and who "anyone" takes first (the engine already did: the first free one in the shop's order); the services' order is the booking page's list. Both are set by sending the whole list once each, so two staff members reordering at once cannot produce a half order (the second is refused with `bad_order` and reloads).
+- **The first one added is said to take the bookings already made**, with the number, because until then they were all in the shop's one lane and the move is not visible.
+
+**Chosen over** a warning instead of a refusal when a service would have nobody (see above); a "move this booking" arrow for the owner's up and down (a drag order is nicer and needs a library and a keyboard alternative anyway: buttons are 44 px, named, and work with a keyboard and a screen reader); renumbering one place at a time (a gap or two people with the same place is what the whole-list form cannot make).
+
+**Revisit when** a pilot salon has more than a dozen people or chairs (a drag order or sections may then pay for itself), or wants assignment by least busy rather than by order.
+
+---
+
 ## D-145 · A shop's WhatsApp line is checked, tested and kept on a trail; staff see every line on one screen
 **Date** 31 Oct 2026 · **Status** Proposed (built and tested against a fake Meta; the first real check is the founder's, in the runbook) · Linear ALY-166 · Builds on D-050 and D-054 (attaching a number) · Spec 060
 
@@ -2216,3 +2381,107 @@ Without it, analytics is off everywhere.
 **Revisit when** a number added in WhatsApp Manager stays unconnected until registered by the API, or when more than one number per shop is allowed.
 
 ---
+
+---
+
+## D-146 · Template status is kept per shop from Meta; submitting to Meta is off until the founder allows it; a template waiting for his go is never sent
+**Date** 31 Oct 2026 · **Status** Proposed (built and tested against a fake Meta; no real submission) · Linear ALY-172 · Spec 061 · Builds on D-145
+
+**Decision.**
+- **Where each of ALYR's 76 templates stands, on each shop's account, is kept per shop** (`whatsapp_templates`) and shown on `/ops` → WhatsApp lines: not submitted, in review, approved, rejected (with Meta's reason and recommendation), paused, flagged, disabled. It is read from Meta on request and kept current by Meta's `message_template_status_update` and `template_category_update` notices, which are written for every shop whose number is on the account they name.
+- **Reading is free; submitting is the founder's.** The only call that writes to Meta's template API is behind `ALYR_TEMPLATE_SUBMIT`, off by default; while off it refuses and nothing is sent. What it would send is always shown first. Turning the setting on is the founder's approval of a Meta-facing action.
+- **A template written but not cleared is `held`.** The eight the code's own comments said were "NOT submitted to Meta: that is the founder's go" are now marked in `core/templates.py` (`held=HELD`), and neither the back office nor `templates_sync --create` will submit them. The founder lifts a hold by deleting the marker.
+- **A template Meta recategorises is warned of.** A utility template Meta calls marketing is billed and limited as marketing and would, by ALYR's own rule, need marketing consent; the notice is on the line's trail as a warning. ALYR does not change its own category on Meta's say-so.
+- **No new wording.** Nothing in `core/templates.py` was written or reworded; the Arabic is still unreviewed (ALY-66).
+
+**Why.** The founder cannot run a command on a laptop per shop, and cannot tell from outside which of the 76 templates a shop is missing. The inventory answers that; keeping it per shop keeps row-level security the plain rule while the truth lives at the account.
+
+**Chosen over** one global table per account (a second kind of table with its own isolation story, for the saving of copying a few dozen short rows per shop), submitting on first attach (the founder's yes is per Meta-facing action, D-007, and the Arabic has not been read by a native speaker), and storing the wording Meta approved (a second copy of wording that would drift from `core/templates.py`).
+
+**Not decided here.** When to switch submitting on, which held templates to release and when, and whether to submit the Arabic before ALY-66. All are the founder's.
+
+**Revisit when** the founder switches submitting on, Meta changes its template statuses or limits, or a second language is added.
+
+---
+
+## D-147 · A number's health comes from Meta's notices and a periodic read; an account's trouble is one item, a number's is one per shop; a flagged or restricted number reaches the founder's phone
+**Date** 31 Oct 2026 · **Status** Proposed (built and tested against a fake Meta; no real Meta call) · Linear ALY-166 · Spec 062 · Builds on D-145 and D-146
+
+**Decision.**
+- **What is kept.** For each attached number: its quality rating, status, messaging limit, throughput, sending status and display-name decision; for its account: restrictions (with their end), a disable scheduled or lifted, a policy violation, a review decision, the business removing ALYR, active alerts. From these ALYR makes a severity (`ok`, `attention`, `critical`) and the reasons behind it.
+- **How it arrives.** Meta's `phone_number_quality_update`, `phone_number_name_update`, `account_update`, `account_review_update` and `account_alerts` notices at the one signed webhook, and a read of every number (`GET /{number-id}`) by the worker every six hours (`ALYR_LINE_POLL_MINUTES`; 0 switches reading off) and when staff press Check. The quality rating is read, not pushed: no webhook Meta documents now carries it. Reading is the only thing this does at Meta.
+- **One item for an account, one for a number.** ALYR's own account is shared by many shops, so a restriction on it is one Today item saying how many shops it reaches. A flag or a yellow rating on one number is one item for that shop.
+- **A flag reaches the phone.** One alert (`line_health`) fires when any number is critical or any account is restricted, disabled or removed by its business. It carries counts only, like every alert (hard rule 2).
+- **A flagged number reads "problem"** on the lines screen, checked or not.
+
+**Why.** Meta is the only one who knows. A restricted number looks perfectly healthy from ALYR's side until a customer complains.
+
+**Chosen over** reading only when staff press Check (nobody presses it for fifty shops), a webhook-only design (the quality rating is not pushed), one item per shop for an account trouble (fifty items for one cause), pausing a shop's sending automatically when its number is flagged (a decision about a shop's customers, the founder's), and messaging the owner (the owner did not cause an ALYR-account restriction and is not told about ALYR's accounts; the founder decides what an owner hears).
+
+**Not decided here.** What to tell an owner whose number is flagged; whether to pause sending on a flag; Meta's phone number status values, which are not on a Meta page I could read (the code treats FLAGGED, RESTRICTED, BANNED, DELETED and DISCONNECTED as critical and anything else unusual as a look).
+
+**Revisit when** Meta documents the `status` values or pushes the quality rating, when the first real flag arrives, or when more than ALYR's own account is in use (spec 063).
+
+---
+
+## D-148 · A business connects its own WhatsApp account through Meta's Embedded Signup, behind a flag that is off
+**Date** 31 Oct 2026 · **Status** Proposed (built and tested against a fake Meta; the founder's steps in Meta come first) · Linear ALY-39 · Spec 063 · Builds on D-007, D-050 and D-145 to D-147
+
+**Decision.**
+- **The owner connects themselves, with Meta's own pop-up.** On the WhatsApp step of `/start`, for the ways that use it (`own_account`, `move_number`), when everything the way needs is ticked: Connect with Meta. The pop-up is Facebook Login for Business with a WhatsApp Embedded Signup configuration; ALYR never sees the owner's Facebook password.
+- **Off until the founder says so** (`ALYR_EMBEDDED_SIGNUP`), and closed by every missing piece (app ID and secret, the configuration's ID, the key that seals tokens). It needs Tech Provider approval (ALY-52) and App Review (ALY-262) first; Meta does not let an unapproved app onboard customers.
+- **The browser is not believed.** The code and the session message come from the owner's browser. The code is exchanged server to server, and every claim in the message (account, number) is read back from Meta with the business's own token before anything is stored.
+- **Everything is done or nothing is.** Exchange, read back, register (not for a number moved from the WhatsApp Business app), subscribe the app to the account's webhooks, then seal the token and attach the number in one transaction. A failure is on the line's trail in Meta's words and told to the owner in Arabic or English.
+- **ALYR staff attach numbers on ALYR's own account exactly as before** (D-050, D-054). `new_number` is not this.
+
+**Why.** A person at a keyboard for every shop does not reach fifty, and cannot serve a shop with its own account or a number that must stay in the WhatsApp Business app. Meta built the pop-up for this and requires it of a Tech Provider.
+
+**Chosen over** staff adding each shop's account by hand (no way to scale, no coexistence), a hand-built phone-number flow (Meta requires Embedded Signup of Tech Providers), and attaching automatically from a typed number (it proves nothing about who owns it).
+
+**Not decided here.** When to switch it on; whether the token's lifetime (Meta's template for the configuration names a 60-day one) needs a refresh job before it is relied on; the coexistence message sync (history, echoes); what a business with a number on both ALYR and its own account does.
+
+**Revisit when** Meta changes the flow (Embedded Signup v2 and v3 end on 15 Oct 2026; this is v4), or the first real business connects.
+
+---
+
+## D-149 · A business's own WhatsApp token is sealed in the database with the key in Secret Manager; every call about its number is made with it
+**Date** 31 Oct 2026 · **Status** Proposed · Linear ALY-39 · Spec 063 · Follows D-072's sealing of a shop's payment keys (`core/payment_keys.py`)
+
+**Decision.**
+- **ALYR's own system-user token stays only in Secret Manager** and serves every number on ALYR's own account. It is unchanged.
+- **A business's own token is sealed** (AES-256-GCM, the business's and the number's IDs bound in) in `channel_credentials`, under `ALYR_CHANNEL_KEYS_KEY`, a key that is itself in Secret Manager in Doha and never in the database. A copied value opens for neither another business nor another number. The database holds ciphertext only; `channel_credential_for()` returns nothing else.
+- **The channel asks, per call, which token to use**: for the number or account the call is about, the business's own, else ALYR's (`MetaChannel(credentials=...)`, five minutes in memory). So sends, templates, health reads and media downloads of a business's own account are made with its own token, and nothing in a module changed.
+- **The app role still does not write `channel_numbers`**: `signup_attach_whatsapp_number()` does, only for the caller's own business, only inside the sign-up code's setting, and only when credentials for that number are already stored.
+- **The token is never logged, returned, put in a job's payload, on the trail or in the audit log.** Its end date is shown and its expiry is a health reason (two weeks before: needs a look; after: needs action).
+
+**Why.** A token for a business's account is the one new secret ALYR must hold per business. It is no more dangerous than a payment key and is treated the same.
+
+**Chosen over** one key per business in Secret Manager (a thousand secrets, a quota and a bill, and a call to the key vault on every send), storing the token in plain text behind row-level security (a database backup would hold fifty working tokens), and sending everything with ALYR's token (Meta refuses it on another business's account).
+
+**Not decided here.** Refreshing or replacing an expiring token; rotating `ALYR_CHANNEL_KEYS_KEY` (it makes every own-account token unreadable: the businesses connect again, as for payment keys).
+
+**Revisit when** Meta documents the token lifetime for the configuration the founder chooses.
+
+---
+
+---
+
+## D-150 · The homepage drops what made it look machine-made
+
+**Date** 31 Oct 2026 · **Status** Proposed (the founder's complaint and the technical cofounder's rulings; built in a pull request, not merged or published) · Linear ALY-303, under ALY-302 · Amends D-048 and ALY-226 (the line back to Check and "Then we check again."), D-062 in one respect (below), and the design skills' rules for buttons, links, rules and labels
+
+The founder, 31 Oct 2026, of two screenshots of the homepage: "fix these items, it looks AI made and AI generated".
+
+**Decision.**
+- **A button is its words.** The Volt button and its outlined twin hold no icon and no corner arrow. It is one component, so this holds on every page. The 45° cut stays: the header's button shows it reads well with no arrow.
+- **On the homepage a link is its words with a line under them,** with no arrow, and the six product tiles have none either.
+- **On the homepage a label is sentence case in the page's own type.** Mono stays inside drawings of the product (and the agreement drawing, with the offer on). This is written for the homepage only, in `home.css`; the shared classes keep their mono for other pages.
+- **No construction marks on the homepage:** no faint grid behind the hero, no dot field on the Carbon plate, no crosses on section rules (only the homepage used them, so they are gone from `kit.css`), no dashed line as decoration, no ticks or numbered discs outside a drawing, no boxed count.
+- **The hero says it in words.** Two plain sentences that carry "we come to your shop in Qatar". The three-line facts list is gone from the page; its words stay in `copy.ts` for the social card only. The note under the button is one short line; the address stays in the closing call.
+- **Checking again is a sentence in the last step,** "Then we check again." The line drawn back to Check, its Volt tick and the floating mono line are gone.
+- **What we need from you is a sentence with the button under it.** The tally under One order is a sentence too, not a row of three big numbers, and the business tabs are names, not eight identical cards with icons.
+- **In the hero film, a window that steps back goes out on the fold's side instead of dimming** (`SHOTS` in `filmScript.ts`). A dimmed window was cut by the plate's diagonal into a grey triangle beside the text, at every width with a fold, for about a third of the loop. Nothing else in the film changes.
+
+**What this does not change.** The positioning, the headline, the claims and the Carbon and Volt look. It adds no gradient and no AI word.
+
+**Not done, for the founder to decide.** Other pages keep their mono labels and link arrows; the footer and the Products menu keep their mono labels, because they are shared. The cards under How we work stay, since the founder approved them on the Framer prototype.

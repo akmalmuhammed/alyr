@@ -1,15 +1,19 @@
 import logging
+import time
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI
+import asyncpg
+from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from alyr.channels.meta import MetaChannel
 from alyr.channels.simulator import SimulatorChannel
-from alyr.config import get_settings
+from alyr.config import get_settings, poll_cache_seconds
 from alyr.core import account as account_notes
-from alyr.core import origin, ratelimit
+from alyr.core import admission, origin, ratelimit
+from alyr.core.admission import BUSY
 from alyr.core.card_billing import CardBilling
+from alyr.core.channel_credentials import Credentials
 from alyr.core.images import PhotoRefused
 from alyr.core.inbound import INBOUND, InboundHandler
 from alyr.core.jobs import JobRunner
@@ -17,10 +21,13 @@ from alyr.core.links import check_secret as check_link_secret
 from alyr.core.media import MediaService
 from alyr.core.outbound import SEND, Outbound
 from alyr.core.payments import Payments
+from alyr.core.pollcache import PollCache
+from alyr.core.shopcache import SessionCache, ShopCache
 from alyr.core.storage import check_store, make_store
 from alyr.core.welcome import JOB as ACCOUNT_EMAIL
 from alyr.core.welcome import AccountMail
-from alyr.db import Database
+from alyr.core.whatsapp_events import AccountEvents
+from alyr.db import Database, PoolBusy
 from alyr.gateways import registry as payment_gateways
 from alyr.modules import report
 from alyr.modules.bookings import deposits as booking_deposits
@@ -80,10 +87,13 @@ from alyr.routes import staff_numbers as staff_numbers_routes
 from alyr.routes import team as team_routes
 from alyr.routes import templates as template_routes
 from alyr.routes import track as track_routes
+from alyr.routes import whatsapp_signup as whatsapp_signup_routes
 from alyr.routes import workspace as workspace_routes
 from alyr.routes.deps import require_any_module, require_module, require_module_for_slug
 
 log = logging.getLogger("alyr.main")
+
+BUSY_RETRY_SECONDS = 2
 
 
 async def close_channels(app: FastAPI) -> None:
@@ -123,16 +133,41 @@ def create_app() -> FastAPI:
     for note in ratelimit.startup_notes(settings):
         log.warning(note)
     app.add_middleware(origin.OwnPagesOnly, settings=settings)
+    app.add_middleware(admission.ShedWhenBusy, limit=settings.max_in_flight)
     app.state.db = Database(settings.database_url)
+    # A business that connected its own WhatsApp account is sent with its own token; every other
+    # number with ALYR's (spec 063).
+    app.state.credentials = Credentials(app.state.db)
+    # The connection budget and the limits on a wait or a statement (D-132).
+    app.state.db.configure(
+        pool_max=settings.db_pool_max, acquire_timeout=settings.db_acquire_timeout_seconds,
+        max_waiting=settings.db_max_waiting, statement_timeout_ms=settings.db_statement_timeout_ms,
+        idle_in_transaction_ms=settings.db_idle_in_transaction_ms,
+    )
+    # What the workspace asks for again and again, kept a few seconds and shared (D-131).
+    app.state.poll = PollCache(poll_cache_seconds(settings))
+    app.state.shops = ShopCache(poll_cache_seconds(settings))
+    app.state.sessions = SessionCache(poll_cache_seconds(settings))
     # A second login for the work that declares itself the back office (ALY-125 part 3, D-137):
     # `core/roles.privileged(db)` finds it. Without an address there is one login, as before.
-    app.state.db.admin = (
-        Database(settings.admin_database_url) if settings.admin_database_url else None
-    )
+    # It holds ONE connection under the same limits (D-132): six API instances in a rollout
+    # already hold 24 of Cloud SQL's 47 and the worker 16, so a second pool of the default ten
+    # would break the budget the day the roles are enforced. Count again before raising it.
+    app.state.db.admin = None
+    if settings.admin_database_url:
+        app.state.db.admin = Database(settings.admin_database_url)
+        app.state.db.admin.configure(
+            pool_max=1, acquire_timeout=settings.db_acquire_timeout_seconds,
+            max_waiting=settings.db_max_waiting,
+            statement_timeout_ms=settings.db_statement_timeout_ms,
+            idle_in_transaction_ms=settings.db_idle_in_transaction_ms,
+        )
     app.state.outbound = Outbound(
         {
             "simulator": SimulatorChannel(),
-            "meta": MetaChannel(settings.meta_access_token, settings.meta_graph_version),
+            "meta": MetaChannel(
+                settings.meta_access_token, settings.meta_graph_version,
+                credentials=app.state.credentials.token_for),
         },
         app.state.db,
     )
@@ -142,6 +177,8 @@ def create_app() -> FastAPI:
     app.state.inbound = InboundHandler(
         app.state.db, app.state.outbound, settings.public_web_url, app.state.media
     )
+    # What Meta says about a WhatsApp account, not a message: templates, limits, restrictions.
+    app.state.account_events = AccountEvents(app.state.db)
 
     app.state.jobs = JobRunner(
         app.state.db, settings.jobs_backoff_seconds, settings.jobs_concurrency
@@ -211,6 +248,24 @@ def create_app() -> FastAPI:
     app.state.jobs.register(
         account_notes.NOTICE, account_notes.AccountNotices(app.state.db).run
     )
+    last_logged = {"at": 0.0, "count": 0}
+
+    async def busy(request: Request, error: Exception) -> JSONResponse:
+        """No connection came free in time, or PostgreSQL stopped a statement that ran too long:
+        answer 503 with Retry-After so the caller tries again in a moment (D-132). One log line
+        in ten seconds, with how many were turned away, so a spike does not flood the log."""
+        last_logged["count"] += 1
+        now = time.monotonic()
+        if now - last_logged["at"] >= 10:
+            log.warning("busy: %s (%s requests in the last %.0fs): %s %s", type(error).__name__,
+                        last_logged["count"], now - last_logged["at"] if last_logged["at"] else 0,
+                        request.method, request.url.path)
+            last_logged["at"], last_logged["count"] = now, 0
+        return JSONResponse(BUSY, status_code=503, headers={"Retry-After": str(BUSY_RETRY_SECONDS)})
+
+    app.add_exception_handler(PoolBusy, busy)
+    app.add_exception_handler(asyncpg.exceptions.QueryCanceledError, busy)
+    app.add_exception_handler(asyncpg.exceptions.IdleInTransactionSessionTimeoutError, busy)
     app.add_exception_handler(PhotoRefused, media_routes.refused)
     app.add_exception_handler(DocumentError, documents_routes.refused)
     app.add_exception_handler(connect_routes.Invalid, connect_routes.invalid)
@@ -261,6 +316,7 @@ def create_app() -> FastAPI:
         return JSONResponse({"status": "ok", "seconds_since_last_check_in": age})
 
     app.include_router(whatsapp_webhook.router)
+    app.include_router(whatsapp_signup_routes.router)
     # Each module's routes answer only for shops that have switched that module on.
     app.include_router(ledger.router, dependencies=[Depends(require_module("ledger"))])
     app.include_router(pay.router)

@@ -62,6 +62,8 @@ project role: `infra/gcp/setup.sh access` sets and checks this (ALY-268).
 USD 14, web app about USD 14, worker about USD 37, the rest a few dollars: about USD 100 to 105,
 paid from the startup credits.
 
+**How much it carries, and how it is kept from tipping over:** `docs/runbooks/capacity.md`. It has the measured limits for 50 and 100 shops, the connection budget (4 connections for each API instance and 8 for the worker, so a rollout with the old and the new revision side by side stays under Cloud SQL's 50), the alert thresholds and the order to scale up in. The API answers 503 with `Retry-After` when it is busy instead of queueing (D-132), and `infra/gcp/setup.sh` sets the API's concurrency to 80 and its request timeout to 60 s.
+
 **The database owner bypasses row-level security** (`ensure_owner_bypasses_rls` in
 `alyr/migrate.py`), as a superuser does on a developer machine: the SECURITY DEFINER
 functions behind sign-up and the back office are owned by it. Cloud SQL's `postgres` is not a

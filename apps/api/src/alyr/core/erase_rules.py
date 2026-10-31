@@ -57,7 +57,7 @@ RULES: dict[str, Rule] = {
         "orders", "order_items", "order_discounts", "order_item_costs", "payment_requests",
         "payment_events", "payment_accounts", "ledger_accounts", "ledger_entries", "bookings",
         "services", "booking_resources", "resource_hours", "service_resources", "business_hours",
-        "stock_holds",
+        "booking_closures", "stock_holds",
     ),
     # The cost tables are among them. Cost prices are for owners and admins only (the
     # `cost_margin` feature, `modules/items/costs.py`); nothing here reads them, it deletes
@@ -97,9 +97,13 @@ RULES: dict[str, Rule] = {
     ),
     **_delete(
         "the business's WhatsApp number and set-up, the trail of what happened to its line "
-        "(states and counts, never a customer's words), its switches, the funnel record of its "
-        "own sign-up and its weekly reports",
+        "(states and counts, never a customer's words), what Meta says about its message "
+        "templates (names and statuses, never their wording), what Meta says about the health of "
+        "its number and account, the sealed token of a business's own WhatsApp account, its "
+        "switches, the funnel record "
+        "of its own sign-up and its weekly reports",
         "channel_numbers", "whatsapp_setup", "whatsapp_line_events", "whatsapp_line_state",
+        "whatsapp_templates", "whatsapp_line_health", "channel_credentials",
         "tenant_modules", "onboarding_events",
         "onboarding_reminders", "onboarding_steps", "setup_requests", "weekly_reports",
     ),

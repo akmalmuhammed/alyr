@@ -43,6 +43,34 @@ class Settings(BaseSettings):
     # /health/worker answers 503 when the worker has not checked in for this long.
     worker_stale_seconds: int = 120
 
+    # The database connection budget (D-132). Cloud SQL's db-g1-small allows 50 connections, 3 for
+    # its own use. A Cloud Run rollout runs the old and the new revision side by side: up to 6 API
+    # instances and 2 workers. 6 x 4 + 2 x 8 = 40, leaving room for the migration job, a person's
+    # psql and the nightly export. Raise these only together with the database's connection limit.
+    db_pool_max: int = 4
+    db_pool_max_worker: int = 8
+    # How long a request waits for a free connection before it is answered 503 with Retry-After,
+    # and how many may wait at once (more are refused at once). Better a quick "busy" than a
+    # page that hangs until its caller gives up.
+    db_acquire_timeout_seconds: float = 3.0
+    db_max_waiting: int = 24
+    # PostgreSQL stops a statement that runs longer than this (milliseconds) and a transaction that
+    # sits idle longer than the second one. The worker, which makes the weekly reports and draws
+    # PDFs, is allowed longer. 0 means no limit.
+    db_statement_timeout_ms: int = 15_000
+    db_statement_timeout_ms_worker: int = 120_000
+    db_idle_in_transaction_ms: int = 60_000
+    # More requests than this in progress in one API process are answered 503 with Retry-After
+    # at once (core/admission.ShedWhenBusy). Cloud Run is set to send more than this at a time
+    # (docs/runbooks/capacity.md), so it is this process that says "busy", not a queue that
+    # holds a request until it times out. 0 means no limit.
+    max_in_flight: int = 60
+
+    # How long the workspace's answers are kept and shared between tabs (core/pollcache.py, D-131).
+    # Unset: 3 seconds in production, off on a developer machine (a test that changes the
+    # database under it would read an old answer). 0 switches it off everywhere.
+    poll_cache_seconds: float | None = None
+
     # Local only: let the workspace be used without signing in, as the demo shop.
     # Ignored everywhere except env "local".
     demo_open: bool = True
@@ -118,6 +146,25 @@ class Settings(BaseSettings):
     # The Meta app's ID. Only `templates_sync` needs it, to upload the sample image a
     # template with an image header is reviewed with (Resumable Upload API).
     meta_app_id: str = ""
+    # Whether ALYR may submit a message template to Meta for a shop (specs/061, D-146). Off: the
+    # back office shows what would be submitted and reads what Meta has, and nothing is sent.
+    # Submitting is a Meta-facing action the founder approves; switching this on is that approval.
+    template_submit: bool = False
+    # Embedded Signup (ALY-39, spec 063, D-148): a business connects its own WhatsApp account
+    # through Meta's pop-up, from its sign-up screen. OFF until the founder has done what
+    # docs/runbooks/embedded-signup.md lists in Meta (Tech Provider approval, App Review, the
+    # configuration) and says so. `meta_es_config_id` is the Facebook Login for Business
+    # configuration's ID (not a secret; the browser needs it); the app's ID and secret are the ones
+    # above. `channel_keys_key` seals each shop's own token (core/channel_keys.py): 32 random
+    # bytes, base64, in Secret Manager, never in git; without it nothing is stored and the feature
+    # offers nothing.
+    embedded_signup: bool = False
+    meta_es_config_id: str = ""
+    channel_keys_key: str = ""
+    # How often the worker reads every attached number's health from Meta, in minutes (spec 062,
+    # D-147): quality rating, status, messaging limit. Reads only. 0 reads nothing (Meta's notices
+    # still arrive); the worker then only makes each severity again every hour.
+    line_poll_minutes: int = 360
 
     # The weekly report card (ALY-99). Off: outside the 24-hour window the report goes as
     # the text-only `weekly_report` template, and REPORT brings the card. On (once Meta
@@ -217,6 +264,14 @@ class Settings(BaseSettings):
     billing_grace_days: int = 14
     billing_pause_sending: bool = True
 
+    # The weekly report is due at 9:00 on Sunday, as the site says. This spreads it over that many
+    # minutes after nine, by shop (a fixed share for each shop, from its ID), so a hundred reports
+    # are not made in the same minute. 0, the default, keeps every shop at nine exactly: fifty
+    # reports and five messages a second measured 3.8 s at the 95th percentile for a reply, with
+    # the worker keeping places for customers (D-132); turn this on at about a hundred shops, and
+    # change what the site says first ("at 9:00" becomes "on Sunday morning").
+    report_spread_minutes: int = 0
+
     # Deleting a stopped client's data (spec 042, D-116). The privacy notice promises it 60 days
     # after the client's cancellation takes effect. `erase_stopped_clients` is the switch: OFF,
     # the daily job (`python -m alyr.erase_job`) only reports what it would delete and changes
@@ -257,3 +312,9 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def poll_cache_seconds(settings: Settings) -> float:
+    if settings.poll_cache_seconds is not None:
+        return settings.poll_cache_seconds
+    return 0.0 if settings.env == "local" else 3.0

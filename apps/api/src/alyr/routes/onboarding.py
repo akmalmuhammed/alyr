@@ -303,8 +303,12 @@ async def finish(request: Request, staff: Staff = Depends(current_staff)) -> dic
 async def get_readiness(request: Request, staff: Staff = Depends(current_staff)) -> dict:
     """Is the business ready to go live, and what is left (ALY-165). The same answer the
     go-live step, the workspace and the back office show."""
-    async with request.app.state.db.tenant(staff.tenant_id) as conn:
-        return await readiness.run(conn, staff.name)
+    async def compute() -> dict:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            return await readiness.run(conn, staff.name)
+
+    return await request.app.state.poll.get_json(
+        staff.tenant_id, ("readiness", staff.user_id), compute)
 
 
 @router.patch("/steps/{key}")
