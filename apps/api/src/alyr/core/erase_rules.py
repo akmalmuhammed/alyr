@@ -57,7 +57,7 @@ RULES: dict[str, Rule] = {
         "orders", "order_items", "order_discounts", "order_item_costs", "payment_requests",
         "payment_events", "payment_accounts", "ledger_accounts", "ledger_entries", "bookings",
         "services", "booking_resources", "resource_hours", "service_resources", "business_hours",
-        "stock_holds",
+        "booking_closures", "stock_holds",
     ),
     # The cost tables are among them. Cost prices are for owners and admins only (the
     # `cost_margin` feature, `modules/items/costs.py`); nothing here reads them, it deletes

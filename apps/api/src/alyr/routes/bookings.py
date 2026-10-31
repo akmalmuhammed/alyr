@@ -35,6 +35,7 @@ router = APIRouter(prefix="/api", tags=["bookings"])
 _STATUS_FOR = {
     "unknown_customer": 404, "unknown_service": 404, "not_free": 409,
     "unknown_resource": 404, "last_resource": 409, "bad_deposit": 422, "bad_time": 422,
+    "service_needs_someone": 409,
 }
 
 
@@ -63,6 +64,10 @@ class ServiceChange(BaseModel):
         default=None, ge=0, le=10_000_000,
         description="Dirhams for a fixed deposit, 1 to 100 for a percentage of the price",
     )
+    resource_ids: list[UUID] | None = Field(
+        default=None, max_length=50,
+        description="The people or chairs that do it; empty means all, none leaves it as it is",
+    )
 
 
 class NewService(BaseModel):
@@ -70,6 +75,12 @@ class NewService(BaseModel):
     name_ar: str = Field(default="", max_length=120)
     duration_minutes: int = Field(ge=5, le=600)
     price: int = Field(default=0, ge=0, description="In dirhams: 100 is QAR 1")
+    deposit_kind: Literal["none", "fixed", "percent"] = "none"
+    deposit_value: int = Field(default=0, ge=0, le=10_000_000)
+    resource_ids: list[UUID] = Field(
+        default_factory=list, max_length=50,
+        description="The people or chairs that do it; empty means all of them",
+    )
 
 
 class NewResource(BaseModel):
@@ -94,6 +105,10 @@ class Active(BaseModel):
     active: bool
 
 
+class Order(BaseModel):
+    ids: list[UUID] = Field(max_length=200, description="Every one of them, in the new order")
+
+
 class Period(BaseModel):
     weekday: int = Field(ge=0, le=6, description="0 is Sunday, 6 is Saturday")
     opens: str = Field(pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
@@ -102,6 +117,18 @@ class Period(BaseModel):
 
 class Week(BaseModel):
     periods: list[Period] = Field(max_length=28)
+
+
+class NewClosure(BaseModel):
+    first: date = Field(description="The first day closed, on the shop's own calendar")
+    last: date = Field(description="The last day closed, the same as the first for one day")
+    resource_id: UUID | None = Field(
+        default=None, description="One person or chair's time off; none closes the whole shop"
+    )
+    reason: str = Field(
+        default="", max_length=120, description="Shown to customers on a whole-shop closure"
+    )
+    reason_ar: str = Field(default="", max_length=120)
 
 
 class Outcome(BaseModel):
@@ -153,7 +180,7 @@ class Assignment(BaseModel):
 def _refuse(error: service.BookingError) -> HTTPException:
     return HTTPException(
         status_code=_STATUS_FOR.get(error.code, 422),
-        detail={"code": error.code, "message": str(error)},
+        detail={"code": error.code, "message": str(error), **error.data},
     )
 
 
@@ -198,6 +225,11 @@ async def booking_page(
     async with request.app.state.db.tenant(shop["id"]) as conn:
         services = await service.list_services(conn, only_active=True)
         resources = await _public_resources(conn)
+        # Who does each service, so the page offers only them (a service the shop limited to
+        # one chair is not offered with the others).
+        by_service = await service.doers(conn)
+        for one in services:
+            one["doers"] = by_service.get(one["id"], [])
         terms = await deposits.shop_terms(conn)
         customer = None
         if link is not None:
@@ -211,10 +243,17 @@ async def booking_page(
                 state = "invalid"  # a link whose customer is gone
         # So a customer who cannot book here can be sent to the shop's chat.
         whatsapp = await conn.fetchval("select whatsapp_number from shop_settings") or ""
+        # The days the whole shop is closed, so the page can say why a day has no times. A
+        # person's own time off is not shown: that person's times are simply not offered.
+        closed = [c for c in await service.list_closures(conn) if c["resource"] is None]
     return {
         "shop": {"name": shop["name"], "name_ar": shop["name_ar"],
                  "timezone": shop["timezone"], "whatsapp": whatsapp},
         "services": services, "resources": resources, "deposit_terms": terms,
+        "closed_days": [
+            {"first": c["first"], "last": c["last"], "reason": c["reason"],
+             "reason_ar": c["reason_ar"]} for c in closed
+        ],
         # Card payments go live with the shop's own payment provider; until then the pay link
         # opens ALYR's test page, and the page says so.
         "payments_live": False,
@@ -233,9 +272,10 @@ async def times(
     try:
         async with request.app.state.db.tenant(shop["id"]) as conn:
             free = await service.free_times(conn, service_id, day, resource_id)
+            closed = await service.shop_closed_on(conn, day)
     except service.BookingError as error:
         raise _refuse(error) from error
-    return {"day": day.isoformat(), "times": [t.isoformat() for t in free]}
+    return {"day": day.isoformat(), "times": [t.isoformat() for t in free], "closed": closed}
 
 
 @public.post("/{slug}",
@@ -339,15 +379,47 @@ async def cancel(
     staff: Staff = Depends(current_staff),
 ) -> dict:
     async with request.app.state.db.tenant(staff.tenant_id) as conn:
-        if not await service.cancel(
+        done = await service.cancel_booking(
             conn, request.app.state.outbound, booking_id, actor=team.actor_of(staff),
             refund=body.refund if body else None,
-        ):
-            raise HTTPException(status_code=404, detail="booking not found or already finished")
-        state = await conn.fetchval(
-            "select deposit_state from bookings where id = $1", booking_id
         )
-    return {"status": "cancelled", "deposit_state": state}
+        if done is None:
+            raise HTTPException(status_code=404, detail="booking not found or already finished")
+    return {"status": "cancelled", **done}
+
+
+@router.get("/bookings/customers")
+async def booking_customers(
+    request: Request, q: str = Query(default="", max_length=60),
+    tenant_id: UUID = Depends(current_tenant),
+) -> dict:
+    """Customers of the shop matching a name or part of a number, for the desk to choose one."""
+    async with request.app.state.db.tenant(tenant_id) as conn:
+        return {"customers": await service.find_customers(conn, q)}
+
+
+@router.get("/bookings/{booking_id}/times")
+async def booking_times(
+    booking_id: UUID, day: date, request: Request, resource_id: UUID | None = None,
+    tenant_id: UUID = Depends(current_tenant),
+) -> dict:
+    """Free start times on a day for a booking being moved: its own service, the person or
+    chair asked for or anyone, and its own time not counted against it. Staff may still choose
+    any other minute; these are the times the page would offer."""
+    async with request.app.state.db.tenant(tenant_id) as conn:
+        found = await conn.fetchrow(
+            "select service_id from bookings where id = $1 and status = 'booked'", booking_id
+        )
+        if found is None:
+            raise HTTPException(status_code=404, detail="booking not found")
+        try:
+            free = await service.free_times(
+                conn, found["service_id"], day, resource_id, ignore_booking=booking_id
+            )
+        except service.BookingError:
+            free = []  # the service has been hidden since: nothing to suggest, staff can still type
+        closed = await service.shop_closed_on(conn, day)
+    return {"day": day.isoformat(), "times": [t.isoformat() for t in free], "closed": closed}
 
 
 @router.post("/bookings/{booking_id}/move")
@@ -432,20 +504,67 @@ async def assign(
     return {"assigned_to": str(body.user_id) if body.user_id else None}
 
 
+@router.get("/closures")
+async def closures(request: Request, tenant_id: UUID = Depends(current_tenant)) -> dict:
+    """The shop's days off that are not over: holidays and closures, and a person's or chair's
+    time off, each with the bookings still standing inside it."""
+    async with request.app.state.db.tenant(tenant_id) as conn:
+        return {
+            "today": (await service.shop_today(conn)).isoformat(),
+            "closures": await service.list_closures(conn),
+        }
+
+
+@router.post("/closures", dependencies=[Depends(require_manager)])
+async def add_closure(
+    body: NewClosure, request: Request, tenant_id: UUID = Depends(current_tenant)
+) -> dict:
+    try:
+        async with request.app.state.db.tenant(tenant_id) as conn:
+            made = await service.add_closure(
+                conn, body.first, body.last, body.resource_id, body.reason, body.reason_ar
+            )
+            return {
+                "closure": made, "today": (await service.shop_today(conn)).isoformat(),
+                "closures": await service.list_closures(conn),
+            }
+    except service.BookingError as error:
+        raise _refuse(error) from error
+
+
+@router.delete("/closures/{closure_id}", dependencies=[Depends(require_manager)])
+async def remove_closure(
+    closure_id: UUID, request: Request, tenant_id: UUID = Depends(current_tenant)
+) -> dict:
+    async with request.app.state.db.tenant(tenant_id) as conn:
+        if not await service.remove_closure(conn, closure_id):
+            raise HTTPException(status_code=404, detail="day off not found")
+        return {
+            "today": (await service.shop_today(conn)).isoformat(),
+            "closures": await service.list_closures(conn),
+        }
+
+
 @router.get("/services")
 async def services(request: Request, tenant_id: UUID = Depends(current_tenant)) -> dict:
+    """Every service, hidden ones too, each with who does it and the bookings still to come."""
     async with request.app.state.db.tenant(tenant_id) as conn:
-        return {"services": await service.list_services(conn)}
+        return {"services": await service.list_services(conn, detail=True)}
 
 
 @router.post("/services", dependencies=[Depends(require_manager)])
 async def add_service(
     body: NewService, request: Request, tenant_id: UUID = Depends(current_tenant)
 ) -> dict:
-    async with request.app.state.db.tenant(tenant_id) as conn:
-        return {"id": await service.add_service(
-            conn, body.name, body.name_ar, body.duration_minutes, body.price
-        )}
+    try:
+        async with request.app.state.db.tenant(tenant_id) as conn:
+            new_id = await service.add_service(
+                conn, body.name, body.name_ar, body.duration_minutes, body.price,
+                body.deposit_kind, body.deposit_value, body.resource_ids,
+            )
+            return {"id": new_id, "services": await service.list_services(conn, detail=True)}
+    except service.BookingError as error:
+        raise _refuse(error) from error
 
 
 @router.patch("/services/{service_id}", dependencies=[Depends(require_manager)])
@@ -457,10 +576,10 @@ async def change_service(
         async with request.app.state.db.tenant(tenant_id) as conn:
             if not await service.update_service(
                 conn, service_id, body.name, body.name_ar, body.duration_minutes, body.price,
-                body.deposit_kind, body.deposit_value,
+                body.deposit_kind, body.deposit_value, body.resource_ids,
             ):
                 raise HTTPException(status_code=404, detail="service not found")
-            return {"services": await service.list_services(conn)}
+            return {"services": await service.list_services(conn, detail=True)}
     except service.BookingError as error:
         raise _refuse(error) from error
 
@@ -473,7 +592,7 @@ async def set_active(
     async with request.app.state.db.tenant(tenant_id) as conn:
         if not await service.set_service_active(conn, service_id, body.active):
             raise HTTPException(status_code=404, detail="service not found")
-    return {"active": body.active}
+        return {"active": body.active, "services": await service.list_services(conn, detail=True)}
 
 
 def _managers_only(staff: Staff) -> None:
@@ -484,9 +603,10 @@ def _managers_only(staff: Staff) -> None:
 
 @router.get("/resources")
 async def resources(request: Request, tenant_id: UUID = Depends(current_tenant)) -> dict:
-    """The shop's chairs, people or rooms. Empty means the shop takes one customer at a time."""
+    """The shop's chairs, people or rooms, each with the services it does and the bookings still
+    to come with it. Empty means the shop takes one customer at a time."""
     async with request.app.state.db.tenant(tenant_id) as conn:
-        return {"resources": await service.list_resources(conn)}
+        return {"resources": await service.list_resources(conn, detail=True)}
 
 
 @router.post("/resources")
@@ -494,9 +614,15 @@ async def add_resource(
     body: NewResource, request: Request, staff: Staff = Depends(current_staff)
 ) -> dict:
     _managers_only(staff)
-    async with request.app.state.db.tenant(staff.tenant_id) as conn:
-        resource_id = await service.add_resource(conn, body.name, body.name_ar, body.kind)
-        return {"id": resource_id, "resources": await service.list_resources(conn)}
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            # The first person or chair takes over the bookings still to come: say how many.
+            adopted = await service.adoptable(conn)
+            resource_id = await service.add_resource(conn, body.name, body.name_ar, body.kind)
+            return {"id": resource_id, "adopted": adopted,
+                    "resources": await service.list_resources(conn, detail=True)}
+    except service.BookingError as error:
+        raise _refuse(error) from error
 
 
 @router.patch("/resources/{resource_id}")
@@ -510,7 +636,21 @@ async def change_resource(
             conn, resource_id, body.name, body.name_ar, body.kind
         ):
             raise HTTPException(status_code=404, detail="resource not found")
-        return {"resources": await service.list_resources(conn)}
+        return {"resources": await service.list_resources(conn, detail=True)}
+
+
+@router.put("/resources/order")
+async def set_resources_order(
+    body: Order, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    """Put the people and chairs in a new order (every one, once)."""
+    _managers_only(staff)
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            await service.set_resource_order(conn, body.ids)
+            return {"resources": await service.list_resources(conn, detail=True)}
+    except service.BookingError as error:
+        raise _refuse(error) from error
 
 
 @router.post("/resources/{resource_id}/active")
@@ -540,6 +680,19 @@ async def set_resource_hours(
             ):
                 raise HTTPException(status_code=404, detail="resource not found")
             return {"resources": await service.list_resources(conn)}
+    except service.BookingError as error:
+        raise _refuse(error) from error
+
+
+@router.put("/services/order", dependencies=[Depends(require_manager)])
+async def set_services_order(
+    body: Order, request: Request, tenant_id: UUID = Depends(current_tenant)
+) -> dict:
+    """Put the services in a new order (every one, hidden too, once each)."""
+    try:
+        async with request.app.state.db.tenant(tenant_id) as conn:
+            await service.set_service_order(conn, body.ids)
+            return {"services": await service.list_services(conn, detail=True)}
     except service.BookingError as error:
         raise _refuse(error) from error
 

@@ -1,5 +1,5 @@
 /* The pieces the homepage and the product pages share (ProductKit.tsx, HomePage.tsx): the
-   type and rhythm tokens, section rules with their crosses, the questions, and the product
+   type and rhythm tokens, section rules, the questions, and the product
    page template of 01-research.md D (the bar under the header, the screen with callouts,
    "Not yet" under a dashed rule, "Works with the rest of ALYR"). Shared tokens, the
    button, header, captions, fold, closing call and footer are in site.css; the drawings in
@@ -26,17 +26,8 @@
 /* a heading whose lines break where its words say (Text.tsx `lines`) */
 .line { display: block; }
 
-/* A section rule with a cross at each end: the construction grid showing through. */
-.rule { position: relative; height: 1px; background: var(--line); margin-bottom: clamp(2rem, 4vw, 3.5rem); }
-.rule i { position: absolute; top: -4px; width: 9px; height: 9px; }
-.rule i:first-child { inset-inline-start: -4px; }
-.rule i:last-child { inset-inline-end: -4px; }
-.rule i::before, .rule i::after { content: ""; position: absolute; background: var(--line-strong); }
-.rule i::before { inset: 4px 0 auto; height: 1px; }
-.rule i::after { inset: 0 auto 0 4px; width: 1px; }
-/* dashed = a slot waiting to become true */
-.rule-dashed { height: 0; background: none; border-top: 1px dashed var(--line-strong); margin-bottom: 1.5rem; }
-.rule-dashed i { top: -5px; }
+/* A section rule: one plain hairline (the crosses at its ends went with ALY-303, D-150). */
+.rule { height: 1px; background: var(--line); margin-bottom: clamp(2rem, 4vw, 3.5rem); }
 
 /* ------------------------------------------------------------- questions */
 .faq-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--col-gap); row-gap: 2rem; align-items: start; }

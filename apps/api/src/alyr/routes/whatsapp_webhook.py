@@ -11,6 +11,7 @@ from alyr.channels.meta import (
     verify_signature,
 )
 from alyr.config import get_settings
+from alyr.db import patient
 
 router = APIRouter(prefix="/webhooks/whatsapp", tags=["whatsapp"])
 
@@ -45,6 +46,9 @@ async def verify(
 
 @router.post("")
 async def receive(request: Request) -> dict:
+    # Meta's webhook waits for a database connection like a customer's page does, but is not turned
+    # away when others queue: it only writes a row, and a refused one comes back later (D-132).
+    patient.set(True)
     raw = await _body(request)
     signature = request.headers.get("x-hub-signature-256")
     if not verify_signature(get_settings().meta_app_secret, raw, signature):

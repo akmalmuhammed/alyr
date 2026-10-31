@@ -39,6 +39,16 @@ Last updated 31 Oct 2026 (Meta App Review submitted, ALY-262), on top of 30 Oct 
   (Tech Provider ALY-52, App Review ALY-262, the configuration, `docs/runbooks/embedded-signup.md`). Not done: renewing a
   business's expiring token, the coexistence message sync.
 
+- **Browser journeys and a read-only production check (ALY-122), in a pull request, nothing applied to
+  production.** `tests/e2e` (Playwright, run by the new workflow `.github/workflows/e2e.yml`, outside `ci`
+  so the release gate, which reads the whole `ci` run, does not wait for it) proves sign-up to "ALYR is
+  preparing your price" (English, Arabic, 390 px), sign-in with `?next=`, the six products, a customer's
+  order and booking reaching the owner, and the closed door of `/ops`. `scripts/smoke-production.sh` is the
+  post-deploy check: GET requests only, no sign-in, no write (`docs/runbooks/release.md`). **Waiting on the
+  founder (Needs Akmal):** nothing to switch on; later, add `e2e` to the required checks once it has run
+  green five times in a row on `main`. The API's test coverage has a floor too (workflow `coverage`: 94.08% measured on
+  31 Oct, floor 93, how to raise it in the same runbook). Not done: Firefox and Safari, real WhatsApp, email and payments.
+
 - **Cloudflare edge and DNS of alyr.qa hardened (ALY-116 first layer, CLD-7, CLD-18, D-113), live since 30 Oct,
   recorded in a pull request.** Always Use HTTPS, minimum TLS 1.2, SSL Full (strict), CAA for the three CAs
   Cloudflare issues from, SPF without the retired Email Routing include, and response-header rules that give the
