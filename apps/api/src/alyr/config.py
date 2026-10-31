@@ -219,6 +219,14 @@ class Settings(BaseSettings):
     erase_after_days: int = 60
     erase_max_per_run: int = 3
 
+    # The second factor for ALYR's own staff (ALY-125, D-136). OFF: staff may set up an
+    # authenticator app and use it, and nothing asks for it. ON: every back-office route refuses
+    # a staff sign-in that has not passed the factor, and a member of staff with none cannot
+    # enrol by themselves (the break-glass opens enrolment). Switch it on only after the founder
+    # has enrolled and kept the recovery codes (docs/runbooks/staff-sign-in.md); take the setting
+    # off again and it is as if it never was.
+    staff_2fa: bool = False
+
     # Per shop, to start (D-039; our estimate). A cap stops new items or photos with a
     # clear message and never deletes anything.
     catalog_max_items: int = 1000

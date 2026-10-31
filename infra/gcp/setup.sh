@@ -177,6 +177,15 @@ api_reads_edge_address() {
   case "$live" in *'"ALYR_CLIENT_IP_HEADER"'*) return 0 ;; *) return 1 ;; esac
 }
 
+# Whether the live API requires the second factor of ALYR's staff (ALY-125, D-136). It is set by
+# `staff-access.sh require` and removed by `unrequire`. A full deploy (`apps`) replaces every
+# setting, so without this a laptop deploy would quietly turn the requirement off.
+api_requires_second_factor() {
+  local live
+  live="$(value run services describe alyr-api --region="$REGION" --format=json 2>/dev/null || true)"
+  case "$live" in *'"ALYR_STAFF_2FA"'*) return 0 ;; *) return 1 ;; esac
+}
+
 case "${1:-}" in
   infra)
     [ -n "$BILLING" ] || { echo "setup: set ALYR_BILLING_ACCOUNT (gcloud billing accounts list) for the budget" >&2; exit 1; }
@@ -478,6 +487,11 @@ for s in json.load(sys.stdin).get('data', []):
       api_env="$api_env,ALYR_CLIENT_IP_HEADER=$CLIENT_IP_HEADER"
       api_secrets="$api_secrets,ALYR_CLIENT_IP_KEYS=client-ip-key:latest"
       echo "Keeping the API's visitor-address settings."
+    fi
+
+    if api_requires_second_factor; then
+      api_env="$api_env,ALYR_STAFF_2FA=true"
+      echo "Keeping the second factor required for ALYR staff."
     fi
 
     echo "The API, the worker and the web app..."

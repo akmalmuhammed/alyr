@@ -87,6 +87,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-121 | The owner is emailed once when ALYR publishes their price, ahead of the rest of the payment path: English or Arabic as they signed up, claimed on the quote so it never goes twice, nothing sent for a price they already saw or an address that cannot be real. The part of D-093 that shipped on its own | Proposed (the founder signs off the wording) |
 | D-122 | ALYR's own business keeps no test line: the "Try it" step says so and offers to skip, and the one-off first-admin job does not create one | Proposed |
 | D-135 | ALYR staff sign-in: ten wrong codes in a day lock the account (the right code too, same words as any refusal), and every staff sign-in is written to the audit log with an email when the device or the address is new | Proposed |
+| D-136 | ALYR staff get a second factor in the app: an authenticator app (RFC 6238) with ten one-time recovery codes, enrolment before enforcement, enforcement behind `ALYR_STAFF_2FA` (off), a code that works once, a new session cookie after passing it, and a founder-run break-glass | Proposed |
 | D-113 | The Cloudflare zone is hardened with what the Free plan offers and the state is written down: HTTPS only, minimum TLS 1.2, strict SSL, CAA, a trimmed SPF and response-header rules for the API and media host are live; the edge rate-limit rule waits because Free has only Block; no Access until Zero Trust is onboarded; DMARC stays `none` until the reports are read, never `reject` | Proposed |
 
 ---
@@ -2097,3 +2098,29 @@ Without it, analytics is off everywhere.
 **Chosen over** locking by address (the address is not trustworthy behind our own proxies and a mobile network moves), a cap that only slows (the audit asks for a lock), and a note only on a new device (an unknown address on a known device is the stolen-session case).
 
 **Revisit when** a second staff member exists, an owner account needs the same cap, or the lock is used against the founder once.
+
+---
+
+## D-136 · A second factor for ALYR staff in the app: an authenticator app and recovery codes, enrolled before it is enforced, enforced behind a setting that is off until the founder has enrolled
+**Date** 31 Oct 2026 · **Status** Proposed (built and tested; part 2 of 3 of ALY-125) · Linear ALY-125 · Spec `specs/047-back-office-hardening/spec.md` · Migration 0096 · Builds on D-135
+
+**The decision.**
+- **What it is.** RFC 6238 TOTP (HMAC-SHA1, 30-second steps, six digits: what every authenticator app speaks), written in `core/second_factor.py` with the standard library and `cryptography`, no new dependency. Ten recovery codes of twelve characters (60 bits, no 0, 1, I or O), each works once.
+- **Where it is enforced.** On the `platform_admin` dependency (`routes/admin.py`), which every back-office route uses: with `ALYR_STAFF_2FA` on, a staff session must have passed the factor (`sessions.second_factor_at`, not earlier than the factor's `confirmed_at`, so replacing or removing the factor ends the sessions that relied on the old one). The routes that set it up (`/api/admin/factor`) use `staff_member`, the same check without the factor. The workspace and the person's own sign-in are not held up by it.
+- **No lockout, by design.** (1) Enrolment is possible before enforcement and checked with *Check my app* while nothing asks for it. (2) `ALYR_STAFF_2FA` defaults to off, and `staff-access.sh require` refuses until every member of staff has an authenticator and a recovery code (`staff_breakglass ready`). (3) Recovery codes are shown once. (4) Unsetting the setting is instant, needs only the founder's Google Cloud sign-in, and puts everything back (`unrequire`). (5) The founder-run break-glass can reset a factor and open a 30-minute enrolment window. (6) A replacement keeps the working factor until its first right code. (7) A full laptop deploy keeps the setting (`setup.sh apps`).
+- **Hostile cases, each tested.** A code works once (the newest accepted 30-second step is kept; two tries at once spend it once); one step of clock drift either way, not two; five wrong in ten minutes or twenty in a day pause the account, counted behind an advisory lock; passing the factor gives the session a new cookie and the old one dies (a cookie planted before sign-in is worth nothing); replacing, new recovery codes and turning off all need a current code even from a verified session; turning off is refused outright while required; while required, a member of staff with none cannot enrol by themselves (an enrolment window is opened by the break-glass only), so someone who only reads the mailbox cannot add their own phone.
+- **The secret is sealed**, AES-256-GCM under a key derived (HKDF) from `ALYR_LINK_SECRET` with the email bound in; recovery codes are keyed hashes. No new secret to create or mount. Rotating `ALYR_LINK_SECRET` makes the sealed secrets unreadable; the runbook says what to do.
+- **Screens** (`/ops/security`, and the door the console draws while the second step is not done), in English and Arabic with a switch, kept with the workspace's language choice. The setup square is drawn in the browser with the QR library the shop's QR cards already use (`qrcode-generator`); the secret and the recovery codes live in the page's memory only while shown.
+
+**Why.** After D-135 a stranger needs the mailbox and has ten guesses a day; with the mailbox alone they still have every client's data. A second factor that the mailbox does not hold closes that, in the app, without waiting for Cloudflare Access (ALY-219, which can stand beside it).
+
+**Costs and risks, said plainly.**
+- **It is a rule the application keeps.** The application's database role can still write `sessions` and `staff_factors`, so someone who already runs SQL as the application can mint a verified session. Part 3 (separate database roles, SEC-5) is what narrows that; until it is applied, this stops the stolen-mailbox case, not the compromised-application case.
+- **One person holds it.** The founder is the only staff account. A lost phone with no recovery code is a call to the break-glass or to `unrequire`, both founder-run. That is the point, and the cost.
+- **Recovery codes are as safe as where they are kept.** The screen offers a download as a text file; the founder is told to keep them in a password manager.
+- **`ALYR_LINK_SECRET` is now also the key to the authenticators.** A rotation is a bigger event than it was; `secret-rotation.md` says so.
+- **TOTP is phishable.** A fake sign-in page that relays the code in time wins. Passkeys are the answer and are not built.
+
+**Chosen over** SMS (SIM swapping, and a Qatar sender ID is a project), a code by email as the second factor (the same mailbox), a separate sealing key (a secret to create, mount and rotate for one account), enforcing at sign-in instead of on `platform_admin` (several doors sign a person in; the dependency is the one place every back-office request passes), and "enrol on first use" when enforcement is on (it gives the first stranger with the mailbox their own phone).
+
+**Revisit when** a second member of staff exists (enrolment from the door needs the break-glass today), passkeys are wanted, or part 3 is applied (the check can then move into the database).

@@ -29,6 +29,7 @@ from alyr.core import (
     price_notice,
     pricing,
     readiness,
+    second_factor,
     subscription,
     terms,
     welcome,
@@ -197,9 +198,11 @@ class NewStaff(BaseModel):
     name: str = Field(default="", max_length=120)
 
 
-async def platform_admin(request: Request, staff: Staff = Depends(current_staff)) -> Staff:
-    """The caller must be signed in as ALYR staff. On a local machine with the open demo
-    on, the unsigned demo user counts as ALYR staff so the back office can be tried."""
+async def staff_member(request: Request, staff: Staff = Depends(current_staff)) -> Staff:
+    """The caller must be signed in as ALYR staff, within the last 12 hours. On a local machine
+    with the open demo on, the unsigned demo user counts as ALYR staff so the back office can be
+    tried. This is the check without the second factor: the routes that set the second factor up
+    use it, because a person who has not passed it yet must be able to."""
     settings = get_settings()
     if staff.user_id is None:
         if settings.env == "local" and settings.demo_open:
@@ -220,6 +223,16 @@ async def platform_admin(request: Request, staff: Staff = Depends(current_staff)
             status_code=401,
             detail="sign in again: back-office sign-ins last "
             f"{backoffice.STAFF_SESSION_HOURS} hours",
+        )
+    return staff
+
+
+async def platform_admin(request: Request, staff: Staff = Depends(staff_member)) -> Staff:
+    """Every back-office route: ALYR staff, and, while `ALYR_STAFF_2FA` is on, a session that
+    has passed the second factor (ALY-125, D-136). Local demo: no person, no factor."""
+    if staff.user_id is not None:
+        await second_factor.require(
+            request, staff.email.lower(), request.cookies.get(auth.COOKIE, "")
         )
     return staff
 

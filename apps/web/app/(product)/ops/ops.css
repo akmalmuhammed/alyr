@@ -203,3 +203,42 @@
 .ops-terms ul { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; font-size: var(--ui-body-sm); }
 .ops-terms code { font-family: var(--font-ui-mono); font-size: var(--ui-small); }
 .ops-terms-open { color: var(--warn); }
+
+/* ── the second factor (ALY-125, D-136): the door, and the Security screen ───────────────
+   Plain tokens, so the door reads the same inside and outside the console's shell. Logical
+   properties only; the root carries lang and dir. */
+.fa-page { min-height: 100dvh; display: grid; place-items: center; padding: var(--space-6) 16px; background: var(--canvas); color: var(--text); font-family: var(--font-ui); }
+.fa-page[dir="rtl"], .fa-panel[dir="rtl"] { font-family: var(--font-ui-arabic); }
+.fa { display: grid; gap: var(--space-5); width: 100%; max-width: 34rem; min-width: 0; }
+.fa-panel { display: grid; gap: var(--space-5); max-width: 40rem; min-width: 0; }
+.fa-top, .fa-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
+.fa-head > div { display: grid; gap: var(--space-2); min-width: 0; }
+.fa-brand { font-weight: var(--weight-semibold); letter-spacing: 0.06em; }
+.fa-title { margin: 0; font-size: var(--ui-heading); line-height: var(--leading-ui); font-weight: var(--weight-semibold); color: var(--text); text-wrap: balance; }
+.fa-text { margin: 0; color: var(--text-muted); font-size: var(--ui-body); line-height: var(--leading-ui); overflow-wrap: anywhere; }
+.fa-text.small { font-size: var(--ui-small); }
+.fa-form, .fa-block { display: grid; gap: var(--space-4); min-width: 0; }
+.fa-block { padding: var(--space-5); border-radius: 14px; background: var(--surface-subtle); box-shadow: 0 0 0 1px var(--hair) inset; }
+.fa-label { display: grid; gap: var(--space-2); font-size: var(--ui-small); color: var(--text-muted); }
+.fa-input { min-height: 44px; padding: 0 var(--space-4); border: 0; border-radius: 9px; background: var(--surface); color: var(--text); box-shadow: 0 0 0 1px var(--line-strong) inset; font: inherit; font-size: var(--ui-input); letter-spacing: 0.12em; font-variant-numeric: tabular-nums; text-align: start; min-width: 0; }
+.fa-input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.fa-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 var(--space-5); border: 0; border-radius: 9px; background: var(--surface); color: var(--text); box-shadow: 0 0 0 1px var(--line-strong) inset; font: inherit; font-size: var(--ui-body-sm); font-weight: var(--weight-medium); cursor: pointer; text-decoration: none; }
+.fa-btn.primary { background: var(--text); color: var(--surface); box-shadow: none; }
+.fa-btn.quiet { background: transparent; box-shadow: none; color: var(--text-muted); }
+.fa-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.fa-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.fa-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.fa-error { margin: 0; padding: var(--space-3) var(--space-4); border-radius: 10px; background: var(--bad-soft); color: var(--bad); font-size: var(--ui-body-sm); font-weight: var(--weight-medium); }
+.fa-ok { margin: 0; color: var(--ok); font-size: var(--ui-body-sm); font-weight: var(--weight-medium); }
+.fa-qr { width: min(100%, 15rem); aspect-ratio: 1; border-radius: 6px; overflow: hidden; background: var(--white); box-shadow: 0 0 0 1px var(--line-strong); }
+.fa-qr > svg { display: block; width: 100%; height: 100%; }
+.fa-key { margin: 0; font-family: var(--font-ui-mono); font-size: var(--ui-input); letter-spacing: 0.08em; overflow-wrap: anywhere; }
+.fa-codes { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: var(--space-2) var(--space-4); font-family: var(--font-ui-mono); font-size: var(--ui-body); }
+.fa-codes li { padding: var(--space-2) 0; border-bottom: 1px solid var(--hair); }
+.fa-check { display: flex; align-items: center; gap: var(--space-3); min-height: 44px; font-size: var(--ui-body-sm); }
+.fa-check input { width: 20px; height: 20px; accent-color: var(--text); }
+.fa-facts { margin: 0; display: grid; gap: var(--space-3); }
+.fa-facts > div { display: grid; gap: var(--space-1); padding-block: var(--space-3); border-bottom: 1px solid var(--hair); }
+.fa-facts dt { font-size: var(--ui-small); color: var(--text-muted); }
+.fa-facts dd { margin: 0; font-size: var(--ui-body); color: var(--text); }
+@media (max-width: 30rem) { .fa-block { padding: var(--space-4); } .fa-row .fa-btn { flex: 1 1 100%; } }

@@ -13,6 +13,8 @@ import "./ops.css";
 import { loginUrl } from "../login/next";
 import { api } from "./api";
 import { denial, type Denial } from "./denied";
+import { gateOf, isSecondFactorAnswer, type Gate } from "./factorLogic";
+import { FactorGate } from "./SecondFactor";
 
 type NavItem = { href: string; label: string; icon: string };
 const MAIN: NavItem[] = [
@@ -28,6 +30,7 @@ const SETTINGS: NavItem[] = [
   { href: "/ops/signup", label: "Sign-up", icon: "door" },
   { href: "/ops/terms", label: "Terms", icon: "audit" },
   { href: "/ops/staff", label: "Staff", icon: "staff" },
+  { href: "/ops/security", label: "Security", icon: "lock" },
   { href: "/ops/audit", label: "Audit log", icon: "audit" },
 ];
 
@@ -41,6 +44,7 @@ const PATHS: Record<string, string> = {
   templates: "M4 4h7v7H4z M13 4h7v7h-7z M4 13h7v7H4z M16.5 13v7 M13 16.5h7",
   door: "M14 3h5v18h-5 M10 17l5-5-5-5 M15 12H3",
   staff: "M12 3 4 6v5c0 5.2 3.4 8.4 8 10 4.6-1.6 8-4.8 8-10V6z",
+  lock: "M6 11V8a6 6 0 0 1 12 0v3 M5 11h14v10H5z M12 15v2",
   audit: "M9 4h10v16H5V8z M9 4v4H5 M9 13h6 M9 17h4",
   more: "M5 12h.01 M12 12h.01 M19 12h.01",
   out: "M10 17l-5-5 5-5 M5 12h12 M14 4h5v16h-5",
@@ -69,12 +73,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [me, setMe] = useState("");
   const [denied, setDenied] = useState<Denial | null>(null);
+  // The console asks for the second step and this sign-in has not done it (ALY-125).
+  const [gate, setGate] = useState<Gate | null>(null);
   const [more, setMore] = useState(false);
 
   useEffect(() => {
     const first = setTimeout(async () => {
       const answer = await api<{ me: string }>("/api/admin/staff");
-      if (answer.ok) { setMe(answer.data.me); setDenied(null); return; }
+      if (answer.ok) { setMe(answer.data.me); setDenied(null); setGate(null); return; }
+      if (isSecondFactorAnswer(answer.status, answer.data)) { setGate(gateOf(answer.data)); return; }
       setDenied(denial(answer.status, answer.error));
     }, 0);
     return () => clearTimeout(first);
@@ -91,6 +98,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
   }
+
+  if (gate) return <FactorGate gate={gate} />;
 
   if (denied) {
     return (
