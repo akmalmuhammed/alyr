@@ -5,6 +5,8 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+
+## v0.3.3 (31 Oct 2026)
 - The terms of service, the refund policy and a pricing page on the public site, in English and Arabic (ALY-301, D-124; no migration, no new dependency; built, not published until the site is published): `/terms`, `/refund` and `/pricing`, linked from the footer of every page with Privacy, and Pricing in the main navigation, for Paddle's domain review before card payments can open. The pricing page shows what ALYR costs each month by bank transfer in riyals (QAR 449 for the first product, QAR 50 for each added one) and by card in US dollars (USD 129 and USD 15), with no setup fee and ALYR Agent and ALYR Shelf included, and it appears whatever the homepage's price switch says (the homepage's price section stays off). The Arabic is a draft until the native review. The header gains room for a fifth link: on a laptop 62 to 68 rem wide the gaps close up, and the phone's menu takes over from 58 rem instead of 53.
 
 ## v0.3.2 (31 Oct 2026)
