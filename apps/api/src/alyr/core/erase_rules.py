@@ -107,6 +107,11 @@ RULES: dict[str, Rule] = {
         "work queued or done for the business: copies of its customers' messages",
         "jobs", "processed_messages",
     ),
+    **_delete(
+        "ALYR's own record of a demo-data load into the business (which rows it added, so a later "
+        "removal takes out exactly those); deleted with the business",
+        "demo_seed_runs",
+    ),
     # The business itself, last: every table above points at it.
     "tenants": Rule(
         DELETE, "the business's own row: its name, its address on the web, its settings",

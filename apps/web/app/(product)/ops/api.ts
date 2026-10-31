@@ -9,6 +9,8 @@ export type Business = {
   way: string; modules: string[]; products: string[]; onboarding_step: string; onboarded: boolean;
   steps: string[]; whatsapp_connected: boolean; open_requests: number; members: number;
   created_at: string; price_mode: string;
+  // Test business: demo data may be loaded (specs/063); whether a load is in the business now.
+  demo_data_allowed: boolean; demo_data_loaded: boolean;
 };
 
 export type Kind = "monthly" | "one_time";

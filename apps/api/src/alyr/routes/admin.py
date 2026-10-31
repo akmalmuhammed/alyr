@@ -133,6 +133,10 @@ class SwitchModule(BaseModel):
     enabled: bool
 
 
+class SwitchDemoData(BaseModel):
+    allowed: bool
+
+
 # The modules the back office switches for one business. The Catalog (ALYR Shelf) and Documents
 # (ALYR Docs) are products since D-123, so an owner or admin switches them on the Products
 # screen too; this is how ALYR does it for one business: the Catalog is on for every business
@@ -411,6 +415,27 @@ async def switch_module(
             business_id, business_id=business_id, detail={"module": module},
         )
     return {"module": module, "enabled": body.enabled}
+
+
+@router.post("/businesses/{business_id}/demo-data")
+async def switch_demo_data(
+    business_id: UUID, body: SwitchDemoData, request: Request,
+    staff: Staff = Depends(platform_admin),
+) -> dict:
+    """Mark a business as a test or demo business, or take the mark off. Only a marked business
+    can be filled with made-up data by `python -m alyr.seed_into_business`. Switching it off is
+    always allowed; it deletes nothing (demo data already loaded is removed by the command)."""
+    async with _back_office(request) as conn:
+        if not await conn.fetchval(
+            "select admin_set_demo_data_allowed($1, $2, $3)",
+            business_id, body.allowed, _by(staff),
+        ):
+            raise HTTPException(status_code=404, detail="no such business")
+        await backoffice.audit(
+            conn, staff, "business.demo_data_on" if body.allowed else "business.demo_data_off",
+            "business", business_id, business_id=business_id,
+        )
+    return {"demo_data_allowed": body.allowed}
 
 
 # ── pricing and onboarding switches (D-032) ───────────────

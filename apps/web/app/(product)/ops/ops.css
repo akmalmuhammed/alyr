@@ -230,3 +230,17 @@
   .wl-checks li { grid-template-columns: 1.4rem minmax(0, 1fr); }
   .wl-checks li span:last-child { grid-column: 2; }
 }
+
+/* The test-business switch for one business (specs/063, D-150): English, then Arabic beneath. */
+.ops-demo { display: grid; gap: var(--space-1); margin-block-end: var(--space-3); min-width: 0; }
+.ops-demo-switch { display: flex; align-items: flex-start; gap: var(--space-2); min-height: 44px; padding-block: var(--space-1); font-size: var(--ui-body-sm); cursor: pointer; }
+.ops-demo-switch input { flex: none; inline-size: 20px; block-size: 20px; margin: 0; margin-block-start: 2px; accent-color: var(--text); cursor: pointer; }
+.ops-demo-switch input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.ops-demo-switch > span, .ops-demo-help, .ops-demo-loaded, .ops-demo-status small { display: grid; gap: var(--space-1); min-width: 0; }
+.ops-demo-switch > span { font-weight: var(--weight-medium); }
+.ops-demo-help, .ops-demo-loaded, .ops-demo-status { margin: 0; font-size: var(--ui-caption); line-height: var(--leading-ui); color: var(--text-muted); max-inline-size: 40rem; }
+.ops-demo-status small { font-size: inherit; }
+.ops-demo-loaded { padding-inline-start: var(--space-2); border-inline-start: 2px solid var(--text); color: var(--text); font-weight: var(--weight-medium); }
+.ops-demo [lang="ar"] { font-family: var(--font-ui-arabic); }
+.ops-demo [lang="ar"], .ops-demo [lang="en"] { text-align: start; }
+.ops-detail h3 [lang="ar"] { font-family: var(--font-ui-arabic); text-transform: none; letter-spacing: 0; }
