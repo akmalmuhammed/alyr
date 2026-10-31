@@ -4,7 +4,7 @@ listed in (which is also who "anyone" takes first), and what the first one added
 Through the real routes and PostgreSQL."""
 
 from alyr.modules.bookings import service
-from alyr.seed import AGENT_EMAIL
+from alyr.seed import AGENT_EMAIL, DEMO_TENANT_ID
 from test_booking_hours_closures import free
 from test_booking_resources import add, chairs, customers, who
 from test_bookings import PAGE, a_working_day, book, service_id
@@ -89,8 +89,10 @@ def test_the_first_person_added_takes_over_the_bookings_still_to_come_and_says_h
     sid = service_id(client)
     a, b = customers(client, 2)
     slots = free(client, sid, a_working_day())
+    # This shop's own: the database also holds other shops' bookings from earlier tests.
     already = owner_sql(
-        "select count(*)::int as n from bookings where status = 'booked' and ends_at > now()"
+        "select count(*)::int as n from bookings where tenant_id = $1 and status = 'booked' "
+        "and ends_at > now()", DEMO_TENANT_ID
     )[0]["n"]
     assert book(client, sid, slots[0], a).status_code == 200
     assert book(client, sid, slots[4], b).status_code == 200
