@@ -57,8 +57,8 @@ Do this only after the release that carries it is live. Nothing here is done by 
 2. **Test it without risk.** On **Security**, type a fresh code and press *Check my app* (the console
    does not ask for it yet, so nothing can lock you out). Sign out and in again to see that the code
    from the mailbox still works as before.
-3. **Check nobody would be locked out.** `infra/gcp/staff-access.sh ready` (the job first: `plan v0.x.y`,
-   then `deploy v0.x.y`, once). It prints each member of staff with *enrolled* and the recovery codes
+3. **Check nobody would be locked out.** `infra/gcp/staff-access.sh ready` (the job first: `plan <image tag>`,
+   then `deploy <image tag>`, with the commit the API runs; see "One time, to make the job" below). It prints each member of staff with *enrolled* and the recovery codes
    left, and fails if any has no authenticator or no recovery code.
 4. **Require it.** `infra/gcp/staff-access.sh require`. It runs `ready` again, asks you to type
    `REQUIRE`, then sets `ALYR_STAFF_2FA=true` on `alyr-api` (a new revision; a minute, no downtime).
@@ -112,7 +112,10 @@ and Google logs who started it. Its commands:
 | `reset-factor <email> <reason>` | Removes the authenticator and the recovery codes, forgets its wrong codes, and **ends every session of that person** |
 | `open-enrolment <email> <reason>` | For 30 minutes, lets the person set up an authenticator from the door while it is required. Refused while they have a working one |
 
-One time, to make the job (it has no schedule and does nothing until started):
+To make the job (it has no schedule and does nothing until started). The job runs the API's image,
+so run `deploy` again after any release that changes `staff_breakglass.py`: the job made for
+v0.3.3 (`50e6e6dc…`) knows `status` and `clear-lock` only, and `ready`, `reset-factor` and
+`open-enrolment` need the job made from the release that brings them:
 
 ```bash
 infra/gcp/staff-access.sh plan <image tag>     # prints what deploy would do; calls nothing
