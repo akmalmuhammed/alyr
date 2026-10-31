@@ -87,6 +87,9 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-119 | The public site can lead with "Try it free" (the self-serve sign-up) with "Book a check-up" beside it, behind a build-time switch that is off until the founder turns it on at publish time | Proposed |
 | D-121 | The owner is emailed once when ALYR publishes their price, ahead of the rest of the payment path: English or Arabic as they signed up, claimed on the quote so it never goes twice, nothing sent for a price they already saw or an address that cannot be real. The part of D-093 that shipped on its own | Proposed (the founder signs off the wording) |
 | D-122 | ALYR's own business keeps no test line: the "Try it" step says so and offers to skip, and the one-off first-admin job does not create one | Proposed |
+| D-145 | A shop's WhatsApp line is checked against Meta, tested with a message to the shop's own staff and kept on a trail; staff see every line on one screen (`/ops/whatsapp`, English and Arabic) | Proposed |
+| D-135 | ALYR staff sign-in: ten wrong codes in a day lock the account (the right code too, same words as any refusal), and every staff sign-in is written to the audit log with an email when the device or the address is new | Proposed |
+| D-125 | Requests from public authorities follow three written rules: check it is lawful, give the minimum, keep a record; how to challenge one waits for a lawyer | Accepted |
 | D-113 | The Cloudflare zone is hardened with what the Free plan offers and the state is written down: HTTPS only, minimum TLS 1.2, strict SSL, CAA, a trimmed SPF and response-header rules for the API and media host are live; the edge rate-limit rule waits because Free has only Block; no Access until Zero Trust is onboarded; DMARC stays `none` until the reports are read, never `reject` | Proposed |
 | D-140 | An owner or admin manages the services from the Bookings screen (add, change names, length, price, deposit and who does it, hide and show; one part of Set up bookings), checked in the page's words and again in the API, and a booking keeps the price it was made at (migration 0100) | Proposed |
 | D-141 | Opening hours are a week a day at a time with a break as two periods, and the shop or one person can have days off (`booking_closures`, migration 0101) that customers cannot book and that never cancel a booking | Proposed |
@@ -2079,6 +2082,10 @@ Without it, analytics is off everywhere.
 
 **Revisit when** the founder prices Docs, ALY-143 (the accountant export, statements) or ALY-147 (ALYR's own invoices) is built and the words may grow, or Shelf is made included.
 
+---
+
+---
+
 ## D-124 · The terms, the refund policy and the pricing page are public; the pricing page shows its prices whatever the offer switch says
 **Date** 31 Oct 2026 · **Status** Accepted (the product lead, on the founder's instruction of 31 Oct 2026 to go ahead and do the right thing for the business; the open choices were settled in `docs/company/paddle/README.md`) · Linear ALY-301 · Follows D-074 (card payments through Paddle), D-092 (no setup fee) and D-034 (prices off the public site until the commercial registration)
 
@@ -2097,6 +2104,46 @@ Without it, analytics is off everywhere.
 
 **Revisit when** the lawyer has read the pages, Paddle answers the domain review, ALYR Docs is priced, or the homepage's offer copy is brought in line with D-092 and the switch is turned on.
 
+---
+
+## D-125 · Requests from public authorities follow three written rules
+**Date** 31 Oct 2026 · **Status** Accepted (the founder, 31 Oct 2026) · Linear ALY-262 · Text: `docs/company/authority-requests.md`
+
+**Decision.** Any request from a public authority for personal data goes to the founder, who checks it is lawful before anything is handed over; ALYR gives only what the request names; and every request is recorded, outside this public repository.
+
+**Why now.** Meta's App Review asks which policies ALYR has for these requests. It had none, so ticking any would have been untrue. The founder chose to adopt three rules ALYR can keep, on the day of the submission.
+
+**What we told Meta.** Legality review, data minimisation and documentation are ticked. "Provisions for challenging these requests" is not: that needs a lawyer's advice (ALY-51, question 15 of the brief).
+
+**Chosen over** answering "None of the above", which was true and needed no document, but would have left ALYR with no answer on the day a first request arrives. Whether either answer affects Meta's approval is not known.
+
+**Revisit when** the lawyer has read it, or a first request arrives.
+
+---
+
+## D-135 · ALYR staff sign-in: a daily cap on wrong codes, and a note and an email for every sign-in from somewhere new
+**Date** 31 Oct 2026 · **Status** Proposed (built and tested; the first of three parts of ALY-125, see D-136 and D-137) · Linear ALY-125 · Spec `specs/047-back-office-hardening/spec.md` · Migration 0095 · Builds on ALY-244 (five guesses a code), ALY-116 (five codes an email an hour)
+
+**The decision.**
+- **The cap.** For an email on the `platform_admins` list, every wrong code of the last 24 hours counts, over all codes. At 10 the account refuses every code, the right one too, until the oldest wrong code is a day old. The refusal has the same words and status as any wrong code, so a visitor cannot tell a locked staff account from an ordinary mistake. Counted in `rate_hits` (bucket `staff-wrong-code`), inside the transaction that holds the code's row, behind an advisory lock for the account, so parallel guesses cannot all see nine.
+- **The announcement, once, when the cap is reached.** An entry `staff.locked` in the audit log, an email to the person (both languages, the time it lifts in Doha time) and an alert to ALYR's channels (`core/alerts.notify`: counts only, never the address).
+- **A note of every staff sign-in, whichever door** (`/api/auth/verify` and the sign-up door `/api/onboarding/verify`). `staff.sign_in` in the audit log with a short device phrase ("Chrome on Windows"), the address the edge vouched for, and whether each is new. A device or an address this person has not signed in from before also sends them an email. "Seen before" lives in `staff_known` as SHA-256 hashes; the address is shown in the audit entry only.
+- **Writing the note never refuses a sign-in.** A mail provider that is down is logged, and the audit entry says `send_failed`.
+
+**Why.** The back office reads every client's data and its only door was one emailed six-digit code. The guess budget was about 600 a day on one account; at ten it is ten. The alert gives the founder the minute it happens, not the next audit.
+
+**Costs and risks, said plainly.**
+- **The cap can be used against the founder.** Someone who asks for codes and gets them wrong ten times keeps the founder from signing in with a code for a day (a rolling day: each wrong code ages out after 24 hours, so a patient attacker can keep it up). It gives them no access. The way through is `docs/runbooks/staff-sign-in.md`: the founder-run, logged break-glass script clears the lock. The second factor (D-136) makes a lock less of a loss, not a smaller one.
+- **A new address is noisy when the founder travels or the phone changes networks.** One email each time; the audit entry is the record.
+- **The addresses are the edge's.** Where the API cannot vouch for an address (`ALYR_CLIENT_IP_KEYS` mismatch) it is shown as "unknown", and only the device decides what is new.
+- **Only staff are capped.** Every other account keeps the older limits (SEC-2 asks for the same cap for owners; the follow-up is to count the same bucket for every email, with a higher number).
+
+**Chosen over** locking by address (the address is not trustworthy behind our own proxies and a mobile network moves), a cap that only slows (the audit asks for a lock), and a note only on a new device (an unknown address on a known device is the stolen-session case).
+
+**Revisit when** a second staff member exists, an owner account needs the same cap, or the lock is used against the founder once.
+
+---
+
 ## D-140 · An owner or admin manages the services from the Bookings screen, and a booking keeps the price it was made at
 **Date** 31 Oct 2026 · **Status** Proposed (built and tested; nothing deployed; waiting for the founder's yes) · Linear ALY-259, stage 1 · Builds on D-084 (people and chairs, deposits) and D-069 (resources)
 
@@ -2112,6 +2159,8 @@ Without it, analytics is off everywhere.
 **Chosen over** reading the price from the service and warning the owner ("a price change applies to bookings not yet paid"), which would have told them about a trap instead of closing it; a trigger-free column set in `_insert` alone, which the seeds and any future insert would each have had to remember; asking the owner for dirhams (the unit the API stores): the form takes QAR, as an owner thinks of a price, and reads "12.5" as 1250 dirhams from the text, never through a float.
 
 **Revisit when** a pilot owner asks for reordering or an audit trail of settings, or when a service needs a photo (not built).
+
+---
 
 ## D-141 · Opening hours have a screen and a break is two periods; the shop, or one person, can have days off that customers cannot book and that never cancel a booking
 **Date** 31 Oct 2026 · **Status** Proposed (built and tested; nothing deployed; waiting for the founder's yes) · Linear ALY-259, stage 2 · Builds on D-140 and D-084
@@ -2129,6 +2178,8 @@ Without it, analytics is off everywhere.
 
 **Revisit when** a pilot salon asks for special hours on one date, repeating closures, or a message to the customers of a day it closes.
 
+---
+
 ## D-142 · The desk finds a customer the shop has, shows the free times for a move, and says whether the customer was told; staff cannot record a customer's consent for them
 **Date** 31 Oct 2026 · **Status** Proposed (built and tested; nothing deployed; one question for the founder, below) · Linear ALY-259, stage 3 · Builds on D-084, D-141 and hard rule 5
 
@@ -2145,6 +2196,8 @@ Without it, analytics is off everywhere.
 
 **Revisit when** the founder answers the consent question, a template for phone bookings is approved, or a pilot salon asks for a walk-in with no number.
 
+---
+
 ## D-143 · The people and chairs screen says what each does and has ahead, refuses a retirement that would strand a service, and lets the owner put the people and the services in order
 **Date** 31 Oct 2026 · **Status** Proposed (built and tested; nothing deployed; waiting for the founder's yes) · Linear ALY-259, stage 4 · Builds on D-084, D-069, D-140
 
@@ -2157,3 +2210,25 @@ Without it, analytics is off everywhere.
 **Chosen over** a warning instead of a refusal when a service would have nobody (see above); a "move this booking" arrow for the owner's up and down (a drag order is nicer and needs a library and a keyboard alternative anyway: buttons are 44 px, named, and work with a keyboard and a screen reader); renumbering one place at a time (a gap or two people with the same place is what the whole-list form cannot make).
 
 **Revisit when** a pilot salon has more than a dozen people or chairs (a drag order or sections may then pay for itself), or wants assignment by least busy rather than by order.
+
+---
+
+## D-145 · A shop's WhatsApp line is checked, tested and kept on a trail; staff see every line on one screen
+**Date** 31 Oct 2026 · **Status** Proposed (built and tested against a fake Meta; the first real check is the founder's, in the runbook) · Linear ALY-166 · Builds on D-050 and D-054 (attaching a number) · Spec 060
+
+**Decision.**
+- **Attaching a number is not the end.** After it, ALYR staff press **Check** (Meta is asked to read: the number, the account's numbers, the apps subscribed to its webhooks; ALYR's own records are read for a customer's message that arrived and one of ours that went out) and **Send test message**. A line reads `unchecked`, `problem`, `waiting` or `working`.
+- **The test goes only to the shop's own staff.** One ordinary text, through the outbound layer (hard rule 5), to a `staff` contact who linked their phone and wrote to this number in the last 24 hours. Staff are chosen because they agreed to be messaged by this shop and are the people who would notice; a customer is never offered, and nothing is sent to a customer to "test the line".
+- **A trail per line**, `whatsapp_line_events`: attached, detached, checked, test sent, with who did it. The app role can add to it, never change it. It holds states and counts, never a token, a customer's name or number, or words. The platform audit log still records each staff action; the trail is what a person reads per shop.
+- **One screen** (`/ops/whatsapp`, English and Arabic) for every line. The check itself sends nothing and changes nothing at Meta.
+- **Credentials do not move.** Numbers on ALYR's own account use the one system-user token in Secret Manager. A token for a shop's own account is spec 063's, and is sealed in the database with the key in Secret Manager, as a shop's payment keys are (D-072, `core/payment_keys.py`).
+
+**Why.** The first fifty shops cannot be looked after by opening fifty chats. The cheapest way to know a line works both ways is to receive one message from a person we trust and send one back, and the cheapest person to trust is the shop's own owner, whom the go-live flow already asks to link their phone.
+
+**Chosen over** a test to any phone number typed into the screen (it would put a message from a shop's number in front of someone who never agreed, and it would create a contact in the shop's records for ALYR's convenience), a test to the founder's own phone (it proves Meta delivers, not that this shop's line works with this shop's people), and a scheduled test (a message nobody asked for, every day).
+
+**Not decided here.** Registering a number through the API with a PIN (Meta documents it as API-only; ALYR does not do it for numbers added in WhatsApp Manager, which the first shops will be), and subscribing the app to an account (spec 063).
+
+**Revisit when** a number added in WhatsApp Manager stays unconnected until registered by the API, or when more than one number per shop is allowed.
+
+---
