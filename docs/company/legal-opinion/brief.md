@@ -104,6 +104,12 @@ No AI model receives customer data today.
 14. The CR lists "retail sale via the internet" (479120), which ALYR does not do itself. Is
     that activity needed for what ALYR does, or should it change?
 
+**E. Requests from public authorities**
+
+15. Is our short policy (`docs/company/authority-requests.md`) enough? Who in Qatar can lawfully
+    demand a private company's data, and when can or must ALYR challenge a request? We told
+    Meta we have no process for challenging one yet.
+
 ## What we ask for
 
 - A written answer to each numbered question, or a written "not required".
