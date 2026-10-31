@@ -2,7 +2,7 @@ import { Icon, Logo, Symbol } from "./brand";
 import { ContactAddress, ContactButton, contactLink, ContactPending, TryFreeButton, TryFreeNote } from "./Contact";
 import { copy, fill, type Locale } from "./copy";
 import {
-  CONTACT_EMAIL, CONTACT_STATE, INCLUDED, OFFER_LIVE, pageKind, PATHS, PRODUCTS, productPath, SECTORS, sectorPage, TRY_FREE_LIVE, TRY_FREE_URL, WHATSAPP_NUMBER, WORKSPACE_URL,
+  CONTACT_EMAIL, CONTACT_STATE, INCLUDED, pageKind, PATHS, PRODUCTS, productPath, SECTORS, sectorPage, TRY_FREE_LIVE, TRY_FREE_URL, WHATSAPP_NUMBER, WORKSPACE_URL,
   type PageKey, type ProductKey,
 } from "./site";
 import { SiteMotion } from "./SiteMotion";
@@ -74,7 +74,9 @@ export function Shell({
     [at("#business"), t.nav.business],
     [at("#how"), t.nav.how],
     [at("#questions"), t.nav.questions],
-    ...(OFFER_LIVE ? [[at("#price"), t.nav.price] as const] : []),
+    // The pricing page is its own page and always built (ALY-301); the homepage's price section
+    // is behind the offer switch and has no link of its own.
+    [PATHS.pricing[locale], t.nav.pricing],
   ] as const;
   const contact = contactLink(locale);
   const other = PATHS[page][otherLocale];
@@ -231,10 +233,14 @@ export function Shell({
             ))}
           </nav>
           <nav className="foot-nav foot-site" aria-label={t.footer.links}>
+            {/* what a card provider and a buyer look for first: pricing, terms, refunds, privacy (ALY-301) */}
+            <a href={PATHS.pricing[locale]} aria-current={page === "pricing" ? "page" : undefined}>{t.nav.pricing}</a>
+            <a href={PATHS.terms[locale]} aria-current={page === "terms" ? "page" : undefined}>{t.nav.terms}</a>
+            <a href={PATHS.refund[locale]} aria-current={page === "refund" ? "page" : undefined}>{t.nav.refund}</a>
+            <a href={PATHS.privacy[locale]} aria-current={page === "privacy" ? "page" : undefined}>{t.nav.privacy}</a>
             <a href={at("#questions")}>{t.nav.questions}</a>
             <a href={PATHS.guides[locale]} aria-current={page === "guides" ? "page" : undefined}>{t.guides.footer}</a>
             <a href={PATHS.company[locale]} aria-current={page === "company" ? "page" : undefined}>{t.nav.company}</a>
-            <a href={PATHS.privacy[locale]} aria-current={page === "privacy" ? "page" : undefined}>{t.nav.privacy}</a>
             <a href={other} lang={otherLocale} hrefLang={otherLocale} data-lang>{t.nav.other}</a>
             {WORKSPACE_URL && <a href={WORKSPACE_URL}>{t.footer.workspace}</a>}
           </nav>
