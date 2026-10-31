@@ -83,9 +83,11 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-117 | The deletion is a daily Cloud Run job under the database owner: one business per transaction, through one door in the guards of issued documents, the business's row really deleted, photos emptied by the worker from a list the job leaves, a receipt of counts only | Proposed |
 | D-118 | What ALYR keeps when it erases a client is data in one file (`core/erase_rules.py`), with ALYR's reading of the law: its own billing records and audit log stay, the shop's receipts to its customers go; every line the lawyer may change is marked | Proposed (pending the lawyer, ALY-51) |
 | D-123 | The workspace's line-up is the public site's six products: ALYR Shelf (the Catalog, "with every product", never priced as an added product) and ALYR Docs (Documents, switched on per shop, no price named) join Chat, Bookings, Agent and Accounts; no quote, no shop and no Sunday report changes | Proposed |
+| D-124 | The terms of service, the refund policy and the pricing page are public in English and Arabic, linked from the footer of every page (Pricing also from the main navigation), and the pricing page shows its prices whatever the homepage's offer switch says: riyals by bank transfer, US dollars by card, no setup fee | Accepted |
 | D-119 | The public site can lead with "Try it free" (the self-serve sign-up) with "Book a check-up" beside it, behind a build-time switch that is off until the founder turns it on at publish time | Proposed |
 | D-121 | The owner is emailed once when ALYR publishes their price, ahead of the rest of the payment path: English or Arabic as they signed up, claimed on the quote so it never goes twice, nothing sent for a price they already saw or an address that cannot be real. The part of D-093 that shipped on its own | Proposed (the founder signs off the wording) |
 | D-122 | ALYR's own business keeps no test line: the "Try it" step says so and offers to skip, and the one-off first-admin job does not create one | Proposed |
+| D-135 | ALYR staff sign-in: ten wrong codes in a day lock the account (the right code too, same words as any refusal), and every staff sign-in is written to the audit log with an email when the device or the address is new | Proposed |
 | D-145 | A shop's WhatsApp line is checked against Meta, tested with a message to the shop's own staff and kept on a trail; staff see every line on one screen (`/ops/whatsapp`, English and Arabic) | Proposed |
 | D-113 | The Cloudflare zone is hardened with what the Free plan offers and the state is written down: HTTPS only, minimum TLS 1.2, strict SSL, CAA, a trimmed SPF and response-header rules for the API and media host are live; the edge rate-limit rule waits because Free has only Block; no Access until Zero Trust is onboarded; DMARC stays `none` until the reports are read, never `reject` | Proposed |
 
@@ -2074,6 +2076,51 @@ Without it, analytics is off everywhere.
 **Chosen over** making Shelf `included` (a false statement for shops without a catalog), leaving the products unregistered and showing them only on the site (the founder found the gap on the Products screen), and a price item at QAR 0 for Shelf (the trap above).
 
 **Revisit when** the founder prices Docs, ALY-143 (the accountant export, statements) or ALY-147 (ALYR's own invoices) is built and the words may grow, or Shelf is made included.
+
+---
+
+## D-124 · The terms, the refund policy and the pricing page are public; the pricing page shows its prices whatever the offer switch says
+**Date** 31 Oct 2026 · **Status** Accepted (the product lead, on the founder's instruction of 31 Oct 2026 to go ahead and do the right thing for the business; the open choices were settled in `docs/company/paddle/README.md`) · Linear ALY-301 · Follows D-074 (card payments through Paddle), D-092 (no setup fee) and D-034 (prices off the public site until the commercial registration)
+
+**The decision.**
+- **Three pages, each in English and Arabic:** `/terms` (terms of service), `/refund` (refund policy) and `/pricing`, with `/privacy` already live. Their words are `copyLegal.ts` and `copyPricing.ts`; the English is the final text of `docs/company/paddle/` (PR #222), the Arabic is formal Modern Standard Arabic and a draft until the native review (ALY-66). A Qatar-qualified lawyer reads them after they are live (ALY-51); changes follow as a new dated version, with the page's "Last updated" date.
+- **Linked from every page:** the footer carries Pricing, Terms, Refund policy and Privacy; the main navigation (and the phone menu) carries Pricing. Paddle's domain review looks for exactly these, and for the legal name `alyr software W.L.L.` to match the registration.
+- **The pricing page does not wait for the offer switch.** `NEXT_PUBLIC_ALYR_OFFER` stays off in production: the homepage's price section, the price in its hero facts and the product pages' price facts still need it, because that prepared copy still names a setup fee (D-092) and has not been re-read. `/pricing` is built whatever the switch says, and `scripts/site/allow/banned.json` ("pricePages") lets a price sit in that page's copy, built page and markdown copy and nowhere else.
+- **The figures are the back office's list-price defaults**, not older copy: QAR 449 a month for the first product (migrations 0015, 0017, 0018), QAR 50 for each product added (0018 set 150, 0049 and D-053 made it 50), USD 129 and USD 15 by card (0064, D-074), ALYR Agent and ALYR Shelf included, no setup fee (D-092). The page names no price for ALYR Docs (D-123: none is set).
+- **No Offer in the structured data.** The pricing page is a plain WebPage like the privacy policy; the price depends on the products a business chooses and a quote confirms it.
+
+**What this changes in D-034.** D-034 kept every price off the public site until the commercial registration. The registration was issued on 26 Oct 2026 and the founder chose to publish. The homepage's other price lines stay behind the switch until their copy is re-read against D-092.
+
+**Not said on purpose.** Whether the US dollar prices include or exclude sales tax: it is Paddle's setting for the product, not ours, and the page says only that Paddle "handles sales tax". Whether card payment is open to clients: it is built and off until the founder sets Paddle's live values; the page describes how payment works, and card becomes true on the page the day it is switched on.
+
+**Chosen over** switching the whole offer on (it would also publish the prepared setup-fee lines), a pricing page behind the switch (Paddle could not see it), and one language first (the founder's pages are bilingual).
+
+**Revisit when** the lawyer has read the pages, Paddle answers the domain review, ALYR Docs is priced, or the homepage's offer copy is brought in line with D-092 and the switch is turned on.
+
+---
+
+## D-135 · ALYR staff sign-in: a daily cap on wrong codes, and a note and an email for every sign-in from somewhere new
+**Date** 31 Oct 2026 · **Status** Proposed (built and tested; the first of three parts of ALY-125, see D-136 and D-137) · Linear ALY-125 · Spec `specs/047-back-office-hardening/spec.md` · Migration 0095 · Builds on ALY-244 (five guesses a code), ALY-116 (five codes an email an hour)
+
+**The decision.**
+- **The cap.** For an email on the `platform_admins` list, every wrong code of the last 24 hours counts, over all codes. At 10 the account refuses every code, the right one too, until the oldest wrong code is a day old. The refusal has the same words and status as any wrong code, so a visitor cannot tell a locked staff account from an ordinary mistake. Counted in `rate_hits` (bucket `staff-wrong-code`), inside the transaction that holds the code's row, behind an advisory lock for the account, so parallel guesses cannot all see nine.
+- **The announcement, once, when the cap is reached.** An entry `staff.locked` in the audit log, an email to the person (both languages, the time it lifts in Doha time) and an alert to ALYR's channels (`core/alerts.notify`: counts only, never the address).
+- **A note of every staff sign-in, whichever door** (`/api/auth/verify` and the sign-up door `/api/onboarding/verify`). `staff.sign_in` in the audit log with a short device phrase ("Chrome on Windows"), the address the edge vouched for, and whether each is new. A device or an address this person has not signed in from before also sends them an email. "Seen before" lives in `staff_known` as SHA-256 hashes; the address is shown in the audit entry only.
+- **Writing the note never refuses a sign-in.** A mail provider that is down is logged, and the audit entry says `send_failed`.
+
+**Why.** The back office reads every client's data and its only door was one emailed six-digit code. The guess budget was about 600 a day on one account; at ten it is ten. The alert gives the founder the minute it happens, not the next audit.
+
+**Costs and risks, said plainly.**
+- **The cap can be used against the founder.** Someone who asks for codes and gets them wrong ten times keeps the founder from signing in with a code for a day (a rolling day: each wrong code ages out after 24 hours, so a patient attacker can keep it up). It gives them no access. The way through is `docs/runbooks/staff-sign-in.md`: the founder-run, logged break-glass script clears the lock. The second factor (D-136) makes a lock less of a loss, not a smaller one.
+- **A new address is noisy when the founder travels or the phone changes networks.** One email each time; the audit entry is the record.
+- **The addresses are the edge's.** Where the API cannot vouch for an address (`ALYR_CLIENT_IP_KEYS` mismatch) it is shown as "unknown", and only the device decides what is new.
+- **Only staff are capped.** Every other account keeps the older limits (SEC-2 asks for the same cap for owners; the follow-up is to count the same bucket for every email, with a higher number).
+
+**Chosen over** locking by address (the address is not trustworthy behind our own proxies and a mobile network moves), a cap that only slows (the audit asks for a lock), and a note only on a new device (an unknown address on a known device is the stolen-session case).
+
+**Revisit when** a second staff member exists, an owner account needs the same cap, or the lock is used against the founder once.
+
+---
 
 ## D-145 · A shop's WhatsApp line is checked, tested and kept on a trail; staff see every line on one screen
 **Date** 31 Oct 2026 · **Status** Proposed (built and tested against a fake Meta; the first real check is the founder's, in the runbook) · Linear ALY-166 · Builds on D-050 and D-054 (attaching a number) · Spec 060

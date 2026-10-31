@@ -189,6 +189,7 @@ RULES: dict[str, Rule] = {
         "price_items": "ALYR's price list",
         "rate_hits": "counts of requests by a hash of the address; they expire by themselves",
         "schema_migrations": "which migrations ran",
+        "staff_known": "the devices and addresses ALYR's own staff signed in from, as hashes",
         "terms_versions": "the texts ALYR published; the same for every client",
         "today_snoozes": "items ALYR's staff set aside; they expire by themselves",
         "worker_heartbeats": "the worker's check-ins",

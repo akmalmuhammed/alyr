@@ -659,8 +659,12 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
   .approach-say, .who-head { position: static; }
   .demo-stage { grid-template-columns: minmax(0, 1fr); }
   .phone { padding-inline: .75rem; }
-  /* a narrow laptop holds the logo, four section links, the language, the theme switch and
-     the button on one line: the gaps close up before a link would wrap */
+}
+/* a narrow laptop holds the logo, five section links (Pricing is the fifth, ALY-301), the
+   language, the theme switch and the button on one line: the gaps close up before a link would
+   wrap or the page would scroll sideways (the English line overflowed from 62 to 66 rem with
+   the fifth link) */
+@media (max-width: 68rem) {
   .top-in { gap: 1.25rem; }
   .top-nav { gap: 1.25rem; margin-inline-start: 0; }
   .top-end { gap: .75rem; }
@@ -672,10 +676,14 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
   .top-cta-full { display: none; }
   .top-cta-short { display: inline; }
 }
-@media (max-width: 53rem) {
+/* The phone's menu takes over from the five section links at 58 rem (it was 53 rem with four:
+   the English line was 5 to 34 px too wide for the page between 53 and 55 rem, ALY-301). */
+@media (max-width: 58rem) {
   .top-nav, .top-lang, .al-js .ts-bar { display: none; }
   .top-menu { display: block; }
   .top-end { gap: .625rem; }
+}
+@media (max-width: 53rem) {
   .who-rows > li { grid-template-columns: minmax(0, 1fr); gap: .5rem; }
   .tags { margin-top: .375rem; }
   .who-rows .tags { justify-content: flex-start; }

@@ -12,14 +12,16 @@ a short timeout and the person can ask for a new code.
 
 import base64
 import logging
-from datetime import date
+from datetime import date, datetime
 from html import escape
+from zoneinfo import ZoneInfo
 
 import httpx
 
 from alyr import brand
 from alyr.config import get_settings
 from alyr.core.normalise import fmt_qar, fmt_qar_ar
+from alyr.core.words import WRONG_CODES, counted
 
 log = logging.getLogger("alyr.mail")
 
@@ -432,11 +434,14 @@ def _letter(parts: list[dict]) -> str:
             f'<p style="margin:0 0 10px;font-size:15px;line-height:1.55">{escape(line)}</p>'
             for line in part["lines"]
         )
-        label, link = part["button"]
+        if part["button"] is not None:
+            label, link = part["button"]
+            inner += (
+                f'<p style="margin:18px 0 6px"><a href="{escape(link)}" style="display:inline-block;'
+                f'background:{e["text"]};color:{e["panel"]};text-decoration:none;font-weight:600;'
+                f'font-size:15px;padding:13px 22px;min-height:20px">{escape(label)}</a></p>'
+            )
         inner += (
-            f'<p style="margin:18px 0 6px"><a href="{escape(link)}" style="display:inline-block;'
-            f'background:{e["text"]};color:{e["panel"]};text-decoration:none;font-weight:600;'
-            f'font-size:15px;padding:13px 22px;min-height:20px">{escape(label)}</a></p>'
             f'<p style="margin:14px 0 0;font-size:13px;color:{e["muted"]}">{escape(part["small"])}</p>'
         )
         rows.append(f'<tr><td{cell}padding-top:18px;{rule}">{inner}</td></tr>')
@@ -450,7 +455,11 @@ def _letter(parts: list[dict]) -> str:
 
 def _plain(parts: list[dict]) -> str:
     return "\n\n---\n\n".join(
-        "\n\n".join([*part["lines"], f"{part['button'][0]}: {part['button'][1]}", part["small"]])
+        "\n\n".join([
+            *part["lines"],
+            *([f"{part['button'][0]}: {part['button'][1]}"] if part["button"] else []),
+            part["small"],
+        ])
         for part in parts
     )
 
@@ -496,3 +505,150 @@ def invite_message(
                       "small": w["unexpected"]})
     subject = _ACCOUNT[order[0]]["invite_subject"](by, shops[order[0]])
     return subject, _plain(parts), _letter(parts)
+
+
+# What ALYR tells a member of its own staff about their back-office account (ALY-125, D-135).
+# Neither email holds a code or a link that signs anyone in. We do not know which language the
+# person reads, so each is in both, English first. A Latin run inside an Arabic sentence (an
+# address, a browser) sits between Unicode isolates, which is what <bdi> does in HTML.
+_STAFF = {
+    "en": {
+        "hello": lambda first: f"Hello {first}," if first else "Hello,",
+        "new_subject": "New sign-in to the ALYR back office",
+        "new_what": {
+            "device and address": "a device and an address ALYR has not seen before",
+            "device": "a device ALYR has not seen before",
+            "address": "an address ALYR has not seen before",
+        },
+        "new_body": lambda what: f"Your ALYR account just signed in to the back office from {what}.",
+        "details": lambda when, device, address: (
+            f"When: {when} (Doha). Device: {device}. Address: {address}."
+        ),
+        "new_yes": "If this was you, you do not need to do anything.",
+        "new_no": (
+            "If it was not you, someone can read your email inbox, because a sign-in code was "
+            "needed. Secure the inbox first: change its password and check its two-step "
+            "verification. Then write to hello@alyr.qa."
+        ),
+        "lock_subject": "Sign-in to your ALYR account is paused",
+        "lock_body": lambda wrong, email, until: (
+            f"{wrong} were entered for {email} in the last 24 hours, so ALYR has paused sign-in "
+            f"for this account until {until} (Doha)."
+        ),
+        "lock_safe": (
+            "No one has signed in. If you made these mistakes yourself, wait until then and "
+            "ask for a new code."
+        ),
+        "lock_no": (
+            "If you did not, someone is guessing codes for your account. Your email inbox is "
+            "the key to it, so check that it is safe. Then write to hello@alyr.qa."
+        ),
+        "small": "ALYR sends this to the member of staff whose account it is.",
+    },
+    "ar": {
+        "hello": lambda first: f"مرحباً {first}،" if first else "مرحباً،",
+        "new_subject": "تسجيل دخول جديد إلى لوحة إدارة ALYR",
+        "new_what": {
+            "device and address": "جهاز وعنوان لم ترهما ALYR من قبل",
+            "device": "جهاز لم تره ALYR من قبل",
+            "address": "عنوان لم تره ALYR من قبل",
+        },
+        "new_body": lambda what: f"سُجّل الدخول إلى لوحة الإدارة بحسابك في ALYR من {what}.",
+        "details": lambda when, device, address: (
+            f"الوقت: {when} (بتوقيت الدوحة). الجهاز: {device}. العنوان: {address}."
+        ),
+        "new_yes": "إذا كنت أنت، فلا تحتاج إلى فعل شيء.",
+        "new_no": (
+            "إذا لم تكن أنت، فهناك من يستطيع قراءة بريدك الإلكتروني، لأن الدخول يحتاج إلى رمز "
+            "يصل إليه. أمّن البريد أولاً: غيّر كلمة مروره وراجع التحقق بخطوتين فيه. ثم اكتب إلى "
+            "hello@alyr.qa."
+        ),
+        "lock_subject": "تسجيل الدخول إلى حسابك في ALYR متوقف مؤقتاً",
+        "lock_body": lambda wrong, email, until: (
+            f"أُدخل {wrong} للبريد {email} خلال آخر 24 ساعة، لذلك أوقفت ALYR تسجيل الدخول إلى "
+            f"هذا الحساب حتى {until} (بتوقيت الدوحة)."
+        ),
+        "lock_safe": (
+            "لم يدخل أحد. إذا كنت أنت من أخطأ، فانتظر حتى ذلك الوقت ثم اطلب رمزاً جديداً."
+        ),
+        "lock_no": (
+            "إذا لم تكن أنت، فهناك من يخمّن رموز حسابك. بريدك الإلكتروني هو مفتاحه، فتأكد أنه "
+            "آمن. ثم اكتب إلى hello@alyr.qa."
+        ),
+        "small": "ترسل ALYR هذه الرسالة إلى عضو الفريق صاحب الحساب.",
+    },
+}
+
+_DOHA = ZoneInfo("Asia/Qatar")
+
+
+def _doha(moment: datetime, lang: str) -> str:
+    """"31 October 2026, 14:05" in Doha time, in the reader's language (Western digits)."""
+    local = moment.astimezone(_DOHA)
+    month = _MONTHS["ar" if lang == "ar" else "en"][local.month - 1]
+    comma = "،" if lang == "ar" else ","
+    return f"{local.day} {month} {local.year}{comma} {local:%H:%M}"
+
+
+def _isolate(text: str) -> str:
+    """A Latin run kept in its own direction inside an Arabic sentence."""
+    return f"⁨{text}⁩"
+
+
+def _both(key: str) -> str:
+    """A subject in both languages, for an email to someone whose language is not known."""
+    return f"{_STAFF['en'][key]} · {_STAFF['ar'][key]}"
+
+
+def _staff_parts(build) -> list[dict]:
+    parts = []
+    for lang in ("en", "ar"):
+        w = _STAFF[lang]
+        parts.append({"lang": lang, "lines": build(lang, w), "button": None, "small": w["small"]})
+    return parts
+
+
+def staff_sign_in_message(
+    name: str, when: datetime, device: str, address: str, new_device: bool, new_address: bool,
+) -> tuple[str, str, str]:
+    """Subject, plain text and HTML of "your account signed in from somewhere new", in both
+    languages. `device` is a short phrase such as "Chrome on Windows"; `address` is the
+    visitor's address, or "unknown"."""
+    kind = (
+        "device and address" if new_device and new_address
+        else "device" if new_device else "address"
+    )
+    first = _first(name)
+
+    def build(lang: str, w: dict) -> list[str]:
+        ar = lang == "ar"
+        return [
+            w["hello"](first), w["new_body"](w["new_what"][kind]),
+            w["details"](
+                _doha(when, lang), _isolate(device) if ar else device,
+                _isolate(address) if ar else address,
+            ),
+            w["new_yes"], w["new_no"],
+        ]
+
+    parts = _staff_parts(build)
+    return _both("new_subject"), _plain(parts), _letter(parts)
+
+
+def staff_locked_message(
+    name: str, email: str, wrong: int, until: datetime
+) -> tuple[str, str, str]:
+    """Subject, plain text and HTML of "sign-in to your account is paused": a member of ALYR
+    staff had too many wrong codes in a day (ALY-125)."""
+    first = _first(name)
+
+    def build(lang: str, w: dict) -> list[str]:
+        shown = _isolate(email) if lang == "ar" else email
+        return [
+            w["hello"](first),
+            w["lock_body"](counted(wrong, WRONG_CODES, lang), shown, _doha(until, lang)),
+            w["lock_safe"], w["lock_no"],
+        ]
+
+    parts = _staff_parts(build)
+    return _both("lock_subject"), _plain(parts), _letter(parts)
