@@ -24,7 +24,7 @@ NEXT_PUBLIC_ALYR_WORKSPACE_URL="" pnpm build >/dev/null
 app=".next/server/app"
 mkdir -p out-site/_next
 # a plain page: no social card of its own (it uses the homepage's)
-plain="company privacy"
+plain="company privacy terms refund pricing"
 # Every other page in PATHS (apps/web/app/_site/site.ts) but the homepage: chat, ..., for/bakeries,
 # guides, guides/stop-losing-whatsapp-orders. A page added there is published here.
 pages="$(node "$root/scripts/site/pages.mjs" $plain)"
