@@ -8,8 +8,12 @@ Source: https://www.paddle.com/help/start/account-verification/what-is-domain-ap
 
 **Content (English and Arabic, same structure):**
 1. One headline: what ALYR does for a small business in Qatar (use the live homepage wording).
-2. The plan and its price: `[TO DECIDE: QAR 449 by transfer and USD 129 by card, or one price]`; USD 15 for each
-   added product (D-074); no setup fee (D-092); month to month, stop with 7 days' notice.
+2. The plan and its price, DECIDED 31 Oct: show both routes. In riyals when paying by bank transfer (the first
+   product and each added product, from the price list's defaults) and in US dollars when paying by card (USD 129
+   the first product, USD 15 each added, D-074). Take every figure from the price list defaults (migrations 0015,
+   0018, 0064 and later) and D-092, never from the older prepared copy: if `copy.ts` disagrees with the price
+   list (it says QAR 50 for an added product in places; the price list says QAR 150), use the price list and name
+   the difference in the pull request. No setup fee. Month to month, stop with 7 days' notice.
 3. What is included each month (agreement clause 2.2: updates, team sign-ins, the weekly report, a person who
    answers, changes to menu, prices and hours on request).
 4. The first month back if the agreed result is missed: link to `/refund`.

@@ -27,12 +27,12 @@ Source: https://www.paddle.com/help/start/account-verification/what-is-domain-ap
 6. Account verification in Paddle (identity, company documents, payout bank): the founder or the registered owner.
 7. Live API key, client-side token and webhook destination; secrets go to Secret Manager from the clipboard.
 
-## Things only the founder can decide
+## Decisions taken on 31 Oct 2026 (the founder said to go ahead and do the right thing for the business)
 
-- **Which price the public sees.** The site's prepared offer says "from QAR 449 a month" (D-034). Paddle charges
-  USD 129 a month for the first product and USD 15 for each added one (D-074), because Paddle has no riyal.
-  Options: show the riyal price for clients in Qatar who pay by transfer and the dollar price for card
-  payments; or show one headline price. Paddle needs the price a buyer is charged to be visible.
-- **Setup fee.** D-092 removed it for now; the prepared site copy still names one and must change first.
-- **The agreed-result refund.** The first month back if the agreed result is missed (D-034, agreement clause 5)
-  is a promise on a public page: confirm it is the wording you want.
+- **Price shown:** both routes, riyals for bank transfer and US dollars for card (Paddle has no riyal, D-074).
+  Paddle needs the price a buyer is charged to be visible, and clients in Qatar pay by transfer in riyals.
+- **Setup fee:** none (D-092). The prepared site copy still names one and changes before the pages go live.
+- **The agreed-result refund:** kept as decided in D-034 (agreement clause 5). Reply time on refund requests: 3 business days.
+- **Lawyer:** reads the pages after they are live (ALY-51) and changes follow as a new dated version. Publishing
+  first is a risk the founder accepted by asking to go ahead; the pages say "not legal advice" nowhere public, so the
+  lawyer's read is the first follow-up.

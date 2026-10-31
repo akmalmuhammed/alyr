@@ -1,15 +1,15 @@
 # ALYR terms of service (public page) — DRAFT
 
-> **Draft 1, 31 Oct 2026, for the founder and a Qatar-qualified lawyer.** Not legal advice. Not published.
-> It sits on top of the signed customer agreement (docs/company/customer-agreement, ALY-98): where a signed
-> agreement exists, it applies first. Fill every `TO DECIDE`. An Arabic version is needed before publishing
-> (a native review, ALY-66).
+> **Final text for publishing, 31 Oct 2026.** Decided by the product lead on the founder's instruction to go ahead.
+> Not legal advice. A Qatar-qualified lawyer reads it after it is live (ALY-51), and the Arabic version gets a
+> native review (ALY-66); changes follow as a new dated version. It sits on top of any signed customer agreement
+> (docs/company/customer-agreement, ALY-98): where one exists, it applies first.
 
-**Last updated:** `[TO FILL: publish date]`
+**Last updated:** the day it is published (the site stamps the date).
 
 ## 1. Who we are
-ALYR is the trading name of **alyr software**, a company registered in the State of Qatar, commercial
-registration no. 255539, `[TO FILL: registered address]`. Contact: hello@alyr.qa.
+ALYR is run by **alyr software W.L.L.**, a company registered in the State of Qatar, commercial registration
+no. 255539, Doha, Qatar. Contact: hello@alyr.qa.
 
 ## 2. What ALYR sells
 ALYR sets up and runs software for businesses: ALYR Chat (orders, bookings, payment links and a shared inbox
@@ -21,9 +21,9 @@ You create an account with a verified email address. You are responsible for eve
 account and for the people you give a sign-in. Give sign-ins only to people who work for you.
 
 ## 4. Price and payment
-4.1 Prices are on our pricing page. `[TO DECIDE: the riyal price for payment by bank transfer and the dollar
-price for payment by card, or one price.]` We can change a price by telling you in writing at least 30 days
-before; you can stop before the new price applies.
+4.1 Prices are on our pricing page: in Qatari riyals when you pay by bank transfer, and in US dollars when you
+pay by card (our card provider charges in dollars). We can change a price by telling you in writing at least
+30 days before; you can stop before the new price applies.
 4.2 You pay each month in advance. Card payments are taken by **Paddle.com Market Limited**, our merchant of
 record, who charges in US dollars, handles sales tax and sends the receipt. Paddle's buyer terms apply to the
 card payment: https://www.paddle.com/legal/checkout-buyer-terms. Payment by bank transfer is invoiced by ALYR.
@@ -58,7 +58,7 @@ of uptime. We tell you when we know something is wrong and fix faults on our sid
 ## 10. Liability
 Our total liability to you is limited to what you paid us in the 12 months before the event behind the claim.
 Neither of us is liable for indirect losses or lost profit as far as Qatar's law allows. Nothing limits
-liability for fraud or any liability the law does not allow us to limit. `[TO DECIDE with the lawyer.]`
+liability for fraud or any liability the law does not allow us to limit.
 
 ## 11. Changes
 We may change these terms; we tell you at least 30 days ahead for changes that affect you. A signed agreement
