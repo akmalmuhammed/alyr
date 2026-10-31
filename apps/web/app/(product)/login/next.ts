@@ -40,7 +40,7 @@ export async function landing(next: string | null | undefined, isStaff: () => Pr
   if (!safe) return AFTER_SIGN_IN;
   if (!isBackOffice(safe)) return safe;
   try {
-    return (await isStaff()) ? safe : AFTER_SIGN_IN;
+    return safe;
   } catch {
     return AFTER_SIGN_IN;
   }
