@@ -438,6 +438,9 @@ def _business(row, types: dict[str, dict]) -> dict:
         "whatsapp_connected": row["whatsapp_connected"],
         "open_requests": row["open_requests"], "members": row["members"],
         "created_at": row["created_at"].isoformat(),
+        # Test business: demo data may be loaded (specs/063), and whether a load is in it now.
+        "demo_data_allowed": row["demo_data_allowed"],
+        "demo_data_loaded": row["demo_data_loaded"],
         "price_mode": types.get(row["business_type"], {}).get("price_mode", "prepared"),
     }
 

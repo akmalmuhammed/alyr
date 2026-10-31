@@ -129,6 +129,8 @@ class Placed:
     done_at: datetime | None = None
     refund: bool = False
     reversed: bool = False
+    cash: bool = False  # paid in cash and recorded by hand (a receipt follows)
+    catering: bool = False
 
     @property
     def on_account(self) -> bool:
@@ -151,11 +153,14 @@ class Booked:
 class Fortnight:
     """Works out and writes the shop's last `DAYS` days."""
 
-    def __init__(self, made: Made, rng: random.Random, web_url: str) -> None:
+    def __init__(self, made: Made, rng: random.Random, web_url: str, days: int = DAYS) -> None:
         self.made, self.shop, self.conn = made, made.shop, made.conn
         self.rng, self.now, self.web_url = rng, made.now, web_url.rstrip("/")
         self.today = self.now.astimezone(TZ).date()
-        self.first_day = self.today - timedelta(days=DAYS - 1)
+        self.days = days
+        # The last fortnight of any history is the one the events of a fortnight happen in.
+        self.recent = max(days - DAYS, 0)
+        self.first_day = self.today - timedelta(days=days - 1)
         self.setup = made.setup
         self.day_starts = made.clock.day_starts
         self.vars: dict[UUID, Var] = {}
@@ -435,9 +440,9 @@ class Fortnight:
         afternoon on Friday, a little more each day."""
         shop, rng = self.shop, self.rng
         weights = self.hour_weights()
-        for i in range(DAYS):
+        for i in range(self.days):
             day = self.first_day + timedelta(days=i)
-            factor = WEEKDAY_FACTOR[day.weekday()] * (0.85 + 0.3 * i / (DAYS - 1))
+            factor = WEEKDAY_FACTOR[day.weekday()] * (0.85 + 0.3 * i / (self.days - 1))
             if shop.key == "wholesale" and day.weekday() == 4:
                 factor = 0.15
             count = max(0, round(shop.orders_a_day * factor + rng.uniform(-1.4, 1.4)))
@@ -462,10 +467,14 @@ class Fortnight:
         rng = self.rng
         owner, agent = self.shop.owner[0], self.shop.agent[0]
         # Deliveries early on the fourth and the ninth day, counts on the seventh.
-        for index in (3, 8):
+        # A longer history gets them all along: a delivery every five days, a count every
+        # week, waste every nine days (for a fortnight these are the days 3 and 8, 6 and 10).
+        for index in range(3, self.days - 1, 5):
             self.push(local(self.first_day + timedelta(days=index), 7, 30), "delivery", owner)
-        self.push(local(self.first_day + timedelta(days=6), 22, 10), "count", agent)
-        self.push(local(self.first_day + timedelta(days=10), 22, 20), "waste", agent)
+        for index in range(6, self.days - 1, 7):
+            self.push(local(self.first_day + timedelta(days=index), 22, 10), "count", agent)
+        for index in range(10, self.days - 1, 9):
+            self.push(local(self.first_day + timedelta(days=index), 22, 20), "waste", agent)
         # One price went up in the middle of the fortnight.
         priced = [
             i for i in self.made.items.values()
@@ -477,7 +486,7 @@ class Fortnight:
             new = round(item.product.price * 1.1 / 100) * 100
             if new == item.product.price:
                 new += 100
-            since = local(self.first_day + timedelta(days=5), 9, 15)
+            since = local(self.first_day + timedelta(days=self.recent + 5), 9, 15)
             self.price_at[item.product.key] = [(since, new)]
             self.price_changes.append((item, new, since))
         # A dish that was off for a lunch and came back: the switch at work.
@@ -485,7 +494,7 @@ class Fortnight:
                     if i.rule == "switch" and i.product.state == "" and i.product.pop >= 4]
         if switches:
             item = rng.choice(switches)
-            day = self.first_day + timedelta(days=4)
+            day = self.first_day + timedelta(days=self.recent + 4)
             self.push(local(day, 12, 20), "flip", (item, False, agent))
             self.push(local(day, 14, 45), "flip", (item, True, agent))
         # What is switched off at the end: a switch cannot be sold down to nothing.
@@ -499,7 +508,7 @@ class Fortnight:
         its staff take off the shelf."""
         rng, agent = self.rng, self.shop.agent[0]
         items = [i for i in self.made.items.values() if i.rule == "count" and i.product.state == ""]
-        for i in range(DAYS):
+        for i in range(self.days):
             day = self.first_day + timedelta(days=i)
             for _ in range(rng.randint(2, 5)):
                 item = rng.choices(items, [max(x.product.pop, 1) for x in items])[0]
@@ -594,15 +603,20 @@ class Fortnight:
             self.push(o.cancelled_at, "restock", o)
         else:
             o.status = self.status_for(at, fulfil)
-            if rng.random() < 0.62 or (holds and age < timedelta(minutes=40)):
-                o.payment, o.request = "paid", "paid"
-                o.paid_at = min(at + timedelta(minutes=rng.randint(1, 25)),
-                                self.now - timedelta(seconds=30))
-            else:
-                o.request = "pending"
+            self.settle(o, age, holds)
         if o.status != "cancelled":
             self.progress(o)
         self.placed.append(o)
+
+    def settle(self, o: Placed, age: timedelta, holds: bool) -> None:
+        """How an ordinary order that went through is paid: by the payment link, which most
+        are, or the link is still open (usually cash at the counter, which is not recorded)."""
+        if self.rng.random() < 0.62 or (holds and age < timedelta(minutes=40)):
+            o.payment, o.request = "paid", "paid"
+            o.paid_at = min(o.at + timedelta(minutes=self.rng.randint(1, 25)),
+                            self.now - timedelta(seconds=30))
+        else:
+            o.request = "pending"
 
     def progress(self, o: Placed) -> None:
         """When staff confirmed, finished and handed over a live order: a share of the time
@@ -624,7 +638,7 @@ class Fortnight:
         rng, shop, made = self.rng, self.shop, self.made
         services = made.services
         made_people = [p for p in made.people]
-        for offset in range(-(DAYS - 1), 7):
+        for offset in range(-(self.days - 1), 7):
             day = self.today + timedelta(days=offset)
             weekday = (day.weekday() + 1) % 7  # PostgreSQL's: Sunday is 0
             windows = [(o, c) for d, o, c in made.hours if d == weekday]
@@ -650,7 +664,7 @@ class Fortnight:
              people: list) -> None:
         rng = self.rng
         pool = [p for p in people if p.first_seen < starts - timedelta(days=1)]
-        if not pool or starts < self.now - timedelta(days=DAYS):
+        if not pool or starts < self.now - timedelta(days=self.days):
             return
         person = rng.choice(pool)
         made = max(person.first_seen + timedelta(hours=1),
