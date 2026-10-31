@@ -83,6 +83,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-117 | The deletion is a daily Cloud Run job under the database owner: one business per transaction, through one door in the guards of issued documents, the business's row really deleted, photos emptied by the worker from a list the job leaves, a receipt of counts only | Proposed |
 | D-118 | What ALYR keeps when it erases a client is data in one file (`core/erase_rules.py`), with ALYR's reading of the law: its own billing records and audit log stay, the shop's receipts to its customers go; every line the lawyer may change is marked | Proposed (pending the lawyer, ALY-51) |
 | D-123 | The workspace's line-up is the public site's six products: ALYR Shelf (the Catalog, "with every product", never priced as an added product) and ALYR Docs (Documents, switched on per shop, no price named) join Chat, Bookings, Agent and Accounts; no quote, no shop and no Sunday report changes | Proposed |
+| D-124 | The terms of service, the refund policy and the pricing page are public in English and Arabic, linked from the footer of every page (Pricing also from the main navigation), and the pricing page shows its prices whatever the homepage's offer switch says: riyals by bank transfer, US dollars by card, no setup fee | Accepted |
 | D-119 | The public site can lead with "Try it free" (the self-serve sign-up) with "Book a check-up" beside it, behind a build-time switch that is off until the founder turns it on at publish time | Proposed |
 | D-121 | The owner is emailed once when ALYR publishes their price, ahead of the rest of the payment path: English or Arabic as they signed up, claimed on the quote so it never goes twice, nothing sent for a price they already saw or an address that cannot be real. The part of D-093 that shipped on its own | Proposed (the founder signs off the wording) |
 | D-122 | ALYR's own business keeps no test line: the "Try it" step says so and offers to skip, and the one-off first-admin job does not create one | Proposed |
@@ -2076,6 +2077,24 @@ Without it, analytics is off everywhere.
 **Chosen over** making Shelf `included` (a false statement for shops without a catalog), leaving the products unregistered and showing them only on the site (the founder found the gap on the Products screen), and a price item at QAR 0 for Shelf (the trap above).
 
 **Revisit when** the founder prices Docs, ALY-143 (the accountant export, statements) or ALY-147 (ALYR's own invoices) is built and the words may grow, or Shelf is made included.
+
+## D-124 · The terms, the refund policy and the pricing page are public; the pricing page shows its prices whatever the offer switch says
+**Date** 31 Oct 2026 · **Status** Accepted (the product lead, on the founder's instruction of 31 Oct 2026 to go ahead and do the right thing for the business; the open choices were settled in `docs/company/paddle/README.md`) · Linear ALY-301 · Follows D-074 (card payments through Paddle), D-092 (no setup fee) and D-034 (prices off the public site until the commercial registration)
+
+**The decision.**
+- **Three pages, each in English and Arabic:** `/terms` (terms of service), `/refund` (refund policy) and `/pricing`, with `/privacy` already live. Their words are `copyLegal.ts` and `copyPricing.ts`; the English is the final text of `docs/company/paddle/` (PR #222), the Arabic is formal Modern Standard Arabic and a draft until the native review (ALY-66). A Qatar-qualified lawyer reads them after they are live (ALY-51); changes follow as a new dated version, with the page's "Last updated" date.
+- **Linked from every page:** the footer carries Pricing, Terms, Refund policy and Privacy; the main navigation (and the phone menu) carries Pricing. Paddle's domain review looks for exactly these, and for the legal name `alyr software W.L.L.` to match the registration.
+- **The pricing page does not wait for the offer switch.** `NEXT_PUBLIC_ALYR_OFFER` stays off in production: the homepage's price section, the price in its hero facts and the product pages' price facts still need it, because that prepared copy still names a setup fee (D-092) and has not been re-read. `/pricing` is built whatever the switch says, and `scripts/site/allow/banned.json` ("pricePages") lets a price sit in that page's copy, built page and markdown copy and nowhere else.
+- **The figures are the back office's list-price defaults**, not older copy: QAR 449 a month for the first product (migrations 0015, 0017, 0018), QAR 50 for each product added (0018 set 150, 0049 and D-053 made it 50), USD 129 and USD 15 by card (0064, D-074), ALYR Agent and ALYR Shelf included, no setup fee (D-092). The page names no price for ALYR Docs (D-123: none is set).
+- **No Offer in the structured data.** The pricing page is a plain WebPage like the privacy policy; the price depends on the products a business chooses and a quote confirms it.
+
+**What this changes in D-034.** D-034 kept every price off the public site until the commercial registration. The registration was issued on 26 Oct 2026 and the founder chose to publish. The homepage's other price lines stay behind the switch until their copy is re-read against D-092.
+
+**Not said on purpose.** Whether the US dollar prices include or exclude sales tax: it is Paddle's setting for the product, not ours, and the page says only that Paddle "handles sales tax". Whether card payment is open to clients: it is built and off until the founder sets Paddle's live values; the page describes how payment works, and card becomes true on the page the day it is switched on.
+
+**Chosen over** switching the whole offer on (it would also publish the prepared setup-fee lines), a pricing page behind the switch (Paddle could not see it), and one language first (the founder's pages are bilingual).
+
+**Revisit when** the lawyer has read the pages, Paddle answers the domain review, ALYR Docs is priced, or the homepage's offer copy is brought in line with D-092 and the switch is turned on.
 
 ## D-140 · An owner or admin manages the services from the Bookings screen, and a booking keeps the price it was made at
 **Date** 31 Oct 2026 · **Status** Proposed (built and tested; nothing deployed; waiting for the founder's yes) · Linear ALY-259, stage 1 · Builds on D-084 (people and chairs, deposits) and D-069 (resources)

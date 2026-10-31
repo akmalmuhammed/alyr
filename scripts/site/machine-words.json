@@ -1,5 +1,5 @@
 {
-  "$comment": "The few sentences of llms.txt and the markdown copies that are not on the pages themselves: what a machine needs said once and plainly (docs/site-audit/03-ax.md, appendix). Everything else in those files comes from apps/web/app/_site/copy.ts at build time (scripts/site/llms.mjs). Checked against docs/status.md and alyr-design/honesty.md on 24 Oct 2026. No prices, no AI words: scripts/site/banned-words.mjs checks these files too. The site lane may move these words into copy.ts later.",
+  "$comment": "The few sentences of llms.txt and the markdown copies that are not on the pages themselves: what a machine needs said once and plainly (docs/site-audit/03-ax.md, appendix). Everything else in those files comes from apps/web/app/_site/copy.ts at build time (scripts/site/llms.mjs). Checked against docs/status.md and alyr-design/honesty.md on 24 Oct 2026. No prices outside the pricing page's own copy (pricing.md, ar/pricing.md), no AI words: scripts/site/banned-words.mjs checks these files too. The site lane may move these words into copy.ts later.",
   "en": {
     "sample": "[Sample screen of a fictional business. The names and numbers in it are made up; they are not ALYR's results or a customer's.]",
     "copyOf": "This is a markdown copy of {url}, made from the same words as the page.",
@@ -13,8 +13,8 @@
       "for": "For owner-run businesses in Qatar: {types}.",
       "how": "How ALYR works: {steps}",
       "money": "ALYR never holds a shop's money. Payment links are built and tested on a test page; card payments are not live yet. Once a shop's own payment provider is connected, payments go to the shop's own account.",
-      "pricesOff": "Prices are not on the site yet. Ask by email.",
-      "pricesOn": "Prices are on the homepage, in the Price section.",
+      "pricesOff": "Prices are on the pricing page, {pricing}: each month by bank transfer in Qatari riyals or by card in US dollars, month to month, with no setup fee.",
+      "pricesOn": "Prices are on the pricing page, {pricing}, and in the homepage's Price section.",
       "new": "ALYR is new and is choosing its first businesses in Doha now. ALYR sets up every product with each business, at its shop.",
       "samples": "The screens and numbers drawn on alyr.qa are samples from fictional businesses ({shops}). They are not ALYR's results, and these are not customers.",
       "markdown": "Each page has a markdown copy at the same address with .md (the homepage at /index.md, the Arabic homepage at /ar.md). llms-full.txt holds them all.",
