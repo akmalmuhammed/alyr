@@ -16,6 +16,8 @@ GLOBAL_TABLES = {
     "worker_heartbeats",
     # ALYR's own staff list; belongs to ALYR, not to a shop (D-027).
     "platform_admins",
+    # The devices and addresses ALYR's own staff have signed in from, as hashes (ALY-125).
+    "staff_known",
     # A verified email before its business exists (D-031).
     "signup_tokens",
     # Erasing a stopped client (spec 042): the door through the guards (empty outside the job's

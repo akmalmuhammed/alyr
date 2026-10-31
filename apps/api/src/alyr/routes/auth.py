@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from alyr.config import get_settings
-from alyr.core import auth, mail, ratelimit, welcome
+from alyr.core import auth, mail, ratelimit, staff_security, welcome
 from alyr.core.auth import Staff
 from alyr.routes.deps import current_staff
 
@@ -85,7 +85,11 @@ async def verify(body: CodeCheck, request: Request, response: Response) -> dict:
         auth.COOKIE, token, max_age=auth.SESSION_DAYS * 86400, httponly=True,
         samesite="lax", secure=get_settings().env != "local", path="/",
     )
-    return _me(await auth.resolve(db, token))
+    staff = await auth.resolve(db, token)
+    # A member of ALYR staff: a note of the sign-in, and an email if it is from somewhere new
+    # (ALY-125). It never refuses the sign-in.
+    await staff_security.record_sign_in(db, request, staff.email)
+    return _me(staff)
 
 
 @router.get("/auth/me")
