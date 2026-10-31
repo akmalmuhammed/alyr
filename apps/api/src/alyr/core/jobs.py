@@ -73,11 +73,18 @@ async def enqueue(
     )
 
 
+# The rows to claim are picked in a CTE that PostgreSQL must run once (`materialized`). Written as
+# `update ... where id in (select ... for update skip locked limit N)`, the planner may run that
+# subquery again for each row it meets and update more than N rows; after a test run it did, and
+# the batch of "at most two weekly reports" became every report that was due (D-132).
 _CLAIM = (
+    "with picked as materialized ("
+    "  select id from jobs where status = 'queued' and run_at <= now() and {which} "
+    "  order by run_at for update skip locked limit $1) "
     "update jobs set status = 'running', locked_at = now(), attempts = attempts + 1 "
-    "where id in (select id from jobs where status = 'queued' and run_at <= now() and {which} "
-    "             order by run_at for update skip locked limit $1) "
-    "returning id, tenant_id, kind, payload, attempts, max_attempts, run_at"
+    "from picked where jobs.id = picked.id "
+    "returning jobs.id, jobs.tenant_id, jobs.kind, jobs.payload, jobs.attempts, "
+    "jobs.max_attempts, jobs.run_at"
 )
 
 
