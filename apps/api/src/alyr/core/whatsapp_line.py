@@ -159,6 +159,7 @@ async def forget(conn: asyncpg.Connection, number_id: str) -> None:
     stays."""
     await conn.execute("delete from whatsapp_line_state where number_id = $1", number_id)
     await conn.execute("delete from whatsapp_line_health where number_id = $1", number_id)
+    await conn.execute("delete from channel_credentials where number_id = $1", number_id)
 
 
 # ── the test message ──────────────────────────────────────────────────────────────────────
@@ -280,6 +281,9 @@ def row_view(r: asyncpg.Record) -> dict:
         "attached_by": r["attached_by"],
         "state": state_of(r["check_ok"], checks, test, health["severity"]),
         "health": health,
+        # Whose token this line is sent with, and when a business's own token ends (spec 063).
+        "credential": {"kind": r["credential"], "expires_at": (
+            r["credential_expires_at"].isoformat() if r["credential_expires_at"] else None)},
         "checked_at": r["checked_at"].isoformat() if r["checked_at"] else None,
         "checks": checks, "test": test,
         "last_inbound_at": r["last_inbound_at"].isoformat() if r["last_inbound_at"] else None,

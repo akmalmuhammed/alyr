@@ -99,10 +99,11 @@ RULES: dict[str, Rule] = {
         "the business's WhatsApp number and set-up, the trail of what happened to its line "
         "(states and counts, never a customer's words), what Meta says about its message "
         "templates (names and statuses, never their wording), what Meta says about the health of "
-        "its number and account, its switches, the funnel record "
+        "its number and account, the sealed token of a business's own WhatsApp account, its "
+        "switches, the funnel record "
         "of its own sign-up and its weekly reports",
         "channel_numbers", "whatsapp_setup", "whatsapp_line_events", "whatsapp_line_state",
-        "whatsapp_templates", "whatsapp_line_health",
+        "whatsapp_templates", "whatsapp_line_health", "channel_credentials",
         "tenant_modules", "onboarding_events",
         "onboarding_reminders", "onboarding_steps", "setup_requests", "weekly_reports",
     ),

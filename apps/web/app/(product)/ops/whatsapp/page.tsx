@@ -39,6 +39,7 @@ type LineRow = {
   staff_numbers: number;
   templates?: { wanted: number; by_status: Record<string, number>; problems: number };
   health: Health;
+  credential: { kind: "shared" | "own"; expires_at: string | null };
 };
 type Tester = { id: string; label: string; phone: string; window_open: boolean };
 type Event = { at: string; kind: string; ok: boolean | null; actor: string; detail: Record<string, unknown> };
@@ -65,6 +66,7 @@ function eventNote(e: { kind: string; detail: Record<string, unknown> }): string
   if (e.kind === "health") return `${d.from ?? ""} → ${d.to ?? ""}`;
   if (e.kind === "account") return `${d.event ?? ""}${d.type ? ` ${d.type}` : ""}`;
   if (e.kind === "name") return `${d.decision ?? ""}`;
+  if (e.kind === "signup") return `${d.event ?? ""}${d.reason ? ` (${d.reason})` : ""}`;
   if (e.kind === "templates_synced") return `${d.approved ?? 0}/${d.wanted ?? 0}`;
   if (e.kind === "templates_submitted") return `${d.submitted ?? 0}`;
   return "";
@@ -251,6 +253,7 @@ export default function WhatsappLines() {
                             <div><dt>{w.health.facts.sending}</dt><dd>{l.health.health ? w.health.sending[l.health.health] ?? l.health.health : w.health.unknown}</dd></div>
                             <div><dt>{w.health.facts.name}</dt><dd>{l.health.name_decision ? w.health.decision[l.health.name_decision] ?? l.health.name_decision : w.health.unknown}</dd></div>
                             <div><dt>{w.health.facts.review}</dt><dd>{l.health.review ? w.health.decision[l.health.review] ?? l.health.review : w.health.unknown}</dd></div>
+                            <div><dt>{w.health.facts.credential}</dt><dd>{w.health.credential[l.credential.kind]}{l.credential.expires_at ? ` · ${w.health.credential.until} ${when(l.credential.expires_at, lang, w.never)}` : ""}</dd></div>
                           </dl>
                           {l.health.restrictions.length > 0 && (
                             <p><b>{w.health.restrictions}:</b> {l.health.restrictions.map((x) => (

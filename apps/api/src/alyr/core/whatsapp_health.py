@@ -41,6 +41,8 @@ log = logging.getLogger("alyr.whatsapp_health")
 CRITICAL_STATUS = ("FLAGGED", "RESTRICTED", "BANNED", "DELETED", "DISCONNECTED")
 # A policy-violation notice is a warning until restrictions follow; it counts for this long.
 VIOLATION_DAYS = 30
+# A business's own token is shown as worth a look this long before it ends.
+TOKEN_WARN_DAYS = 14
 SEVERITIES = ("unknown", "ok", "attention", "critical")
 
 
@@ -65,10 +67,11 @@ def _when(value: object) -> datetime | None:
 
 
 def evaluate(
-    number: dict, account: dict, now: datetime, heard: bool
+    number: dict, account: dict, now: datetime, heard: bool, token_expires: datetime | None = None
 ) -> tuple[str, list[dict], datetime | None]:
     """The severity of a line, the reasons behind it, and when to make it again (when the first
-    restriction on the account runs out). `heard` is whether Meta has said anything at all."""
+    restriction on the account runs out). `heard` is whether Meta has said anything at all.
+    `token_expires` is when a business's own token ends, if it has one and Meta said (spec 063)."""
     reasons: list[dict] = []
     recheck: datetime | None = None
 
@@ -117,6 +120,15 @@ def evaluate(
         add("account_review_rejected", "critical", "account")
     elif review in ("PENDING", "DEFERRED"):
         add("account_review_pending", "attention", "account", review)
+    if token_expires is not None:
+        if token_expires <= now:
+            add("token_expired", "critical", "number")
+        else:
+            warn_from = token_expires - timedelta(days=TOKEN_WARN_DAYS)
+            if warn_from <= now:
+                add("token_expiring", "attention", "number", token_expires.date().isoformat())
+            soonest = token_expires if warn_from <= now else warn_from
+            recheck = soonest if recheck is None or soonest < recheck else recheck
     for alert in account.get("alerts", []):
         if alert.get("status") == "ACTIVE" and alert.get("severity") in ("CRITICAL", "WARNING"):
             add("alert", "attention", "account", str(alert.get("type", "")))
@@ -151,6 +163,8 @@ REASON_TEXT = {
     "account_review_rejected": "Meta's review of the account was rejected",
     "account_review_pending": "Meta's review of the account is not decided",
     "alert": "Meta raised an alert",
+    "token_expired": "the business's own WhatsApp access token has expired",
+    "token_expiring": "the business's own WhatsApp access token ends within two weeks",
 }
 
 
@@ -184,7 +198,9 @@ async def _save(
     """Write the number's and the account's facts with the severity made from them, and put what
     changed on the line's trail: a new severity, a new quality rating, a new limit."""
     now = datetime.now(UTC)
-    severity, reasons, recheck = evaluate(number, account, now, heard)
+    token_expires = await conn.fetchval(
+        "select expires_at from channel_credentials where number_id = $1", line.number_id)
+    severity, reasons, recheck = evaluate(number, account, now, heard, token_expires)
     await conn.execute(
         "update whatsapp_line_health set quality_rating = $2, number_status = $3, "
         "name_status = $4, name_decision = $5, name_reason = $6, messaging_limit = $7, "
@@ -389,7 +405,8 @@ def view(row: asyncpg.Record, now: datetime | None = None) -> dict:
     account = row["account"] if isinstance(row["account"], dict) else {}
     number = {c: row[c] for c in _NUMBER_COLUMNS}
     heard = row["polled_at"] is not None or row["event_at"] is not None
-    severity, reasons, _ = evaluate(number, account, now, heard)
+    expires = row["credential_expires_at"] if "credential_expires_at" in row.keys() else None
+    severity, reasons, _ = evaluate(number, account, now, heard, expires)
     active = [r for r in account.get("restrictions", [])
               if _when(r.get("expires")) is None or _when(r.get("expires")) > now]
     return {

@@ -10,6 +10,7 @@ from alyr.config import get_settings
 from alyr.core import account as account_notes
 from alyr.core import origin, ratelimit
 from alyr.core.card_billing import CardBilling
+from alyr.core.channel_credentials import Credentials
 from alyr.core.images import PhotoRefused
 from alyr.core.inbound import INBOUND, InboundHandler
 from alyr.core.jobs import JobRunner
@@ -80,6 +81,7 @@ from alyr.routes import staff_numbers as staff_numbers_routes
 from alyr.routes import team as team_routes
 from alyr.routes import templates as template_routes
 from alyr.routes import track as track_routes
+from alyr.routes import whatsapp_signup as whatsapp_signup_routes
 from alyr.routes import workspace as workspace_routes
 from alyr.routes.deps import require_any_module, require_module, require_module_for_slug
 
@@ -120,10 +122,15 @@ def create_app() -> FastAPI:
         log.warning(note)
     app.add_middleware(origin.OwnPagesOnly, settings=settings)
     app.state.db = Database(settings.database_url)
+    # A business that connected its own WhatsApp account is sent with its own token; every other
+    # number with ALYR's (spec 063).
+    app.state.credentials = Credentials(app.state.db)
     app.state.outbound = Outbound(
         {
             "simulator": SimulatorChannel(),
-            "meta": MetaChannel(settings.meta_access_token, settings.meta_graph_version),
+            "meta": MetaChannel(
+                settings.meta_access_token, settings.meta_graph_version,
+                credentials=app.state.credentials.token_for),
         },
         app.state.db,
     )
@@ -252,6 +259,7 @@ def create_app() -> FastAPI:
         return JSONResponse({"status": "ok", "seconds_since_last_check_in": age})
 
     app.include_router(whatsapp_webhook.router)
+    app.include_router(whatsapp_signup_routes.router)
     # Each module's routes answer only for shops that have switched that module on.
     app.include_router(ledger.router, dependencies=[Depends(require_module("ledger"))])
     app.include_router(pay.router)

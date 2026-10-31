@@ -89,6 +89,8 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-145 | A shop's WhatsApp line is checked against Meta, tested with a message to the shop's own staff and kept on a trail; staff see every line on one screen (`/ops/whatsapp`, English and Arabic) | Proposed |
 | D-146 | The status of each of ALYR's templates on each shop's account is kept per shop from Meta (read on request, and by Meta's notices); submitting to Meta is off until the founder allows it; a template waiting for his go is held and never sent | Proposed |
 | D-147 | A number's health comes from Meta's notices and a periodic read; a trouble with an account is one Today item and with a number one per shop; a flagged or restricted number reaches the founder's phone | Proposed |
+| D-148 | A business connects its own WhatsApp account through Meta's Embedded Signup from its sign-up screen, behind a flag that is off; the browser's code and session message are never believed; everything is done or nothing | Proposed |
+| D-149 | A business's own WhatsApp token is sealed in the database with the key in Secret Manager, and every call about its number is made with it | Proposed |
 | D-113 | The Cloudflare zone is hardened with what the Free plan offers and the state is written down: HTTPS only, minimum TLS 1.2, strict SSL, CAA, a trimmed SPF and response-header rules for the API and media host are live; the edge rate-limit rule waits because Free has only Block; no Access until Zero Trust is onboarded; DMARC stays `none` until the reports are read, never `reject` | Proposed |
 
 ---
@@ -2134,5 +2136,45 @@ Without it, analytics is off everywhere.
 **Not decided here.** What to tell an owner whose number is flagged; whether to pause sending on a flag; Meta's phone number status values, which are not on a Meta page I could read (the code treats FLAGGED, RESTRICTED, BANNED, DELETED and DISCONNECTED as critical and anything else unusual as a look).
 
 **Revisit when** Meta documents the `status` values or pushes the quality rating, when the first real flag arrives, or when more than ALYR's own account is in use (spec 063).
+
+---
+
+## D-148 · A business connects its own WhatsApp account through Meta's Embedded Signup, behind a flag that is off
+**Date** 31 Oct 2026 · **Status** Proposed (built and tested against a fake Meta; the founder's steps in Meta come first) · Linear ALY-39 · Spec 063 · Builds on D-007, D-050 and D-145 to D-147
+
+**Decision.**
+- **The owner connects themselves, with Meta's own pop-up.** On the WhatsApp step of `/start`, for the ways that use it (`own_account`, `move_number`), when everything the way needs is ticked: Connect with Meta. The pop-up is Facebook Login for Business with a WhatsApp Embedded Signup configuration; ALYR never sees the owner's Facebook password.
+- **Off until the founder says so** (`ALYR_EMBEDDED_SIGNUP`), and closed by every missing piece (app ID and secret, the configuration's ID, the key that seals tokens). It needs Tech Provider approval (ALY-52) and App Review (ALY-262) first; Meta does not let an unapproved app onboard customers.
+- **The browser is not believed.** The code and the session message come from the owner's browser. The code is exchanged server to server, and every claim in the message (account, number) is read back from Meta with the business's own token before anything is stored.
+- **Everything is done or nothing is.** Exchange, read back, register (not for a number moved from the WhatsApp Business app), subscribe the app to the account's webhooks, then seal the token and attach the number in one transaction. A failure is on the line's trail in Meta's words and told to the owner in Arabic or English.
+- **ALYR staff attach numbers on ALYR's own account exactly as before** (D-050, D-054). `new_number` is not this.
+
+**Why.** A person at a keyboard for every shop does not reach fifty, and cannot serve a shop with its own account or a number that must stay in the WhatsApp Business app. Meta built the pop-up for this and requires it of a Tech Provider.
+
+**Chosen over** staff adding each shop's account by hand (no way to scale, no coexistence), a hand-built phone-number flow (Meta requires Embedded Signup of Tech Providers), and attaching automatically from a typed number (it proves nothing about who owns it).
+
+**Not decided here.** When to switch it on; whether the token's lifetime (Meta's template for the configuration names a 60-day one) needs a refresh job before it is relied on; the coexistence message sync (history, echoes); what a business with a number on both ALYR and its own account does.
+
+**Revisit when** Meta changes the flow (Embedded Signup v2 and v3 end on 15 Oct 2026; this is v4), or the first real business connects.
+
+---
+
+## D-149 · A business's own WhatsApp token is sealed in the database with the key in Secret Manager; every call about its number is made with it
+**Date** 31 Oct 2026 · **Status** Proposed · Linear ALY-39 · Spec 063 · Follows D-072's sealing of a shop's payment keys (`core/payment_keys.py`)
+
+**Decision.**
+- **ALYR's own system-user token stays only in Secret Manager** and serves every number on ALYR's own account. It is unchanged.
+- **A business's own token is sealed** (AES-256-GCM, the business's and the number's IDs bound in) in `channel_credentials`, under `ALYR_CHANNEL_KEYS_KEY`, a key that is itself in Secret Manager in Doha and never in the database. A copied value opens for neither another business nor another number. The database holds ciphertext only; `channel_credential_for()` returns nothing else.
+- **The channel asks, per call, which token to use**: for the number or account the call is about, the business's own, else ALYR's (`MetaChannel(credentials=...)`, five minutes in memory). So sends, templates, health reads and media downloads of a business's own account are made with its own token, and nothing in a module changed.
+- **The app role still does not write `channel_numbers`**: `signup_attach_whatsapp_number()` does, only for the caller's own business, only inside the sign-up code's setting, and only when credentials for that number are already stored.
+- **The token is never logged, returned, put in a job's payload, on the trail or in the audit log.** Its end date is shown and its expiry is a health reason (two weeks before: needs a look; after: needs action).
+
+**Why.** A token for a business's account is the one new secret ALYR must hold per business. It is no more dangerous than a payment key and is treated the same.
+
+**Chosen over** one key per business in Secret Manager (a thousand secrets, a quota and a bill, and a call to the key vault on every send), storing the token in plain text behind row-level security (a database backup would hold fifty working tokens), and sending everything with ALYR's token (Meta refuses it on another business's account).
+
+**Not decided here.** Refreshing or replacing an expiring token; rotating `ALYR_CHANNEL_KEYS_KEY` (it makes every own-account token unreadable: the businesses connect again, as for payment keys).
+
+**Revisit when** Meta documents the token lifetime for the configuration the founder chooses.
 
 ---

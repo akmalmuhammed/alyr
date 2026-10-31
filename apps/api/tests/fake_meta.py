@@ -43,6 +43,19 @@ class FakeMeta:
         self.created: list[dict] = []
         self.edited: list[tuple[str, list]] = []
         self.uploads: list[str] = []
+        # Embedded Signup (spec 063). The tokens a test uses are named here, so the fake can say
+        # which one a call carried without keeping any: token -> label ("shared", "shop1", ...).
+        self.labels: dict[str, str] = {}
+        # The label each call carried, in order, beside `calls`.
+        self.who: list[str] = []
+        # An asset ID (a number or an account) a shop's own token owns: any other token is refused.
+        self.owned: dict[str, str] = {}
+        # code -> {"token", "expires_in"}: what Embedded Signup's code exchanges for, once.
+        self.codes: dict[str, dict] = {}
+        self.app_secret = "test-app-secret"
+        self.registered: list[tuple[str, str]] = []
+        self.refuse_register: tuple[int, int, str] | None = None
+        self.refuse_subscribe: tuple[int, int, str] | None = None
         # Meta refuses a request for a field it does not know (error 100) as a whole; the health
         # read asks for the extended fields first and again for the basics when refused.
         self.reject_extended = False
@@ -99,13 +112,57 @@ class FakeMeta:
         ):
             body = json.loads(request.content)
         self.calls.append((request.method, path, query, body))
+        sent = request.headers.get("authorization", "").removeprefix("Bearer ")
+        label = self.labels.get(sent, "none" if not sent else "unknown")
+        self.who.append(label)
         if not self.token_ok:
             return error(401, 190, "Error validating access token: Session has expired")
+        # An asset a shop's own token owns is reachable with that token only, and a shop's token
+        # reaches nothing else.
+        versioned = len(parts) > 1 and parts[0].startswith("v")
+        asset = parts[1] if versioned else (parts[0] if parts else "")
+        owner = self.owned.get(asset)
+        if (owner is not None and owner != label) or (
+            label.startswith("shop") and asset and owner != label and asset != "oauth"
+        ):
+            return error(400, 100, "Unsupported request. Object with this ID does not exist or "
+                                   "missing permissions")
         if path in self.refuse:
             return error(*self.refuse[path])
         return self.route(request.method, parts[1:], query, body)
 
     def route(self, method: str, parts: list[str], query: dict, body: dict) -> httpx.Response:
+        if method == "GET" and parts == ["oauth", "access_token"]:
+            granted = self.codes.pop(query.get("code", ""), None)
+            if granted is None:
+                return error(400, 100, "This authorization code has expired or was already used")
+            asked = (query.get("client_secret"), query.get("client_id"))
+            if asked != (self.app_secret, self.app_id):
+                return error(400, 101, "Error validating client secret")
+            return httpx.Response(200, json={
+                "access_token": granted["token"], "token_type": "bearer",
+                **({"expires_in": granted["expires_in"]} if granted.get("expires_in") else {})})
+        if method == "POST" and len(parts) == 2 and parts[1] == "subscribed_apps":
+            if self.refuse_subscribe:
+                return error(*self.refuse_subscribe)
+            account = self.wabas.get(parts[0])
+            if account is None:
+                return error(400, 100, "Unsupported post request. Object does not exist")
+            if self.app_id not in account["apps"]:
+                account["apps"].append(self.app_id)
+            return httpx.Response(200, json={"success": True})
+        if method == "POST" and len(parts) == 2 and parts[1] == "register":
+            if self.refuse_register:
+                return error(*self.refuse_register)
+            number = self.numbers.get(parts[0])
+            pin = body.get("pin", "")
+            if number is None or body.get("messaging_product") != "whatsapp" or not (
+                len(pin) == 6 and pin.isdigit()
+            ):
+                return error(400, 100, "Invalid parameter")
+            self.registered.append((parts[0], pin))
+            number["status"] = "CONNECTED"
+            return httpx.Response(200, json={"success": True})
         if method == "GET" and len(parts) == 1 and parts[0] in self.numbers:
             number = self.numbers[parts[0]]
             wanted = [f for f in query.get("fields", "").split(",") if f]
