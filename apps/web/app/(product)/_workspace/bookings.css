@@ -130,3 +130,9 @@
 .bk-chip { min-width: 4.5rem; font-variant-numeric: tabular-nums; }
 .bk-chip[aria-pressed="true"] { background: var(--text); color: var(--canvas); box-shadow: none; }
 .bk .bk-chip[aria-pressed="true"]:hover { background: var(--text); }
+
+/* ── people and chairs: what each does, in order ── */
+.bk-personhead { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); min-width: 0; }
+.bk-person.is-hidden .bk-service-name b { color: var(--text-muted); }
+.bk-order { display: inline-flex; gap: var(--space-1); flex: none; }
+.bk-order .bk-iconbtn:disabled { opacity: 0.4; cursor: default; }

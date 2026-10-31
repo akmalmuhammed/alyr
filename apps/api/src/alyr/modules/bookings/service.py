@@ -34,6 +34,7 @@ LEAD_MINUTES = 30
 REMIND_BEFORE = timedelta(hours=2)
 MAX_DAYS_AHEAD = 60
 MAX_SERVICES = 100
+MAX_RESOURCES = 50
 # Staff may enter a visit that has already started (a walk-in written down afterwards), up to
 # this long ago.
 STAFF_LOOK_BACK = timedelta(hours=12)
@@ -45,9 +46,11 @@ class BookingError(Exception):
     """A booking request that cannot be carried out; `code` is stable, the message is
     safe to show."""
 
-    def __init__(self, code: str, message: str) -> None:
+    def __init__(self, code: str, message: str, data: dict | None = None) -> None:
         super().__init__(message)
         self.code = code
+        # What the screen needs to say it well (for example the services left with nobody).
+        self.data = data or {}
 
 
 def deposit_amount(kind: str, value: int, price: int) -> int:
@@ -512,9 +515,13 @@ async def _pick_resource(
 
 # ----------------------------------------------------------------------- resources
 
-async def list_resources(conn: asyncpg.Connection, only_active: bool = False) -> list[dict]:
+async def list_resources(
+    conn: asyncpg.Connection, only_active: bool = False, detail: bool = False
+) -> list[dict]:
     """The shop's resources in their order, each with the services narrowed to it (an empty
-    list means it does every service) and its own week (empty: the shop's hours)."""
+    list means it does every service) and its own week (empty: the shop's hours). `detail` is
+    for the workspace's own screen: the services each does (`does`, and `does_all` when it does
+    every one the shop lists) and the bookings still to come with it (`upcoming`)."""
     rows = await conn.fetch(
         "select id, name, name_ar, active, kind from booking_resources "
         "where active or not $1 order by sort, created_at",
@@ -528,7 +535,7 @@ async def list_resources(conn: asyncpg.Connection, only_active: bool = False) ->
         "select resource_id, weekday, opens, closes from resource_hours order by weekday, opens"
     ):
         week.setdefault(period["resource_id"], []).append(period)
-    return [
+    out = [
         {
             "id": str(r["id"]), "name": r["name"], "name_ar": r["name_ar"],
             "active": r["active"], "kind": r["kind"],
@@ -536,6 +543,26 @@ async def list_resources(conn: asyncpg.Connection, only_active: bool = False) ->
         }
         for r in rows
     ]
+    if detail:
+        listed = [str(r["id"]) for r in await conn.fetch("select id from services where active")]
+        does: dict[str, list[str]] = {}
+        for service_id, people in (await doers(conn)).items():
+            if service_id in listed:
+                for resource_id in people:
+                    does.setdefault(resource_id, []).append(service_id)
+        ahead = {
+            str(r["resource_id"]): r["n"]
+            for r in await conn.fetch(
+                "select resource_id, count(*)::int as n from bookings "
+                "where status = 'booked' and ends_at > now() and resource_id is not null "
+                "group by 1"
+            )
+        }
+        for one in out:
+            one["does"] = does.get(one["id"], [])
+            one["does_all"] = bool(listed) and len(one["does"]) == len(listed)
+            one["upcoming"] = ahead.get(one["id"], 0)
+    return out
 
 
 async def add_resource(
@@ -543,12 +570,17 @@ async def add_resource(
 ) -> str:
     """Add a resource. The first one a shop adds takes over the bookings still to come, so
     they keep blocking it (until now they were all in the shop's one lane)."""
+    name = _clean_name(name)
+    if await conn.fetchval("select count(*) from booking_resources") >= MAX_RESOURCES:
+        raise BookingError(
+            "too_many_resources", f"A shop can list up to {MAX_RESOURCES} people or chairs."
+        )
     first = not await has_resources(conn)
     resource_id = await conn.fetchval(
         "insert into booking_resources (name, name_ar, kind, sort) "
         "values ($1, $2, $3, (select coalesce(max(sort), 0) + 1 from booking_resources)) "
         "returning id",
-        name.strip(), name_ar.strip(), kind,
+        name, name_ar.strip(), kind,
     )
     if first:
         await conn.execute(
@@ -557,6 +589,16 @@ async def add_resource(
             resource_id,
         )
     return str(resource_id)
+
+
+async def adoptable(conn: asyncpg.Connection) -> int:
+    """How many bookings still to come the shop's first person or chair would take over: all
+    of them while the shop lists none (they were in its one lane), nothing after."""
+    if await has_resources(conn):
+        return 0
+    return await conn.fetchval(
+        "select count(*)::int from bookings where status = 'booked' and ends_at > now()"
+    )
 
 
 async def update_resource(
@@ -582,10 +624,54 @@ async def set_resource_active(conn: asyncpg.Connection, resource_id: UUID, activ
             raise BookingError(
                 "last_resource", "Keep at least one resource active, or customers cannot book."
             )
+        # A service the shop limited to this one would have nobody: customers would be offered
+        # it and find no time. Say which, so the owner chooses someone else for it first.
+        stranded = [
+            r["name"] for r in await conn.fetch(
+                "select s.name from services s where s.active "
+                "and exists (select 1 from service_resources sr "
+                "            where sr.service_id = s.id and sr.resource_id = $1) "
+                "and not exists (select 1 from service_resources sr "
+                "                join booking_resources r on r.id = sr.resource_id "
+                "                where sr.service_id = s.id and r.active and r.id <> $1) "
+                "order by s.sort, s.created_at",
+                resource_id,
+            )
+        ]
+        if stranded:
+            raise BookingError(
+                "service_needs_someone",
+                "Some services are only done by this one: " + ", ".join(stranded) + ".",
+                {"services": stranded},
+            )
     updated = await conn.execute(
         "update booking_resources set active = $2 where id = $1", resource_id, active
     )
     return updated == "UPDATE 1"
+
+
+async def set_resource_order(conn: asyncpg.Connection, ids: list[UUID]) -> None:
+    """Put the shop's people and chairs in this order: the day view's columns, the booking
+    page's list, and who "anyone" takes first. The list must be all of them, once each."""
+    have = {r["id"] for r in await conn.fetch("select id from booking_resources")}
+    if len(ids) != len(set(ids)) or set(ids) != have:
+        raise BookingError("bad_order", "Send every person or chair once.")
+    await conn.execute(
+        "update booking_resources r set sort = o.n::int "
+        "from unnest($1::uuid[]) with ordinality as o(id, n) where r.id = o.id", ids,
+    )
+
+
+async def set_service_order(conn: asyncpg.Connection, ids: list[UUID]) -> None:
+    """Put the shop's services in this order, as the booking page lists them. The list must be
+    all of them (hidden ones too), once each."""
+    have = {r["id"] for r in await conn.fetch("select id from services")}
+    if len(ids) != len(set(ids)) or set(ids) != have:
+        raise BookingError("bad_order", "Send every service once.")
+    await conn.execute(
+        "update services s set sort = o.n::int "
+        "from unnest($1::uuid[]) with ordinality as o(id, n) where s.id = o.id", ids,
+    )
 
 
 async def set_service_resources(

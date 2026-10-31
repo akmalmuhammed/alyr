@@ -37,3 +37,14 @@ Pictures of each stage's screens, taken by `scripts/bookings-owner-flow-browser-
 | `en-22-move-form-390` | the move form on a phone, the number to call shown |
 | `en-23-cancelled-not-told-1440` | after a cancel for a customer who cannot be messaged: nothing was sent, the number to call |
 | `en-24-walk-in-390-dark` | the walk-in form on a phone, dark, with the matching customer under the name |
+
+## Stage 4: the people and chairs (D-143)
+
+| Picture | Shows |
+|---|---|
+| `en-25-people-1440` | each person says what they do and what is booked ahead, with order buttons |
+| `en-26-retire-refused-1440` | retiring the only chair for a service is refused, naming the service |
+| `en-27-people-reordered-1440` | a chair put first |
+| `en-28-chair-retired-1440` | a chair retired after a question: it keeps its booking |
+| `en-29-services-reordered-1440` | the services in a new order |
+| `ar-30-people-390-light`, `en-30-people-390-dark` | the people on a phone, Arabic and dark |

@@ -35,6 +35,7 @@ router = APIRouter(prefix="/api", tags=["bookings"])
 _STATUS_FOR = {
     "unknown_customer": 404, "unknown_service": 404, "not_free": 409,
     "unknown_resource": 404, "last_resource": 409, "bad_deposit": 422, "bad_time": 422,
+    "service_needs_someone": 409,
 }
 
 
@@ -102,6 +103,10 @@ class ServiceResources(BaseModel):
 
 class Active(BaseModel):
     active: bool
+
+
+class Order(BaseModel):
+    ids: list[UUID] = Field(max_length=200, description="Every one of them, in the new order")
 
 
 class Period(BaseModel):
@@ -175,7 +180,7 @@ class Assignment(BaseModel):
 def _refuse(error: service.BookingError) -> HTTPException:
     return HTTPException(
         status_code=_STATUS_FOR.get(error.code, 422),
-        detail={"code": error.code, "message": str(error)},
+        detail={"code": error.code, "message": str(error), **error.data},
     )
 
 
@@ -598,9 +603,10 @@ def _managers_only(staff: Staff) -> None:
 
 @router.get("/resources")
 async def resources(request: Request, tenant_id: UUID = Depends(current_tenant)) -> dict:
-    """The shop's chairs, people or rooms. Empty means the shop takes one customer at a time."""
+    """The shop's chairs, people or rooms, each with the services it does and the bookings still
+    to come with it. Empty means the shop takes one customer at a time."""
     async with request.app.state.db.tenant(tenant_id) as conn:
-        return {"resources": await service.list_resources(conn)}
+        return {"resources": await service.list_resources(conn, detail=True)}
 
 
 @router.post("/resources")
@@ -608,9 +614,15 @@ async def add_resource(
     body: NewResource, request: Request, staff: Staff = Depends(current_staff)
 ) -> dict:
     _managers_only(staff)
-    async with request.app.state.db.tenant(staff.tenant_id) as conn:
-        resource_id = await service.add_resource(conn, body.name, body.name_ar, body.kind)
-        return {"id": resource_id, "resources": await service.list_resources(conn)}
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            # The first person or chair takes over the bookings still to come: say how many.
+            adopted = await service.adoptable(conn)
+            resource_id = await service.add_resource(conn, body.name, body.name_ar, body.kind)
+            return {"id": resource_id, "adopted": adopted,
+                    "resources": await service.list_resources(conn, detail=True)}
+    except service.BookingError as error:
+        raise _refuse(error) from error
 
 
 @router.patch("/resources/{resource_id}")
@@ -624,7 +636,21 @@ async def change_resource(
             conn, resource_id, body.name, body.name_ar, body.kind
         ):
             raise HTTPException(status_code=404, detail="resource not found")
-        return {"resources": await service.list_resources(conn)}
+        return {"resources": await service.list_resources(conn, detail=True)}
+
+
+@router.put("/resources/order")
+async def set_resources_order(
+    body: Order, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    """Put the people and chairs in a new order (every one, once)."""
+    _managers_only(staff)
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            await service.set_resource_order(conn, body.ids)
+            return {"resources": await service.list_resources(conn, detail=True)}
+    except service.BookingError as error:
+        raise _refuse(error) from error
 
 
 @router.post("/resources/{resource_id}/active")
@@ -654,6 +680,19 @@ async def set_resource_hours(
             ):
                 raise HTTPException(status_code=404, detail="resource not found")
             return {"resources": await service.list_resources(conn)}
+    except service.BookingError as error:
+        raise _refuse(error) from error
+
+
+@router.put("/services/order", dependencies=[Depends(require_manager)])
+async def set_services_order(
+    body: Order, request: Request, tenant_id: UUID = Depends(current_tenant)
+) -> dict:
+    """Put the services in a new order (every one, hidden too, once each)."""
+    try:
+        async with request.app.state.db.tenant(tenant_id) as conn:
+            await service.set_service_order(conn, body.ids)
+            return {"services": await service.list_services(conn, detail=True)}
     except service.BookingError as error:
         raise _refuse(error) from error
 

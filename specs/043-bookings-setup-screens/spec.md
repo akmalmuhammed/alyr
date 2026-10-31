@@ -1,6 +1,6 @@
 # Spec 043: The bookings setup screens (services first)
 
-Status: stage 1 (services) built on branch `aly-259-bookings-services` and stage 2 (opening hours and days off) on `aly-259-bookings-hours`, stacked on it (Linear ALY-259), one pull request each, not merged. Decisions: D-140, D-141. Stage 3 (the desk: walk-ins and moving a booking, with the customer told) is on `aly-259-bookings-desk`, stacked on stage 2 (D-142); the people and chairs polish (stage 4) adds to this spec in its own pull request. Builds on spec 026 (resources, D-069) and spec 033 (people and chairs, deposits, the day view, D-084).
+Status: stage 1 (services) built on branch `aly-259-bookings-services` and stage 2 (opening hours and days off) on `aly-259-bookings-hours`, stacked on it (Linear ALY-259), one pull request each, not merged. Decisions: D-140, D-141. Stage 3 (the desk: walk-ins and moving a booking, with the customer told) is on `aly-259-bookings-desk`, stacked on stage 2 (D-142); stage 4 (the people and chairs, and the order of both lists) is on `aly-259-bookings-people`, stacked on stage 3 (D-143). Builds on spec 026 (resources, D-069) and spec 033 (people and chairs, deposits, the day view, D-084).
 
 ## Where we start
 
@@ -38,12 +38,12 @@ Every word is in `bookingsCopy.ts`, English and Arabic against one type. The for
 
 ## Not built in this stage
 
-- **Opening hours and days off** (stage 2, below), **walk-ins and moving a booking with the customer told** (stage 3, below), **adding and retiring a person or chair** (stage 4, the routes exist).
-- **Reordering services.** They are shown in the order they were added.
+- **Opening hours and days off** (stage 2, below), **walk-ins and moving a booking with the customer told** (stage 3, below), **adding and retiring a person or chair** (stage 4, below).
+- **Reordering services** (stage 4, below).
 - **An audit trail of settings.** Nothing in the activity record says who changed a service or a price (D-140).
 - **A photo or a description for a service.**
 - **A service that only some days or hours offer.**
-- **Retiring a person or chair who is the only one doing a service** does not warn (stage 4).
+- **Retiring a person or chair who is the only one doing a service** (stage 4, below).
 
 ## Checks
 
@@ -144,3 +144,25 @@ Moving, cancelling and writing down a booking by phone answer with `told: {sent,
 - `tests/test_bookings_desk.py` (18): a move says the customer was told, and says it was not (never agreed, said stop) with the number; the move happens anyway; the same for a cancel and for a booking by phone for a new customer; a walk-in sends nothing and says nothing; the list carries where consent stands; a booking being moved does not block its own time; the times follow the person asked for; a closed day is said; a time the screen offered is taken; any other minute is allowed; finding a customer by name and by part of the number; one character, blanks and wildcards find nobody; test customers are not offered; an agent can do all of it; another shop sees nothing and can move or cancel nothing.
 - `bookingsDeskLogic.test.mjs` (6): a visit's end, the sentences in both languages (reasons, the number, Western digits in Arabic), a reason nobody wrote words for.
 - `scripts/bookings-owner-flow-browser-check.mjs --stages 1,2,3`: a walk-in for a customer found by typing three letters, a booking by phone for a new customer (warned before, told nothing was sent after, the confirmation on the record as blocked), a move to a chosen free time with the customer told, a move and a cancel for a customer who cannot be messaged (the number shown before and after, the cancel done all the same), the forms at 390 px light and dark. English and Arabic, axe, 44 px targets, no sideways scroll.
+
+## Stage 4: the people and chairs (D-143)
+
+The People part had the routes' bare minimum: a name, a kind, a switch, their own hours. Stage 4 says what each person does and has ahead, stops a retirement that would strand a service, and puts the lists in the order the owner wants. The routes are the same, with `GET /api/resources` and `GET /api/services` carrying more.
+
+- **What each does and has ahead.** Every person or chair shows "Does every service" or "Does: Haircut, Colour" (in the services' own names, in the page's language) and "Booked ahead: 3" (`does`, `does_all` and `upcoming` on `GET /api/resources`; a hidden service is not counted). Who does a service is still set on the service (Services): this is the same fact from the other side.
+- **Retiring (not taking bookings).** Switching someone off keeps the bookings they have and stops new ones. With bookings still to come the screen asks first and says they stay ("move or cancel them from the day"; new bookings go to someone else). A retirement that would leave a service with **nobody** to do it is refused (`service_needs_someone`, 409, naming the services): a service the owner limited to this one would still be offered on the booking page with no time to book. The owner chooses someone else for it under Services, or hides it, first. The last active person or chair still cannot be retired (`last_resource`).
+- **The order.** Up and down buttons (44 px, named for the one they move) put the people and chairs in order, and the services in order (`PUT /api/resources/order`, `PUT /api/services/order`: the whole list once each, hidden services included, or `bad_order`). The people's order is the day view's columns, the booking page's list, and **who "anyone" takes first** (the engine already took the first free one in the shop's order); the services' order is the booking page's list.
+- **The first one added.** "Add a person or chair" says the first one takes over the bookings already made, and the answer says how many (`adopted`): "Added. Bookings still to come, now with them: 3. Move any you want elsewhere from the day."
+- **Limits and names.** A person or chair needs a name (`bad_name`); a shop may list up to 50 (`too_many_resources`).
+
+### Not built in stage 4
+
+- **A person's own login or calendar** (spec 033, not in scope), **assignment by least busy**, **a person's photo**.
+- **Setting who does a service from the person's side.** It is set on the service; the person's row shows the result and says where to change it.
+- **Moving a retired person's bookings in one step.** Each is moved from the day on its own (stage 3).
+
+### Checks (stage 4)
+
+- `tests/test_bookings_people.py` (12): what each does and has ahead (a hidden service is not counted); nobody is retired who is the only one for a service, and the other chair can be; the last one still cannot be; retiring keeps the bookings and stops new ones; the first one added takes over the bookings and says how many; a name and a limit; the order is kept and "anyone" takes the first; an order must name every one once; services in order with the hidden ones; agents can read and nothing more; another shop cannot reorder this shop's people.
+- `bookingsReorder.test.mjs` (3).
+- `scripts/bookings-owner-flow-browser-check.mjs --stages 1,2,3,4`: the people list says what each does and has ahead, retiring the only chair for a service is refused naming the service, a chair is put first, a chair with a booking ahead is retired after a question and the booking stays, a person is added, the services are put in order; the screen at 390 px light and dark. English and Arabic, axe, 44 px, no sideways scroll.

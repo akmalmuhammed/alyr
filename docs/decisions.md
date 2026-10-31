@@ -90,6 +90,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-140 | An owner or admin manages the services from the Bookings screen (add, change names, length, price, deposit and who does it, hide and show; one part of Set up bookings), checked in the page's words and again in the API, and a booking keeps the price it was made at (migration 0100) | Proposed |
 | D-141 | Opening hours are a week a day at a time with a break as two periods, and the shop or one person can have days off (`booking_closures`, migration 0101) that customers cannot book and that never cancel a booking | Proposed |
 | D-142 | The desk (walk-ins, moving and cancelling a booking) finds a customer the shop has instead of retyping them, shows the free times for a move, and says whether the customer was told, with the number to call when ALYR may not message them; staff cannot record a customer's consent for them | Proposed |
+| D-143 | The people and chairs screen says what each does and has ahead, refuses a retirement that would leave a service with nobody, and puts both lists in an order the owner chooses (the people's order is who "anyone" takes first) | Proposed |
 
 ---
 
@@ -2124,3 +2125,16 @@ Without it, analytics is off everywhere.
 **Chosen over** saying "the customer is told" whatever happened (what the screen said before: false for any customer typed in at the desk); recording consent when staff tick a box (a legal question that is not ours to settle by a checkbox); a "send a message anyway" button (hard rule 5 has no such door); a new template for a phone booking (Meta's approval is the founder's).
 
 **Revisit when** the founder answers the consent question, a template for phone bookings is approved, or a pilot salon asks for a walk-in with no number.
+
+## D-143 · The people and chairs screen says what each does and has ahead, refuses a retirement that would strand a service, and lets the owner put the people and the services in order
+**Date** 31 Oct 2026 · **Status** Proposed (built and tested; nothing deployed; waiting for the founder's yes) · Linear ALY-259, stage 4 · Builds on D-084, D-069, D-140
+
+**The decision.**
+- **A person's row says what they do and what they have ahead.** "Does every service" or the services' names, and the number of bookings still to come with them, from the same facts the engine uses (who does a service, and the bookings by resource). Who does a service stays set on the service: one place to change it, shown from both sides.
+- **Retiring someone never strands a service.** Not taking bookings keeps what they have and stops new ones. A retirement that would leave a service the owner had limited to them with nobody is refused, naming the services, because the booking page would go on offering a service nobody can take. This is a refusal, not a warning: a warning only moves the surprise to a customer. The last active one still cannot be retired.
+- **The order is the owner's.** The people's order is the day view's columns, the booking page's list and who "anyone" takes first (the engine already did: the first free one in the shop's order); the services' order is the booking page's list. Both are set by sending the whole list once each, so two staff members reordering at once cannot produce a half order (the second is refused with `bad_order` and reloads).
+- **The first one added is said to take the bookings already made**, with the number, because until then they were all in the shop's one lane and the move is not visible.
+
+**Chosen over** a warning instead of a refusal when a service would have nobody (see above); a "move this booking" arrow for the owner's up and down (a drag order is nicer and needs a library and a keyboard alternative anyway: buttons are 44 px, named, and work with a keyboard and a screen reader); renumbering one place at a time (a gap or two people with the same place is what the whole-list form cannot make).
+
+**Revisit when** a pilot salon has more than a dozen people or chairs (a drag order or sections may then pay for itself), or wants assignment by least busy rather than by order.

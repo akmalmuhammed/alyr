@@ -63,6 +63,8 @@ const W = AR
     toldSent: "يُبلَّغ العميل عبر واتساب", notAgreed: "لم يوافق بعد على رسائل واتساب", tellYourself: "أبلغه بنفسك",
     nowAt: "الآن", move: "تغيير الموعد", movedDone: "تم تغيير الموعد.", cancel: "إلغاء", confirmCancel: "إلغاء الحجز",
     cancelledDone: "تم الإلغاء.", close: "إغلاق",
+    doesAll: "يقدّم كل الخدمات", aheadOne: "محجوز مسبقاً: 1", retireAsk: "الحجوزات القادمة معه: 1", stopTaking: "إيقاف استقبال الحجوزات",
+    moveUpTwo: "نقل Chair 2 إلى الأعلى", retiredTag: "لا يستقبل حجوزات", personAdded: "تمت الإضافة.",
   }
   : {
     setup: "Set up bookings", back: "Back to the day", services: "Services", addService: "Add a service", addSave: "Add service",
@@ -80,6 +82,8 @@ const W = AR
     toldSent: "The customer is told on WhatsApp", notAgreed: "has not agreed to WhatsApp messages yet", tellYourself: "Tell them yourself",
     nowAt: "Now", move: "Move", movedDone: "Moved.", cancel: "Cancel", confirmCancel: "Cancel the booking",
     cancelledDone: "Cancelled.", close: "Close",
+    doesAll: "Does every service", aheadOne: "Booked ahead: 1", retireAsk: "Bookings still to come with them: 1", stopTaking: "Stop taking bookings",
+    moveUpTwo: "Move Chair 2 up", retiredTag: "Not taking bookings", personAdded: "Added.",
   };
 
 // A booking link for one customer, signed with the development key, as the chat would send it.
@@ -524,6 +528,84 @@ try {
         await touchTargets(`walk-in form 390 ${scheme}`);
         await shot(`24-walk-in-390-${scheme}`);
         if (scheme === "dark") await axe("desk-dark");
+      }
+    });
+  }
+
+  if (stage(4)) {
+    const row = (name) => `[...document.querySelectorAll('.bk-people > li')].find((li) => li.querySelector('.bk-service-name')?.textContent.includes(${JSON.stringify(name)}))`;
+    const openPeople = async () => {
+      await b.go(`${BASE}/app/bookings`, 1500);
+      await until("!!document.querySelector('.bk')", "the Bookings screen");
+      await click(buttonByText(W.setup), 900);
+      await click("document.querySelectorAll('.bk-partbtn')[2]", 700);
+      await until("document.querySelectorAll('.bk-people > li').length >= 2", "the people");
+    };
+
+    await run("people: what each does and what is booked ahead", async () => {
+      await b.view(1440, 900, false, "light");
+      await openPeople();
+      const one = await js(`(${row("Chair 1")}).querySelector('.bk-facts').textContent`);
+      const two = await js(`(${row("Chair 2")}).querySelector('.bk-facts').textContent`);
+      check(!one.includes(W.doesAll) && one.includes(W.aheadOne), `Chair 1 does only some services and has one booking ahead (${one})`);
+      check(two.includes(W.doesAll), `Chair 2 does every service (${two})`);
+      await shot("25-people-1440");
+      await noSideScroll("people 1440");
+      await axe("people");
+    });
+
+    await run("people: nobody is retired who is the only one for a service", async () => {
+      await click(`(${row("Chair 2")}).querySelector('.bk-check input')`, 500);
+      await until(`!!(${row("Chair 2")}).querySelector('.bk-form.inline')`, "the question");
+      check((await js(`(${row("Chair 2")}).querySelector('.bk-form.inline').textContent`)).includes(W.retireAsk), "someone with bookings ahead is asked first, and told they stay");
+      await click(buttonByText(W.stopTaking), 1500);
+      const said = await text();
+      check(said.includes("Eyebrow threading") || said.includes("تشذيب الحاجبين"), "the refusal names the service Chair 2 alone does");
+      check(sql(`select active from booking_resources where tenant_id = '${tenant}' and name = 'Chair 2'`) === "t", "Chair 2 is still taking bookings");
+      await shot("26-retire-refused-1440");
+    });
+
+    await run("people: put a chair first", async () => {
+      await openPeople();
+      await click(`(${row("Chair 2")}).querySelector('[aria-label="${W.moveUpTwo}"]')`, 1200);
+      await until(`document.querySelector('.bk-people > li .bk-service-name').textContent.includes('Chair 2')`, "Chair 2 first");
+      const order = sql(`select string_agg(name, ',' order by sort) from booking_resources where tenant_id = '${tenant}'`);
+      check(order === "Chair 2,Chair 1", `the order is kept (${order})`);
+      await shot("27-people-reordered-1440");
+    });
+
+    await run("people: retire a chair that has a booking ahead, the booking stays", async () => {
+      await click(`(${row("Chair 1")}).querySelector('.bk-check input')`, 500);
+      await until(`!!(${row("Chair 1")}).querySelector('.bk-form.inline')`, "the question");
+      await click(buttonByText(W.stopTaking), 1500);
+      await until(`(${row("Chair 1")}).textContent.includes(${JSON.stringify(W.retiredTag)})`, "the retired mark");
+      check(sql(`select active from booking_resources where tenant_id = '${tenant}' and name = 'Chair 1'`) === "f", "Chair 1 is retired");
+      check(Number(sql(`select count(*) from bookings b join booking_resources r on r.id = b.resource_id where r.tenant_id = '${tenant}' and r.name = 'Chair 1' and b.status = 'booked'`)) >= 1, "the booking it had is still booked");
+      await shot("28-chair-retired-1440");
+    });
+
+    await run("people: add a person, and put the services in order", async () => {
+      await fill("#bk-new-n", "Reem");
+      await click(buttonByText(W.addPerson), 1200);
+      await until(`!!(${row("Reem")})`, "the new person");
+      check((await text()).includes(W.personAdded), "it says the person was added");
+      await click("document.querySelectorAll('.bk-partbtn')[0]", 700);
+      await until("document.querySelectorAll('.bk-service').length > 1", "the services");
+      const before = sql(`select name from services where tenant_id = '${tenant}' order by sort limit 1`);
+      await click("document.querySelector('.bk-service .bk-order button:last-child')", 1200);
+      const after = sql(`select name from services where tenant_id = '${tenant}' order by sort limit 1`);
+      check(after !== before, `the first service moved down (${before} is no longer first: ${after})`);
+      await shot("29-services-reordered-1440");
+    });
+
+    await run("people: phone width, light and dark", async () => {
+      for (const scheme of ["light", "dark"]) {
+        await b.view(390, 844, true, scheme);
+        await openPeople();
+        await noSideScroll(`people 390 ${scheme}`);
+        await touchTargets(`people 390 ${scheme}`);
+        await shot(`30-people-390-${scheme}`);
+        if (scheme === "dark") await axe("people-dark");
       }
     });
   }

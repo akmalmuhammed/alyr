@@ -10,12 +10,14 @@
 import { useEffect, useRef, useState } from "react";
 import { formatPrice } from "../_customer/price";
 import type { BookingsCopy, Lang } from "./bookingsCopy";
+import { OrderButtons } from "./BookingsOrder";
+import { reorder } from "./bookingsReorder";
 import {
   blankForm, checkForm, formFromService, type ServiceForm, type ServiceRow,
 } from "./bookingsServiceForm";
 
 export type Person = { id: string; name: string; name_ar: string; active: boolean };
-export type Save = (url: string, method: string, body: unknown, done?: string) => Promise<string>;
+export type Save = (url: string, method: string, body: unknown, done?: string | ((data: Record<string, unknown>) => string)) => Promise<string>;
 
 function personName(p: { name: string; name_ar: string }, lang: Lang): string {
   return lang === "ar" && p.name_ar ? p.name_ar : p.name;
@@ -62,13 +64,14 @@ export function BookingsServices({ t, lang, services, people, save }: {
     <section className="bk-part" aria-labelledby="bk-services">
       <h3 id="bk-services">{t.services}</h3>
       <p className="bk-quiet">{t.servicesHint}</p>
+      {services.length > 1 && <p className="bk-quiet">{t.serviceOrderHint}</p>}
       {noneShown && <p className="bk-warn" role="status">{t.noneShown}</p>}
 
       {services.length === 0 ? (
         <p className="bk-empty">{t.noServices}</p>
       ) : (
         <ul className="bk-people bk-services">
-          {services.map((s) => (
+          {services.map((s, i) => (
             <li key={s.id} className={`bk-person bk-service${s.active ? "" : " is-hidden"}`}>
               {editing === s.id ? (
                 <ServiceFormView
@@ -89,6 +92,10 @@ export function BookingsServices({ t, lang, services, people, save }: {
                     </p>
                   </div>
                   <div className="bk-acts">
+                    <OrderButtons up={t.moveUp(serviceName(s, lang))} down={t.moveDown(serviceName(s, lang))}
+                      first={i === 0} last={i === services.length - 1}
+                      onUp={() => void save("/api/services/order", "PUT", { ids: reorder(services.map((x) => x.id), s.id, "up") })}
+                      onDown={() => void save("/api/services/order", "PUT", { ids: reorder(services.map((x) => x.id), s.id, "down") })} />
                     <button type="button" id={`bk-svc-edit-${s.id}`} className="btn small"
                       aria-label={`${t.editService}: ${serviceName(s, lang)}`}
                       onClick={() => { setEditing(s.id); setAdding(false); setHiding(null); }}>{t.editService}</button>
