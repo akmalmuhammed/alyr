@@ -68,6 +68,12 @@
       "reason": "The section rule's CSS class (the hairline with crosses above a section) in Next's page data, a class name, not a word on the page."
     }
   ],
+  "pricePages": {
+    "reason": "The pricing page (ALY-301) exists to show prices. The founder decided on 31 Oct 2026 to publish them with the homepage's offer switch (NEXT_PUBLIC_ALYR_OFFER) still off, because Paddle, ALYR's card-payment provider, needs the price a buyer is charged to be visible before it approves the domain (D-074). So a price shape may sit in the copy under pricing.** and in the built pages and markdown copies of that one page, and nowhere else: the check still refuses a price on every other page, in the homepage's lines, in llms.txt and in the rest of llms-full.txt.",
+    "copy": ["pricing.**"],
+    "files": ["pricing.html", "ar/pricing.html", "pricing.md", "ar/pricing.md"],
+    "sections": ["/pricing.md", "/ar/pricing.md"]
+  },
   "offerOnly": [
     {
       "path": "home.price.**",

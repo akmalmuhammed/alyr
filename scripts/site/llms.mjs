@@ -7,7 +7,9 @@
 // changed), except a few sentences a machine needs said once (scripts/site/machine-words.json).
 //
 // The rules:
-// - **No prices.** The copies always use the offer-off words, even when the build shows prices.
+// - **No prices, except on the pricing page's own copy** (pricing.md, ar/pricing.md, ALY-301):
+//   that page exists to show them. Every other copy uses the offer-off words, even when the
+//   build shows prices.
 // - **Samples are labelled.** No sample figure is copied: each drawing of a fictional business
 //   becomes one line that says it is a sample of a fictional business, with made-up numbers.
 // - **Only what the page says.** The questions are filtered as the page filters them (contact
@@ -202,6 +204,53 @@ function privacyTwin(locale) {
   return doc.text();
 }
 
+// ------------------------------------------------------------------ the terms and the refund policy
+
+/** A line of copyLegal.ts or copyPricing.ts may hold [label](address); an address that begins with /
+ * is a page of the site, so the copy gets the whole address. */
+const absolute = (text) => String(text ?? "").replace(/\]\((\/[^)\s]*)\)/g, (_, path) => `](${SITE}${path})`);
+
+function legalTwin(locale, key) {
+  const t = copy[locale];
+  const v = t[key];
+  const doc = new Doc();
+  header(doc, locale, key, v.title, null);
+  doc.p(v.updated).p(v.lead);
+  v.sections.forEach((s, index) => {
+    doc.h(2, v.numbered ? `${index + 1}. ${s.title}` : s.title);
+    for (const para of s.paras) doc.p(absolute(typeof para === "string" ? para : `${para.n} ${para.text}`));
+    if (s.list) doc.list(s.list, absolute);
+    for (const para of s.after ?? []) doc.p(absolute(para));
+  });
+  footer(doc, locale, site.PATHS[key][locale]);
+  return doc.text();
+}
+
+// ------------------------------------------------------------------ the pricing page
+
+function pricingTwin(locale) {
+  const t = copy[locale];
+  const v = t.pricing;
+  const cell = (c) => [c.amount, c.per].filter(has).join(" ");
+  const prices = (row) => `${v.plan.transfer.name} (${v.plan.transfer.currency}): ${cell(row.transfer)} · ${v.plan.card.name} (${v.plan.card.currency}): ${cell(row.card)}`;
+  const doc = new Doc();
+  header(doc, locale, "pricing", v.title, null);
+  doc.p(v.updated).p(v.lead);
+  doc.h(2, v.plan.title);
+  doc.list(v.plan.rows, (row) => `**${flat(row.name)}** (${flat(row.note)}): ${prices(row)}`);
+  doc.p(v.plan.confirm);
+  doc.h(3, v.examples.title);
+  doc.list(v.examples.rows, (row) => `**${flat(row.name)}**: ${prices(row)}`);
+  doc.h(2, v.terms.title);
+  doc.list(v.terms.rows, (row) => `**${flat(row.name)}**: ${flat(row.value)}`);
+  doc.h(2, v.includes.title).list(v.includes.items).p(v.includes.note);
+  doc.h(2, v.refund.title).p(v.refund.body).p(`[${flat(v.refund.link)}](${SITE}${site.PATHS.refund[locale]})`);
+  doc.h(2, v.pay.title).list(v.pay.items, (item) => `**${flat(item.name)}**: ${absolute(item.body)}`).p(v.pay.note);
+  doc.h(2, v.seller.title).p(absolute(v.seller.body));
+  footer(doc, locale, site.PATHS.pricing[locale]);
+  return doc.text();
+}
+
 // ------------------------------------------------------------------ the product pages
 
 function productTwin(locale, key) {
@@ -334,7 +383,7 @@ function guidesTwin(locale) {
 function pageName(locale, key) {
   const t = copy[locale];
   if (key === "home") return t.nav?.home ?? "ALYR";
-  if (key === "company" || key === "privacy") return t.nav?.[key] ?? key;
+  if (site.PLAIN.includes(key)) return t.nav?.[key] ?? key;
   if (key === "guides") return t.guides?.crumb ?? key;
   if (key.startsWith("for-")) return t.sectors?.items?.[key.slice(4)]?.name ?? key;
   if (key.startsWith("guide-")) return t.guides?.items?.[key.slice(6)]?.title ?? key;
@@ -346,6 +395,8 @@ function twinOf(locale, key) {
   if (key === "home") return homeTwin(locale);
   if (key === "company") return companyTwin(locale);
   if (key === "privacy") return privacyTwin(locale);
+  if (key === "terms" || key === "refund") return legalTwin(locale, key);
+  if (key === "pricing") return pricingTwin(locale);
   if (key === "guides") return guidesTwin(locale);
   if (key.startsWith("for-")) return sectorTwin(locale, key.slice(4));
   if (key.startsWith("guide-")) return guideTwin(locale, key.slice(6));
@@ -368,7 +419,7 @@ function llmsTxt() {
     w.noApp,
     t.footer?.disclaimer,
     w.money,
-    offer ? w.pricesOn : w.pricesOff,
+    fill(offer ? w.pricesOn : w.pricesOff, { pricing: `${SITE}${twinPath(site.PATHS.pricing.en)}` }),
     contactLine("en"),
     shops && fill(w.samples, { shops }),
     w.markdown,
@@ -393,6 +444,9 @@ function llmsTxt() {
     "", `## ${w.pages}`, "", `- [${w.home}](${SITE}${twinPath("/")}): ${w.homeLine}`,
     `- [${flat(t.guides.crumb)}](${SITE}${twinPath(site.PATHS.guides.en)}): ${flat(t.guides.meta.description)}`,
     `- [${t.nav.company}](${SITE}${twinPath(site.PATHS.company.en)}): ${flat(t.meta.company.description)}`,
+    `- [${t.nav.pricing}](${SITE}${twinPath(site.PATHS.pricing.en)}): ${flat(t.meta.pricing.description)}`,
+    `- [${t.nav.terms}](${SITE}${twinPath(site.PATHS.terms.en)}): ${flat(t.meta.terms.description)}`,
+    `- [${t.nav.refund}](${SITE}${twinPath(site.PATHS.refund.en)}): ${flat(t.meta.refund.description)}`,
     `- [${t.nav.privacy}](${SITE}${twinPath(site.PATHS.privacy.en)}): ${flat(t.meta.privacy.description)}`,
     "", `## ${w.optional}`, "",
   );
@@ -440,4 +494,4 @@ if (problems.length) {
   for (const p of problems) console.error(`  - ${p}`);
   process.exit(1);
 }
-console.log(`llms: llms.txt, llms-full.txt and ${written.length} markdown copies written (offer ${offer ? "on" : "off"}; no prices in them either way).`);
+console.log(`llms: llms.txt, llms-full.txt and ${written.length} markdown copies written (offer ${offer ? "on" : "off"}; no prices in them either way, except the pricing page's own copy).`);
