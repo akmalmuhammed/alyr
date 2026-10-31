@@ -16,6 +16,7 @@ type Today = { items: Item[]; later: Item[]; counts: Record<string, number> };
 const KIND: Record<string, string> = {
   price: "To price", answer: "Waiting for owner", request: "Asked for help",
   whatsapp: "Go-live", stuck: "Stuck", delivery: "Failing",
+  line: "WhatsApp number", account: "WhatsApp account", templates: "Templates",
 };
 
 function age(since: string | null) {
@@ -27,6 +28,8 @@ function age(since: string | null) {
 }
 
 function target(item: Item) {
+  if (item.kind === "account" || item.kind === "templates") return "/ops/whatsapp";
+  if (item.kind === "line" && item.business_id) return `/ops/whatsapp?business=${item.business_id}`;
   if (item.kind === "request" && !item.client_id) return "/ops/requests";
   return item.client_id ? `/ops/clients?client=${item.client_id}` : "/ops/clients";
 }

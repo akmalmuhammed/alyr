@@ -137,7 +137,10 @@ class Channel(Protocol):
         """Store a file with the channel and return the ID a message refers to it by."""
         ...
 
-    async def download_media(self, media_id: str, max_bytes: int) -> tuple[bytes, str]:
+    async def download_media(
+        self, media_id: str, max_bytes: int, number_id: str = ""
+    ) -> tuple[bytes, str]:
         """Fetch a file a customer or staff member sent, by the ID the inbound message
-        carried. Returns its bytes and type. Raises if it is larger than `max_bytes`."""
+        carried. Returns its bytes and type. Raises if it is larger than `max_bytes`.
+        `number_id` is the number it was sent to, for a channel that holds a token per number."""
         ...

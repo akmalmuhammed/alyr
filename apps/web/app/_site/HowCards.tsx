@@ -14,17 +14,16 @@ import "./drawings.css";
 // "How we work with you" as four cards (ALY-226; the founder approved the Framer prototype,
 // docs/framer-review/04-triptych-prototype-log.md): check, set up, see and improve, each a
 // still Carbon canvas cut at 45° with one small scene from the product for the fictional
-// Qirfa Bakery, its title and two lines under it, then a line that draws back from Improve
-// to Check, "Then we check again."
+// Qirfa Bakery, its title and two lines under it. The last card's words say that we check
+// again (ALY-303: the line back to Check and its floating words are gone).
 //
-// The HTML is every scene's finished state, and the return line is drawn. With motion
+// The HTML is every scene's finished state. With motion
 // wanted (`.motion`), loops.ts adds `is-in` to a card as it comes into view (staggered
 // across a row) and how.css plays its scene from the start: every animation fills
 // backwards, so its first frame is the earlier state, and it ends on the finished one. The
 // finished scene holds while its new words are read (`--words`), fades, and plays again
 // (founder, 26 Oct 2026: motion always on), each card on its own cycle; a hover, focus or
-// tap replays a card at once. Each time Improve plays, `is-looped` on the row draws the
-// return line, and Check's cut takes one Volt tick. One Pause control stops all four
+// tap replays a card at once. One Pause control stops all four
 // (WCAG 2.2.2); they stop off screen and in a hidden tab too. Without scripts or with
 // reduced motion nothing moves and everything is finished.
 //
@@ -262,7 +261,7 @@ function sceneWords(key: keyof typeof SCENE, locale: Locale): number {
 }
 const KEYS = ["check", "setup", "see", "improve"] as const;
 
-/** The four cards, the return line from Improve back to Check, and its words. */
+/** The four cards. */
 export function HowCards({ locale }: { locale: Locale }) {
   const t = copy[locale];
   const w = t.home.how;
@@ -285,7 +284,6 @@ export function HowCards({ locale }: { locale: Locale }) {
                 <div className="hw-scene" inert aria-hidden="true" data-nosnippet>
                   <Scene locale={locale} />
                 </div>
-                {key === "check" && <span className="hw-tick" aria-hidden="true" />}
                 {/* the whole canvas plays its scene again: a tap, a click or the keyboard */}
                 <button type="button" className="hw-play" aria-label={scene.replay} aria-describedby={`hw-${key}-say`} data-hw-play />
               </div>
@@ -294,11 +292,6 @@ export function HowCards({ locale }: { locale: Locale }) {
           );
         })}
       </ol>
-      {/* the way back, drawn once after Improve: down from under it, along the foot of the
-          row, up the gutter and along Check's cut (how.css; mirrored in Arabic) */}
-      <span className="hw-loop hw-loop-h" aria-hidden="true"><i className="hw-l1" /><i className="hw-c1" /><i className="hw-c2" /></span>
-      <span className="hw-loop hw-loop-v" aria-hidden="true"><i className="hw-l3" /><i className="hw-c3" /></span>
-      <p className="hw-again"><span>{rich(w.again)}</span></p>
       <LoopToggle words={t.loop} name={t.loop.names.how} className="hw-toggle" />
     </div>
   );

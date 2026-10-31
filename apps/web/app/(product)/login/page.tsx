@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { keepLang, savedLang, type Lang } from "../_workspace/lang";
 import { codeDigits } from "./code";
 import { COPY } from "./copy";
+import { isSecondFactorAnswer } from "../ops/factorLogic";
 import { landing } from "./next";
 
 type CodeAnswer = { sent: boolean; dev_code?: string | null };
@@ -73,7 +74,11 @@ export default function Login() {
       keepLang(lang);
       // Back to the page that sent them here (`?next=`), when it is a safe path of this site.
       const next = new URLSearchParams(window.location.search).get("next");
-      router.push(await landing(next, async () => (await fetch("/api/admin/staff", { cache: "no-store" })).ok));
+      router.push(await landing(next, async () => {
+        const asked = await fetch("/api/admin/staff", { cache: "no-store" });
+        // Staff who have yet to pass the second step are staff: the console asks them for it.
+        return asked.ok || isSecondFactorAnswer(asked.status, await asked.json().catch(() => null));
+      }));
     } catch {
       setError("offline");
     } finally {

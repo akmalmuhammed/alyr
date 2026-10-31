@@ -14,7 +14,7 @@ import signal
 import socket
 
 from alyr.config import get_settings
-from alyr.core import alerts, erase, resume, subscription
+from alyr.core import alerts, erase, resume, subscription, whatsapp_health
 from alyr.core.links import check_secret as check_link_secret
 from alyr.core.retention import purge as purge_old_copies
 from alyr.core.storage import check_store
@@ -157,6 +157,15 @@ async def main() -> None:
     app = create_app()
     # The worker imports photos from spreadsheets, so the same rule as the API (ALY-63).
     check_store(get_settings(), app.state.media.store)
+    # The worker holds more connections than an API instance (a job may hold two at a moment),
+    # waits longer for one, and may run a statement longer: the weekly report is a big query
+    # (D-132).
+    settings = get_settings()
+    app.state.db.configure(
+        pool_max=settings.db_pool_max_worker, acquire_timeout=30.0,
+        statement_timeout_ms=settings.db_statement_timeout_ms_worker,
+        idle_in_transaction_ms=settings.db_idle_in_transaction_ms,
+    )
     await app.state.db.connect()
     # A deploy or a scale-down sends SIGTERM and allows a few seconds: finish the jobs already
     # started, put the rest of the batch back in the queue, and stop (ALY-276).
@@ -171,6 +180,9 @@ async def main() -> None:
     billing = asyncio.create_task(keep_billing_checked(app.state.db))
     purger = asyncio.create_task(keep_old_copies_purged(app.state.db))
     erased = asyncio.create_task(keep_erased_files_removed(app.state.db, app.state.media.store))
+    # Every attached number's health, read from Meta (reads only; spec 062).
+    lines = asyncio.create_task(whatsapp_health.keep_lines_polled(
+        app.state.db, app.state.outbound.channels["meta"], get_settings().line_poll_minutes))
     try:
         await app.state.jobs.run_forever(heartbeat=heartbeat(app.state.db))
         log.info("stopped: the jobs that had started finished, the rest went back in the queue")
@@ -183,6 +195,7 @@ async def main() -> None:
         billing.cancel()
         purger.cancel()
         erased.cancel()
+        lines.cancel()
         await app.state.db.close()
         await close_channels(app)
 

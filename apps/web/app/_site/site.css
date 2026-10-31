@@ -63,8 +63,8 @@ svg { display: block; }
 
 /* --------------------------------------------------------------- controls */
 /* One Volt button everywhere. Its top inline-end corner is cut at 45°, the Command Fold's
-   angle; the arrow sits under that cut and moves 1 px along the diagonal when pressed.
-   The shape is drawn on ::before, so the focus ring around the button is never clipped. */
+   angle. It holds its words and nothing else: no icon, no arrow (the founder, 31 Oct 2026,
+   D-150). The shape is drawn on ::before, so the focus ring around the button is never clipped. */
 .btn {
   --notch: 12px;
   position: relative; isolation: isolate;
@@ -103,18 +103,9 @@ svg { display: block; }
 .btn-line.btn-band::after { background: var(--band); }
 .btn-line.btn-band:hover::after { background: var(--dark-line); }
 .btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 3px; }
-.btn-notch { padding-inline: 1.125rem .625rem; }
-.btn-sm.btn-notch { padding-inline: .9375rem .875rem; }
-.btn-glyph { width: 1.125rem; height: 1.125rem; }
-/* the arrow tucks under the notch */
-.btn .btn-arrow { width: 1rem; height: 1rem; margin-inline-start: .125rem; align-self: flex-start; margin-top: .5rem; transition: translate var(--dur-2) var(--spring); }
-.btn:active .btn-arrow { translate: 1px -1px; }
-[dir="rtl"] .btn:active .btn-arrow { translate: -1px -1px; }
-.btn .ico, .link .ico { transition: translate var(--fast) var(--ease); }
+.link .ico { transition: translate var(--fast) var(--ease); }
 .link:hover .ico { translate: 2px 0; }
 [dir="rtl"] .link:hover .ico { translate: -2px 0; }
-.btn:hover .btn-arrow { translate: 1px -1px; }
-[dir="rtl"] .btn:hover .btn-arrow { translate: -1px -1px; }
 .link { display: inline-flex; align-items: center; gap: .5rem; min-height: 2.75rem; font-weight: 600; border-bottom: 1px solid transparent; }
 .link:hover { border-bottom-color: currentColor; }
 

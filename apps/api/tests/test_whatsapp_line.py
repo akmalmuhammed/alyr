@@ -24,6 +24,14 @@ def office(client_factory):
     return client_factory()
 
 
+@pytest.fixture(autouse=True)
+def _no_health_left_behind():
+    """A line Meta shows as flagged is critical (spec 062) and counts in the alert that reaches the
+    founder's phone; the database lives for the whole run, so a test must not leave one behind."""
+    yield
+    owner_sql("delete from whatsapp_line_health")
+
+
 @pytest.fixture
 def meta(monkeypatch):
     return FakeMeta().install(monkeypatch)
