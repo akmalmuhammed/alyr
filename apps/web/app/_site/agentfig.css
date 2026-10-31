@@ -2,7 +2,7 @@
    the sample switch, and the agent's feed. The dashboard keeps its own styles (agent.css);
    this places it. Three settings:
    - hero: the homepage's first screen, on the Carbon plate, cropped, with the feed beside;
-   - spot: the homepage's whole screen, on the page, with numbered marks and callouts;
+   - spot: the homepage's whole screen, on the page, with its callouts beside it;
    - agent: ALYR Agent's own page, on its Carbon block, with the switch and the feed.
    Logical properties throughout, and the plate's cut mirrored, so Arabic mirrors itself. */
 
@@ -121,19 +121,10 @@ main .ag { font-weight: 400; }
 .afig-spot .af-stage { display: grid; grid-template-columns: minmax(0, 9fr) minmax(0, 3fr); column-gap: var(--col-gap); row-gap: 2rem; align-items: start; }
 .afig-spot .aw { grid-column: 1; }
 .afig-spot .af-aside { grid-column: 2; grid-row: 1 / span 2; align-self: start; }
-/* numbered marks on the dashboard's parts, matching the callouts (alt text "": the
-   number is for the eye; the list beside says what each part is) */
-.afig-spot .ag :is(.ag-needs, .ag-kpis-block, .ag-cards, .ag-done) { position: relative; }
-.afig-spot .ag :is(.ag-needs, .ag-kpis-block, .ag-cards, .ag-done)::after {
-  position: absolute; top: 0; inset-inline-end: 0; translate: 0 -50%; z-index: 1;
-  display: grid; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: 50%;
-  background: var(--carbon); color: var(--on-band); box-shadow: 0 0 0 3px var(--window), inset 0 0 0 1.5px var(--mark-ring);
-  font-family: var(--mono); font-size: .75rem; font-weight: 500; line-height: 1;
-}
-.afig-spot .ag .ag-needs::after { content: "1" / ""; }
-.afig-spot .ag .ag-cards::after { content: "2" / ""; }
-.afig-spot .ag .ag-kpis-block::after { content: "3" / ""; }
-.afig-spot .ag .ag-done::after { content: "4" / ""; }
+/* the callouts are plain lines: each names the part of the screen it is about, so no numbered
+   discs and no ruled rows (ALY-303) */
+.afig-spot .callouts { gap: var(--space-3); border-bottom: 0; }
+.afig-spot .callouts li { display: block; padding-block: 0; border-top: 0; }
 /* The hero already shows the screen's opening sentence and its first numbers, so the whole
    screen opens on what the hero cannot reach: Needs you now and the suggestions with their
    reasons, across the window (framer-review P2). "See the whole screen", a native <details>,
@@ -161,7 +152,6 @@ main .ag { font-weight: 400; }
   .afig-spot .af-stage { grid-template-columns: minmax(0, 1fr); }
   .afig-spot .af-aside { position: static; grid-column: 1; grid-row: auto; }
   .afig-spot .callouts { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--col-gap); }
-  .afig-spot .callouts li:nth-child(2) { border-top: 1px solid var(--line); }
 }
 @media (max-width: 47.99rem) {
   .afig-spot .callouts { grid-template-columns: minmax(0, 1fr); }
