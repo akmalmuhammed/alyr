@@ -68,19 +68,18 @@
 /* a screen fills its tile down to the label; a card and a sheet of paper keep their own height */
 .sf-shelf .sf-frag, .sf-docs .sf-frag { grid-template-rows: auto; align-content: start; }
 .sf-label { display: grid; gap: var(--space-1); }
-.sf-name { display: inline-flex; align-items: center; gap: var(--space-2); font-family: var(--sans); font-size: var(--fs-body); font-weight: var(--weight-semibold); line-height: 1.2; }
-.sf-name .ico { width: 1.125rem; height: 1.125rem; flex: none; }
+.sf-name { font-family: var(--sans); font-size: var(--fs-body); font-weight: var(--weight-semibold); line-height: 1.2; }
 .sf-desc { color: var(--on-band-quiet); font-size: var(--fs-caption); line-height: 1.4; }
 [lang="ar"] .sf-desc { line-height: 1.7; }
 .sf-state { color: var(--on-band-faint); }
 
 @media (hover: hover) and (pointer: fine) {
   .sf-tile:hover::after { opacity: 1; }
+  .sf-tile:hover .sf-name { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .2em; }
 }
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .sf-frag, .sf-name .ico { transition: translate var(--dur-2) var(--ease); }
+  .sf-frag { transition: translate var(--dur-2) var(--ease); }
   .sf-tile:hover .sf-frag { translate: calc(var(--dir) * 2px) -2px; }
-  .sf-tile:hover .sf-name .ico { translate: calc(var(--dir) * 1px) 0; }
 }
 
 /* ------------------------------------------- a window of the workspace, drawn */

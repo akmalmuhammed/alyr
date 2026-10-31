@@ -157,6 +157,15 @@ async def main() -> None:
     app = create_app()
     # The worker imports photos from spreadsheets, so the same rule as the API (ALY-63).
     check_store(get_settings(), app.state.media.store)
+    # The worker holds more connections than an API instance (a job may hold two at a moment),
+    # waits longer for one, and may run a statement longer: the weekly report is a big query
+    # (D-132).
+    settings = get_settings()
+    app.state.db.configure(
+        pool_max=settings.db_pool_max_worker, acquire_timeout=30.0,
+        statement_timeout_ms=settings.db_statement_timeout_ms_worker,
+        idle_in_transaction_ms=settings.db_idle_in_transaction_ms,
+    )
     await app.state.db.connect()
     # A deploy or a scale-down sends SIGTERM and allows a few seconds: finish the jobs already
     # started, put the rest of the batch back in the queue, and stop (ALY-276).

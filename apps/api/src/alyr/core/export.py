@@ -176,15 +176,63 @@ def _lines(rows: list[list[object]]) -> bytes:
     return out.getvalue().encode("utf-8")
 
 
+# A download holds one database connection for as long as it takes the person to receive the
+# file, minutes for a big business. Only this many run at once in one process, so a few
+# downloads can never take every connection the pool has from the screens (D-132).
+DOWNLOADS_AT_ONCE = 2
+_downloading = 0
+
+
+class Slot:
+    """One of the places for a download. Given back once, by whoever gets there first: the end of
+    the stream, or the stream being thrown away without ever starting."""
+
+    def __init__(self) -> None:
+        self._held = True
+
+    def release(self) -> None:
+        global _downloading
+        if self._held:
+            self._held = False
+            _downloading -= 1
+
+
+def take_slot() -> Slot | None:
+    """A place for one more download, or None when they are all taken."""
+    global _downloading
+    if _downloading >= DOWNLOADS_AT_ONCE:
+        return None
+    _downloading += 1
+    return Slot()
+
+
 async def stream(
-    db: Database, store: Store, tenant_id: UUID, by: str, at: datetime,
+    db: Database, store: Store, tenant_id: UUID, by: str, at: datetime, slot: Slot | None = None,
 ) -> AsyncIterator[bytes]:
     """The ZIP's bytes, a piece at a time. `by` is the name of who asked, for the README."""
+    try:
+        async for piece in _stream(db, store, tenant_id, by, at):
+            yield piece
+    finally:
+        if slot is not None:
+            slot.release()
+
+
+async def _stream(
+    db: Database, store: Store, tenant_id: UUID, by: str, at: datetime,
+) -> AsyncIterator[bytes]:
     sink = _Sink()
     counts: dict[str, int] = {}
     files = {"documents": 0, "photos": 0, "messages": 0, "missing_photos": 0}
     with zipfile.ZipFile(sink, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         async with db.tenant(tenant_id) as conn:
+            # The file is read in one transaction and sent at the pace of the person's
+            # connection: neither the statement nor the wait between pieces is held to the limits
+            # the screens have.
+            await conn.execute(
+                "select set_config('statement_timeout', '0', true), "
+                "       set_config('idle_in_transaction_session_timeout', '0', true)"
+            )
             shop = await conn.fetchrow(
                 "select * from tenants where id = $1", tenant_id
             )
