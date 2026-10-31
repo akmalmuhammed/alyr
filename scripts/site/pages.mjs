@@ -4,7 +4,7 @@
 // languages, with its social card, without editing the build script (ALY-232).
 //
 //   node scripts/site/pages.mjs                   every page
-//   node scripts/site/pages.mjs company privacy   every page but these (build-site.sh's plain pages)
+//   node scripts/site/pages.mjs company privacy terms refund pricing   every page but these (build-site.sh's plain pages)
 
 import { loadSite } from "./lib/copy.mjs";
 
