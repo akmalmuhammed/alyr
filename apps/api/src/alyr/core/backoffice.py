@@ -12,6 +12,7 @@ from uuid import UUID
 import asyncpg
 
 from alyr import catalog
+from alyr.core import whatsapp_health, whatsapp_templates
 from alyr.core.auth import Staff
 
 STAFF_SESSION_HOURS = 12
@@ -201,6 +202,8 @@ async def today(conn: asyncpg.Connection) -> dict:
             business_id=d["tenant_id"], urgent=True,
         ))
 
+    items += await _line_items(conn, now)
+
     snoozed = {
         r["item_key"]: r["until"]
         for r in await conn.fetch("select item_key, until from today_snoozes where until > now()")
@@ -213,6 +216,60 @@ async def today(conn: asyncpg.Connection) -> dict:
     for i in due:
         counts[i["kind"]] = counts.get(i["kind"], 0) + 1
     return {"items": due, "later": later, "counts": counts}
+
+
+async def _line_items(conn: asyncpg.Connection, now: datetime) -> list[dict]:
+    """What Meta says is wrong with a WhatsApp number or account (spec 062), and with the templates
+    on an account (spec 061). A trouble with one number is an item for that shop. ALYR's own account
+    is shared by many shops, so a trouble with an account is one item for the account, saying how
+    many shops it reaches, not one per shop."""
+    items: list[dict] = []
+    accounts: dict[str, dict] = {}
+    problems: dict[str, int] = {}
+    for r in await conn.fetch("select * from admin_whatsapp_template_counts()"):
+        if r["status"] in whatsapp_templates.PROBLEMS:
+            problems[str(r["tenant_id"])] = problems.get(str(r["tenant_id"]), 0) + r["n"]
+    for r in await conn.fetch("select * from admin_whatsapp_lines()"):
+        health = whatsapp_health.view(r, now)
+        since = r["event_at"] or r["polled_at"] or r["attached_at"]
+        mine = [x for x in health["reasons"] if x["scope"] == "number"]
+        if mine:
+            critical = any(x["level"] == "critical" for x in mine)
+            items.append(_item(
+                "line", r["tenant_id"],
+                f"WhatsApp number {'needs action' if critical else 'needs a look'}: {r['name']}",
+                whatsapp_health.describe(mine), since, client_id=r["client_id"],
+                business_id=r["tenant_id"], urgent=critical,
+            ))
+        waba = r["waba_id"] or ""
+        if not waba:
+            continue
+        group = accounts.setdefault(
+            waba, {"shops": 0, "reasons": {}, "since": since, "problems": 0})
+        group["shops"] += 1
+        group["problems"] = max(group["problems"], problems.get(str(r["tenant_id"]), 0))
+        for x in health["reasons"]:
+            if x["scope"] == "account":
+                group["reasons"][(x["code"], x["value"])] = x
+    for waba, group in accounts.items():
+        shops = f"{group['shops']} shop{'s' if group['shops'] != 1 else ''}"
+        if group["reasons"]:
+            reasons = list(group["reasons"].values())
+            critical = any(x["level"] == "critical" for x in reasons)
+            items.append(_item(
+                "account", waba,
+                f"WhatsApp account …{waba[-4:]} {'needs action' if critical else 'needs a look'}",
+                f"{whatsapp_health.describe(reasons)}. Reaches {shops}.", group["since"],
+                urgent=critical,
+            ))
+        if group["problems"]:
+            items.append(_item(
+                "templates", waba,
+                f"{group['problems']} message template{'s' if group['problems'] != 1 else ''} "
+                f"need a look on account …{waba[-4:]}",
+                f"Rejected, paused, flagged or disabled by Meta. Reaches {shops}.", group["since"],
+            ))
+    return items
 
 
 async def snooze(conn: asyncpg.Connection, key: str, days: int, by: str) -> datetime:

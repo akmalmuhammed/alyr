@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from alyr.config import get_settings
-from alyr.core import backoffice, whatsapp_line, whatsapp_templates
+from alyr.core import backoffice, whatsapp_health, whatsapp_line, whatsapp_templates
 from alyr.core.auth import Staff
 from alyr.routes.admin import _admin_call, _by, _in_business, platform_admin
 
@@ -192,9 +192,12 @@ async def check_line(
     if line is None:
         raise HTTPException(status_code=404, detail="this business has no WhatsApp number")
     # Meta is asked with no database transaction open.
-    checks = await whatsapp_line.probe(
+    checks, info = await whatsapp_line.probe(
         request.app.state.outbound.channels["meta"], line, get_settings().meta_app_id)
     async with _in_business(request, business_id) as conn:
+        if info is not None:
+            # What Meta said about the number is its health too (spec 062).
+            await whatsapp_health.apply_info(conn, line, info, _by(staff))
         checks += await whatsapp_line.local_checks(conn, line)
         ok = await whatsapp_line.save_check(conn, line, checks, _by(staff))
         await backoffice.audit(

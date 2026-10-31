@@ -23,6 +23,7 @@ rules below run inside the worker and watch what an uptime check cannot see.
 | Messages are waiting (`queue_late`) | Jobs are due and nothing is taking them | Open `/health/worker`. 503: the worker is down, restart the worker pool (roll back if a deploy caused it). 200: look for one slow or stuck job |
 | A job gave up (`job_parked`) | A job used all its attempts | Read it in `/ops`, failed jobs; fix the cause, then retry it |
 | WhatsApp sends are failing (`sends_failing`) | More than 5% of sends fail | Meta token expired or a template rejected: check the Meta app and `docs/runbooks/secret-rotation.md` |
+| A WhatsApp number or account is in trouble (`line_health`) | Meta says a number is flagged, restricted or blocked, or an account is restricted, disabled or removed by its business. Counts only | Open `/ops` → WhatsApp lines (Today names the shop or the account); `docs/runbooks/whatsapp-line.md`, "Health" |
 | No WhatsApp message received (`webhook_quiet`) | A shop has a live number but no customer message arrived for 15 minutes in opening hours | Check the webhook subscription and callback address in Meta; the public address answering 404 is a cause |
 | Uptime check failed (Cloud Monitoring) | The API cannot reach the database, or the worker stopped checking in | Open `/health/ready` and `/health/worker` |
 

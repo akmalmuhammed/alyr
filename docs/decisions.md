@@ -88,6 +88,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-122 | ALYR's own business keeps no test line: the "Try it" step says so and offers to skip, and the one-off first-admin job does not create one | Proposed |
 | D-145 | A shop's WhatsApp line is checked against Meta, tested with a message to the shop's own staff and kept on a trail; staff see every line on one screen (`/ops/whatsapp`, English and Arabic) | Proposed |
 | D-146 | The status of each of ALYR's templates on each shop's account is kept per shop from Meta (read on request, and by Meta's notices); submitting to Meta is off until the founder allows it; a template waiting for his go is held and never sent | Proposed |
+| D-147 | A number's health comes from Meta's notices and a periodic read; a trouble with an account is one Today item and with a number one per shop; a flagged or restricted number reaches the founder's phone | Proposed |
 | D-113 | The Cloudflare zone is hardened with what the Free plan offers and the state is written down: HTTPS only, minimum TLS 1.2, strict SSL, CAA, a trimmed SPF and response-header rules for the API and media host are live; the edge rate-limit rule waits because Free has only Block; no Access until Zero Trust is onboarded; DMARC stays `none` until the reports are read, never `reject` | Proposed |
 
 ---
@@ -2113,5 +2114,25 @@ Without it, analytics is off everywhere.
 **Not decided here.** When to switch submitting on, which held templates to release and when, and whether to submit the Arabic before ALY-66. All are the founder's.
 
 **Revisit when** the founder switches submitting on, Meta changes its template statuses or limits, or a second language is added.
+
+---
+
+## D-147 · A number's health comes from Meta's notices and a periodic read; an account's trouble is one item, a number's is one per shop; a flagged or restricted number reaches the founder's phone
+**Date** 31 Oct 2026 · **Status** Proposed (built and tested against a fake Meta; no real Meta call) · Linear ALY-166 · Spec 062 · Builds on D-145 and D-146
+
+**Decision.**
+- **What is kept.** For each attached number: its quality rating, status, messaging limit, throughput, sending status and display-name decision; for its account: restrictions (with their end), a disable scheduled or lifted, a policy violation, a review decision, the business removing ALYR, active alerts. From these ALYR makes a severity (`ok`, `attention`, `critical`) and the reasons behind it.
+- **How it arrives.** Meta's `phone_number_quality_update`, `phone_number_name_update`, `account_update`, `account_review_update` and `account_alerts` notices at the one signed webhook, and a read of every number (`GET /{number-id}`) by the worker every six hours (`ALYR_LINE_POLL_MINUTES`; 0 switches reading off) and when staff press Check. The quality rating is read, not pushed: no webhook Meta documents now carries it. Reading is the only thing this does at Meta.
+- **One item for an account, one for a number.** ALYR's own account is shared by many shops, so a restriction on it is one Today item saying how many shops it reaches. A flag or a yellow rating on one number is one item for that shop.
+- **A flag reaches the phone.** One alert (`line_health`) fires when any number is critical or any account is restricted, disabled or removed by its business. It carries counts only, like every alert (hard rule 2).
+- **A flagged number reads "problem"** on the lines screen, checked or not.
+
+**Why.** Meta is the only one who knows. A restricted number looks perfectly healthy from ALYR's side until a customer complains.
+
+**Chosen over** reading only when staff press Check (nobody presses it for fifty shops), a webhook-only design (the quality rating is not pushed), one item per shop for an account trouble (fifty items for one cause), pausing a shop's sending automatically when its number is flagged (a decision about a shop's customers, the founder's), and messaging the owner (the owner did not cause an ALYR-account restriction and is not told about ALYR's accounts; the founder decides what an owner hears).
+
+**Not decided here.** What to tell an owner whose number is flagged; whether to pause sending on a flag; Meta's phone number status values, which are not on a Meta page I could read (the code treats FLAGGED, RESTRICTED, BANNED, DELETED and DISCONNECTED as critical and anything else unusual as a look).
+
+**Revisit when** Meta documents the `status` values or pushes the quality rating, when the first real flag arrives, or when more than ALYR's own account is in use (spec 063).
 
 ---

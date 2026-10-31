@@ -43,6 +43,9 @@ class FakeMeta:
         self.created: list[dict] = []
         self.edited: list[tuple[str, list]] = []
         self.uploads: list[str] = []
+        # Meta refuses a request for a field it does not know (error 100) as a whole; the health
+        # read asks for the extended fields first and again for the basics when refused.
+        self.reject_extended = False
         # Meta pages its lists; a small page forces the code to follow the cursor.
         self.page_size = 200
         # After this many created templates Meta answers "too many requests" (code 4).
@@ -61,6 +64,9 @@ class FakeMeta:
             "id": number_id, "status": status, "display_phone_number": display,
             "verified_name": name, "quality_rating": quality, "name_status": "APPROVED",
             "code_verification_status": "VERIFIED",
+            "whatsapp_business_manager_messaging_limit": "TIER_250",
+            "throughput": {"level": "STANDARD"},
+            "health_status": {"can_send_message": "AVAILABLE"},
         }
         if waba_id:
             account = self.wabas.setdefault(waba_id, {"numbers": [], "apps": []})
@@ -103,6 +109,8 @@ class FakeMeta:
         if method == "GET" and len(parts) == 1 and parts[0] in self.numbers:
             number = self.numbers[parts[0]]
             wanted = [f for f in query.get("fields", "").split(",") if f]
+            if self.reject_extended and "whatsapp_business_manager_messaging_limit" in wanted:
+                return error(400, 100, "(#100) Tried accessing nonexisting field")
             return httpx.Response(200, json={
                 "id": parts[0], **{k: v for k, v in number.items() if not wanted or k in wanted}})
         if method == "GET" and len(parts) == 1:

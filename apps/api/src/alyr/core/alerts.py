@@ -83,6 +83,8 @@ async def evaluate(db: Database, now: datetime | None = None) -> dict[str, Alert
         real_numbers = await conn.fetchval(
             "select count(*) from channel_numbers where channel = 'meta'"
         )
+        # Counts of lines and accounts Meta says are flagged, restricted or removed (spec 062).
+        trouble = await conn.fetchrow("select * from whatsapp_health_alert_counts()")
         # The webhook only queues a customer's message (routes/whatsapp_webhook.py), so the
         # newest such job is when Meta last reached us with one, for a shop on a real number.
         last_inbound = await conn.fetchval(
@@ -91,6 +93,14 @@ async def evaluate(db: Database, now: datetime | None = None) -> dict[str, Alert
             "(select tenant_id from channel_numbers where channel = 'meta')",
             INBOUND,
         )
+
+    lines_bad, accounts_bad = trouble["lines_critical"], trouble["accounts_critical"]
+    results["line_health"] = Alert(
+        "line_health", "A WhatsApp number or account is in trouble",
+        f"{lines_bad} number(s) flagged, restricted or blocked; {accounts_bad} account(s) "
+        "restricted, disabled or removed by the business.",
+        "Open /ops, WhatsApp lines, and read docs/runbooks/whatsapp-line.md, \"Health\".",
+    ) if lines_bad or accounts_bad else None
 
     oldest = queue["oldest_due"]
     results["queue_late"] = Alert(

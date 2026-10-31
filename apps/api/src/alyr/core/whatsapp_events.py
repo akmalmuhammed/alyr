@@ -14,10 +14,23 @@ that cannot be applied is logged (its kind, never its content) and dropped.
 import logging
 
 from alyr.channels.meta import AccountEvent
-from alyr.core import whatsapp_line, whatsapp_templates
+from alyr.core import whatsapp_health, whatsapp_line, whatsapp_templates
 from alyr.db import Database
 
 log = logging.getLogger("alyr.whatsapp_events")
+
+# Notices that name one number, by its display number.
+NUMBER_FIELDS = ("phone_number_quality_update", "phone_number_name_update")
+
+_HANDLERS = {
+    "message_template_status_update": whatsapp_templates.apply_status_event,
+    "template_category_update": whatsapp_templates.apply_category_event,
+    "phone_number_quality_update": whatsapp_health.apply_quality_notice,
+    "phone_number_name_update": whatsapp_health.apply_name_notice,
+    "account_update": whatsapp_health.apply_account_notice,
+    "account_alerts": whatsapp_health.apply_alert_notice,
+    "account_review_update": whatsapp_health.apply_review_notice,
+}
 
 
 class AccountEvents:
@@ -48,11 +61,21 @@ class AccountEvents:
             # An account that is not one of ours, or a number detached since: nothing to keep.
             log.info("a %s notice for an account with no attached number", event.field)
             return 0
+        # A notice about one number names it by its display number; one about the account, or
+        # about a business portfolio, is for every number on the account.
+        if event.field in NUMBER_FIELDS:
+            shown = whatsapp_health.digits(event.value.get("display_phone_number"))
+            lines = [x for x in lines if shown and whatsapp_health.digits(x.display_phone) == shown]
+            if not lines:
+                log.info("a %s notice for a number ALYR has not attached", event.field)
+        elif event.field == "account_alerts" and (
+            event.value.get("entity_type") == "PHONE_NUMBER"
+        ):
+            lines = [x for x in lines if x.number_id == str(event.value.get("entity_id"))]
         done = 0
         for line in lines:
             async with self._db.tenant(line.tenant_id) as conn:
-                if event.field == "message_template_status_update":
-                    done += await whatsapp_templates.apply_status_event(conn, line, event.value)
-                elif event.field == "template_category_update":
-                    done += await whatsapp_templates.apply_category_event(conn, line, event.value)
+                handler = _HANDLERS.get(event.field)
+                if handler is not None:
+                    done += await handler(conn, line, event.value)
         return done

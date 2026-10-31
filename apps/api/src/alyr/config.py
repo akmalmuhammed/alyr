@@ -112,6 +112,10 @@ class Settings(BaseSettings):
     # back office shows what would be submitted and reads what Meta has, and nothing is sent.
     # Submitting is a Meta-facing action the founder approves; switching this on is that approval.
     template_submit: bool = False
+    # How often the worker reads every attached number's health from Meta, in minutes (spec 062,
+    # D-147): quality rating, status, messaging limit. Reads only. 0 reads nothing (Meta's notices
+    # still arrive); the worker then only makes each severity again every hour.
+    line_poll_minutes: int = 360
 
     # The weekly report card (ALY-99). Off: outside the 24-hour window the report goes as
     # the text-only `weekly_report` template, and REPORT brings the card. On (once Meta

@@ -274,6 +274,25 @@ NUMBER_BASIC_FIELDS = (
 )
 
 
+# What the health read asks for besides the basics: the messaging limit (the field Meta's messaging
+# limits page names; `messaging_limit_tier` is deprecated), the throughput level and the health
+# status (Meta's health status page). Meta fails the whole request when it does not know a field, so
+# `number_health` asks again for the basics when it is refused.
+HEALTH_FIELDS = (
+    NUMBER_BASIC_FIELDS + ",whatsapp_business_manager_messaging_limit,throughput,health_status"
+)
+
+
+def error_code(error: Exception) -> int:
+    """Meta's own error code from a refused request, or 0."""
+    if isinstance(error, httpx.HTTPStatusError):
+        try:
+            return int(error.response.json()["error"]["code"])
+        except (ValueError, KeyError, TypeError):
+            return 0
+    return 0
+
+
 def describe_error(error: Exception) -> str:
     """A refused request to Meta in words a member of staff can act on, without anything
     secret in it. Meta's error codes, from its error codes page: 190 the access token is
@@ -376,6 +395,16 @@ class MetaChannel:
         when it is refused. Fields checked against Meta's phone number, messaging limits,
         throughput and health status pages, 31 Oct 2026."""
         return await self._read(number_id, {"fields": fields})
+
+    async def number_health(self, number_id: str) -> dict:
+        """The number's status, quality rating and name status, and, where Meta will say, its
+        messaging limit, throughput and health. A read."""
+        try:
+            return await self.number_details(number_id, HEALTH_FIELDS)
+        except httpx.HTTPStatusError as error:
+            if error_code(error) != 100:
+                raise
+        return await self.number_details(number_id, NUMBER_BASIC_FIELDS)
 
     async def account_number_ids(self, waba_id: str) -> list[str]:
         """The IDs of every number on a WhatsApp Business Account: GET /{waba-id}/phone_numbers

@@ -26,7 +26,7 @@ import asyncpg
 import httpx
 
 from alyr.channels.base import OutboundMessage
-from alyr.channels.meta import NUMBER_BASIC_FIELDS, MetaChannel, describe_error
+from alyr.channels.meta import MetaChannel, describe_error
 from alyr.core.outbound import Outbound
 
 # Where a line stands, in the order a person reads it. `working` needs a customer's message to
@@ -77,23 +77,26 @@ def _ok(key: str, ok: bool | None, value: str = "", error: str = "") -> dict:
     return {"key": key, "ok": ok, "value": value, **({"error": error} if error else {})}
 
 
-async def probe(channel: MetaChannel, line: Line, app_id: str) -> list[dict]:
+async def probe(
+    channel: MetaChannel, line: Line, app_id: str
+) -> tuple[list[dict], dict | None]:
     """Ask Meta about the line. Each answer is one entry: `ok` true, false, or null for "cannot
-    tell yet". A Meta that does not answer fails the check it was asked for and no other."""
+    tell yet". A Meta that does not answer fails the check it was asked for and no other. Also
+    answers what Meta said about the number, for its health (spec 062), or None if it did not."""
     checks: list[dict] = []
     try:
-        info = await channel.number_details(line.number_id, NUMBER_BASIC_FIELDS)
+        info = await channel.number_health(line.number_id)
     except httpx.HTTPError as error:
         # One refusal (the token, the number ID) would be repeated by every later question, so
         # ask no more: the account and the webhook cannot be checked without the number.
         checks.append(_ok("number", False, "error", describe_error(error)))
-        return checks
+        return checks, None
     status = str(info.get("status", ""))
     checks.append(_ok("number", status == "CONNECTED", status or "UNKNOWN"))
 
     if not line.waba_id:
         checks += [_ok("account", None, "no_account_id"), _ok("webhook", None, "no_account_id")]
-        return checks
+        return checks, info
     try:
         listed = line.number_id in await channel.account_number_ids(line.waba_id)
         checks.append(_ok("account", listed, "listed" if listed else "not_listed"))
@@ -109,7 +112,7 @@ async def probe(channel: MetaChannel, line: Line, app_id: str) -> list[dict]:
             checks.append(_ok("webhook", True, "subscribed"))
     except httpx.HTTPError as error:
         checks.append(_ok("webhook", False, "error", describe_error(error)))
-    return checks
+    return checks, info
 
 
 async def local_checks(conn: asyncpg.Connection, line: Line) -> list[dict]:
@@ -152,8 +155,10 @@ async def save_check(
 
 
 async def forget(conn: asyncpg.Connection, number_id: str) -> None:
-    """The number was detached: its check and test no longer describe anything. The trail stays."""
+    """The number was detached: its check, test and health no longer describe anything. The trail
+    stays."""
     await conn.execute("delete from whatsapp_line_state where number_id = $1", number_id)
+    await conn.execute("delete from whatsapp_line_health where number_id = $1", number_id)
 
 
 # ── the test message ──────────────────────────────────────────────────────────────────────
@@ -243,8 +248,13 @@ def test_info(status: str | None, error: str | None, at: datetime | None, by: st
             "by": by, "ok": status in SENT}
 
 
-def state_of(check_ok: bool | None, checks: list[dict], test: dict | None) -> str:
-    """Where one attached line stands. A failed check or a test that did not go is a problem."""
+def state_of(
+    check_ok: bool | None, checks: list[dict], test: dict | None, severity: str = "unknown"
+) -> str:
+    """Where one attached line stands. A failed check, a test that did not go, or a number Meta
+    has flagged or restricted (spec 062) is a problem, whether or not it has been checked."""
+    if severity == "critical":
+        return "problem"
     if check_ok is None:
         return "unchecked"
     if check_ok is False or (test is not None and test["status"] in ("failed", "blocked")):
@@ -257,6 +267,10 @@ def row_view(r: asyncpg.Record) -> dict:
     """One row of `admin_whatsapp_lines()` as the back office reads it."""
     checks = r["checks"] if isinstance(r["checks"], list) else []
     test = test_info(r["test_status"], r["test_error"], r["test_at"], r["test_by"])
+    # Imported here: the health module uses this one.
+    from alyr.core import whatsapp_health
+
+    health = whatsapp_health.view(r)
     return {
         "business_id": str(r["tenant_id"]), "name": r["name"], "slug": r["slug"],
         "client_id": str(r["client_id"]) if r["client_id"] else None,
@@ -264,7 +278,8 @@ def row_view(r: asyncpg.Record) -> dict:
         "display_phone": r["display_phone"],
         "attached_at": r["attached_at"].isoformat() if r["attached_at"] else None,
         "attached_by": r["attached_by"],
-        "state": state_of(r["check_ok"], checks, test),
+        "state": state_of(r["check_ok"], checks, test, health["severity"]),
+        "health": health,
         "checked_at": r["checked_at"].isoformat() if r["checked_at"] else None,
         "checks": checks, "test": test,
         "last_inbound_at": r["last_inbound_at"].isoformat() if r["last_inbound_at"] else None,

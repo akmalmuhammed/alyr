@@ -23,12 +23,22 @@ type TplView = {
   counts: { wanted: number; by_status: Record<string, number>; held: number; extra: number };
   results?: { name: string; language: string; result: string; note: string }[];
 };
+type Health = {
+  severity: "unknown" | "ok" | "attention" | "critical";
+  reasons: { code: string; level: string; scope: string; value: string }[];
+  quality_rating: string; number_status: string; messaging_limit: string; health: string;
+  name_decision: string; name_reason: string; review: string;
+  restrictions: { type: string; expires: string | null }[];
+  alerts: { type: string; severity: string; description: string }[];
+  polled_at: string | null; event_at: string | null;
+};
 type LineRow = {
   business_id: string; name: string; slug: string; number_id: string; waba_id: string;
   display_phone: string; attached_at: string | null; attached_by: string; state: State;
   checked_at: string | null; checks: Check[]; test: Test | null; last_inbound_at: string | null;
   staff_numbers: number;
   templates?: { wanted: number; by_status: Record<string, number>; problems: number };
+  health: Health;
 };
 type Tester = { id: string; label: string; phone: string; window_open: boolean };
 type Event = { at: string; kind: string; ok: boolean | null; actor: string; detail: Record<string, unknown> };
@@ -42,6 +52,7 @@ const TPL_PILL: Record<string, string> = {
   rejected: "bad", paused: "bad", flagged: "bad", disabled: "bad",
 };
 const PROBLEM = ["rejected", "paused", "flagged", "disabled"];
+const SEVERITY_PILL: Record<string, string> = { ok: "active", attention: "wait", critical: "bad", unknown: "idle" };
 
 // The detail of a template event on the trail: which template, and where it now stands.
 function eventNote(e: { kind: string; detail: Record<string, unknown> }): string {
@@ -50,6 +61,10 @@ function eventNote(e: { kind: string; detail: Record<string, unknown> }): string
     const where = (d.status ?? d.category ?? "") as string;
     return `${d.name ?? ""} · ${String(d.language ?? "").toUpperCase()} · ${where}${d.reason ? ` (${d.reason})` : ""}`;
   }
+  if (e.kind === "quality" || e.kind === "limit") return `${d.from ?? ""} → ${d.to ?? ""}`;
+  if (e.kind === "health") return `${d.from ?? ""} → ${d.to ?? ""}`;
+  if (e.kind === "account") return `${d.event ?? ""}${d.type ? ` ${d.type}` : ""}`;
+  if (e.kind === "name") return `${d.decision ?? ""}`;
   if (e.kind === "templates_synced") return `${d.approved ?? 0}/${d.wanted ?? 0}`;
   if (e.kind === "templates_submitted") return `${d.submitted ?? 0}`;
   return "";
@@ -173,7 +188,10 @@ export default function WhatsappLines() {
                 <tr className="norow">
                   <td><b>{l.name}</b><br /><small>{l.slug}</small></td>
                   <td data-label={w.line}><span dir="ltr">{l.display_phone || l.number_id}</span><br /><small dir="ltr">{l.number_id}</small></td>
-                  <td data-label={w.state}><span className={`sh-pill ${PILL[l.state]}`}>{w.states[l.state]}</span></td>
+                  <td data-label={w.state}>
+                    <span className={`sh-pill ${PILL[l.state]}`}>{w.states[l.state]}</span>
+                    {l.health.reasons[0] && <><br /><small>{w.health.reasons[l.health.reasons[0].code] ?? l.health.reasons[0].code}{l.health.reasons.length > 1 ? ` (+${l.health.reasons.length - 1})` : ""}</small></>}
+                  </td>
                   <td data-label={w.lastCheck}>{when(l.checked_at, lang, w.never)}</td>
                   <td data-label={w.lastMessage}>{l.last_inbound_at ? when(l.last_inbound_at, lang, w.never) : w.notYet}</td>
                   <td data-label={w.templatesColumn}>
@@ -210,6 +228,42 @@ export default function WhatsappLines() {
                             ))}
                           </ul>
                         )}
+                        <h3>{w.health.title}</h3>
+                        <p className="sh-note">{w.health.help}</p>
+                        <div className="wl-health">
+                          <p>
+                            <span className={`sh-pill ${SEVERITY_PILL[l.health.severity]}`}>{w.health.severity[l.health.severity]}</span>
+                          </p>
+                          {l.health.reasons.length > 0 && (
+                            <ul className="wl-reasons">
+                              {l.health.reasons.map((r) => (
+                                <li key={`${r.code}:${r.value}`} className={r.level === "critical" ? "bad" : ""}>
+                                  {w.health.reasons[r.code] ?? r.code}{r.value && <> (<bdi dir="ltr">{r.value}</bdi>)</>}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                          {l.health.reasons.some((r) => r.scope === "account") && <small>{w.health.shared}</small>}
+                          <dl className="wl-facts">
+                            <div><dt>{w.health.facts.quality}</dt><dd>{l.health.quality_rating ? w.health.quality[l.health.quality_rating] ?? l.health.quality_rating : w.health.unknown}</dd></div>
+                            <div><dt>{w.health.facts.status}</dt><dd dir="ltr">{l.health.number_status || w.health.unknown}</dd></div>
+                            <div><dt>{w.health.facts.limit}</dt><dd>{l.health.messaging_limit ? w.health.limit[l.health.messaging_limit] ?? l.health.messaging_limit : w.health.unknown}</dd></div>
+                            <div><dt>{w.health.facts.sending}</dt><dd>{l.health.health ? w.health.sending[l.health.health] ?? l.health.health : w.health.unknown}</dd></div>
+                            <div><dt>{w.health.facts.name}</dt><dd>{l.health.name_decision ? w.health.decision[l.health.name_decision] ?? l.health.name_decision : w.health.unknown}</dd></div>
+                            <div><dt>{w.health.facts.review}</dt><dd>{l.health.review ? w.health.decision[l.health.review] ?? l.health.review : w.health.unknown}</dd></div>
+                          </dl>
+                          {l.health.restrictions.length > 0 && (
+                            <p><b>{w.health.restrictions}:</b> {l.health.restrictions.map((x) => (
+                              <span key={x.type}><bdi dir="ltr">{x.type}</bdi>{x.expires ? ` ${w.health.until} ${when(x.expires, lang, w.never)}` : ""} </span>
+                            ))}</p>
+                          )}
+                          {l.health.alerts.length > 0 && (
+                            <p><b>{w.health.alerts}:</b> {l.health.alerts.map((x) => <span key={x.type}><bdi dir="ltr">{x.type}</bdi> </span>)}</p>
+                          )}
+                          <small>
+                            {w.health.read}: {when(l.health.polled_at, lang, w.never)} · {w.health.notice}: {when(l.health.event_at, lang, w.never)}
+                          </small>
+                        </div>
                         <h3>{w.testTitle}</h3>
                         <p className="sh-note">{w.testHelp}</p>
                         {detail?.line?.business_id === l.business_id && (

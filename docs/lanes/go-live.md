@@ -25,15 +25,17 @@ Anything else belongs to another lane. If a task needs it, keep the change small
 
 Last updated 30 Oct 2026 (Cloudflare edge and DNS hardening, ALY-116 first layer, branch `claude/cf-edge-dns-hardening-ae84c8`; and the production database's backups, restore and secrets audited, ALY-34, branch `claude/aly-34-backups-restore-2b913c`), on top of 29 Oct 2026 (the visitor's address for the rate limits, ALY-265, branch `aly-ratelimit-trusted-client-ip`) and 24 Oct 2026 (site tooling, branch `aly-site-tooling`, `docs/site-audit/05-tooling-log.md`).
 
-- **A shop's WhatsApp line is checked, tested and kept on a trail, and its templates are tracked (ALY-166 spec 060
-  D-145; ALY-172 spec 061 D-146), in pull requests.** `/ops` → WhatsApp lines (English and Arabic) lists every line,
-  lets staff Check it against Meta (reads only) and send one test message to the shop's own staff through the
-  outbound layer, keeps each line's trail, and shows where each of ALYR's 76 templates stands on the shop's
-  account (read from Meta and kept current by Meta's notices). Submitting a template to Meta is **off**
-  (`ALYR_TEMPLATE_SUBMIT`); eight templates written for later are held (`Template.held`) and never sent. All built
-  against a fake Meta. **Waiting on the founder (Needs Akmal):** the first real attach and check
-  (`docs/runbooks/whatsapp-line.md`) and the decision to allow submitting templates, with the Arabic read first
-  (`docs/runbooks/whatsapp-templates.md`). Not done: quality and limits from Meta's webhooks, Embedded Signup (ALY-39).
+- **A shop's WhatsApp line is checked, tested and watched, and its templates are tracked (ALY-166 specs 060, 062,
+  D-145, D-147; ALY-172 spec 061, D-146), in pull requests.** `/ops` → WhatsApp lines (English and Arabic) lists every
+  line, lets staff Check it against Meta (reads only) and send one test message to the shop's own staff through the
+  outbound layer, keeps each line's trail, shows where each of ALYR's 76 templates stands on the shop's account, and
+  shows each number's quality rating, status and messaging limit and its account's restrictions, from Meta's notices
+  and a six-hourly read. Today gets one item per number in trouble and one per shared account; a flagged or
+  restricted number reaches the phone (alert `line_health`). Submitting a template to Meta is **off**
+  (`ALYR_TEMPLATE_SUBMIT`); eight templates written for later are held (`Template.held`). All built against a fake
+  Meta. **Waiting on the founder (Needs Akmal):** the first real attach and check (`docs/runbooks/whatsapp-line.md`),
+  subscribing the Meta app's webhook to the account and template fields, and the decision to allow submitting
+  templates, with the Arabic read first (`docs/runbooks/whatsapp-templates.md`). Not done: Embedded Signup (ALY-39).
 
 - **Cloudflare edge and DNS of alyr.qa hardened (ALY-116 first layer, CLD-7, CLD-18, D-113), live since 30 Oct,
   recorded in a pull request.** Always Use HTTPS, minimum TLS 1.2, SSL Full (strict), CAA for the three CAs
