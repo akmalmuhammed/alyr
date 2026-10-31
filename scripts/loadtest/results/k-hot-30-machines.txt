@@ -1,0 +1,8 @@
+container             cpu avg  cpu peak  mem peak MiB   (100 = one core)
+alyrscale-api1             21        35            96
+alyrscale-load-51204       25        71            43
+alyrscale-load-51205       14        30            43
+alyrscale-load-51206       12        24            43
+alyrscale-pg                7        50           630
+alyrscale-worker            8        59           102
+database connections: average 13, peak 13
