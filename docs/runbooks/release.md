@@ -156,6 +156,40 @@ journey proves, and how to run one on a laptop, is in `tests/e2e/README.md`.
 - **A test that passes only on its retry is a bug**, in the test or in the product. The report
   marks it flaky. Fix it; do not raise the retries.
 
+## The API coverage floor (the `coverage` workflow)
+
+`.github/workflows/coverage.yml` runs the API's whole test suite once more under coverage.py and
+fails when the line coverage of `src/alyr` is below `COVERAGE_FLOOR`, the number at the top of the
+job. coverage.py and pytest-cov are added for the run only (`uv run --with`, pinned), so the API's
+own dependencies and `uv.lock` do not change. The run's summary page shows the number every time.
+
+- **Measured on 31 Oct 2026, on GitHub:** **94.08%**, 28,237 of 30,013 lines, with 3,241 tests
+  passed and 2 skipped, under Python 3.14.4 (the runner's own). Under Python 3.13, the version the
+  API image runs, the same suite gave 94.18% on a laptop (3.13 counts about 500 more statements,
+  all of them covered), which is why the number is read from the CI run and nowhere else.
+  **The floor is 93**: a point under, about 300 lines of room, so a lucky or unlucky run does not
+  turn it red but a module added with no tests will.
+- **Why a workflow of its own.** The suite under coverage takes about 45 minutes (30 of them
+  tests), and the release gate waits for the whole `ci` run, so a second long job inside `ci`
+  would make every release wait for the slower of the two. A newer push to a pull request cancels
+  the older run. It is not in branch protection yet: to make it required (Needs Akmal, one pull
+  request), add `"api-coverage"` to `required_status_checks.contexts` in the command below once it
+  has run green five times in a row on `main`, as for `e2e`.
+- **How it ratchets up.** Only upward, by hand, in a pull request that changes that one number.
+  Read the number on the summary of the last three runs on `main`. The new floor is the whole
+  number of the **lowest** of the three, minus one (94.08% gives 93; 95.6% would give 94). Raise
+  it when that is higher than the floor now; do it whenever someone finishes a block of tests.
+  The floor goes **down** only in a pull request that says why (for example, well-tested code was
+  deleted): a lower floor is a decision and is written down like one.
+- **Where to look for what is missing.** The job's log lists every file below 100%. The lowest on
+  31 Oct: `doctor.py` 0%, `templates_sync.py` 29%, `worker.py` 34%, `agent_samples.py` 37%,
+  `report_samples.py` 56%, `modules/bookings/report.py` 57%, `first_admin.py` 62%. (ALY-122 named
+  `doctor.py`, `worker.py`, `presets.py` and `routes/admin.py` as untested: `presets.py` is now
+  fully covered and `routes/admin.py` is at 94%; the other two are still open.)
+- **What the number is not.** Lines run, not behaviour proved, and the processes the API starts
+  for itself (the drawing process, `core/drawing.py`) are not followed. It is a floor against
+  sliding back, nothing more.
+
 ## One-time setup: GitHub settings (Needs Akmal, about 15 minutes)
 
 Claude cannot change repository settings and did not. Run these from any terminal signed in to

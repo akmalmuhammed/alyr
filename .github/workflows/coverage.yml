@@ -49,7 +49,7 @@ jobs:
       # coverage.py's low-overhead tracer for Python 3.12 and later (it counts lines, not branches).
       COVERAGE_CORE: sysmon
       # The least line coverage, in percent, that the tests may leave. Raise it as the runbook says.
-      COVERAGE_FLOOR: "0"
+      COVERAGE_FLOOR: "93"
     defaults:
       run:
         working-directory: apps/api
