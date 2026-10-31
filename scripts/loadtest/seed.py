@@ -4,9 +4,10 @@ Runs inside the API image on the stack's network (scripts/loadtest/stack.sh). Sh
 and their items are made through the product's own code (sign-up, the item service), so they
 have everything a real shop has: modules, features, price group, item codes, sessions. Their
 history (customers, messages, orders, finished jobs) is written in bulk with SQL, as the
-database owner, in the amounts a shop has after `--days` days of the load model:
+database owner, in the amounts a shop has after `--days` days of a busy shop:
 
-    150 chats a day, 4 messages in each, 20 orders a day, 5 documents a day
+    150 chats a day, 4 messages in each, 20 orders a day
+(Documents are issued through the API afterwards: `load.py docs-seed`.)
 
 Only fictional data: .example addresses and made-up numbers. Writes /state/world.json, which
 load.py reads (who the shops are, a session for each owner, customers and items to use).
