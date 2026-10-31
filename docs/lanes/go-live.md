@@ -25,6 +25,15 @@ Anything else belongs to another lane. If a task needs it, keep the change small
 
 Last updated 30 Oct 2026 (Cloudflare edge and DNS hardening, ALY-116 first layer, branch `claude/cf-edge-dns-hardening-ae84c8`; and the production database's backups, restore and secrets audited, ALY-34, branch `claude/aly-34-backups-restore-2b913c`), on top of 29 Oct 2026 (the visitor's address for the rate limits, ALY-265, branch `aly-ratelimit-trusted-client-ip`) and 24 Oct 2026 (site tooling, branch `aly-site-tooling`, `docs/site-audit/05-tooling-log.md`).
 
+- **Browser journeys and a read-only production check (ALY-122), in a pull request, nothing applied to
+  production.** `tests/e2e` (Playwright, run by the new workflow `.github/workflows/e2e.yml`, outside `ci`
+  so the release gate, which reads the whole `ci` run, does not wait for it) proves sign-up to "ALYR is
+  preparing your price" (English, Arabic, 390 px), sign-in with `?next=`, the six products, a customer's
+  order and booking reaching the owner, and the closed door of `/ops`. `scripts/smoke-production.sh` is the
+  post-deploy check: GET requests only, no sign-in, no write (`docs/runbooks/release.md`). **Waiting on the
+  founder (Needs Akmal):** nothing to switch on; later, add `e2e` to the required checks once it has run
+  green five times in a row on `main`. Not done: Firefox and Safari, real WhatsApp, email and payments.
+
 - **Cloudflare edge and DNS of alyr.qa hardened (ALY-116 first layer, CLD-7, CLD-18, D-113), live since 30 Oct,
   recorded in a pull request.** Always Use HTTPS, minimum TLS 1.2, SSL Full (strict), CAA for the three CAs
   Cloudflare issues from, SPF without the retired Email Routing include, and response-header rules that give the
