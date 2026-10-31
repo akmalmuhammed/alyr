@@ -35,7 +35,7 @@ jobs:
     env:
       COMPOSE: docker compose --env-file .env.prod -f docker-compose.prod.yml
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Random passwords for this run
         run: scripts/rehearsal-env.sh
