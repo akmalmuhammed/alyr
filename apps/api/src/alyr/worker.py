@@ -14,7 +14,7 @@ import signal
 import socket
 
 from alyr.config import get_settings
-from alyr.core import alerts, erase, resume, subscription
+from alyr.core import alerts, erase, resume, subscription, whatsapp_health
 from alyr.core.links import check_secret as check_link_secret
 from alyr.core.retention import purge as purge_old_copies
 from alyr.core.storage import check_store
@@ -180,6 +180,9 @@ async def main() -> None:
     billing = asyncio.create_task(keep_billing_checked(app.state.db))
     purger = asyncio.create_task(keep_old_copies_purged(app.state.db))
     erased = asyncio.create_task(keep_erased_files_removed(app.state.db, app.state.media.store))
+    # Every attached number's health, read from Meta (reads only; spec 062).
+    lines = asyncio.create_task(whatsapp_health.keep_lines_polled(
+        app.state.db, app.state.outbound.channels["meta"], get_settings().line_poll_minutes))
     try:
         await app.state.jobs.run_forever(heartbeat=heartbeat(app.state.db))
         log.info("stopped: the jobs that had started finished, the rest went back in the queue")
@@ -192,6 +195,7 @@ async def main() -> None:
         billing.cancel()
         purger.cancel()
         erased.cancel()
+        lines.cancel()
         await app.state.db.close()
         await close_channels(app)
 

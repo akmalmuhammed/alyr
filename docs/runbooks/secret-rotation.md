@@ -7,6 +7,7 @@ the old one (except after a leak: revoke first). Never paste the value into chat
 | Secret | Where it lives | Create a new one | Check |
 |---|---|---|---|
 | Meta system-user token (`ALYR_META_ACCESS_TOKEN`) | `apps/api/.env` | Meta Business settings → System users → `alyradmin` → Generate token (whatsapp_business_messaging, whatsapp_business_management) | `scripts/demo.sh check` shows the number |
+| Key that seals a business's own WhatsApp token (`ALYR_CHANNEL_KEYS_KEY`, Secret Manager `channel-keys-key`; D-149, not yet created) | Secret Manager | `openssl rand -base64 32` (32 random bytes) | A business connected through Embedded Signup can still be checked. **Changing it makes every business's own token unreadable: they connect again** |
 | Meta app secret (`ALYR_META_APP_SECRET`) | `apps/api/.env` | Meta app → Settings → Basic → Reset app secret | Send "hello" from a test phone; a reply means signatures verify |
 | Webhook verify token (`ALYR_META_VERIFY_TOKEN`) | `apps/api/.env` and Meta webhook settings | Any new random string, set in both places | Meta's "Verify and save" succeeds |
 | Resend app key (`ALYR_EMAIL_API_KEY`) | `apps/api/.env` | `resend api-keys create --name ... --permission sending_access --domain-id <alyr.qa>`, written straight into `.env` | Sign in at `/login`; the code arrives by email |

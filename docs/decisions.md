@@ -91,6 +91,10 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-150 | The homepage drops what made it look machine-made: buttons are their words with no icon or arrow (on every page), and on the homepage links are plain, labels are sentence case, and there is no facts list, no grid, no crosses, no ticks, no numbered badges; the idea of checking again is said in the last step | Proposed |
 | D-135 | ALYR staff sign-in: ten wrong codes in a day lock the account (the right code too, same words as any refusal), and every staff sign-in is written to the audit log with an email when the device or the address is new | Proposed |
 | D-125 | Requests from public authorities follow three written rules: check it is lawful, give the minimum, keep a record; how to challenge one waits for a lawyer | Accepted |
+| D-146 | The status of each of ALYR's templates on each shop's account is kept per shop from Meta (read on request, and by Meta's notices); submitting to Meta is off until the founder allows it; a template waiting for his go is held and never sent | Proposed |
+| D-147 | A number's health comes from Meta's notices and a periodic read; a trouble with an account is one Today item and with a number one per shop; a flagged or restricted number reaches the founder's phone | Proposed |
+| D-148 | A business connects its own WhatsApp account through Meta's Embedded Signup from its sign-up screen, behind a flag that is off; the browser's code and session message are never believed; everything is done or nothing | Proposed |
+| D-149 | A business's own WhatsApp token is sealed in the database with the key in Secret Manager, and every call about its number is made with it | Proposed |
 | D-113 | The Cloudflare zone is hardened with what the Free plan offers and the state is written down: HTTPS only, minimum TLS 1.2, strict SSL, CAA, a trimmed SPF and response-header rules for the API and media host are live; the edge rate-limit rule waits because Free has only Block; no Access until Zero Trust is onboarded; DMARC stays `none` until the reports are read, never `reject` | Proposed |
 | D-143 | The people and chairs screen says what each does and has ahead, refuses a retirement that would leave a service with nobody, and puts both lists in an order the owner chooses (the people's order is who "anyone" takes first) | Proposed |
 | D-142 | The desk (walk-ins, moving and cancelling a booking) finds a customer the shop has instead of retyping them, shows the free times for a move, and says whether the customer was told, with the number to call when ALYR may not message them; staff cannot record a customer's consent for them | Proposed |
@@ -2318,6 +2322,90 @@ Without it, analytics is off everywhere.
 **Not decided here.** Registering a number through the API with a PIN (Meta documents it as API-only; ALYR does not do it for numbers added in WhatsApp Manager, which the first shops will be), and subscribing the app to an account (spec 063).
 
 **Revisit when** a number added in WhatsApp Manager stays unconnected until registered by the API, or when more than one number per shop is allowed.
+
+---
+
+---
+
+## D-146 · Template status is kept per shop from Meta; submitting to Meta is off until the founder allows it; a template waiting for his go is never sent
+**Date** 31 Oct 2026 · **Status** Proposed (built and tested against a fake Meta; no real submission) · Linear ALY-172 · Spec 061 · Builds on D-145
+
+**Decision.**
+- **Where each of ALYR's 76 templates stands, on each shop's account, is kept per shop** (`whatsapp_templates`) and shown on `/ops` → WhatsApp lines: not submitted, in review, approved, rejected (with Meta's reason and recommendation), paused, flagged, disabled. It is read from Meta on request and kept current by Meta's `message_template_status_update` and `template_category_update` notices, which are written for every shop whose number is on the account they name.
+- **Reading is free; submitting is the founder's.** The only call that writes to Meta's template API is behind `ALYR_TEMPLATE_SUBMIT`, off by default; while off it refuses and nothing is sent. What it would send is always shown first. Turning the setting on is the founder's approval of a Meta-facing action.
+- **A template written but not cleared is `held`.** The eight the code's own comments said were "NOT submitted to Meta: that is the founder's go" are now marked in `core/templates.py` (`held=HELD`), and neither the back office nor `templates_sync --create` will submit them. The founder lifts a hold by deleting the marker.
+- **A template Meta recategorises is warned of.** A utility template Meta calls marketing is billed and limited as marketing and would, by ALYR's own rule, need marketing consent; the notice is on the line's trail as a warning. ALYR does not change its own category on Meta's say-so.
+- **No new wording.** Nothing in `core/templates.py` was written or reworded; the Arabic is still unreviewed (ALY-66).
+
+**Why.** The founder cannot run a command on a laptop per shop, and cannot tell from outside which of the 76 templates a shop is missing. The inventory answers that; keeping it per shop keeps row-level security the plain rule while the truth lives at the account.
+
+**Chosen over** one global table per account (a second kind of table with its own isolation story, for the saving of copying a few dozen short rows per shop), submitting on first attach (the founder's yes is per Meta-facing action, D-007, and the Arabic has not been read by a native speaker), and storing the wording Meta approved (a second copy of wording that would drift from `core/templates.py`).
+
+**Not decided here.** When to switch submitting on, which held templates to release and when, and whether to submit the Arabic before ALY-66. All are the founder's.
+
+**Revisit when** the founder switches submitting on, Meta changes its template statuses or limits, or a second language is added.
+
+---
+
+## D-147 · A number's health comes from Meta's notices and a periodic read; an account's trouble is one item, a number's is one per shop; a flagged or restricted number reaches the founder's phone
+**Date** 31 Oct 2026 · **Status** Proposed (built and tested against a fake Meta; no real Meta call) · Linear ALY-166 · Spec 062 · Builds on D-145 and D-146
+
+**Decision.**
+- **What is kept.** For each attached number: its quality rating, status, messaging limit, throughput, sending status and display-name decision; for its account: restrictions (with their end), a disable scheduled or lifted, a policy violation, a review decision, the business removing ALYR, active alerts. From these ALYR makes a severity (`ok`, `attention`, `critical`) and the reasons behind it.
+- **How it arrives.** Meta's `phone_number_quality_update`, `phone_number_name_update`, `account_update`, `account_review_update` and `account_alerts` notices at the one signed webhook, and a read of every number (`GET /{number-id}`) by the worker every six hours (`ALYR_LINE_POLL_MINUTES`; 0 switches reading off) and when staff press Check. The quality rating is read, not pushed: no webhook Meta documents now carries it. Reading is the only thing this does at Meta.
+- **One item for an account, one for a number.** ALYR's own account is shared by many shops, so a restriction on it is one Today item saying how many shops it reaches. A flag or a yellow rating on one number is one item for that shop.
+- **A flag reaches the phone.** One alert (`line_health`) fires when any number is critical or any account is restricted, disabled or removed by its business. It carries counts only, like every alert (hard rule 2).
+- **A flagged number reads "problem"** on the lines screen, checked or not.
+
+**Why.** Meta is the only one who knows. A restricted number looks perfectly healthy from ALYR's side until a customer complains.
+
+**Chosen over** reading only when staff press Check (nobody presses it for fifty shops), a webhook-only design (the quality rating is not pushed), one item per shop for an account trouble (fifty items for one cause), pausing a shop's sending automatically when its number is flagged (a decision about a shop's customers, the founder's), and messaging the owner (the owner did not cause an ALYR-account restriction and is not told about ALYR's accounts; the founder decides what an owner hears).
+
+**Not decided here.** What to tell an owner whose number is flagged; whether to pause sending on a flag; Meta's phone number status values, which are not on a Meta page I could read (the code treats FLAGGED, RESTRICTED, BANNED, DELETED and DISCONNECTED as critical and anything else unusual as a look).
+
+**Revisit when** Meta documents the `status` values or pushes the quality rating, when the first real flag arrives, or when more than ALYR's own account is in use (spec 063).
+
+---
+
+## D-148 · A business connects its own WhatsApp account through Meta's Embedded Signup, behind a flag that is off
+**Date** 31 Oct 2026 · **Status** Proposed (built and tested against a fake Meta; the founder's steps in Meta come first) · Linear ALY-39 · Spec 063 · Builds on D-007, D-050 and D-145 to D-147
+
+**Decision.**
+- **The owner connects themselves, with Meta's own pop-up.** On the WhatsApp step of `/start`, for the ways that use it (`own_account`, `move_number`), when everything the way needs is ticked: Connect with Meta. The pop-up is Facebook Login for Business with a WhatsApp Embedded Signup configuration; ALYR never sees the owner's Facebook password.
+- **Off until the founder says so** (`ALYR_EMBEDDED_SIGNUP`), and closed by every missing piece (app ID and secret, the configuration's ID, the key that seals tokens). It needs Tech Provider approval (ALY-52) and App Review (ALY-262) first; Meta does not let an unapproved app onboard customers.
+- **The browser is not believed.** The code and the session message come from the owner's browser. The code is exchanged server to server, and every claim in the message (account, number) is read back from Meta with the business's own token before anything is stored.
+- **Everything is done or nothing is.** Exchange, read back, register (not for a number moved from the WhatsApp Business app), subscribe the app to the account's webhooks, then seal the token and attach the number in one transaction. A failure is on the line's trail in Meta's words and told to the owner in Arabic or English.
+- **ALYR staff attach numbers on ALYR's own account exactly as before** (D-050, D-054). `new_number` is not this.
+
+**Why.** A person at a keyboard for every shop does not reach fifty, and cannot serve a shop with its own account or a number that must stay in the WhatsApp Business app. Meta built the pop-up for this and requires it of a Tech Provider.
+
+**Chosen over** staff adding each shop's account by hand (no way to scale, no coexistence), a hand-built phone-number flow (Meta requires Embedded Signup of Tech Providers), and attaching automatically from a typed number (it proves nothing about who owns it).
+
+**Not decided here.** When to switch it on; whether the token's lifetime (Meta's template for the configuration names a 60-day one) needs a refresh job before it is relied on; the coexistence message sync (history, echoes); what a business with a number on both ALYR and its own account does.
+
+**Revisit when** Meta changes the flow (Embedded Signup v2 and v3 end on 15 Oct 2026; this is v4), or the first real business connects.
+
+---
+
+## D-149 · A business's own WhatsApp token is sealed in the database with the key in Secret Manager; every call about its number is made with it
+**Date** 31 Oct 2026 · **Status** Proposed · Linear ALY-39 · Spec 063 · Follows D-072's sealing of a shop's payment keys (`core/payment_keys.py`)
+
+**Decision.**
+- **ALYR's own system-user token stays only in Secret Manager** and serves every number on ALYR's own account. It is unchanged.
+- **A business's own token is sealed** (AES-256-GCM, the business's and the number's IDs bound in) in `channel_credentials`, under `ALYR_CHANNEL_KEYS_KEY`, a key that is itself in Secret Manager in Doha and never in the database. A copied value opens for neither another business nor another number. The database holds ciphertext only; `channel_credential_for()` returns nothing else.
+- **The channel asks, per call, which token to use**: for the number or account the call is about, the business's own, else ALYR's (`MetaChannel(credentials=...)`, five minutes in memory). So sends, templates, health reads and media downloads of a business's own account are made with its own token, and nothing in a module changed.
+- **The app role still does not write `channel_numbers`**: `signup_attach_whatsapp_number()` does, only for the caller's own business, only inside the sign-up code's setting, and only when credentials for that number are already stored.
+- **The token is never logged, returned, put in a job's payload, on the trail or in the audit log.** Its end date is shown and its expiry is a health reason (two weeks before: needs a look; after: needs action).
+
+**Why.** A token for a business's account is the one new secret ALYR must hold per business. It is no more dangerous than a payment key and is treated the same.
+
+**Chosen over** one key per business in Secret Manager (a thousand secrets, a quota and a bill, and a call to the key vault on every send), storing the token in plain text behind row-level security (a database backup would hold fifty working tokens), and sending everything with ALYR's token (Meta refuses it on another business's account).
+
+**Not decided here.** Refreshing or replacing an expiring token; rotating `ALYR_CHANNEL_KEYS_KEY` (it makes every own-account token unreadable: the businesses connect again, as for payment keys).
+
+**Revisit when** Meta documents the token lifetime for the configuration the founder chooses.
+
+---
 
 ---
 

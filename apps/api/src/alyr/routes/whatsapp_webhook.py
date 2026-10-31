@@ -4,6 +4,7 @@ import json
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 
 from alyr.channels.meta import (
+    parse_account_events,
     parse_statuses,
     parse_user_id_updates,
     parse_webhook,
@@ -62,4 +63,6 @@ async def receive(request: Request) -> dict:
         await inbound.handle_status(status)
     for message in parse_webhook(payload):
         await inbound.accept(message)
+    # Notices about the account itself (templates, limits, restrictions); never fails the webhook.
+    await request.app.state.account_events.handle(parse_account_events(payload))
     return {"status": "ok"}

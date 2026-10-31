@@ -136,6 +136,25 @@ class Settings(BaseSettings):
     # The Meta app's ID. Only `templates_sync` needs it, to upload the sample image a
     # template with an image header is reviewed with (Resumable Upload API).
     meta_app_id: str = ""
+    # Whether ALYR may submit a message template to Meta for a shop (specs/061, D-146). Off: the
+    # back office shows what would be submitted and reads what Meta has, and nothing is sent.
+    # Submitting is a Meta-facing action the founder approves; switching this on is that approval.
+    template_submit: bool = False
+    # Embedded Signup (ALY-39, spec 063, D-148): a business connects its own WhatsApp account
+    # through Meta's pop-up, from its sign-up screen. OFF until the founder has done what
+    # docs/runbooks/embedded-signup.md lists in Meta (Tech Provider approval, App Review, the
+    # configuration) and says so. `meta_es_config_id` is the Facebook Login for Business
+    # configuration's ID (not a secret; the browser needs it); the app's ID and secret are the ones
+    # above. `channel_keys_key` seals each shop's own token (core/channel_keys.py): 32 random
+    # bytes, base64, in Secret Manager, never in git; without it nothing is stored and the feature
+    # offers nothing.
+    embedded_signup: bool = False
+    meta_es_config_id: str = ""
+    channel_keys_key: str = ""
+    # How often the worker reads every attached number's health from Meta, in minutes (spec 062,
+    # D-147): quality rating, status, messaging limit. Reads only. 0 reads nothing (Meta's notices
+    # still arrive); the worker then only makes each severity again every hour.
+    line_poll_minutes: int = 360
 
     # The weekly report card (ALY-99). Off: outside the 24-hour window the report goes as
     # the text-only `weekly_report` template, and REPORT brings the card. On (once Meta

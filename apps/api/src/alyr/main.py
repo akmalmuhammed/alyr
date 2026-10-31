@@ -13,6 +13,7 @@ from alyr.core import account as account_notes
 from alyr.core import admission, origin, ratelimit
 from alyr.core.admission import BUSY
 from alyr.core.card_billing import CardBilling
+from alyr.core.channel_credentials import Credentials
 from alyr.core.images import PhotoRefused
 from alyr.core.inbound import INBOUND, InboundHandler
 from alyr.core.jobs import JobRunner
@@ -25,6 +26,7 @@ from alyr.core.shopcache import SessionCache, ShopCache
 from alyr.core.storage import check_store, make_store
 from alyr.core.welcome import JOB as ACCOUNT_EMAIL
 from alyr.core.welcome import AccountMail
+from alyr.core.whatsapp_events import AccountEvents
 from alyr.db import Database, PoolBusy
 from alyr.gateways import registry as payment_gateways
 from alyr.modules import report
@@ -84,6 +86,7 @@ from alyr.routes import staff_numbers as staff_numbers_routes
 from alyr.routes import team as team_routes
 from alyr.routes import templates as template_routes
 from alyr.routes import track as track_routes
+from alyr.routes import whatsapp_signup as whatsapp_signup_routes
 from alyr.routes import workspace as workspace_routes
 from alyr.routes.deps import require_any_module, require_module, require_module_for_slug
 
@@ -127,6 +130,9 @@ def create_app() -> FastAPI:
     app.add_middleware(origin.OwnPagesOnly, settings=settings)
     app.add_middleware(admission.ShedWhenBusy, limit=settings.max_in_flight)
     app.state.db = Database(settings.database_url)
+    # A business that connected its own WhatsApp account is sent with its own token; every other
+    # number with ALYR's (spec 063).
+    app.state.credentials = Credentials(app.state.db)
     # The connection budget and the limits on a wait or a statement (D-132).
     app.state.db.configure(
         pool_max=settings.db_pool_max, acquire_timeout=settings.db_acquire_timeout_seconds,
@@ -140,7 +146,9 @@ def create_app() -> FastAPI:
     app.state.outbound = Outbound(
         {
             "simulator": SimulatorChannel(),
-            "meta": MetaChannel(settings.meta_access_token, settings.meta_graph_version),
+            "meta": MetaChannel(
+                settings.meta_access_token, settings.meta_graph_version,
+                credentials=app.state.credentials.token_for),
         },
         app.state.db,
     )
@@ -150,6 +158,8 @@ def create_app() -> FastAPI:
     app.state.inbound = InboundHandler(
         app.state.db, app.state.outbound, settings.public_web_url, app.state.media
     )
+    # What Meta says about a WhatsApp account, not a message: templates, limits, restrictions.
+    app.state.account_events = AccountEvents(app.state.db)
 
     app.state.jobs = JobRunner(
         app.state.db, settings.jobs_backoff_seconds, settings.jobs_concurrency
@@ -285,6 +295,7 @@ def create_app() -> FastAPI:
         return JSONResponse({"status": "ok", "seconds_since_last_check_in": age})
 
     app.include_router(whatsapp_webhook.router)
+    app.include_router(whatsapp_signup_routes.router)
     # Each module's routes answer only for shops that have switched that module on.
     app.include_router(ledger.router, dependencies=[Depends(require_module("ledger"))])
     app.include_router(pay.router)
