@@ -1,0 +1,16 @@
+{
+  "displayName": "Database getting busy: CPU above 70% for 15 minutes",
+  "combiner": "OR",
+  "documentation": {
+    "mimeType": "text/markdown",
+    "content": "The database has less than a third of its CPU left, so a busy hour could make the workspace slow. This is the early warning, before the alert at 80%. First step: docs/runbooks/capacity.md, 'What to watch' and 'Scale up, in order of cost'. Open Cloud SQL > alyr-db > Query insights for the slow query."
+  },
+  "conditions": [{
+    "displayName": "CPU above 70% for 15 minutes",
+    "conditionThreshold": {
+      "filter": "metric.type=\"cloudsql.googleapis.com/database/cpu/utilization\" AND resource.type=\"cloudsql_database\" AND resource.label.database_id=\"__DB__\"",
+      "aggregations": [{"alignmentPeriod": "60s", "perSeriesAligner": "ALIGN_MEAN"}],
+      "comparison": "COMPARISON_GT", "thresholdValue": 0.7, "duration": "900s", "trigger": {"count": 1}
+    }
+  }]
+}
