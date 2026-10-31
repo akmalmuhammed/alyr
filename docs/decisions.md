@@ -88,6 +88,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-121 | The owner is emailed once when ALYR publishes their price, ahead of the rest of the payment path: English or Arabic as they signed up, claimed on the quote so it never goes twice, nothing sent for a price they already saw or an address that cannot be real. The part of D-093 that shipped on its own | Proposed (the founder signs off the wording) |
 | D-122 | ALYR's own business keeps no test line: the "Try it" step says so and offers to skip, and the one-off first-admin job does not create one | Proposed |
 | D-145 | A shop's WhatsApp line is checked against Meta, tested with a message to the shop's own staff and kept on a trail; staff see every line on one screen (`/ops/whatsapp`, English and Arabic) | Proposed |
+| D-150 | The homepage drops what made it look machine-made: buttons are their words with no icon or arrow (on every page), and on the homepage links are plain, labels are sentence case, and there is no facts list, no grid, no crosses, no ticks, no numbered badges; the idea of checking again is said in the last step | Proposed |
 | D-135 | ALYR staff sign-in: ten wrong codes in a day lock the account (the right code too, same words as any refusal), and every staff sign-in is written to the audit log with an email when the device or the address is new | Proposed |
 | D-125 | Requests from public authorities follow three written rules: check it is lawful, give the minimum, keep a record; how to challenge one waits for a lawyer | Accepted |
 | D-113 | The Cloudflare zone is hardened with what the Free plan offers and the state is written down: HTTPS only, minimum TLS 1.2, strict SSL, CAA, a trimmed SPF and response-header rules for the API and media host are live; the edge rate-limit rule waits because Free has only Block; no Access until Zero Trust is onboarded; DMARC stays `none` until the reports are read, never `reject` | Proposed |
@@ -2159,3 +2160,23 @@ Without it, analytics is off everywhere.
 **Revisit when** a number added in WhatsApp Manager stays unconnected until registered by the API, or when more than one number per shop is allowed.
 
 ---
+
+## D-150 · The homepage drops what made it look machine-made
+
+**Date** 31 Oct 2026 · **Status** Proposed (the founder's complaint and the technical cofounder's rulings; built in a pull request, not merged or published) · Linear ALY-303, under ALY-302 · Amends D-048 and ALY-226 (the line back to Check and "Then we check again."), D-062 in one respect (below), and the design skills' rules for buttons, links, rules and labels
+
+The founder, 31 Oct 2026, of two screenshots of the homepage: "fix these items, it looks AI made and AI generated".
+
+**Decision.**
+- **A button is its words.** The Volt button and its outlined twin hold no icon and no corner arrow. It is one component, so this holds on every page. The 45° cut stays: the header's button shows it reads well with no arrow.
+- **On the homepage a link is its words with a line under them,** with no arrow, and the six product tiles have none either.
+- **On the homepage a label is sentence case in the page's own type.** Mono stays inside drawings of the product (and the agreement drawing, with the offer on). This is written for the homepage only, in `home.css`; the shared classes keep their mono for other pages.
+- **No construction marks on the homepage:** no faint grid behind the hero, no dot field on the Carbon plate, no crosses on section rules (only the homepage used them, so they are gone from `kit.css`), no dashed line as decoration, no ticks or numbered discs outside a drawing, no boxed count.
+- **The hero says it in words.** Two plain sentences that carry "we come to your shop in Qatar". The three-line facts list is gone from the page; its words stay in `copy.ts` for the social card only. The note under the button is one short line; the address stays in the closing call.
+- **Checking again is a sentence in the last step,** "Then we check again." The line drawn back to Check, its Volt tick and the floating mono line are gone.
+- **What we need from you is a sentence with the button under it.** The tally under One order is a sentence too, not a row of three big numbers, and the business tabs are names, not eight identical cards with icons.
+- **In the hero film, a window that steps back goes out on the fold's side instead of dimming** (`SHOTS` in `filmScript.ts`). A dimmed window was cut by the plate's diagonal into a grey triangle beside the text, at every width with a fold, for about a third of the loop. Nothing else in the film changes.
+
+**What this does not change.** The positioning, the headline, the claims and the Carbon and Volt look. It adds no gradient and no AI word.
+
+**Not done, for the founder to decide.** Other pages keep their mono labels and link arrows; the footer and the Products menu keep their mono labels, because they are shared. The cards under How we work stay, since the founder approved them on the Framer prototype.
