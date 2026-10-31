@@ -91,8 +91,10 @@ test("counts agree with their nouns in Arabic and English", () => {
   assert.equal(codesLeftText(9, "en"), "9 codes left");
 });
 
+// The key below is made up and obviously not a secret (a scanner for committed secrets rightly
+// flags a real-looking one).
 test("the setup square reads back, with an independent decoder, as the key link the API made", () => {
-  const link = "otpauth://totp/ALYR%3Aops%40alyr.example?secret=J77HNSWIKF5DWNOJKZ2MCMAK4T7FQMSC&issuer=ALYR&algorithm=SHA1&digits=6&period=30";
+  const link = "otpauth://totp/ALYR%3Aops%40alyr.example?secret=ABCDEFGHABCDEFGHABCDEFGHABCDEFGH&issuer=ALYR&algorithm=SHA1&digits=6&period=30";
   const colours = { dark: color.brand.carbon, light: color.ink.white };
   for (const scale of [4, 8]) {
     const { width, height, data } = pixels(link, scale, colours);
@@ -101,7 +103,7 @@ test("the setup square reads back, with an independent decoder, as the key link 
     assert.equal(found.data, ascii(link));
     const url = new URL(found.data);
     assert.equal(url.protocol, "otpauth:");
-    assert.equal(url.searchParams.get("secret"), "J77HNSWIKF5DWNOJKZ2MCMAK4T7FQMSC");
+    assert.equal(url.searchParams.get("secret"), "ABCDEFGHABCDEFGHABCDEFGHABCDEFGH");
     assert.equal(url.searchParams.get("period"), "30");
     assert.equal(url.searchParams.get("digits"), "6");
   }
