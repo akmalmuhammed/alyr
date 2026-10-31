@@ -234,6 +234,39 @@ def is_meta_media_url(url: object) -> bool:
     )
 
 
+# What the line check asks Meta about a number (spec 060). Every one of these is on Meta's
+# phone number page; the quality rating and the name's status are what the health screen shows.
+NUMBER_BASIC_FIELDS = (
+    "display_phone_number,verified_name,status,quality_rating,name_status,code_verification_status"
+)
+
+
+def describe_error(error: Exception) -> str:
+    """A refused request to Meta in words a member of staff can act on, without anything
+    secret in it. Meta's error codes, from its error codes page: 190 the access token is
+    wrong or expired, 10 and 200 to 299 a permission is missing, 100 a field or ID Meta does
+    not know, 4, 17, 32, 613 and 80007 too many requests."""
+    if isinstance(error, httpx.HTTPStatusError):
+        try:
+            body = error.response.json()["error"]
+            code, text = int(body.get("code", 0)), str(body.get("message", ""))[:200]
+        except (ValueError, KeyError, TypeError):
+            return f"Meta answered error {error.response.status_code}"
+        if code == 190:
+            return ("Meta refused ALYR's access token (it is wrong or has expired); "
+                    "docs/runbooks/secret-rotation.md says how to replace it")
+        if code == 10 or 200 <= code <= 299:
+            return f"ALYR's access token lacks a permission for this account ({text})"
+        if code in (4, 17, 32, 613, 80007):
+            return "Meta says there were too many requests; try again in a few minutes"
+        return text or f"Meta answered error {error.response.status_code}"
+    if isinstance(error, httpx.TimeoutException):
+        return "Meta did not answer in time"
+    if isinstance(error, httpx.HTTPError):
+        return "Meta could not be reached"
+    return type(error).__name__
+
+
 class MetaChannel:
     name = "meta"
 
@@ -292,6 +325,49 @@ class MetaChannel:
         )
         response.raise_for_status()
         return response.json()
+
+    async def _read(self, path: str, params: dict | None = None) -> dict:
+        response = await self._http().get(
+            f"{self._base}/{path}",
+            headers={"Authorization": f"Bearer {self._token}"},
+            params=params or {}, timeout=10,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    async def number_details(self, number_id: str, fields: str) -> dict:
+        """Named fields of one WhatsApp number, for the line check and the health poll
+        (spec 060, spec 062). Meta fails the whole request when it does not know one of the
+        fields, so a caller that wants more than `NUMBER_BASIC_FIELDS` asks again with those
+        when it is refused. Fields checked against Meta's phone number, messaging limits,
+        throughput and health status pages, 31 Oct 2026."""
+        return await self._read(number_id, {"fields": fields})
+
+    async def account_number_ids(self, waba_id: str) -> list[str]:
+        """The IDs of every number on a WhatsApp Business Account: GET /{waba-id}/phone_numbers
+        (Meta's phone number page, 31 Oct 2026), paged by cursor, at most 2,000 numbers."""
+        found: list[str] = []
+        after = ""
+        for _ in range(10):
+            page = await self._read(
+                f"{waba_id}/phone_numbers", {"fields": "id", "limit": 200}
+                | ({"after": after} if after else {}))
+            found += [str(n["id"]) for n in page.get("data", []) if n.get("id")]
+            after = page.get("paging", {}).get("cursors", {}).get("after", "")
+            if not (after and page.get("paging", {}).get("next")):
+                break
+        return found
+
+    async def subscribed_app_ids(self, waba_id: str) -> list[str]:
+        """The apps subscribed to a WhatsApp Business Account's webhooks:
+        GET /{waba-id}/subscribed_apps answers `data[].whatsapp_business_api_data.id`
+        (Meta's manage-webhooks page, 31 Oct 2026). Empty means no webhook reaches us."""
+        answer = await self._read(f"{waba_id}/subscribed_apps")
+        return [
+            str(entry["whatsapp_business_api_data"]["id"])
+            for entry in answer.get("data", [])
+            if entry.get("whatsapp_business_api_data", {}).get("id")
+        ]
 
     async def download_media(self, media_id: str, max_bytes: int) -> tuple[bytes, str]:
         """Fetch a file that was sent to us. Two requests, checked against Meta's media

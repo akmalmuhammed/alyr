@@ -95,7 +95,7 @@ Keep these true. If one stops being true, change the answer at the next review, 
 - **Responsible entity:** alyr software W.L.L., Qatar.
 - **National security requests in the past 12 months:** No.
 - **Policies for requests from authorities:** legality review, data minimisation and
-  documentation, the three rules of `docs/company/authority-requests.md` (D-124). "Provisions
+  documentation, the three rules of `docs/company/authority-requests.md` (D-125). "Provisions
   for challenging these requests" is not ticked: that waits for a lawyer (ALY-51).
 - **Agreements:** allowed usage for the two permissions and `public_profile`, and the Meta
   Platform Terms and Developer Policies at Submit, which Akmal ticked.
