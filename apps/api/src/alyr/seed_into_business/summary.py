@@ -33,7 +33,7 @@ async def collect(conn: asyncpg.Connection, tenant_id: UUID, now: datetime) -> d
         f"{week('created_at')}, "
         "coalesce(sum(total) filter (where status <> 'cancelled'), 0)::bigint as value "
         "from orders where tenant_id = $1", tenant_id, *args)
-    cash = await one("select count(*) from manual_payments where subject = 'order'")
+    cash = await one("select count(*) from manual_payments where tenant_id = $1 and subject = 'order'")
     bookings = await conn.fetchrow(
         "select count(*) as total, "
         "count(*) filter (where starts_at >= $2) as upcoming, "

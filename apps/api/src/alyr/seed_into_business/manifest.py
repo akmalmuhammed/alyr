@@ -18,7 +18,6 @@ erasure job uses (migration 0083), opened for this business only, inside this tr
 Every statement names the business as well, so a mistake cannot reach another one.
 """
 
-import json
 from dataclasses import dataclass, field
 from uuid import UUID
 
@@ -160,7 +159,7 @@ async def remove(conn: asyncpg.Connection, tenant_id: UUID, manifest: dict) -> d
 
 
 async def _restore_row(conn, tenant_id: UUID, table: str, cols: list[str], row: dict) -> None:
-    image = json.dumps(row["old"])
+    image = row["old"]
     for column in row["old"]:
         await conn.execute(
             f'update "{table}" x set "{column}" = (jsonb_populate_record(null::"{table}", $3::jsonb))."{column}" '

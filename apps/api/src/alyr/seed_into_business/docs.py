@@ -195,7 +195,8 @@ async def record_cash(conn, staff: Staff, clock: Clock, at, o, story) -> dict:
         o.id, o.person.id, o.total, f"demo-cash-{o.number}", staff.name, staff.user_id, at,
     )
     clock.at(at)
-    out = {"payment": None, "document": None, "replayed": False, "receipt_error": None}
+    out = {"payment": payments._present(row), "document": None, "replayed": False,
+           "receipt_error": None}
     done = await payments._issue_receipt(conn, staff, row, False, out)
     story.activity.append((
         "order", o.id, o.person.id, "paid",
@@ -222,7 +223,8 @@ async def pay_invoice(conn, staff: Staff, clock: Clock, at, invoice: dict, o, am
                            note=f"Invoice {invoice['number']}", created_by=staff.name,
                            at=at, documents=False)
     clock.at(at)
-    out = {"payment": None, "document": None, "replayed": False, "receipt_error": None}
+    out = {"payment": payments._present(row), "document": None, "replayed": False,
+           "receipt_error": None}
     done = await payments._issue_receipt(conn, staff, row, False, out)
     story.activity.append((
         "account", o.person.id, o.person.id, "paid",
@@ -282,7 +284,8 @@ async def catering_quote(conn, staff, clock, at, data, run, story, counts) -> in
         staff.user_id, paid_at,
     )
     clock.at(paid_at)
-    out = {"payment": None, "document": None, "replayed": False, "receipt_error": None}
+    out = {"payment": payments._present(row), "document": None, "replayed": False,
+           "receipt_error": None}
     done = await payments._issue_receipt(conn, staff, row, False, out)
     counts["invoices"] += 1
     counts["receipts"] += 1
