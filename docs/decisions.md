@@ -106,6 +106,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-132 | A process holds few database connections (4 for an API instance, 8 for the worker), gives up after 3 seconds and answers 503 with Retry-After; only so many documents are drawn at once; the worker keeps places for customers; the Sunday report can be spread but stays at nine | Accepted |
 | D-131 | What the workspace and the order page ask for again and again is kept three seconds and shared between tabs, thrown away by the shop's own writes; who is signed in and a shop's modules the same | Accepted |
 | D-130 | The inbox and the Orders screen read the newest rows off an index (a customer carries the times of their latest messages, kept by the database; the inbox lists 300 conversations, Orders the last 30 days and everything open), so a refresh costs the same in a shop's first week and its second year | Accepted |
+| D-151 | ALYR's direction is the agentic business path: an owner can start, run, operate and scale a business on ALYR's products and agents. A plan, not a claim: no AI model is in the product and the public words do not change until one is | Accepted |
 
 ---
 
@@ -207,6 +208,8 @@ Until the first 10 paying customers we do not pay for infrastructure where a fre
 
 ## D-012 · No AI model required for Product 1
 **Date** 7 Oct 2026 · **Status** Accepted
+
+*Updated by D-151 (1 Nov 2026): ALYR now plans to put a model in the product. Until it does, this still describes the product, and a model stays behind one gateway, off by default.*
 
 The ledger's chat commands, balance questions and payment intents work from rules (`core/normalise.py`). A model is an optional improvement behind one gateway, off by default.
 
@@ -655,6 +658,8 @@ A new owner can create their own business at `/start` without ALYR's back office
 
 ## D-035 · ALYR is a suite of products, led by ALYR Agent
 **Date** 17 Oct 2026 · **Status** Accepted (founder, 17 Oct, in conversation; recorded in `docs/agent-dashboard/00-founder-decisions.md`) · Linear ALY-99 · Updates D-027, D-030, D-032
+
+*Updated by D-151 (1 Nov 2026): the suite grows to eleven proposed families with agents across them, and ALYR Agent is one family, no longer the lead. Whether it keeps its name is open on ALY-302.*
 
 **The decision.** ALYR is the business agent for owner-run businesses in Qatar, with a suite of products in one workspace:
 
@@ -2485,3 +2490,26 @@ The founder, 31 Oct 2026, of two screenshots of the homepage: "fix these items, 
 **What this does not change.** The positioning, the headline, the claims and the Carbon and Volt look. It adds no gradient and no AI word.
 
 **Not done, for the founder to decide.** Other pages keep their mono labels and link arrows; the footer and the Products menu keep their mono labels, because they are shared. The cards under How we work stay, since the founder approved them on the Framer prototype.
+
+## D-151 · ALYR's direction is the agentic business path
+
+**Date** 1 Nov 2026 · **Status** Accepted (the founder, 31 Oct and 1 Nov 2026) · Linear ALY-302 · Updates D-012 and D-035 · The plan is `docs/master-plan.md` section 0
+
+The founder, 31 Oct and 1 Nov 2026: ALYR is changing who it is and is going the agentic business path. A user can start, run, operate and scale their business with ALYR's agents and products, with many solutions planned and custom solutions too.
+
+**Decision.** This is the company's direction, and every plan follows it. The founder's Suite Stack is the map: eleven product families across start, run, operate and scale.
+
+**What this does not change.**
+- The goal for this stage: one real business live on its own number and paying, then the first 50 clients.
+- Every owner-run business, Qatar first (D-043). Paid from the first customer, sold in person. Product first (no fork per client).
+- Non-custodial payments and every other hard rule in `CLAUDE.md`.
+- The rule on public words. No AI model is in the product, so `honesty.md` stands until one is and the founder changes it. A public claim has to be true on the day it is made.
+- The current homepage. The founder rejected a concept homepage built from the plan on 31 Oct, so the homepage is not being rebuilt.
+
+**Why this order.** The direction is the founder's call and it is made. The claim has to wait for the product. Phases 0 to 6 in the master plan tie each public word to a job that has passed its test.
+
+**Rejected.** Saying "agentic" in public now: it would not be true. Rebuilding the site around the plan before the product does the work.
+
+**Still open.** The founder's five decisions on ALY-302, including which words reach owners, the name of ALYR Agent and the first job. The order of work stays proposed until they are answered.
+
+**Revisit when.** The first job has passed its test with real owners, or the reviews in progress or a lawyer's answer change what is allowed.

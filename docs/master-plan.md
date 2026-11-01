@@ -1,6 +1,68 @@
 # Alyr master plan
 
-Version 1, 7 October 2026. Owner: Akmal. This is the source of truth for what Alyr is, what it builds in what order, and why. Tasks live in Linear ("Alyr Launch"); this file explains the decisions behind them. When a decision changes, change it here first.
+Version 2, 1 November 2026. Owner: Akmal. This is the source of truth for what Alyr is, what it builds in what order, and why. Tasks live in Linear ("Alyr Launch"); this file explains the decisions behind them. When a decision changes, change it here first.
+
+Version 2 adds section 0, the agentic path (D-151). Sections 1 to 12 are version 1 of 7 October, kept as the record. Where they differ from section 0, `docs/status.md` or `docs/decisions.md`, those win (ALY-123). The company's fuller plan, with the founder's item-by-item map, is private: section 13 of the Eraser file "ALYR Company Master Plan".
+
+## 0. The agentic path
+
+**Where ALYR is going.** ALYR is becoming an agentic business suite: an owner can start, run, operate and scale a business on ALYR's products and agents, with many solutions planned and custom solutions alongside them.
+
+**This is a plan, not a claim.** On 1 November 2026 no AI model is in the product, and ALYR Agent is a set of rules (D-012). Nothing a customer sees says or implies AI until a model is in the product and the founder changes the rule in `.claude/skills/alyr-design/honesty.md`.
+
+**What stays the same.** The goal for this stage is one real business live on its own number and paying, then the first 50 clients. Every owner-run business, Qatar first, then the GCC (D-043). Paid from the first customer, sold in person. Payments stay non-custodial. The current homepage stays.
+
+### The suite
+
+| Stage | What it means | Main product families |
+|---|---|---|
+| Start | From licence to first order, once only. It does not mean forming a company | ALYR's setup, using Shelf and Connect |
+| Run | Work a customer sets off, many times a day | Chat, Bookings, Shelf, Projects |
+| Operate | Work the clock and the books set off | Accounts, Docs, People, Connect, Agent |
+| Scale | Work that changes the size of the business | Growth, Network |
+
+Six families exist: Chat, Shelf, Bookings, Accounts, Docs, Agent. Five are proposed: Growth, People, Projects, Connect, Network. Platform (trust, security, support, languages) is the foundation and is not sold.
+
+The idea that holds the suite together: one entry in a chat flows through it without anyone typing it again.
+
+### How the offer is built (proposed)
+
+| Layer | What it is | Example |
+|---|---|---|
+| Family | Where records live and the team works | ALYR Bookings |
+| Job (an agent) | One named job, inside limits the owner set, with each step on the record | Setting up your catalog |
+| Solution | What is sold: a named result made of families, jobs and setup | Get paid what you're owed |
+| Custom | A job or connection built for one business, on the same platform, by written quote | Sales fed in from a POS |
+
+A job cannot exist without a family under it. A solution holds no code of its own. There is one core, with no fork per client.
+
+### Three doors for agents
+
+| Who acts | Example | Where it stands |
+|---|---|---|
+| ALYR's own jobs | Draft a reply, set up a catalog | Not built |
+| The owner's own assistant, through MCP (ALY-286) | "How many bookings today?" | Backlog |
+| A customer's assistant | Someone's assistant finds a bakery and books | Not built |
+
+No outside assistant touches WhatsApp directly.
+
+### The order of work
+
+Phases, not dates. A phase ends when its test passes. This order is proposed until the founder answers the decisions on ALY-302.
+
+| Phase | What happens |
+|---|---|
+| 0. Prove the ground | No product code. Check where a model can run, choose a native Arabic reviewer, brief a lawyer (ALY-51), answer the founder's decisions |
+| 1. Rails and one job | A guarded door to a model with a budget and an off switch, then Catalog setup behind a switch, tested on fictional menus |
+| 2. Three real owners | Three consenting owners use Catalog setup in the workspace, with no customer or WhatsApp data |
+| 3. Suggested replies | Staff press Send on every reply, opt-in per shop |
+| 4. The owner by WhatsApp | Free-text instructions with yes and undo |
+| 5. Narrow replies alone | Hours, location, price and availability, with hand-off to a person |
+| 6. The suite | Three named jobs pass across three of the four stages, with real shops |
+
+Phase 0 can start now. Code for Phase 1 starts after the first paying business is live, so this does not delay go-live.
+
+**The words follow the work.** "Agent" is used only for a named job that has passed its test. "Agentic business suite" is used only after phase 6. The website changes last, after the reviews in progress have passed, the documents are updated, owners are told and one consenting shop has tried a job.
 
 ## 1. The one-paragraph plan
 
