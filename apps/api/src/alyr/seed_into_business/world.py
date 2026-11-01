@@ -230,7 +230,7 @@ def make_shop(run: Run, people: list[Customer]) -> Shop:
         whatsapp="", owner=(address_of(run, owner.key), owner.name, owner.name_ar),
         agent=(address_of(run, agent.key), agent.name, agent.name_ar),
         products=persona.PRODUCTS, customers=tuple(people), groups=persona.GROUPS,
-        orders_a_day=3.4, lines=(1, 3), open_hours=(6, 22), day_starts="00:00",
+        orders_a_day=2.2, lines=(1, 3), open_hours=(6, 22), day_starts="00:00",
     )
 
 
@@ -269,7 +269,7 @@ async def back_date(run: Run, to) -> None:
             return
         for table in tables:
             await conn.execute(
-                f'update "{table}" set created_at = created_at + ($1::timestamptz - $2::timestamptz) '
+                f'update "{table}" set created_at = created_at + ($1::timestamptz - $2::timestamptz) '  # noqa: E501
                 "where tenant_id = $3 and created_at >= $4", to, anchor, run.id, run.since,
             )
         await conn.execute(

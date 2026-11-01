@@ -187,7 +187,7 @@ class Story(history.Fortnight):
                 and age > timedelta(hours=3) and self.rng.random() < 0.6):
             o.payment, o.request, o.cash = "paid", "", True
             ready = o.ready_at or (o.at + timedelta(minutes=45))
-            o.paid_at = min(max(ready, o.at + timedelta(minutes=20)), self.now - timedelta(minutes=5))
+            o.paid_at = min(max(ready, o.at + timedelta(minutes=20)), self.now - timedelta(minutes=5))  # noqa: E501
 
     def schedule_payment(self, o: Placed) -> None:
         habit = self.profiles[o.person.id]

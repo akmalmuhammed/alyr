@@ -10,11 +10,10 @@ documents) back to where they belong, touching only rows made since the load beg
 the queue is cleaned of anything that would send.
 """
 
-from datetime import timedelta
 
 from alyr.core import jobs  # noqa: F401 - the queue the cleanup reads
 from alyr.seed_into_business import bookings, chats, credit, docs, world
-from alyr.seed_into_business.context import Refused, Run
+from alyr.seed_into_business.context import Run
 
 # Jobs that may stay in the queue after a load. The photo store's own writes carry no message;
 # the worker, which holds the store's keys, carries them out.

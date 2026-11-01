@@ -9,11 +9,9 @@ would have left in the chat are written beside them.
 """
 
 from datetime import datetime, time, timedelta
-from uuid import UUID
 
 from alyr.core.normalise import fmt_qar
 from alyr.demo.build import TZ
-from alyr.seed_into_business import persona
 from alyr.seed_into_business.context import Run
 
 # (key, name, Arabic name, minutes, price, deposit (fixed, in dirhams), resource keys)
@@ -174,7 +172,7 @@ async def write(run: Run, conn, story, ids: dict) -> int:
             "deposit_state, deposit_terms, hold_until) "
             "values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)",
             booking_id, number, person.id, ids["services"][key], name, starts, ends, status,
-            reminded, made, story.made.users[staff_email], ids["resources"][res], deposit if state != "none" else 0,
+            reminded, made, story.made.users[staff_email], ids["resources"][res], deposit if state != "none" else 0,  # noqa: E501
             state,
             {"kind": "fixed", "value": deposit, "no_show": "keep", "late_cancel": "keep",
              "cancel_hours": 24} if state != "none" else {},

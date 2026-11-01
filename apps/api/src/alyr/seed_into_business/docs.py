@@ -286,7 +286,7 @@ async def catering_quote(conn, staff, clock, at, data, run, story, counts) -> in
     clock.at(paid_at)
     out = {"payment": payments._present(row), "document": None, "replayed": False,
            "receipt_error": None}
-    done = await payments._issue_receipt(conn, staff, row, False, out)
+    await payments._issue_receipt(conn, staff, row, False, out)
     counts["invoices"] += 1
     counts["receipts"] += 1
     counts["payments_by_hand"] += 1

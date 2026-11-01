@@ -5,8 +5,10 @@ decision D-150, docs/runbooks/demo-data.md).
     python -m alyr.seed_into_business --owner-email akmal@alyr.qa \\
         --yes-this-business-is-a-test --dry-run
     python -m alyr.seed_into_business --owner-email akmal@alyr.qa --yes-this-business-is-a-test
-    python -m alyr.seed_into_business --owner-email akmal@alyr.qa --yes-this-business-is-a-test --replace
-    python -m alyr.seed_into_business --owner-email akmal@alyr.qa --yes-this-business-is-a-test --remove
+    python -m alyr.seed_into_business --owner-email akmal@alyr.qa \\
+        --yes-this-business-is-a-test --replace
+    python -m alyr.seed_into_business --owner-email akmal@alyr.qa \\
+        --yes-this-business-is-a-test --remove
 
 The rules it holds itself to, each with a test:
 
@@ -146,6 +148,31 @@ def require_test_business(target: Target, *, needs_mark: bool) -> None:
             "be loaded” on its page), or run the SQL step in docs/runbooks/demo-data.md.")
 
 
+REHEARSAL_VALID = "1 day"
+
+
+async def require_dry_run(owner: Database, target: Target, args) -> None:
+    """A real load only follows a dry run of the same seed, made in the last day."""
+    async with owner.tenant(target.id) as conn:
+        found = await conn.fetchval(
+            "select count(*) from demo_seed_runs where tenant_id = $1 and status = 'rehearsed' "
+            f"and seed = $2 and created_at > now() - interval '{REHEARSAL_VALID}'",
+            target.id, str(args.seed))
+    if not found:
+        raise Refused("no dry run was made first, so nothing was loaded. Run the same command "
+                      "with --dry-run, read what it would leave, then run it again (a dry run "
+                      "counts for one day).")
+
+
+async def record_rehearsal(owner: Database, target: Target, args) -> None:
+    async with owner.tenant(target.id) as conn:
+        await conn.execute("delete from demo_seed_runs where tenant_id = $1 and "
+                           "status = 'rehearsed'", target.id)
+        await conn.execute(
+            "insert into demo_seed_runs (tenant_id, status, story_end, seed, run_by) "
+            "values ($1, 'rehearsed', now(), $2, $3)", target.id, str(args.seed), args.run_by)
+
+
 async def active_run(conn: asyncpg.Connection, tenant_id: UUID):
     return await conn.fetchrow(
         "select * from demo_seed_runs where tenant_id = $1 and status = 'active'", tenant_id)
@@ -159,7 +186,7 @@ async def activity_outside(conn: asyncpg.Connection, tenant_id: UUID, manifest_:
     for table, column in ACTIVITY:
         n = await conn.fetchval(
             f'select count(*) from "{table}" t where t.tenant_id = $1 and not exists '
-            f'(select 1 from contacts c where c.id = t."{column}" and c.wa_user_id like \'TEST.%\')',
+            f'(select 1 from contacts c where c.id = t."{column}" and c.wa_user_id like \'TEST.%\')',  # noqa: E501
             tenant_id)
         n -= len(inserted.get(table, []))
         if n > 0:
@@ -376,7 +403,10 @@ async def main(argv: list[str]) -> int:
         require_test_business(target, needs_mark=not args.remove)
         say(f"Business: {target.name} ({target.slug}), owner {target.owner_email or '?'}")
         if args.dry_run:
-            return await rehearse(settings, target, args, say)
+            code = await rehearse(settings, target, args, say)
+            if code == 0 and not args.remove:
+                await record_rehearsal(owner, target, args)
+            return code
         lock = await owner.pool.acquire()
         if not await lock.fetchval("select pg_try_advisory_lock(hashtext($1))",
                                    f"demo-seed:{target.id}"):
@@ -411,11 +441,15 @@ async def act(owner, app, target, args, settings, say) -> int:
                 f"{n} {t.replace('_', ' ')}" for t, n in outside.items()) + "), so nothing was "
             "loaded. If this is a test business that you want filled anyway, take a copy and "
             "add --replace; the business's own rows are never deleted.")
+    await require_dry_run(owner, target, args)
     if args.replace:
         await take_copy(app, target, Path(args.export_dir), say)
         await remove_active(owner, target.id, say)
     result = await do_load(owner, app, target, args, settings, say, rehearsal=False)
     run_id = await record_run(owner, target, args, result)
+    async with owner.tenant(target.id) as conn:
+        await conn.execute("delete from demo_seed_runs where tenant_id = $1 and "
+                           "status = 'rehearsed'", target.id)
     say(f"\nLoaded (run {run_id}). Nothing was sent to anyone.\n")
     say(summary.table(result["summary"]))
     return 0

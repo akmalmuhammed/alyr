@@ -38,8 +38,9 @@ create table demo_seed_runs (
     tenant_id uuid not null default nullif(current_setting('app.tenant_id', true), '')::uuid
         references tenants(id),
     created_at timestamptz not null default now(),
-    -- active: its rows are in the business; removed: they were taken out again
-    status text not null default 'active' check (status in ('active', 'removed')),
+    -- active: its rows are in the business; removed: they were taken out again; rehearsed: a dry
+    -- run finished (no rows), which a real load needs within a day and uses up
+    status text not null default 'active' check (status in ('active', 'removed', 'rehearsed')),
     removed_at timestamptz,
     -- the moment the story ends ("today" when it was loaded) and the seed it was drawn from
     story_end timestamptz not null,

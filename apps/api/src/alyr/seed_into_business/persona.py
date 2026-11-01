@@ -156,7 +156,7 @@ PRODUCTS = (
        "Three milks, saffron and pistachio, chilled overnight.",
        "ثلاثة أنواع حليب وزعفران وفستق، مبرّدة طوال الليل.",
        rule="daily_limit", lead=NEXT_DAY, pop=7, sku="CKE-001",
-       sizes=(Size("Small, 1 kg", "صغيرة، 1 كغ", 0, 4), Size("Large, 2 kg", "كبيرة، 2 كغ", qar(70), 3))),
+       sizes=(Size("Small, 1 kg", "صغيرة، 1 كغ", 0, 4), Size("Large, 2 kg", "كبيرة، 2 كغ", qar(70), 3))),  # noqa: E501
     _p("kunafa-cheesecake", "Pistachio kunafa cheesecake", "تشيز كيك الكنافة بالفستق", CAKES, 135,
        "cake", "A cream cheese cake on a crisp kunafa base.", "تشيز كيك على قاعدة كنافة مقرمشة.",
        rule="daily_limit", lead=NEXT_DAY, pop=6, sku="CKE-002",
@@ -203,7 +203,7 @@ PRODUCTS = (
        unit="box", rule="count", stock=12, pop=3, sku="SWT-005",
        groups=(("corporate", qar(58)),)),
     _p("qatayef", "Qatayef, tray of 20", "قطايف، صينية 20", SWEETS, 48, "box",
-       "Stuffed pancakes for Ramadan. Back next Ramadan.", "قطايف محشوة لرمضان. تعود في رمضان القادم.",
+       "Stuffed pancakes for Ramadan. Back next Ramadan.", "قطايف محشوة لرمضان. تعود في رمضان القادم.",  # noqa: E501
        unit="box", state="hidden", sku="SWT-006", rule="always"),
     _p("eid-cookies", "Eid cookie box", "علبة كعك العيد", SWEETS, 60, "box",
        "Being photographed.", "قيد التصوير.", unit="box", state="draft", photo=False,
@@ -232,7 +232,7 @@ PRODUCTS = (
        rule="count", stock=22, pop=3, sku="DRK-008", state="low"),
     # ── Catering and trays: orders for groups, mostly on account ──────────────────────────
     _p("breakfast-tray", "Breakfast tray for 10", "صينية فطور لـ 10 أشخاص", CATERING, 220, "plate",
-       "Croissants, labneh, olives, cheese, jam and fruit.", "كرواسون ولبنة وزيتون وجبن ومربى وفواكه.",
+       "Croissants, labneh, olives, cheese, jam and fruit.", "كرواسون ولبنة وزيتون وجبن ومربى وفواكه.",  # noqa: E501
        rule="always", lead=NEXT_DAY, pop=6, sku="CAT-001", choices=(SETUP,),
        groups=(("corporate", qar(195)), ("wholesale", qar(185)))),
     _p("pastry-platter", "Mini pastry platter, 30 pieces", "صينية معجنات صغيرة، 30 قطعة",
@@ -244,7 +244,7 @@ PRODUCTS = (
        rule="always", lead=NEXT_DAY, pop=5, sku="CAT-003", choices=(SETUP,),
        groups=(("corporate", qar(230)), ("wholesale", qar(218)))),
     _p("lunch-box", "Corporate lunch box", "وجبة غداء للشركات", CATERING, 45, "box",
-       "Sandwich, salad, juice and a sweet. Minimum 10.", "ساندويتش وسلطة وعصير وحلوى. الحد الأدنى 10.",
+       "Sandwich, salad, juice and a sweet. Minimum 10.", "ساندويتش وسلطة وعصير وحلوى. الحد الأدنى 10.",  # noqa: E501
        unit="box", rule="always", lead=NEXT_DAY, min_order=10, pop=5, sku="CAT-004",
        groups=(("corporate", qar(38)), ("wholesale", qar(36)))),
     _p("coffee-station", "Coffee and karak station, 25 guests", "ركن قهوة وكرك لـ 25 ضيفاً",

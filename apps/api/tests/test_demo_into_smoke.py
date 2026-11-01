@@ -22,4 +22,9 @@ def test_smoke(client):
     code, text = run("--owner-email", owner, "--yes-this-business-is-a-test", "--remove")
     print(text)
     assert code == 0, text
-    assert table_counts(tenant_id) == before
+    after = table_counts(tenant_id)
+    # The record of the load stays as history, marked removed; everything else is as it was.
+    assert after.pop("demo_seed_runs") == before["demo_seed_runs"] + 1
+    assert after == {k: v for k, v in before.items() if k != "demo_seed_runs"}
+    status = sql("select status from demo_seed_runs where tenant_id = $1", tenant_id)
+    assert [r["status"] for r in status] == ["removed"]

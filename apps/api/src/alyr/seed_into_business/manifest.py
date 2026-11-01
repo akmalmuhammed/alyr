@@ -28,8 +28,8 @@ from alyr.demo.build import Refused
 
 SEP = "\x1f"
 # Tables with a `tenant_id` that the diff does not look at: the job queue (checked on its own),
-# this file's own record, sessions, and counters the product keeps up to date by itself.
-IGNORED = {"jobs", "demo_seed_runs", "sessions", "media_usage", "processed_messages",
+# this file's own record (kept as history, marked removed), sessions, and queues of the product.
+IGNORED = {"jobs", "demo_seed_runs", "sessions", "processed_messages",
            "staff_link_codes", "erasing_businesses"}
 # Tables whose existing rows the load may change, because the product's own services do it when
 # something is added (a counter moves, a category is re-ordered, a module is switched on).
@@ -37,6 +37,7 @@ RESTORABLE = {
     "shop_settings", "document_settings", "document_series", "document_branches",
     "item_code_counters", "items", "item_categories", "tenant_modules", "shop_features",
     "delivery_settings", "services", "business_hours", "price_groups", "memberships",
+    "media_usage",
 }
 
 
@@ -59,7 +60,7 @@ async def primary_keys(conn: asyncpg.Connection) -> dict[str, list[str]]:
         cols = await conn.fetchval(
             "select array_agg(a.attname::text order by array_position(i.indkey::int2[], a.attnum)) "
             "from pg_index i join pg_attribute a on a.attrelid = i.indrelid "
-            "and a.attnum = any(i.indkey) where i.indrelid = format('public.%I', $1::text)::regclass "
+            "and a.attnum = any(i.indkey) where i.indrelid = format('public.%I', $1::text)::regclass "  # noqa: E501
             "and i.indisprimary", table,
         )
         if not cols:
@@ -94,7 +95,8 @@ async def take(conn: asyncpg.Connection, tenant_id: UUID, pks: dict[str, list[st
     return snap
 
 
-def diff(before: Snapshot, after: Snapshot, strict: bool = True) -> tuple[dict[str, list[str]], dict[str, list[dict]]]:
+def diff(before: Snapshot, after: Snapshot,
+         strict: bool = True) -> tuple[dict[str, list[str]], dict[str, list[dict]]]:
     """(the keys that are new, per table; the changed columns of existing rows, per table).
     Raises `Unexpected` for a row that vanished or changed where it must not."""
     inserted: dict[str, list[str]] = {}
@@ -144,7 +146,7 @@ async def remove(conn: asyncpg.Connection, tenant_id: UUID, manifest: dict) -> d
     )
     for table in order:
         done = await conn.execute(
-            f'delete from "{table}" x where x.tenant_id = $1 and {key_sql(pks[table])} = any($2::text[])',
+            f'delete from "{table}" x where x.tenant_id = $1 and {key_sql(pks[table])} = any($2::text[])',  # noqa: E501
             tenant_id, inserted[table],
         )
         deleted[table] = int(done.split()[-1])
@@ -162,7 +164,7 @@ async def _restore_row(conn, tenant_id: UUID, table: str, cols: list[str], row: 
     image = row["old"]
     for column in row["old"]:
         await conn.execute(
-            f'update "{table}" x set "{column}" = (jsonb_populate_record(null::"{table}", $3::jsonb))."{column}" '
+            f'update "{table}" x set "{column}" = (jsonb_populate_record(null::"{table}", $3::jsonb))."{column}" '  # noqa: E501
             f"where x.tenant_id = $1 and {key_sql(cols)} = $2",
             tenant_id, row["pk"], image,
         )
