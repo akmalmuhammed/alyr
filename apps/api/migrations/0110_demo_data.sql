@@ -1,4 +1,4 @@
--- Demo data in an existing business (spec 063, decision D-150).
+-- Demo data in an existing business (spec 064, decision D-151).
 --
 -- Two things, and nothing else:
 --

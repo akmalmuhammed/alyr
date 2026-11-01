@@ -1,4 +1,4 @@
-"""`python -m alyr.seed_into_business` (specs/064, D-150): the safety rules, then the data.
+"""`python -m alyr.seed_into_business` (specs/064, D-151): the safety rules, then the data.
 
 Real PostgreSQL, the real sign-up to make the business, the command run as a person types it.
 The rules proved here, each with a mutation check written in the runbook's test report:
@@ -141,7 +141,7 @@ def test_lifecycle_and_the_data(client):
                    "and wa_user_id not like 'TEST.%'") <= 40
     assert 8 <= n("select count(*) n from contacts where tenant_id = $1 and credit_limit > 0") <= 10
     assert 150 <= n("select count(*) n from orders where tenant_id = $1") <= 250
-    assert 38 <= n("select count(*) n from bookings where tenant_id = $1") <= 60
+    assert 40 <= n("select count(*) n from bookings where tenant_id = $1") <= 60
     assert 4 <= n("select count(*) n from memberships where tenant_id = $1") <= 7
     assert n("select count(*) n from documents where tenant_id = $1") >= 150
 

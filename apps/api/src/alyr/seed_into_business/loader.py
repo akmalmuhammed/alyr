@@ -1,5 +1,5 @@
 """One load, start to finish: the steps of `world.py`, the story's writes, and the touches that
-need the database owner (spec 063).
+need the database owner (spec 064).
 
 Everything the product's services write is stamped with the database's clock, and ten weeks of
 history cannot be written at the speed of one request. So the load works in three moves: the

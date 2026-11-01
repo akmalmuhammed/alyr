@@ -1,7 +1,7 @@
 """The conversations people had with the shop that were not just an order: questions about
 prices and hours, "is it ready", a change to an order, a complaint that was put right, a
 catering enquiry that became a job, a photo of a cake to copy, a voice note, a customer who
-asked to stop (spec 063).
+asked to stop (spec 064).
 
 Each conversation is written once, in both languages, and played in the language the customer
 writes. Four of them are waiting for an answer right now, so the ALYR Agent's "Needs you now"

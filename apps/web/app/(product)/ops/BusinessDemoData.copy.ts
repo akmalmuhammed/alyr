@@ -1,4 +1,4 @@
-// The words of the "test business" switch in the back office (specs/063, D-150): one object per
+// The words of the "test business" switch in the back office (specs/064, D-151): one object per
 // language. The console is English, so the switch shows both: each line in English, then in Arabic
 // beneath it. Arabic is Modern Standard, and unreviewed by a native speaker until ALY-66.
 

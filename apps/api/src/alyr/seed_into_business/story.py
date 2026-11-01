@@ -1,5 +1,5 @@
 """Ten weeks of Zaman Bakehouse, worked out in memory and written the way the product writes
-it (spec 063).
+it (spec 064).
 
 This is the demo shops' fortnight (`demo/history.py`) stretched to ten weeks and changed where
 a bakery with a catering side differs from a one-room shop:

@@ -1,4 +1,4 @@
-"""The back office's switch for demo data (specs/063, D-150, migration 0110): only ALYR staff can
+"""The back office's switch for demo data (specs/064, D-151, migration 0110): only ALYR staff can
 mark a business as one that may be filled with made-up data, it is off for every business, the
 change is in the audit log, and the app role cannot write the flag any other way."""
 

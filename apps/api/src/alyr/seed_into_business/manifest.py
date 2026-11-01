@@ -1,4 +1,4 @@
-"""What one load wrote, and taking exactly that out again (spec 063, decision D-150).
+"""What one load wrote, and taking exactly that out again (spec 064, decision D-151).
 
 The load never says which rows it wrote: whatever the product's services insert along the way
 (an item's variants, an order's activity, a document's lines and its PDF) lands in the business's

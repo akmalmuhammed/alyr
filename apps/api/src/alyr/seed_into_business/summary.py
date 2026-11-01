@@ -1,4 +1,4 @@
-"""What is in the business now, by area, read from the database (spec 063). The command prints
+"""What is in the business now, by area, read from the database (spec 064). The command prints
 this after a load (and for a rehearsal, what the load would leave), and the tests read it."""
 
 from datetime import datetime, timedelta

@@ -1,6 +1,6 @@
 "use client";
 
-// The "test business" switch for one business (specs/063, D-150). Only a business ALYR staff have
+// The "test business" switch for one business (specs/064, D-151). Only a business ALYR staff have
 // marked here can be filled with made-up demo data by the command `python -m alyr.seed_into_business`.
 // Off by default. Switching it off is always allowed and deletes nothing. English first, Arabic
 // beneath, from the copy object.

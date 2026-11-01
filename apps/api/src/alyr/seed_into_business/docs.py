@@ -1,5 +1,5 @@
 """The documents the ten weeks would have made: receipts, invoices, a quote accepted into an
-invoice, credit notes and statements of account (spec 063).
+invoice, credit notes and statements of account (spec 064).
 
 Every document is made by the Documents engine itself (`modules/documents/service.py`): its
 numbers come off the series under the row lock, its totals and hash are worked out by the

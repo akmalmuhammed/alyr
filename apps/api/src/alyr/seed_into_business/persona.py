@@ -1,5 +1,5 @@
 """The made-up business the demo tells the story of: Zaman Bakehouse («مخبز زمان»), a
-neighbourhood bakery and café in Doha that also caters for offices and events (spec 063).
+neighbourhood bakery and café in Doha that also caters for offices and events (spec 064).
 
 Everything here is data, in both languages. The words are written once, here, and nowhere
 else: the writer (`world.py`) turns them into rows through the product's own services. Every

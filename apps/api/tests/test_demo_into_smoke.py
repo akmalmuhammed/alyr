@@ -13,7 +13,9 @@ def test_smoke(client):
     print(text)
     print("DRY RUN SECONDS", time.time() - started)
     assert code == 0, text
-    assert table_counts(tenant_id) == before
+    dry = table_counts(tenant_id)
+    assert dry.pop("demo_seed_runs") == 1  # the marker a real load needs
+    assert dry == {k: v for k, v in before.items() if k != "demo_seed_runs"}
     started = time.time()
     code, text = run("--owner-email", owner, "--yes-this-business-is-a-test", "--photos", "now")
     print(text)

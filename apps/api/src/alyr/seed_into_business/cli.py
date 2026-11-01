@@ -1,6 +1,6 @@
 """`python -m alyr.seed_into_business`: fill ONE existing business with ten weeks of a made-up,
-believable small business, so a client in a meeting sees a real-looking workspace (spec 063,
-decision D-150, docs/runbooks/demo-data.md).
+believable small business, so a client in a meeting sees a real-looking workspace (spec 064,
+decision D-151, docs/runbooks/demo-data.md).
 
     python -m alyr.seed_into_business --owner-email akmal@alyr.qa \\
         --yes-this-business-is-a-test --dry-run
@@ -145,7 +145,7 @@ def require_test_business(target: Target, *, needs_mark: bool) -> None:
         raise Refused(
             f"“{target.name}” has not been marked as a test business, so it was left alone. "
             "ALYR staff mark it in the back office (the switch “Test business: demo data may "
-            "be loaded” on its page), or run the SQL step in docs/runbooks/demo-data.md.")
+            "be loaded” on its page; docs/runbooks/demo-data.md).")
 
 
 REHEARSAL_VALID = "1 day"

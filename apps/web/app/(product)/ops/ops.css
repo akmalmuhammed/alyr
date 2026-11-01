@@ -287,7 +287,7 @@
   .wl-checks li span:last-child { grid-column: 2; }
 }
 
-/* The test-business switch for one business (specs/063, D-150): English, then Arabic beneath. */
+/* The test-business switch for one business (specs/064, D-151): English, then Arabic beneath. */
 .ops-demo { display: grid; gap: var(--space-1); margin-block-end: var(--space-3); min-width: 0; }
 .ops-demo-switch { display: flex; align-items: flex-start; gap: var(--space-2); min-height: 44px; padding-block: var(--space-1); font-size: var(--ui-body-sm); cursor: pointer; }
 .ops-demo-switch input { flex: none; inline-size: 20px; block-size: 20px; margin: 0; margin-block-start: 2px; accent-color: var(--text); cursor: pointer; }

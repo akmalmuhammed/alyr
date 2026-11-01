@@ -118,6 +118,8 @@ from a nightly backup, timed, into a temporary instance that is deleted at the e
 
 The privacy notice promises that a business's data is deleted 60 days after it stops. `infra/gcp/erase.sh` makes the Cloud Run job `alyr-erase` (the same image as the API, run as `alyr-migrate`, the only account that reads the database owner's address) and a Cloud Scheduler schedule for 03:30 Doha time, created **paused**. The job is made with the switch off, so it only reports. `plan` prints what `deploy` would do and calls nothing; `dry-run`, `logs` and `status` look; `hold` and `release` keep one client back; `enable` turns the real deletion on and asks for the word ERASE. It needs no new account and no new secret. Read `docs/runbooks/erasing-a-client.md`, "Before the switch goes on", first.
 
+`infra/gcp/demo-data.sh` makes the Cloud Run job `alyr-demo-data` (same image, run as `alyr-migrate`, no schedule, only the two database addresses) that loads made-up demo data into one business the back office marked as a test business: `plan`, `deploy`, `dry-run <email>`, `load <email>`, `replace <email>`, `remove <email>`, `logs`. Nothing of it has run on Google Cloud. Read `docs/runbooks/demo-data.md`.
+
 ## The visitor's address (ALY-265)
 
 So the per-address rate limits count the visitor and not the proxy, the edge Worker signs the

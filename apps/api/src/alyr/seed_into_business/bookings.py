@@ -1,6 +1,6 @@
 """The diary: tastings, catering consultations and cake design fittings, with the people and
 the room they use, deposits where the service takes one, and a today and tomorrow that look
-busy (spec 063).
+busy (spec 064).
 
 A person or the tasting table is never booked twice at once: every booking is placed in a free
 slot of its resource's own hours. The made-up customers are the ones of the story; bookings are
@@ -109,10 +109,22 @@ async def write(run: Run, conn, story, ids: dict) -> int:
             count = 5  # today and tomorrow are full
         elif offset < 0:
             ramp = 0.35 + 0.9 * (offset + story.days) / (story.days + 6)
-            count = rng.choices([0, 1, 2], [15 - 9 * ramp, 2 + 3 * ramp, 0.2 + ramp])[0]
+            count = rng.choices([0, 1, 2], [10 - 5 * ramp, 2.5 + 3 * ramp, 0.2 + ramp])[0]
         else:
             count = rng.choices([0, 1, 2], [2, 3, 2])[0]
         plan += [(day, rng.choices([s[0] for s in SERVICES], [4, 3, 2])[0]) for _ in range(count)]
+    # However the days fell, a load holds about fifty bookings, never fewer than forty or more
+    # than sixty: the past ones are cut or topped up to a fixed number (some do not fit their
+    # person's day and are dropped below, which is why the aim is above the middle).
+    ahead = [p for p in plan if p[0] >= today]
+    past = [p for p in plan if p[0] < today]
+    aim = 56 - len(ahead)
+    if len(past) > aim:
+        past = sorted(rng.sample(past, aim))
+    while len(past) < aim:
+        past.append((today - timedelta(days=rng.randint(1, story.days - 1)),
+                     rng.choices([s[0] for s in SERVICES], [4, 3, 2])[0]))
+    plan = sorted(past + ahead, key=lambda p: p[0])
     rows = []
     for day, key in plan:
         service = next(s for s in SERVICES if s[0] == key)

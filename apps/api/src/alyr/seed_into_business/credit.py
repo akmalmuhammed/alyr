@@ -1,5 +1,5 @@
 """The credit accounts' last touches: the balances brought forward from before ALYR, one
-account over its limit, promises to pay, and the reminders the shop already sent (spec 063).
+account over its limit, promises to pay, and the reminders the shop already sent (spec 064).
 
 The sales and payments themselves come from the story (an office orders trays on account; each
 order is a sale on the customer's account, each payment is recorded against its invoice). What
