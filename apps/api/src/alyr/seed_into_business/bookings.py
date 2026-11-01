@@ -35,7 +35,7 @@ BOOK = {"en": "Can I book a {service}?", "ar": "أبي أحجز {service}"}
 LINK = {"en": "Choose a time here: {url}", "ar": "اختر الموعد من هنا: {url}"}
 CONFIRMED = {"en": "Booking #{n} confirmed for {when}.", "ar": "تم تأكيد الحجز رقم {n} يوم {when}."}
 REMINDER = {"en": "A reminder of your appointment today.", "ar": "تذكير بموعدك اليوم."}
-DEPOSIT = {"en": "Your deposit of {amount} is received. See you soon!",
+DEPOSIT = {"en": "Your deposit of {amount} is received. See you then!",
            "ar": "وصلنا العربون {amount}. بانتظاركم!"}
 
 

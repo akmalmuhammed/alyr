@@ -153,7 +153,7 @@ async def add_replies(conn) -> None:
 
 REPLIES = (
     ("Opening hours", "We are open Saturday to Thursday 6:30 am to 10 pm, and Friday from 1 pm "
-                      "to 10 pm. See you soon!"),
+                      "to 10 pm. See you there!"),
     ("Cake orders", "Celebration cakes need two days' notice. Send the date, the size and the "
                     "message for the top and we will confirm the price."),
     ("Delivery", "We deliver to West Bay, Pearl, Al Sadd, Musheireb and Lusail. Delivery is "

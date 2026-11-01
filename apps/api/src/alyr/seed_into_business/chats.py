@@ -149,8 +149,8 @@ CHATS = (
                       "two days' notice we can do a custom flavour.",
              "الكب كيك في علب من 6 بسعر 42 ريالاً، فـ 30 قطعة 5 علب بـ 210 ريالات. ونقدر نعمل "
              "نكهة خاصة بإشعار يومين.", gap=7),
-        Turn(C, "That is a bit more than I planned, I will think about it.",
-             "That is a bit more than I planned, I will think about it.", gap=20)),
+        Turn(C, "That is a bit more than I expected, I will think about it.",
+             "That is a bit more than I expected, I will think about it.", gap=20)),
          assigned="noura", outcome="lost", reason="price"),
     Chat("Sophie T.", 3 * D + 2 * H, "closed", (
         Turn(C, "Please stop sending me messages.", "Please stop sending me messages."),
@@ -181,8 +181,8 @@ CHATS = (
          outcome="booked"),
     Chat("ريم و.", 1 * D + 6 * H, "closed", (
         Turn(C, "Thank you, the cake was wonderful!", "شكراً، الكيكة كانت رائعة!"),
-        Turn("hessa", "You are welcome! We hope to see you again soon.",
-             "العفو! نتمنى أن نراك قريباً.", gap=30)), assigned="faisal", outcome="answered"),
+        Turn("hessa", "You are welcome! We hope to see you again.",
+             "العفو! نتمنى أن نراك مرة أخرى.", gap=30)), assigned="faisal", outcome="answered"),
     Chat("Hassan D.", 7 * D, "closed", (
         Turn(C, "هل عندكم خيارات نباتية؟", "هل عندكم خيارات نباتية؟"),
         Turn("faisal", "Yes: za'atar manousheh, spinach fatayer, the sourdough and the "
