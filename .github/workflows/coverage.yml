@@ -1,0 +1,73 @@
+name: coverage
+
+# How much of the API the API's own tests run (ALY-122), with a floor: the same suite as the `api`
+# job of `ci`, once more under coverage.py, failing when the line coverage of src/alyr falls below
+# COVERAGE_FLOOR. A floor, not a target: it stops the number sliding back, and it is raised, never
+# lowered without a written reason (docs/runbooks/release.md, "The API coverage floor").
+#
+# A workflow of its own, like `e2e`, on purpose: the release gate waits for the whole `ci` run, and
+# this suite under coverage runs as long as `api` or longer, which would make every release wait
+# for the slower of the two. It is not in branch protection yet either; the runbook says when it is.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Least privilege: the job reads the code and nothing else (ALY-114).
+permissions:
+  contents: read
+
+# A newer push to a pull request makes the older run pointless, and this one is long. Runs on main
+# are all kept.
+concurrency:
+  group: coverage-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  api-coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: alyr
+          # No password: the database lives for this job only, on the runner (the `e2e` workflow
+          # does the same). The settings the tests connect with are the ones `api` uses.
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: alyr
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U alyr"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      ALYR_ENV: local
+      # coverage.py's low-overhead tracer for Python 3.12 and later (it counts lines, not branches).
+      COVERAGE_CORE: sysmon
+      # The least line coverage, in percent, that the tests may leave. Raise it as the runbook says.
+      COVERAGE_FLOOR: "93"
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+      - run: uv sync --locked
+      # coverage and pytest-cov are added for this run only (`uv run --with`), pinned, so the API's
+      # own dependencies and lock file do not change.
+      - name: Tests, with coverage and its floor
+        run: |
+          uv run --with coverage==7.16.2 --with pytest-cov==7.1.0 \
+            pytest -p no:cacheprovider --durations=10 \
+            --cov=alyr --cov-report=term:skip-covered --cov-fail-under="$COVERAGE_FLOOR"
+      - name: The number, on the run's summary
+        if: always()
+        run: |
+          if [ -f .coverage ]; then
+            total="$(uv run --with coverage==7.16.2 coverage report --format=total)"
+            echo "API line coverage: **${total}%** (floor ${COVERAGE_FLOOR}%)" | tee -a "$GITHUB_STEP_SUMMARY"
+          fi

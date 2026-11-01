@@ -358,6 +358,14 @@ def email(report: dict, shop: dict) -> tuple[str, str, str]:
     return subject, text, html
 
 
+def spread_minutes(tenant_id: UUID, spread: int) -> int:
+    """How long after nine this shop's report waits: a fixed share of `spread` minutes, from the
+    shop's ID, so it is the same every week and every restart, and shops are evenly mixed."""
+    if spread <= 0:
+        return 0
+    return int.from_bytes(tenant_id.bytes[-4:], "big") % spread
+
+
 async def schedule(conn: asyncpg.Connection, week_start: date, tz: str) -> None:
     """Queue the report for this week, unless it is queued already."""
     queued = await conn.fetchval(
@@ -367,6 +375,10 @@ async def schedule(conn: asyncpg.Connection, week_start: date, tz: str) -> None:
     )
     if not queued:
         run_at = datetime.combine(week_start + timedelta(days=7), time(SEND_HOUR), ZoneInfo(tz))
+        tenant_id = await conn.fetchval(
+            "select nullif(current_setting('app.tenant_id', true), '')::uuid")
+        run_at += timedelta(
+            minutes=spread_minutes(tenant_id, get_settings().report_spread_minutes))
         await jobs.enqueue(conn, JOB, {"week_start": week_start.isoformat()}, run_at)
 
 

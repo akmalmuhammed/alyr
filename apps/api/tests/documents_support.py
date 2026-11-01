@@ -74,6 +74,16 @@ def sign_in_all(client_factory, shop: Shop) -> Shop:
 def configured_shop(client_factory, monkeypatch, *, documents: bool = True, seller: dict | None = None,
                     **settings) -> Shop:
     monkeypatch.setenv("ALYR_DEMO_OPEN", "false")
+    # These tests put twenty issues through the routes at once to prove the numbering holds; the
+    # gate that turns a long queue of draws away (core/admission.py, D-132) has tests of its own.
+    from alyr.core import admission
+
+    monkeypatch.setattr(admission, "renders", admission.Admission(running=50, waiting=50))
+    # Twenty issues of one shop's series wait their turn at its counter, and each holds a connection
+    # while it waits: the limits that answer "busy" after 3 seconds (core/db.py) would end the
+    # queue's tail. They have tests of their own (test_db_budget.py).
+    monkeypatch.setenv("ALYR_DB_ACQUIRE_TIMEOUT_SECONDS", "60")
+    monkeypatch.setenv("ALYR_DB_MAX_WAITING", "100")
     shop = sign_in_all(client_factory, make_shop(documents=documents))
     if documents:
         done = shop.owner.put("/api/documents/settings", json={**(SELLER if seller is None else seller), **settings})

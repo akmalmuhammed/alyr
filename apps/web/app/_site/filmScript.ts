@@ -210,16 +210,20 @@ export const camCss = (v: View) => `translate(calc(var(--dir) * ${r2(v.tx)}px), 
 
 // ------------------------------------------------------------------ the editor's light
 // Each window's strength through the film: the one the event is on is lit, the rest step back.
+// In the close shots only the neighbour on the far side stays, dimmed, and everything else goes
+// out: a window left dimmed on the fold's side is cut by the plate's diagonal into a grey
+// triangle beside the hero's text, with a piece of its numbers showing (ALY-303, the founder's
+// screenshot: the Orders window, its "QAR 112", at every width with a fold).
 type Shot = [number, number, Partial<Record<CardKey | "_", number>>];
 const SHOTS: Shot[] = [
   [-2, 3.1, { _: 0.92 }],
-  [4.6, 8.3, { book: 1, noor: 0.25, _: 0.1 }],
-  [9.5, 12.2, { stock: 1, table: 0.25, _: 0.1 }],
-  [13.0, 15.2, { table: 1, stock: 0.2, chat: 0.2, _: 0.1 }],
-  [16.0, 18.9, { chat: 1, inbox: 0.25, table: 0.2, _: 0.1 }],
+  [4.6, 8.3, { book: 1, noor: 0.25, _: 0 }],
+  [9.5, 12.2, { stock: 1, _: 0 }],
+  [13.0, 15.2, { table: 1, stock: 0.2, _: 0 }],
+  [16.0, 18.9, { chat: 1, table: 0.2, _: 0 }],
   [20.1, 24.0, { inbox: 0.96, book: 0.96, owed: 0.96, lina: 0.96, noor: 0.7, chat: 0.6, _: 0.5 }],
-  [25.0, 26.0, { chat: 1, table: 0.9, _: 0.1 }],
-  [26.8, 28.6, { table: 1, chat: 0.16, stock: 0.16, _: 0.1 }],
+  [25.0, 26.0, { chat: 1, table: 0.9, _: 0 }],
+  [26.8, 28.6, { table: 1, stock: 0.16, _: 0 }],
   [29.9, 40, { dash: 1, _: 0 }],
 ];
 

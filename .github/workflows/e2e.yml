@@ -1,0 +1,113 @@
+name: e2e
+
+# The journeys that must never break once clients depend on ALYR (ALY-122), in a real browser
+# (Playwright, Chromium) against the real stack: PostgreSQL, the API in local mode (it hands back
+# sign-in codes and has the simulator channel) and the web app as `next build` made it. Nothing is
+# faked or mocked. tests/e2e/README.md says what each journey proves and how to run them on a laptop.
+#
+# A workflow of its own, not a job of `ci`, on purpose: the release gate (release-gate.yml) reads the
+# conclusion of the whole `ci` run, so a red or still-running job inside it would hold a release
+# back. This one does not, and it is not in branch protection. It becomes required only after it has
+# run green five times in a row on main (docs/runbooks/release.md, "The browser journeys"); the
+# runs are listed with `gh run list --workflow e2e --branch main`.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Least privilege: the job reads the code and nothing else (ALY-114).
+permissions:
+  contents: read
+
+# A newer push to a pull request makes the older run pointless. Runs on main are all kept: they
+# are the record of the five in a row.
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: alyr
+          # No password: the database lives for this job only, on the runner, and the API's own
+          # settings (the same ones `ci` uses) connect as `alyr` whatever password they send.
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: alyr
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U alyr"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # A local API with the demo open off: only a signed-in session reaches anything, as in
+      # production. ALYR_CLIENT_IP_HEADER names the header each test writes its own visitor address
+      # in, so the per-address limits are on and no test is held up by another (support/test.ts).
+      ALYR_ENV: local
+      ALYR_DEMO_OPEN: "false"
+      ALYR_CLIENT_IP_HEADER: x-e2e-address
+      ALYR_PUBLIC_WEB_URL: http://127.0.0.1:3100
+      ALYR_API_URL: http://127.0.0.1:8000
+      E2E_WEB_URL: http://127.0.0.1:3100
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: apps/web/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: |
+            apps/web/pnpm-lock.yaml
+            tests/e2e/pnpm-lock.yaml
+      - name: API dependencies
+        working-directory: apps/api
+        run: uv sync --locked
+      - name: Web dependencies and build
+        working-directory: apps/web
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+      - name: Journey tests, a browser, and the types of the tests
+        working-directory: tests/e2e
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps chromium
+          pnpm typecheck
+      - name: Migrate, load the demo shop, start the API and the web app
+        run: |
+          (cd apps/api && uv run python -m alyr.migrate && uv run python -m alyr.seed)
+          (cd apps/api && setsid nohup uv run uvicorn alyr.main:app --host 127.0.0.1 --port 8000 > "$RUNNER_TEMP/api.log" 2>&1 &)
+          (cd apps/web && setsid nohup pnpm exec next start -p 3100 -H 127.0.0.1 > "$RUNNER_TEMP/web.log" 2>&1 &)
+          for _ in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8000/health >/dev/null && curl -fsS http://127.0.0.1:3100/api/onboarding/types >/dev/null; then echo "stack is up"; exit 0; fi
+            sleep 2
+          done
+          echo "the stack did not come up"; tail -n 40 "$RUNNER_TEMP/api.log" "$RUNNER_TEMP/web.log"; exit 1
+      - name: Run the journeys
+        working-directory: tests/e2e
+        run: pnpm test
+      # The report, the traces of failed (and retried) tests and the servers' logs, kept for 14
+      # days. Open a trace with `pnpm exec playwright show-trace <trace.zip>`.
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: e2e-report
+          path: |
+            tests/e2e/report
+            tests/e2e/results
+          retention-days: 14
+          if-no-files-found: ignore
+      - name: Server logs
+        if: failure()
+        run: tail -n 80 "$RUNNER_TEMP/api.log" "$RUNNER_TEMP/web.log" || true

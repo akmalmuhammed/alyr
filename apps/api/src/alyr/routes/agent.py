@@ -19,6 +19,9 @@ from alyr.routes.deps import current_staff
 
 router = APIRouter(prefix="/api/agent", tags=["agent"])
 
+# The home screen's dashboard is a summary of the week: a little older than the inbox is fine.
+AGENT_SECONDS = 15.0
+
 
 class NotNow(BaseModel):
     key: str = Field(min_length=1, max_length=40)
@@ -35,8 +38,15 @@ async def agent_view(
     now = None
     if settings.env == "local" and settings.agent_clock:
         now = datetime.fromisoformat(settings.agent_clock)
-    async with request.app.state.db.tenant(staff.tenant_id) as conn:
-        return await view.build(conn, staff, lang, now=now)
+    async def compute() -> dict:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            return await view.build(conn, staff, lang, now=now)
+
+    # Several people's tabs on the home screen ask every few seconds; the view says who it is for
+    # (their first name, whether they see money), so the answer is kept per person.
+    return await request.app.state.poll.get_json(
+        staff.tenant_id, ("agent", lang, staff.user_id, staff.role), compute,
+        seconds=AGENT_SECONDS)
 
 
 @router.post("/not-now")

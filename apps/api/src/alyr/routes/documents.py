@@ -11,6 +11,7 @@ the answer sends the same request again and gets the same document back, with 20
 """
 
 import asyncio
+from collections.abc import AsyncIterator
 from datetime import date
 from decimal import Decimal
 from typing import Annotated, Literal
@@ -20,7 +21,7 @@ from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, StrictInt
 
-from alyr.core import mail, team
+from alyr.core import admission, mail, team
 from alyr.core.auth import Staff
 from alyr.core.team import actor_of
 from alyr.modules.documents import (
@@ -52,6 +53,14 @@ Unit = Literal["piece", "kg", "g", "l", "m", "box", "pack", "portion", "hour", "
 Method = Literal["cash", "card", "bank_transfer", "link", "credit", "cheque", "other"]
 IMAGE_LIMIT = doc_settings.IMAGE_MAX_BYTES
 Shape = Literal["pdf", "png"]
+
+
+async def render_slot(staff: Staff = Depends(current_staff)) -> AsyncIterator[None]:
+    """A route that draws a document waits here first, once we know who is asking and before it
+    opens a transaction: two draw at once, six wait, the rest are told to try again in a moment
+    (core/admission.py, D-132)."""
+    async with admission.renders.slot():
+        yield
 
 
 async def refused(request: Request, error: DocumentError) -> JSONResponse:
@@ -418,7 +427,7 @@ async def put_series(
 # ── the preview: any layout and kind, no number taken ─────────────────────────────────────
 
 
-@router.post("/preview")
+@router.post("/preview", dependencies=[Depends(render_slot)])
 async def preview(
     body: PreviewIn, request: Request, staff: Staff = Depends(current_staff),
     shape: Annotated[Shape, Query(alias="format")] = "pdf",
@@ -534,7 +543,7 @@ async def find_catalog_lines(
 
 
 
-@router.post("", status_code=201)
+@router.post("", status_code=201, dependencies=[Depends(render_slot)])
 async def create(
     body: CreateIn, request: Request, response: Response, staff: Staff = Depends(current_staff),
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
@@ -584,7 +593,7 @@ async def discard(
     return {"deleted": True}
 
 
-@router.post("/{doc_id}/issue")
+@router.post("/{doc_id}/issue", dependencies=[Depends(render_slot)])
 async def issue(
     doc_id: UUID, request: Request, response: Response, staff: Staff = Depends(current_staff),
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
@@ -596,7 +605,8 @@ async def issue(
     return {"document": document, "replayed": replayed}
 
 
-@router.post("/{doc_id}/credit-note", status_code=201)
+@router.post(
+    "/{doc_id}/credit-note", status_code=201, dependencies=[Depends(render_slot)])
 async def credit_note(
     doc_id: UUID, body: CreditNoteIn, request: Request, response: Response,
     staff: Staff = Depends(current_staff),
@@ -614,7 +624,7 @@ async def credit_note(
     return {"document": document, "replayed": replayed}
 
 
-@router.get("/{doc_id}/pdf")
+@router.get("/{doc_id}/pdf", dependencies=[Depends(render_slot)])
 async def pdf(
     doc_id: UUID, request: Request, layout: Layout | None = None,
     download: bool = False, staff: Staff = Depends(current_staff),
@@ -666,7 +676,7 @@ async def activity(
 # ── from the shop's own sales, payments by hand, and delivery (ALY-139) ───────────────────
 
 
-@router.post("/payments", status_code=201)
+@router.post("/payments", status_code=201, dependencies=[Depends(render_slot)])
 async def record_payment(
     body: PaymentRecordIn, request: Request, response: Response,
     staff: Staff = Depends(current_staff),
@@ -690,7 +700,7 @@ async def record_payment(
     return done
 
 
-@router.post("/payments/{payment_id}/receipt")
+@router.post("/payments/{payment_id}/receipt", dependencies=[Depends(render_slot)])
 async def receipt_for_payment(
     payment_id: UUID, request: Request, send: bool | None = None,
     staff: Staff = Depends(current_staff),
@@ -700,7 +710,8 @@ async def receipt_for_payment(
         return await payments.receipt_of_payment(conn, staff, payment_id, send)
 
 
-@router.post("/from/order/{order_id}", status_code=201)
+@router.post(
+    "/from/order/{order_id}", status_code=201, dependencies=[Depends(render_slot)])
 async def document_from_order(
     order_id: UUID, body: FromSaleIn, request: Request, response: Response,
     staff: Staff = Depends(current_staff),
@@ -714,7 +725,8 @@ async def document_from_order(
     return {"document": document, "replayed": replayed}
 
 
-@router.post("/from/booking/{booking_id}", status_code=201)
+@router.post(
+    "/from/booking/{booking_id}", status_code=201, dependencies=[Depends(render_slot)])
 async def document_from_booking(
     booking_id: UUID, body: FromSaleIn, request: Request, response: Response,
     staff: Staff = Depends(current_staff),
@@ -729,7 +741,7 @@ async def document_from_booking(
     return {"document": document, "replayed": replayed}
 
 
-@router.post("/{doc_id}/send")
+@router.post("/{doc_id}/send", dependencies=[Depends(render_slot)])
 async def send_document(
     doc_id: UUID, body: SendIn, request: Request, staff: Staff = Depends(current_staff)
 ) -> dict:
@@ -756,7 +768,7 @@ async def deliveries(
          "last": found[0]} if found else None)}
 
 
-@router.post("/{doc_id}/cancel", status_code=201)
+@router.post("/{doc_id}/cancel", status_code=201, dependencies=[Depends(render_slot)])
 async def cancel_document(
     doc_id: UUID, body: CancelIn, request: Request, response: Response,
     staff: Staff = Depends(current_staff),

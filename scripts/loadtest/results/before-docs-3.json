@@ -1,0 +1,20 @@
+{
+ "scenario": "before-docs-3",
+ "seconds": 44.4,
+ "requests": {
+  "document-issue": {
+   "n": 128,
+   "per_s": 2.88,
+   "p50": 202.0,
+   "p95": 687.1,
+   "p99": 1890.8,
+   "max": 2091.3,
+   "errors": 0,
+   "error_pct": 0.0,
+   "codes": {
+    "201": 128
+   }
+  }
+ },
+ "documents_started": 128
+}

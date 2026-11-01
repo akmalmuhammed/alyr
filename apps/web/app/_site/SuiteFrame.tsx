@@ -1,7 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { Rich } from "../_agent/AgentDashboard";
 import { AGENT_LABELS } from "../_agent/labels";
-import { Icon } from "./brand";
 import { copy, type Locale } from "./copy";
 import { SampleMark, TickPath } from "./Frames";
 import { LoopToggle } from "./LoopToggle";
@@ -268,10 +267,7 @@ export function SuiteFrame({ locale }: { locale: Locale }) {
                   <Fragment locale={locale} />
                 </div>
                 <div className="sf-label">
-                  <span className="sf-name">
-                    <bdi>{p.name}</bdi>
-                    <Icon name="arrow-right" className="ico ico-flip" />
-                  </span>
+                  <span className="sf-name"><bdi>{p.name}</bdi></span>
                   <span className="sf-desc">
                     {p.descriptor}
                     {state && <span className="sf-state"><span aria-hidden="true"> · </span>{state}</span>}

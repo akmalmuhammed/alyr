@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import Depends, HTTPException, Request
+from fastapi import BackgroundTasks, Depends, HTTPException, Request
 
 from alyr import catalog
 from alyr.config import get_settings
@@ -11,19 +11,27 @@ from alyr.seed import DEMO_TENANT_ID
 DEMO_STAFF = Staff(None, "Workspace", "", "owner", DEMO_TENANT_ID)
 
 
-async def current_staff(request: Request) -> Staff:
+async def current_staff(request: Request, after: BackgroundTasks) -> Staff:
     """Who is making this workspace request.
 
     A valid session cookie decides it. Without one, a local machine with the open demo
     switched on acts as the demo shop's owner; anywhere else the request is refused.
+
+    A request that changes something throws away the shop's kept answers once it is done, so
+    the person who made the change sees it on their next look (core/pollcache.py).
     """
     token = request.cookies.get(auth.COOKIE)
     if token:
-        staff = await auth.resolve(request.app.state.db, token)
+        staff = await request.app.state.sessions.resolve(request.app.state.db, token)
         if staff is not None:
+            if request.method not in ("GET", "HEAD", "OPTIONS"):
+                after.add_task(request.app.state.poll.invalidate, staff.tenant_id)
+                after.add_task(request.app.state.shops.forget_tenant, staff.tenant_id)
             return staff
     settings = get_settings()
     if settings.env == "local" and settings.demo_open:
+        if request.method not in ("GET", "HEAD", "OPTIONS"):
+            after.add_task(request.app.state.poll.invalidate, DEMO_STAFF.tenant_id)
         return DEMO_STAFF
     raise HTTPException(status_code=401, detail="sign-in required")
 
@@ -47,9 +55,8 @@ def require_module(module: str):
     signed-in person's shop has not switched that module on,."""
 
     async def check(request: Request, staff: Staff = Depends(current_staff)) -> None:
-        from alyr.core.workspace import module_enabled
-
-        if not await module_enabled(request.app.state.db, staff.tenant_id, module):
+        modules = await request.app.state.shops.modules_of(request.app.state.db, staff.tenant_id)
+        if module not in modules:
             raise HTTPException(
                 status_code=403, detail=f"{module} is not switched on for this shop"
             )
@@ -62,10 +69,9 @@ def require_any_module(*modules: str):
     switched on none of them (the Catalog's API serves the orders module and its own)."""
 
     async def check(request: Request, staff: Staff = Depends(current_staff)) -> None:
-        from alyr.core.workspace import module_enabled
-
+        on = await request.app.state.shops.modules_of(request.app.state.db, staff.tenant_id)
         for module in modules:
-            if await module_enabled(request.app.state.db, staff.tenant_id, module):
+            if module in on:
                 return
         raise HTTPException(
             status_code=403, detail=f"{' or '.join(modules)} is not switched on for this shop"
@@ -80,14 +86,9 @@ def require_module_for_slug(module: str):
     on `request.state.shop`, so the route need not look it up again (ALY-276)."""
 
     async def check(request: Request, slug: str) -> None:
-        from alyr.core.workspace import module_enabled
-
-        async with request.app.state.db.unscoped() as conn:
-            shop = await conn.fetchrow(
-                "select id, name, name_ar, slug, timezone from tenants where slug = $1", slug
-            )
+        shop, modules = await request.app.state.shops.find(request.app.state.db, slug)
         request.state.shop = shop
-        if shop is not None and not await module_enabled(request.app.state.db, shop["id"], module):
+        if shop is not None and module not in modules:
             raise HTTPException(status_code=404, detail="this page is not available")
 
     return check

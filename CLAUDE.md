@@ -136,8 +136,13 @@ scripts/                      check.sh (everything CI runs), demo.sh (start and 
                               golive-truth-check.mjs (every onboarding sentence of every business type proved on the
                               finished order page and workspace, English and Arabic),
                               check-edge.sh (the edge and DNS of alyr.qa from outside, docs/runbooks/cloudflare-edge.md),
+                              smoke-production.sh (production answers, in both languages, with its headers: read only,
+                              the check after a release, docs/runbooks/release.md),
                               hooks/pre-commit
 specs/                        One folder per spec; write or update the spec before building
+tests/e2e/                    Browser journeys that must never break (Playwright, own lock file): sign-up, sign-in,
+                              products, order, booking, back office, at desktop and 390 px, English and Arabic; run by
+                              .github/workflows/e2e.yml, README.md there (ALY-122)
 infra/gcp/                    Production on Google Cloud in Doha (D-060): setup.sh, push-images.sh, README
 infra/cloudflare/edge/        app.alyr.qa and api.alyr.qa: a Worker in front of Cloud Run (ALY-219)
 infra/cloudflare/zone/        Rules set on the alyr.qa zone itself: response headers (live) and one rate-limit

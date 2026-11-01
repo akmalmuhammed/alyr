@@ -64,16 +64,19 @@ class Availability(BaseModel):
 
 @router.get("/orders")
 async def orders(request: Request, tenant_id: UUID = Depends(current_tenant)) -> dict:
-    async with request.app.state.db.tenant(tenant_id) as conn:
-        slug = await conn.fetchval("select slug from tenants where id = $1", tenant_id)
-        rows = await service.list_orders(conn)
-        # A shop with Documents on sees a pointer to the receipt or invoice an order made.
-        # A shop without it is answered exactly as before (no `document` key at all).
-        made = await doc_refs.by_source(conn, "order", [o["id"] for o in rows])
-        for order in rows:
-            if order["id"] in made:
-                order["document"] = made[order["id"]]
-        return {"slug": slug, "orders": rows}
+    async def compute() -> dict:
+        async with request.app.state.db.tenant(tenant_id) as conn:
+            slug = await conn.fetchval("select slug from tenants where id = $1", tenant_id)
+            rows = await service.list_orders(conn)
+            # A shop with Documents on sees a pointer to the receipt or invoice an order made.
+            # A shop without it is answered exactly as before (no `document` key at all).
+            made = await doc_refs.by_source(conn, "order", [o["id"] for o in rows])
+            for order in rows:
+                if order["id"] in made:
+                    order["document"] = made[order["id"]]
+            return {"slug": slug, "orders": rows}
+
+    return await request.app.state.poll.get_json(tenant_id, ("orders",), compute)
 
 
 @router.post("/orders/{order_id}/status")

@@ -20,7 +20,9 @@ class SimulatorChannel:
     def keep(self, media_id: str, data: bytes, content_type: str) -> None:
         self.inbox[media_id] = (data, content_type)
 
-    async def download_media(self, media_id: str, max_bytes: int) -> tuple[bytes, str]:
+    async def download_media(
+        self, media_id: str, max_bytes: int, number_id: str = ""
+    ) -> tuple[bytes, str]:
         if media_id not in self.inbox:
             raise LookupError("no such file")
         data, content_type = self.inbox[media_id]

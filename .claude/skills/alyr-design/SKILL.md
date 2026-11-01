@@ -47,8 +47,8 @@ this skill, then the content skill, then your own taste.
 ## 1. Principles
 
 **Precision industrial minimalism.** A working drawing of an owner's business, made by an
-engineer who respects the owner's time: a light canvas, a visible 12-column grid, hairline
-rules, a small "Sample" mark in each drawing's own chrome, and the product's real screens at true scale in its real
+engineer who respects the owner's time: a light canvas, a 12-column grid that is used and not
+drawn, hairline rules, a small "Sample" mark in each drawing's own chrome, and the product's real screens at true scale in its real
 words. Nothing is decoration; even the honesty labels are design. Light first; Carbon for
 command moments (the band, the plate, the closing call). Rules and whitespace before cards;
 asymmetry over centring.
@@ -96,6 +96,12 @@ asymmetry over centring.
     How we work, the products frame and the signature figures, each with a Pause control, on
     the pace, stopped off screen and in a hidden tab. Text and sections arrive once and stay.
     With reduced motion only the end state shows ([motion.md](motion.md)).
+11. **It must not look machine-made** (the founder, 31 Oct 2026, D-150). No icon or arrow on a
+    button, on any page. On the homepage: no arrow on a link, no mono capitals outside a drawing
+    of the product, no floating centred kicker, no tick lists, no numbered badges or boxed
+    counts, no row of big stats, no row of identical icon cards, no construction marks (grids,
+    dot fields, crosses on rules), no dashed line as decoration, and no "X, Y and Z" rhythm
+    where a plain sentence will do. A literal list of things is fine; a drumbeat is not.
 
 ## 2. Tokens
 
@@ -122,14 +128,16 @@ the semantic tier, never a primitive, in components. Full list and usage:
 ## 3. Type, spacing and the grid
 
 - **Families:** Instrument Sans for Latin (with its width axis on the site), IBM Plex Sans
-  Arabic for Arabic, IBM Plex Mono for small labels, rule lines and identifiers. Figures are
+  Arabic for Arabic, IBM Plex Mono for small labels and identifiers inside drawings of the
+  product (and for labels on pages other than the homepage). Figures are
   Instrument Sans with tabular digits, not mono. Arabic mono labels switch to Plex Sans Arabic.
 - **Scale:** the site's `--display`, `--h2`, `--h3`, `--fs-*` steps and the product's
   `--ui-*` steps (`--ui-input` for inputs). Use a step; never a one-off size or a half-pixel.
   Generated images have their own floor (`font.size.card.min`, `alyr-generated-image`).
 - **Weights:** `--weight-regular`, `--weight-medium`, `--weight-semibold` (400, 500, 600) in
   the product, the Agent and images; the site's in-between weights from `--weight-*`. No 700.
-- **Latin labels** in mono capitals, tracked by the token. **Arabic is never tracked, never in
+- **Latin labels** in mono capitals, tracked by the token, except on the homepage's own
+  sections, where a label is sentence case in Instrument Sans (D-150; `home.css`). **Arabic is never tracked, never in
   capitals, never italic, never with kashida**, and takes the looser line heights.
 - **Spacing:** `--space-1` to `--space-7` (4, then 8 px steps); sections `--sec`, and
   `--rule-gap` under a section rule.
@@ -145,8 +153,9 @@ the semantic tier, never a primitive, in components. Full list and usage:
 Use what exists before drawing anything new; the catalogue with paths, when to use each
 and what not to do is [components.md](components.md). The ones every page uses: the
 Logo and Symbol (`_site/brand.tsx`, never retyped, never under 140 px wide, the symbol
-below that), the Volt button and its outlined twin, the link with arrow, the signal mark,
-the pending dot and status line, the "Sample" mark, section rules with crosses, the fold, the
+below that), the Volt button and its outlined twin (their words only), the link (with an
+arrow, except on the homepage: D-150), the signal mark,
+the pending dot and status line, the "Sample" mark, section rules, the fold, the
 Carbon plate, the drawn phone and workspace window, the ALYR Agent dashboard
 (`_agent/AgentDashboard.tsx`, the one component shared by site and product).
 

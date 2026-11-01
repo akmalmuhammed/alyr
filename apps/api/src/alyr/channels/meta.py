@@ -7,6 +7,7 @@ https://developers.facebook.com/documentation/business-messaging/whatsapp/busine
 import asyncio
 import hashlib
 import hmac
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from urllib.parse import urlsplit
@@ -141,6 +142,39 @@ def parse_statuses(payload: dict) -> list[DeliveryStatus]:
     return found
 
 
+@dataclass(frozen=True)
+class AccountEvent:
+    """One change Meta reports about a WhatsApp Business Account (not about a message): a
+    template's status, a number's limit, an account restriction. `waba_id` is the account the
+    notice is about (`entry.id`); `value` is Meta's own payload for the field, untouched, and
+    `core/whatsapp_events.py` reads it. Fields checked against Meta's webhook reference pages,
+    31 Oct 2026 (linked from docs/runbooks/whatsapp-line.md)."""
+
+    waba_id: str
+    field: str
+    value: dict
+    time: int = 0
+
+
+ACCOUNT_FIELDS = frozenset({
+    "message_template_status_update", "template_category_update", "message_template_quality_update",
+    "phone_number_quality_update", "phone_number_name_update", "account_update", "account_alerts",
+    "account_review_update",
+})
+
+
+def parse_account_events(payload: dict) -> list[AccountEvent]:
+    found: list[AccountEvent] = []
+    for entry in payload.get("entry", []):
+        for change in entry.get("changes", []):
+            field, value = change.get("field", ""), change.get("value")
+            if field in ACCOUNT_FIELDS and isinstance(value, dict) and entry.get("id"):
+                found.append(AccountEvent(
+                    waba_id=str(entry["id"]), field=field, value=value,
+                    time=int(entry.get("time") or 0)))
+    return found
+
+
 def to_graph_payload(message: OutboundMessage, address: Address) -> dict:
     base: dict = {"messaging_product": "whatsapp", "recipient_type": "individual"}
     # Meta takes a phone number in `to`, or a business-scoped user ID in `recipient`.
@@ -241,6 +275,25 @@ NUMBER_BASIC_FIELDS = (
 )
 
 
+# What the health read asks for besides the basics: the messaging limit (the field Meta's messaging
+# limits page names; `messaging_limit_tier` is deprecated), the throughput level and the health
+# status (Meta's health status page). Meta fails the whole request when it does not know a field, so
+# `number_health` asks again for the basics when it is refused.
+HEALTH_FIELDS = (
+    NUMBER_BASIC_FIELDS + ",whatsapp_business_manager_messaging_limit,throughput,health_status"
+)
+
+
+def error_code(error: Exception) -> int:
+    """Meta's own error code from a refused request, or 0."""
+    if isinstance(error, httpx.HTTPStatusError):
+        try:
+            return int(error.response.json()["error"]["code"])
+        except (ValueError, KeyError, TypeError):
+            return 0
+    return 0
+
+
 def describe_error(error: Exception) -> str:
     """A refused request to Meta in words a member of staff can act on, without anything
     secret in it. Meta's error codes, from its error codes page: 190 the access token is
@@ -249,7 +302,8 @@ def describe_error(error: Exception) -> str:
     if isinstance(error, httpx.HTTPStatusError):
         try:
             body = error.response.json()["error"]
-            code, text = int(body.get("code", 0)), str(body.get("message", ""))[:200]
+            code = int(body.get("code", 0))
+            text = str(body.get("error_user_msg") or body.get("message", ""))[:200]
         except (ValueError, KeyError, TypeError):
             return f"Meta answered error {error.response.status_code}"
         if code == 190:
@@ -273,8 +327,13 @@ class MetaChannel:
     def __init__(
         self, access_token: str, graph_version: str,
         transport: httpx.AsyncBaseTransport | None = None,
+        credentials: Callable[[str], Awaitable[str | None]] | None = None,
     ) -> None:
+        # `access_token` is ALYR's own system-user token, for the numbers on ALYR's account.
+        # `credentials` answers, for a number ID or an account ID, the token of a shop that
+        # connected its own account (Embedded Signup, spec 063), or None for every other.
         self._token = access_token
+        self._credentials = credentials
         self._base = f"https://graph.facebook.com/{graph_version}"
         self._transport = transport
         self._client: httpx.AsyncClient | None = None
@@ -299,12 +358,19 @@ class MetaChannel:
             await self._client.aclose()
         self._client = None
 
+    async def _auth(self, ident: str, token: str | None = None) -> dict[str, str]:
+        """The Authorization header for a call about one number or account: the token the caller
+        holds, else the shop's own if it connected its own account, else ALYR's."""
+        if token is None and self._credentials is not None and ident:
+            token = await self._credentials(ident)
+        return {"Authorization": f"Bearer {token or self._token}"}
+
     async def send(
         self, from_number_id: str, message: OutboundMessage, address: Address
     ) -> str | None:
         response = await self._http().post(
             f"{self._base}/{from_number_id}/messages",
-            headers={"Authorization": f"Bearer {self._token}"},
+            headers=await self._auth(from_number_id),
             json=to_graph_payload(message, address),
             timeout=10,
         )
@@ -319,31 +385,45 @@ class MetaChannel:
         name Meta verified, and `status` (CONNECTED once the number is registered)."""
         response = await self._http().get(
             f"{self._base}/{number_id}",
-            headers={"Authorization": f"Bearer {self._token}"},
+            headers=await self._auth(number_id),
             params={"fields": "display_phone_number,verified_name,status,quality_rating"},
             timeout=10,
         )
         response.raise_for_status()
         return response.json()
 
-    async def _read(self, path: str, params: dict | None = None) -> dict:
+    async def _read(
+        self, path: str, params: dict | None = None, token: str | None = None
+    ) -> dict:
         response = await self._http().get(
             f"{self._base}/{path}",
-            headers={"Authorization": f"Bearer {self._token}"},
+            headers=await self._auth(path.split("/")[0], token),
             params=params or {}, timeout=10,
         )
         response.raise_for_status()
         return response.json()
 
-    async def number_details(self, number_id: str, fields: str) -> dict:
+    async def number_details(
+        self, number_id: str, fields: str, token: str | None = None
+    ) -> dict:
         """Named fields of one WhatsApp number, for the line check and the health poll
         (spec 060, spec 062). Meta fails the whole request when it does not know one of the
         fields, so a caller that wants more than `NUMBER_BASIC_FIELDS` asks again with those
         when it is refused. Fields checked against Meta's phone number, messaging limits,
         throughput and health status pages, 31 Oct 2026."""
-        return await self._read(number_id, {"fields": fields})
+        return await self._read(number_id, {"fields": fields}, token)
 
-    async def account_number_ids(self, waba_id: str) -> list[str]:
+    async def number_health(self, number_id: str, token: str | None = None) -> dict:
+        """The number's status, quality rating and name status, and, where Meta will say, its
+        messaging limit, throughput and health. A read."""
+        try:
+            return await self.number_details(number_id, HEALTH_FIELDS, token)
+        except httpx.HTTPStatusError as error:
+            if error_code(error) != 100:
+                raise
+        return await self.number_details(number_id, NUMBER_BASIC_FIELDS, token)
+
+    async def account_number_ids(self, waba_id: str, token: str | None = None) -> list[str]:
         """The IDs of every number on a WhatsApp Business Account: GET /{waba-id}/phone_numbers
         (Meta's phone number page, 31 Oct 2026), paged by cursor, at most 2,000 numbers."""
         found: list[str] = []
@@ -351,7 +431,7 @@ class MetaChannel:
         for _ in range(10):
             page = await self._read(
                 f"{waba_id}/phone_numbers", {"fields": "id", "limit": 200}
-                | ({"after": after} if after else {}))
+                | ({"after": after} if after else {}), token)
             found += [str(n["id"]) for n in page.get("data", []) if n.get("id")]
             after = page.get("paging", {}).get("cursors", {}).get("after", "")
             if not (after and page.get("paging", {}).get("next")):
@@ -369,13 +449,102 @@ class MetaChannel:
             if entry.get("whatsapp_business_api_data", {}).get("id")
         ]
 
-    async def download_media(self, media_id: str, max_bytes: int) -> tuple[bytes, str]:
+    # ── message templates of an account (spec 061) ──────────────────────────────────────────
+    # Checked against Meta's template management page, 31 Oct 2026: the list takes `fields`,
+    # `limit` and paging; creating is POST /{waba-id}/message_templates with `name`,
+    # `language`, `category` and `components`; editing is POST /{template-id} with `components`
+    # (only an approved, rejected or paused template can be edited).
+
+    async def list_templates(self, waba_id: str) -> list[dict]:
+        found: list[dict] = []
+        after = ""
+        for _ in range(20):
+            page = await self._read(f"{waba_id}/message_templates", {
+                "fields": "id,name,language,status,category,rejected_reason", "limit": 200,
+            } | ({"after": after} if after else {}))
+            found += page.get("data", [])
+            after = page.get("paging", {}).get("cursors", {}).get("after", "")
+            if not (after and page.get("paging", {}).get("next")):
+                break
+        return found
+
+    async def _write(self, path: str, body: dict, token: str | None = None) -> dict:
+        response = await self._http().post(
+            f"{self._base}/{path}", headers=await self._auth(path.split("/")[0], token),
+            json=body, timeout=30,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    # ── Embedded Signup (spec 063) ─────────────────────────────────────────────────────────
+    # Checked against Meta's "Onboarding customers as a Tech Provider" page, 31 Oct 2026: the
+    # code from the browser is exchanged for the business's token (GET /oauth/access_token with the
+    # app's ID and secret and the code, server to server); the app is subscribed to the customer's
+    # account (POST /{waba-id}/subscribed_apps with the business token); a number that is not
+    # already registered is registered (POST /{number-id}/register with `messaging_product` and a
+    # six-digit `pin`). The code lives 30 seconds.
+
+    async def exchange_code(
+        self, app_id: str, app_secret: str, code: str
+    ) -> tuple[str, int | None]:
+        """The business token for a code Embedded Signup returned, and how many seconds it lasts if
+        Meta says. Nothing here is logged: the answer holds a secret."""
+        response = await self._http().get(
+            f"{self._base}/oauth/access_token",
+            params={"client_id": app_id, "client_secret": app_secret, "code": code}, timeout=15,
+        )
+        response.raise_for_status()
+        answer = response.json()
+        lasts = answer.get("expires_in")
+        return str(answer["access_token"]), int(lasts) if lasts else None
+
+    async def subscribe_app(self, waba_id: str, token: str) -> None:
+        answer = await self._write(f"{waba_id}/subscribed_apps", {}, token)
+        if answer.get("success") is False:
+            raise ValueError("Meta did not subscribe the app to the account")
+
+    async def register_number(self, number_id: str, pin: str, token: str) -> None:
+        answer = await self._write(
+            f"{number_id}/register", {"messaging_product": "whatsapp", "pin": pin}, token)
+        if answer.get("success") is False:
+            raise ValueError("Meta did not register the number")
+
+    async def create_template(self, waba_id: str, body: dict) -> dict:
+        """Submit a new template. Answers `id`, `status` (PENDING) and `category`."""
+        return await self._write(f"{waba_id}/message_templates", body)
+
+    async def edit_template(self, template_id: str, components: list[dict]) -> dict:
+        return await self._write(template_id, {"components": components})
+
+    async def upload_template_sample(
+        self, app_id: str, filename: str, data: bytes, content_type: str
+    ) -> str:
+        """The handle Meta reviews a template's sample header with (Resumable Upload API, as
+        `templates_sync.header_handle` has always done it): start an upload session on the app,
+        then send the file's bytes. Meta's guide, checked 17 Oct 2026."""
+        headers = {"Authorization": f"Bearer {self._token}"}
+        started = await self._http().post(
+            f"{self._base}/{app_id}/uploads", headers=headers,
+            params={"file_name": filename, "file_length": len(data), "file_type": content_type},
+        )
+        started.raise_for_status()
+        sent = await self._http().post(
+            f"{self._base}/{started.json()['id']}", content=data,
+            headers={"Authorization": f"OAuth {self._token}", "file_offset": "0"},
+        )
+        sent.raise_for_status()
+        return sent.json()["h"]
+
+    async def download_media(
+        self, media_id: str, max_bytes: int, number_id: str = ""
+    ) -> tuple[bytes, str]:
         """Fetch a file that was sent to us. Two requests, checked against Meta's media
         page on 18 Oct 2026: GET /{media-id} answers with a `url` (good for five minutes)
         and the type; GET that url, with the access token, answers with the file. The
         file is read in pieces and dropped as soon as it passes `max_bytes`. Meta's own
-        limit for an image is 5 MB. The second request goes only to Meta (`MEDIA_HOSTS`)."""
-        headers = {"Authorization": f"Bearer {self._token}"}
+        limit for an image is 5 MB. The second request goes only to Meta (`MEDIA_HOSTS`). A file
+        sent to a shop's own account is fetched with that shop's token (`number_id`)."""
+        headers = await self._auth(number_id)
         async with httpx.AsyncClient(timeout=30, headers=headers) as client:
             found = await client.get(f"{self._base}/{media_id}")
             found.raise_for_status()
@@ -400,7 +569,7 @@ class MetaChannel:
         and `file` as multipart form data."""
         response = await self._http().post(
             f"{self._base}/{from_number_id}/media",
-            headers={"Authorization": f"Bearer {self._token}"},
+            headers=await self._auth(from_number_id),
             data={"messaging_product": "whatsapp", "type": content_type},
             files={"file": (
                 {"image/png": "card.png", "application/pdf": "document.pdf"}.get(

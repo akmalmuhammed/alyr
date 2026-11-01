@@ -4,12 +4,14 @@ import json
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 
 from alyr.channels.meta import (
+    parse_account_events,
     parse_statuses,
     parse_user_id_updates,
     parse_webhook,
     verify_signature,
 )
 from alyr.config import get_settings
+from alyr.db import patient
 
 router = APIRouter(prefix="/webhooks/whatsapp", tags=["whatsapp"])
 
@@ -44,6 +46,9 @@ async def verify(
 
 @router.post("")
 async def receive(request: Request) -> dict:
+    # Meta's webhook waits for a database connection like a customer's page does, but is not turned
+    # away when others queue: it only writes a row, and a refused one comes back later (D-132).
+    patient.set(True)
     raw = await _body(request)
     signature = request.headers.get("x-hub-signature-256")
     if not verify_signature(get_settings().meta_app_secret, raw, signature):
@@ -58,4 +63,6 @@ async def receive(request: Request) -> dict:
         await inbound.handle_status(status)
     for message in parse_webhook(payload):
         await inbound.accept(message)
+    # Notices about the account itself (templates, limits, restrictions); never fails the webhook.
+    await request.app.state.account_events.handle(parse_account_events(payload))
     return {"status": "ok"}

@@ -389,6 +389,8 @@
 .ob-wa-status { margin: 0; font-size: var(--ui-body-sm); line-height: 1.5; color: var(--ink-2); }
 .ob-wa-status.failed { color: var(--bad); }
 .ob-wa-status.waiting_on_meta, .ob-wa-status.queued, .ob-wa-status.connecting { color: var(--ink); }
+.ob-connect { display: grid; gap: 10px; justify-items: start; }
+.ob-connect .ob-error { margin: 0; }
 .ob-wa-needs { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .ob-wa-needs label { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; font-size: var(--ui-small); line-height: 1.5; color: var(--ink-2); cursor: pointer; }
 .ob-wa-needs input { width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--ink); }

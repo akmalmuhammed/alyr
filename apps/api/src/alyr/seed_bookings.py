@@ -689,7 +689,8 @@ async def reset_sample(db: Database, sample: Sample, now: datetime | None = None
     async with db.tenant(sample.tenant_id) as conn:
         await conn.execute("delete from sessions where tenant_id = $1", sample.tenant_id)
         for table in ("weekly_reports", "agent_snoozes", "bookings", "services",
-                      "booking_resources", "business_hours", "saved_replies", "memberships",
+                      "booking_closures", "booking_resources", "business_hours",
+                      "saved_replies", "memberships",
                       "jobs", "messages",
                       "processed_messages", "payment_requests", "ledger_entries",
                       "ledger_accounts", "contacts", "tenant_modules",

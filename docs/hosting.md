@@ -62,6 +62,8 @@ project role: `infra/gcp/setup.sh access` sets and checks this (ALY-268).
 USD 14, web app about USD 14, worker about USD 37, the rest a few dollars: about USD 100 to 105,
 paid from the startup credits.
 
+**How much it carries, and how it is kept from tipping over:** `docs/runbooks/capacity.md`. It has the measured limits for 50 and 100 shops, the connection budget (4 connections for each API instance and 8 for the worker, so a rollout with the old and the new revision side by side stays under Cloud SQL's 50), the alert thresholds and the order to scale up in. The API answers 503 with `Retry-After` when it is busy instead of queueing (D-132), and `infra/gcp/setup.sh` sets the API's concurrency to 80 and its request timeout to 60 s.
+
 **The database owner bypasses row-level security** (`ensure_owner_bypasses_rls` in
 `alyr/migrate.py`), as a superuser does on a developer machine: the SECURITY DEFINER
 functions behind sign-up and the back office are owned by it. Cloud SQL's `postgres` is not a
@@ -101,6 +103,9 @@ only in the worker.
 | `ALYR_R2_ACCOUNT_ID`, `ALYR_R2_ACCESS_KEY_ID`, `ALYR_R2_SECRET_ACCESS_KEY` | Product photos on Cloudflare R2 (D-039), served from `ALYR_MEDIA_BASE_URL` (`https://media.alyr.qa`). Without all three the API and worker refuse to start outside a developer machine, because a container's disk is wiped on restart and not shared between copies | Yes |
 | `ALYR_CLIENT_IP_HEADER` | `x-alyr-client-ip`: where the API reads the visitor's address from, for the per-address rate limits (ALY-116). Empty: the limits are off and the API says so at start-up. Set only together with the next row, by `setup.sh client-ip-on` | No |
 | `ALYR_CLIENT_IP_KEYS` | The keys (comma separated) that sign that address: Secret Manager `client-ip-key`, the same value as the edge Worker's secret `CLIENT_IP_KEY`. The API believes the address only with a matching signature (ALY-265; `runbooks/client-address.md`) | Yes |
+| `ALYR_STAFF_2FA` | `true` makes every back-office route require the staff member's authenticator code (ALY-125, D-136). Unset: off. Set by `infra/gcp/staff-access.sh require` after `ready`, removed by `unrequire`; a laptop `setup.sh apps` keeps it. Not a secret | No |
+| `ALYR_ADMIN_DATABASE_URL` | Secret Manager `admin-database-url`: the API's second database login, `alyr_admin`, for work that declares the back office (ALY-125 part 3, D-137). Empty: one login, as before. Made by `infra/gcp/roles.sh create`, given by `move`, undone by `back`. Also read by the migration job, to make the role | No |
+| `ALYR_WORKER_DATABASE_URL` | Secret Manager `worker-database-url`: read only by the migration job, which makes the role `alyr_worker`. The worker itself signs in with it as its own `ALYR_DATABASE_URL` after `roles.sh move` | No |
 | `ALYR_MEDIA_ALLOW_LOCAL`, `ALYR_MEDIA_LOCAL_DIR` | Only for a single server whose photo folder is a kept volume (the rehearsal) | No |
 | `ALYR_ENV` | `production`, or `staging` for a demo copy that keeps the simulator | No |
 

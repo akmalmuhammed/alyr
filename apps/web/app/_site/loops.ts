@@ -81,17 +81,6 @@ export function startLoops(): () => void {
   const off: (() => void)[] = [];
   const groupOf = (node: Element) => groups.find((g) => g.root.contains(node))!;
 
-  /** The How cards' return line, drawn with Improve each time it plays. */
-  function drawLine(root: HTMLElement, again: boolean) {
-    if (!root.hasAttribute("data-hw")) return;
-    if (!again) {
-      root.classList.add("is-looped");
-      return;
-    }
-    root.classList.add("is-redraw", "is-looped");
-    rewind(Array.from(root.querySelectorAll(".hw-loop, .hw-tick")));
-  }
-
   /** Play a player: `first` as it is first seen (with its row's stagger and its parts'
    * arrival), `again` from a visitor's hover, focus or press, `auto` at the end of a cycle. */
   function play(player: HTMLElement, mode: "first" | "again" | "auto") {
@@ -107,7 +96,6 @@ export function startLoops(): () => void {
       player.classList.toggle("is-loop", mode === "auto");
       rewind([player]); // from its first frame again
     }
-    if (player.dataset.hwCard === "improve") drawLine(group.root, mode !== "first");
     shown(group, true);
   }
 

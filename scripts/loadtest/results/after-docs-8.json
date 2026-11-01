@@ -1,0 +1,21 @@
+{
+ "scenario": "after-docs-8",
+ "seconds": 45.6,
+ "requests": {
+  "document-issue": {
+   "n": 339,
+   "per_s": 7.43,
+   "p50": 731.1,
+   "p95": 1240.5,
+   "p99": 1504.8,
+   "max": 1706.9,
+   "errors": 29,
+   "error_pct": 8.55,
+   "codes": {
+    "201": 310,
+    "503": 29
+   }
+  }
+ },
+ "documents_started": 339
+}

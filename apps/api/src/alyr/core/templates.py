@@ -40,6 +40,14 @@ class Template:
     # names its consent purpose here (`core/consent.py`). The outbound layer then sends it
     # to customers who hold that consent, and not to those who only agreed to marketing.
     consent: str = ""
+    # Written but not yet submitted to Meta, and not to be until the founder says so: the reason
+    # in one line. The back office shows such a template as a draft held back and will not submit
+    # it (`core/whatsapp_templates.py`); `templates_sync --create` still would, so it is not run
+    # for these. Taking the hold off is the founder's go, written as deleting `held=HELD`.
+    held: str = ""
+
+
+HELD = "written, not submitted: waiting for the founder's go"
 
 
 CATALOGUE: dict[str, Template] = {
@@ -210,6 +218,7 @@ CATALOGUE: dict[str, Template] = {
          "https://app.alyr.online/pay/dafira?t=Ab3dE.f9Gh"),
         samples_ar=("105", "صالون ضفيرة", "صبغة شعر مع ريم، 30/10 17:00", "50 ر.ق", "30",
                     "https://app.alyr.online/pay/dafira?t=Ab3dE.f9Gh"),
+        held=HELD,
     ),
     "booking_deposit_paid": Template(
         "utility",
@@ -218,6 +227,7 @@ CATALOGUE: dict[str, Template] = {
         "استلمنا العربون {{1}} للحجز رقم {{2}}. تم تأكيد موعدك: {{3}}. بانتظارك.",
         ("QAR 50", "105", "Hair colour with Reem, Thu 30 Oct, 5:00 PM"),
         samples_ar=("50 ر.ق", "105", "صبغة شعر مع ريم، 30/10 17:00"),
+        held=HELD,
     ),
     "booking_released": Template(
         "utility",
@@ -227,6 +237,7 @@ CATALOGUE: dict[str, Template] = {
         "راسلنا لحجز موعد جديد.",
         ("105", "Thu 30 Oct, 5:00 PM"),
         samples_ar=("105", "30/10 17:00"),
+        held=HELD,
     ),
     "booking_cancelled_deposit": Template(
         "utility",
@@ -234,6 +245,7 @@ CATALOGUE: dict[str, Template] = {
         "تم إلغاء الحجز رقم {{1}} ({{2}}). {{3}} راسلنا لحجز موعد جديد.",
         ("105", "Thu 30 Oct, 5:00 PM", "The shop will refund your deposit of QAR 50."),
         samples_ar=("105", "30/10 17:00", "سيرد المحل إليك العربون 50 ر.ق."),
+        held=HELD,
     ),
     # Asked after one named visit or order, with no offer in it: Meta's guidelines (checked 29
     # Oct 2026) approve a feedback request as utility only when it names the order or
@@ -247,6 +259,7 @@ CATALOGUE: dict[str, Template] = {
         "ويمكنك أيضاً الرد على هذه الرسالة.",
         ("your visit on Thu 30 Oct", "Dafira Salon", "https://g.page/r/example/review"),
         samples_ar=("زيارتك يوم 30/10", "صالون ضفيرة", "https://g.page/r/example/review"),
+        held=HELD,
     ),
     # The owner's weekly result report (D-030). Inside the window the whole report goes
     # as a plain message; outside it, this one line, and REPORT brings the rest.
@@ -387,6 +400,7 @@ CATALOGUE: dict[str, Template] = {
         header="document",
         header_sample="documents/receipt.{lang}.pdf",
         samples_ar=("RC-0042", "مخبز قرفة", "127.00 ر.ق", "https://app.alyr.online/d/qirfa?t=a"),
+        held=HELD,
     ),
     "document_invoice": Template(
         "utility",
@@ -398,6 +412,7 @@ CATALOGUE: dict[str, Template] = {
         header="document",
         header_sample="documents/invoice.{lang}.pdf",
         samples_ar=("INV-0017", "مخبز قرفة", "540.00 ر.ق", "https://app.alyr.online/d/qirfa?t=a"),
+        held=HELD,
     ),
     # Not in the brief's two: a refund or a cancelled sale sends a credit note, and "your
     # receipt" would be the wrong word for it outside the window.
@@ -411,6 +426,7 @@ CATALOGUE: dict[str, Template] = {
         header="document",
         header_sample="documents/credit_note.{lang}.pdf",
         samples_ar=("CN-0003", "مخبز قرفة", "127.00 ر.ق", "https://app.alyr.online/d/qirfa?t=a"),
+        held=HELD,
     ),
 }
 

@@ -1,0 +1,30 @@
+{
+ "scenario": "before-sunday",
+ "seconds": 90.7,
+ "requests": {
+  "webhook": {
+   "n": 424,
+   "per_s": 4.68,
+   "p50": 10.9,
+   "p95": 30.8,
+   "p99": 75.2,
+   "max": 86.7,
+   "errors": 0,
+   "error_pct": 0.0,
+   "codes": {
+    "200": 424
+   }
+  }
+ },
+ "reports_due": 50,
+ "messages_started": 424,
+ "queue_drained_after_s": 1.0,
+ "reply_lag": {
+  "answered": 424,
+  "unanswered": 0,
+  "p50_s": 0.9,
+  "p95_s": 3.82,
+  "p99_s": 4.32,
+  "max_s": 4.47
+ }
+}

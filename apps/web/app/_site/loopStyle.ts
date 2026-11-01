@@ -18,9 +18,7 @@
 // it), then one element fades out (`loop-out`); loops.ts plays it again and it fades back in
 // (`loop-in`, with `is-loop`). Paused (`data-paused`), neither runs and it rests finished.
 //
-// - How we work: where each scene ends (its last move; Improve's includes the return line,
-//   drawn 36 beats after it starts); the Pause control under Improve, on the line of the words;
-//   the line drawn again with Improve, counted from Improve's own start, its words left as are.
+// - How we work: where each scene ends (its last move); the Pause control under Improve.
 // - The products frame: where each tile's moment ends; a stagger of 8 beats a tile so the six
 //   never fade together; the Pause control at the bar's end, in the room the bar keeps for it.
 // - On the homepage (How we work and the products frame) the motion plays like a video
@@ -42,9 +40,8 @@ export const LOOP_CSS = `
 .hw-check{--hw-end:calc(20 * var(--play-stagger) + var(--play-3))}
 .hw-setup{--hw-end:calc(24 * var(--play-stagger) + var(--play-3))}
 .hw-see{--hw-end:calc(44 * var(--play-stagger) + var(--play-3))}
-.hw-improve{--hw-end:calc(36 * var(--play-stagger) + 3 * var(--play-3))}
-.hw-toggle{bottom:-.875rem;inset-inline-end:-.75rem}
-.hw.is-redraw{--hw-loop:calc(36 * var(--play-stagger))}
+.hw-improve{--hw-end:calc(18 * var(--play-stagger) + var(--play-3))}
+.hw-toggle{bottom:-2.75rem;inset-inline-end:-.75rem}
 .sf .sf-toggle{top:calc((3.5rem - 2.75rem) / 2);inset-inline-end:calc(var(--space-4) - .75rem);color:var(--on-band-quiet)}
 .sf .sf-toggle:hover{color:var(--on-band)}
 .sf .sf-toggle:focus-visible{outline-color:var(--focus-on-band);outline-offset:-2px}
@@ -65,7 +62,6 @@ export const LOOP_CSS = `
 @media (prefers-reduced-motion:no-preference){
 .motion .hw[data-loop]:not([data-paused]) .hw-card.is-in .hw-scene{animation:loop-out var(--play-3) var(--ease) forwards;animation-delay:calc(var(--hw-d) + var(--hw-end) + var(--loop-hold))}
 .motion .hw[data-loop]:not([data-paused]) .hw-card.is-loop .hw-scene{animation:loop-in var(--play-3) var(--ease) both,loop-out var(--play-3) var(--ease) forwards;animation-delay:0s,calc(var(--hw-d) + var(--hw-end) + var(--loop-hold))}
-.motion .hw.is-redraw.is-looped .hw-again>span{animation:none}
 .motion .sf[data-loop]:not([data-paused]) .sf-tile.is-in>.sf-frag{animation:loop-out var(--play-3) var(--ease) forwards;animation-delay:calc(var(--sf-end) + var(--loop-hold) + var(--k,0) * 8 * var(--play-stagger))}
 .motion .sf[data-loop]:not([data-paused]) .sf-tile.is-loop>.sf-frag{animation:loop-in var(--play-3) var(--ease) both,loop-out var(--play-3) var(--ease) forwards;animation-delay:0s,calc(var(--sf-end) + var(--loop-hold) + var(--k,0) * 8 * var(--play-stagger))}
 .motion .sig[data-loop]:not([data-paused]).is-in>.sig-stage{animation:loop-out var(--play-3) var(--ease) forwards;animation-delay:calc(var(--sig-end) + var(--loop-hold))}

@@ -13,6 +13,7 @@ import { call } from "./api";
 import { identifyFromSession } from "../../_analytics/ProductAnalytics";
 import { track } from "../../_analytics/posthog";
 import { Chat, initialsOf, type ChatMessage, type Choice } from "./Chat";
+import WhatsappConnect from "./WhatsappConnect";
 import { codeDigits } from "../login/code";
 import { COPY, type Lang } from "./copy";
 import { areaName, bookingWhat } from "./format";
@@ -65,6 +66,8 @@ type Check = {
 type WaNeed = { key: string; label: Record<Lang, string>; field: "" | "phone" | "display_name"; done: boolean };
 type WaSetup = {
   way: string; status: string; phone: string; display_name: string; needs: WaNeed[]; note: string; open: boolean;
+  // Whether the owner may connect now with Meta's pop-up (Embedded Signup, ALY-39).
+  connect?: { available: boolean };
 };
 type Readiness = { stage: "setting_up" | "ready" | "live"; checks: Check[]; left: string[] };
 // "Start on ALYR's number" waits on the founder's decision (ALY-217); the others are offered.
@@ -1009,10 +1012,14 @@ export default function Start() {
       const fields = setup.needs.filter((n) => n.field);
       const value = (f: "phone" | "display_name") => waDraft[f] ?? setup[f];
       const dirty = fields.some((n) => value(n.field as "phone" | "display_name") !== setup[n.field as "phone" | "display_name"]);
-      const status = g.waStatus[setup.status];
+      // With everything ready and Embedded Signup on, the owner connects now: "ALYR will message
+      // you" would be the wrong thing to say.
+      const canConnect = !!setup.connect?.available && setup.status !== "connected" && setup.needs.every((n) => n.done);
+      const status = canConnect && setup.status !== "failed" ? "" : g.waStatus[setup.status];
       return (
         <div className="ob-wa">
           {status && <p className={`ob-wa-status ${setup.status}`}>{status}{setup.status === "failed" && setup.note && <> {setup.note}</>}</p>}
+          {canConnect && <WhatsappConnect lang={lang} onConnected={loadReadiness} />}
           {setup.needs.length > 0 && setup.status !== "connected" && <>
             <p className="ob-kicker">{g.getReady}</p>
             <ul className="ob-wa-needs">

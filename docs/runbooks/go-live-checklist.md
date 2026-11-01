@@ -5,7 +5,7 @@ customers use ALYR. From the 17 Oct 2026 audit (`docs/audit/2026-10-17.md`).
 
 ## Company and accounts
 - [x] Commercial registration issued (CR 255539, 26 Oct 2026; application SR3044041) and Meta business verification done (28 Oct 2026; `docs/runbooks/meta-tech-provider.md`)
-- [ ] Merchant's own WhatsApp number connected (Embedded Signup, ALY-39)
+- [ ] Merchant's own WhatsApp number connected (Embedded Signup, ALY-39: built and off; the founder's steps in Meta are `docs/runbooks/embedded-signup.md`; until then ALYR staff attach numbers, `whatsapp-line.md`)
 - [ ] Every account in `docs/access.md` has 2FA and an owner; renewal dates recorded
 - [ ] Customer agreement and privacy notice published (PR #47; the privacy policy is published at https://alyr.qa/privacy, ALY-68; terms are not)
 
@@ -25,10 +25,13 @@ customers use ALYR. From the 17 Oct 2026 audit (`docs/audit/2026-10-17.md`).
 - [ ] `main` is protected and requires the `ci` jobs; merged branches delete themselves; secret scanning and push protection are on
 - [ ] The Cloudflare token and account ID are environment secrets (`production`, and a narrower token in `preview`), the repository copies are deleted and the old token is rolled
 - [ ] One release has run end to end through `deploy-gcp` (gate, approval, deploy, health checks, tag `v0.x.y`) and the CHANGELOG has a cut section
+- [ ] After a release, `scripts/smoke-production.sh` passes (read only: the site in both languages, sign-in and sign-up up, the API healthy, security headers; `release.md`, "After the deploy"), and the `e2e` journeys have run green on `main` (ALY-122)
 - [ ] A rollback by traffic split has been rehearsed on the API, the web app and the worker, and a deploy afterwards served the new revision (`rollback.md`, "Rehearsal")
 
 ## Application
 - [ ] Rate limits on sign-in codes, sign-up and public pages (ALY-116, built; the per-address part is on only once the edge signs the visitor's address and the API is told to read it: ALY-265, steps and check in `client-address.md`; Cloudflare in front: HTTPS only, TLS 1.2 and header rules are live since 30 Oct, the rate-limit rule is prepared and waits for a yes: `cloudflare-edge.md`)
+- [ ] ALYR staff sign-in (ALY-125, `staff-sign-in.md`): the cap on wrong codes and the new-sign-in email are live (D-135); the founder has set up the authenticator app, kept the ten recovery codes, and run `infra/gcp/staff-access.sh ready` then `require` (D-136); a private-window sign-in to `/ops` stops at the prompt
+- [ ] The back office and the worker on their own database logins, the guard enforced (ALY-125 part 3, SEC-5, `database-roles.md`): `roles.sh create`, `move`, then `enforce`, with the checks between each step
 - [ ] Staff roles: agents cannot change prices, services, hours or send bulk reminders (audit issue)
 - [ ] Contact merge keeps consent records (audit issue)
 - [x] Security headers on the web app (CSP, HSTS, frame-ancestors, nosniff) and an Origin check on signed-in changes (ALY-118); on the public site: `_headers` has HSTS, nosniff, frame-ancestors, base-uri, object-src; Cloudflare's header rules for `api` and `media` are live (`cloudflare-edge.md`)

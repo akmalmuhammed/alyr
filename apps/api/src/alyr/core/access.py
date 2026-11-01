@@ -21,7 +21,7 @@ from zoneinfo import ZoneInfo
 import asyncpg
 
 from alyr.config import Settings, get_settings
-from alyr.core import paddle, pricing
+from alyr.core import paddle, pricing, roles
 from alyr.core.normalise import fmt_qar
 from alyr.db import Database
 
@@ -34,7 +34,7 @@ METHODS = ("bank_transfer", "cash", "cheque", "link")
 async def office(db: Database) -> AsyncIterator[asyncpg.Connection]:
     """One transaction on which the API declares it is ALYR itself, as `routes/admin.py`
     does for its staff: a client's billing is ALYR's own data, not a shop's."""
-    async with db.unscoped() as conn, conn.transaction():
+    async with roles.privileged(db).unscoped() as conn, conn.transaction():
         await conn.execute("select set_config('app.platform_admin', 'on', true)")
         yield conn
 

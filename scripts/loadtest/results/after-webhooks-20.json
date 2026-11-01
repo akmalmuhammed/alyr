@@ -1,0 +1,29 @@
+{
+ "scenario": "after-webhooks-20",
+ "seconds": 98.6,
+ "requests": {
+  "webhook": {
+   "n": 1160,
+   "per_s": 11.77,
+   "p50": 11.1,
+   "p95": 35.3,
+   "p99": 75.0,
+   "max": 128.3,
+   "errors": 0,
+   "error_pct": 0.0,
+   "codes": {
+    "200": 1160
+   }
+  }
+ },
+ "messages_started": 1160,
+ "queue_drained_after_s": 38.1,
+ "reply_lag": {
+  "answered": 1160,
+  "unanswered": 0,
+  "p50_s": 20.82,
+  "p95_s": 36.41,
+  "p99_s": 37.06,
+  "max_s": 37.35
+ }
+}

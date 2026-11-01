@@ -50,6 +50,54 @@ async def ensure_backup_role(conn: asyncpg.Connection, backup_dsn: str) -> None:
         print(f"warning: backup role {role} not fully set up ({error}); backups will fail")
 
 
+PLATFORM_ROLES = ("alyr_admin", "alyr_worker")
+
+
+async def ensure_platform_roles(
+    conn: asyncpg.Connection, admin_dsn: str = "", worker_dsn: str = ""
+) -> None:
+    """Create the two roles that carry ALYR's cross-business powers, if they are missing (ALY-125
+    part 3, SEC-5, D-137): `alyr_admin`, which the API uses for the back office, and
+    `alyr_worker`, which the worker signs in as.
+
+    Each can do what the application role can (it is a member of it, so a table added later for
+    `alyr_app` is theirs too) and nothing else is granted. What they add is that the guards
+    (`is_back_office()`, `assert_platform_admin()`, the jobs policy) accept them once the guard
+    is enforced (migration 0097, `python -m alyr.db_roles enforce`), while `alyr_app` no longer
+    can: before, anything running as the application role could write a session setting that
+    granted those powers.
+
+    With no address a role is made NOLOGIN (a group, enough for a test or a developer machine).
+    With an address the role is made with that password, or, if it exists without a login, given
+    one. A role that already has a login keeps its password: it is rotated by hand
+    (docs/runbooks/database-roles.md). A host that does not let the owner create roles must not
+    block a deploy: say so and carry on; `enforce` then refuses until the roles exist."""
+    for role, dsn in zip(PLATFORM_ROLES, (admin_dsn, worker_dsn), strict=True):
+        password = ""
+        if dsn:
+            parsed = urlparse(dsn)
+            if parsed.username != role:
+                raise ValueError(f"the address for {role} must sign in as {role}")
+            password = (parsed.password or "").replace("'", "''")
+        try:
+            row = await conn.fetchrow("select rolcanlogin from pg_roles where rolname = $1", role)
+            if row is None:
+                login = f"login password '{password}'" if password else "nologin"
+                await conn.execute(f"create role {role} {login}")
+            elif password and not row["rolcanlogin"]:
+                await conn.execute(f"alter role {role} login password '{password}'")
+            member = await conn.fetchval(
+                "select true from pg_auth_members m join pg_roles r on r.oid = m.roleid "
+                "join pg_roles u on u.oid = m.member "
+                "where r.rolname = 'alyr_app' and u.rolname = $1",
+                role,
+            )
+            if not member:
+                await conn.execute(f"grant alyr_app to {role}")
+        except asyncpg.InsufficientPrivilegeError as error:
+            print(f"warning: role {role} not set up ({error}); see docs/runbooks/database-roles.md")
+
+
 async def ensure_owner_bypasses_rls(conn: asyncpg.Connection) -> None:
     """Let the owner role, which runs the migrations and owns the SECURITY DEFINER
     functions (sign-up, the back office, quotes), act past row-level security.
@@ -79,12 +127,15 @@ async def ensure_owner_bypasses_rls(conn: asyncpg.Connection) -> None:
 _MIGRATION_LOCK = 7_301_202_610
 
 
-async def migrate(owner_dsn: str, app_dsn: str, backup_dsn: str = "") -> list[str]:
+async def migrate(
+    owner_dsn: str, app_dsn: str, backup_dsn: str = "", admin_dsn: str = "", worker_dsn: str = ""
+) -> list[str]:
     conn = await asyncpg.connect(owner_dsn)
     try:
         await conn.execute("select pg_advisory_lock($1)", _MIGRATION_LOCK)
         await ensure_owner_bypasses_rls(conn)
         await ensure_app_role(conn, app_dsn)
+        await ensure_platform_roles(conn, admin_dsn, worker_dsn)
         if backup_dsn:
             await ensure_backup_role(conn, backup_dsn)
         await conn.execute(
@@ -108,6 +159,9 @@ async def migrate(owner_dsn: str, app_dsn: str, backup_dsn: str = "") -> list[st
 if __name__ == "__main__":
     settings = get_settings()
     names = asyncio.run(
-        migrate(settings.migration_url, settings.database_url, settings.backup_url)
+        migrate(
+            settings.migration_url, settings.database_url, settings.backup_url,
+            settings.admin_database_url, settings.worker_database_url,
+        )
     )
     print("applied:", ", ".join(names) if names else "nothing new")

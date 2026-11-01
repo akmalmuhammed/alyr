@@ -70,7 +70,9 @@ The rules now, all enforced by the workflows except the last:
 7. **After the health checks pass, the `tag` job tags the commit** `v0.x.y`. Check with
    `git ls-remote --tags origin v0.x.y`. When both workflows ship the same version from the
    same commit, the second finds the tag and does nothing.
-8. **Write what is live** in `docs/status.md`: the version, the short commit, the date. The
+8. **Check production from outside** (below, "After the deploy"). It only reads and takes
+   under a minute. If it fails, roll back first ([rollback.md](rollback.md)), then look.
+9. **Write what is live** in `docs/status.md`: the version, the short commit, the date. The
    `deploy-gcp` run's summary lists the revisions that served before this release: keep them
    until the next release, they are the way back ([rollback.md](rollback.md)).
 
@@ -95,6 +97,98 @@ It takes the same path: a pull request with the fix and its own `scripts/release
 line (or two pull requests), merge, wait for `ci`, run the release. When production is
 hurting now and 35 minutes is too long, **roll back first** ([rollback.md](rollback.md)),
 then fix properly. The laptop fallback is for a day GitHub is down, not for skipping `ci`.
+
+## After the deploy: the smoke check
+
+```bash
+scripts/smoke-production.sh                       # what is live right now
+scripts/smoke-production.sh --commit 267c68a      # and the public site is that commit
+scripts/smoke-production.sh --signup open         # and the sign-up door is open (or: closed)
+```
+
+It is **read only**: every request is a plain `GET` of a public address (ALY-122). It signs
+nobody in, sends no code, submits no form and creates nothing, so it is safe to run at any hour
+and as often as you like; a check that would write something does not belong in it. It needs only
+`curl`, and exits 1 when anything FAILs (a WARN is not a failure). What it looks at, in four
+groups:
+
+1. **The public site, English and Arabic:** the home page, `/chat`, `/bookings` and `/privacy`
+   and their `/ar` pages answer 200; the English home page says `lang="en"` and the Arabic one
+   `lang="ar" dir="rtl"`; `alyr.qa/version.txt` names a commit that is not `-dirty` (and is
+   the one you passed with `--commit`).
+2. **The app:** `app.alyr.qa/login` and `/start` answer 200, and sign-up's list of business types
+   comes back through the web app from the database. It prints whether the door is open;
+   `--signup open|closed` makes that a check.
+3. **The API:** `/health`, `/health/ready` (and its database) and `/health/worker` say ok;
+   `/docs`, `/openapi.json` and `/sim/personas` answer 404 (nothing for developers is on); the
+   sign-in-only addresses `/api/auth/me`, `/api/admin/today` and `/api/orders` answer 401.
+4. **Security headers and HTTPS** on the site, the app and the API, and `http://` moving to
+   `https://`. (`scripts/check-edge.sh` goes deeper into DNS and TLS and is for the edge, not
+   for every release.)
+
+What it cannot tell you: that a signed-in journey works, which revision of the app serves
+(the `deploy-gcp` summary lists them), or anything about WhatsApp, email or payments. The signed-in
+journeys are the browser tests below, which run against a local copy of the stack and never
+against production: nothing may sign in on production or write there to prove a release.
+
+## The browser journeys (the `e2e` workflow)
+
+`tests/e2e` holds Playwright tests for the paths that must never break: sign-up to the plan step
+(English, Arabic, at 390 px), sign-in with `?next=`, the Products screen, a customer's order and
+booking reaching the owner, and the back office's door and Today queue. They run in the `e2e` job
+of `.github/workflows/e2e.yml` on every pull request and every push to `main`, against a local
+PostgreSQL, API and web build (a few minutes: nearly all of it installing and building). What each
+journey proves, and how to run one on a laptop, is in `tests/e2e/README.md`.
+
+- **It is a workflow of its own, and it does not gate a release.** The release gate
+  (`release-gate.yml`) reads the conclusion of the whole `ci` run on the commit, so a red or
+  still-running job inside `ci` would hold a release back. `e2e` lives outside it, and branch
+  protection (below) does not list it. A red `e2e` is shown on the pull request and the commit
+  all the same.
+- **It becomes required only after five green runs in a row on `main`.** Count them with
+  `gh run list --workflow e2e --branch main --limit 10`; they must be the five newest, with no
+  retried ("flaky") test among them. A red run in the meantime is read, not skipped: open the
+  `e2e-report` artifact, and `pnpm exec playwright show-trace` on the failed test's `trace.zip`
+  shows every step.
+- **To make it required** (Needs Akmal, one pull request): move the `e2e` job from `e2e.yml` into
+  `ci.yml` (the gate then sees it, because it reads the whole run), and add `"e2e"` to
+  `required_status_checks.contexts` in the branch-protection command below.
+- **A test that passes only on its retry is a bug**, in the test or in the product. The report
+  marks it flaky. Fix it; do not raise the retries.
+
+## The API coverage floor (the `coverage` workflow)
+
+`.github/workflows/coverage.yml` runs the API's whole test suite once more under coverage.py and
+fails when the line coverage of `src/alyr` is below `COVERAGE_FLOOR`, the number at the top of the
+job. coverage.py and pytest-cov are added for the run only (`uv run --with`, pinned), so the API's
+own dependencies and `uv.lock` do not change. The run's summary page shows the number every time.
+
+- **Measured on 31 Oct 2026, on GitHub:** **94.08%**, 28,237 of 30,013 lines, with 3,241 tests
+  passed and 2 skipped, under Python 3.14.4 (the runner's own). Under Python 3.13, the version the
+  API image runs, the same suite gave 94.18% on a laptop (3.13 counts about 500 more statements,
+  all of them covered), which is why the number is read from the CI run and nowhere else.
+  **The floor is 93**: a point under, about 300 lines of room, so a lucky or unlucky run does not
+  turn it red but a module added with no tests will.
+- **Why a workflow of its own.** The suite under coverage takes about 45 minutes (30 of them
+  tests), and the release gate waits for the whole `ci` run, so a second long job inside `ci`
+  would make every release wait for the slower of the two. A newer push to a pull request cancels
+  the older run. It is not in branch protection yet: to make it required (Needs Akmal, one pull
+  request), add `"api-coverage"` to `required_status_checks.contexts` in the command below once it
+  has run green five times in a row on `main`, as for `e2e`.
+- **How it ratchets up.** Only upward, by hand, in a pull request that changes that one number.
+  Read the number on the summary of the last three runs on `main`. The new floor is the whole
+  number of the **lowest** of the three, minus one (94.08% gives 93; 95.6% would give 94). Raise
+  it when that is higher than the floor now; do it whenever someone finishes a block of tests.
+  The floor goes **down** only in a pull request that says why (for example, well-tested code was
+  deleted): a lower floor is a decision and is written down like one.
+- **Where to look for what is missing.** The job's log lists every file below 100%. The lowest on
+  31 Oct: `doctor.py` 0%, `templates_sync.py` 29%, `worker.py` 34%, `agent_samples.py` 37%,
+  `report_samples.py` 56%, `modules/bookings/report.py` 57%, `first_admin.py` 62%. (ALY-122 named
+  `doctor.py`, `worker.py`, `presets.py` and `routes/admin.py` as untested: `presets.py` is now
+  fully covered and `routes/admin.py` is at 94%; the other two are still open.)
+- **What the number is not.** Lines run, not behaviour proved, and the processes the API starts
+  for itself (the drawing process, `core/drawing.py`) are not followed. It is a floor against
+  sliding back, nothing more.
 
 ## One-time setup: GitHub settings (Needs Akmal, about 15 minutes)
 

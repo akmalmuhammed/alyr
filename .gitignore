@@ -39,3 +39,6 @@ htmlcov/
 .idea/
 .vscode/
 Thumbs.db
+
+# Load-test stack state (throw-away local secrets, scripts/loadtest/stack.sh)
+.loadtest-state/

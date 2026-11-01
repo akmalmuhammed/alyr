@@ -117,7 +117,7 @@ function offerOnly(path, parents) {
   if (parents.some((p) => p && !Array.isArray(p) && p.offer === true)) return true;
   // meta.<page>.description, when the page has a descriptionNoOffer (document.tsx).
   if (path.endsWith(".description") && parent && "descriptionNoOffer" in parent) return true;
-  // hero.facts, when there is a factsNoOffer (HomePage.tsx Hero).
+  // hero.facts, when there is a factsNoOffer (app/opengraph-image/route.tsx, the social card).
   if (/\.facts\[\d+\]$/.test(path) && parents.at(-2) && "factsNoOffer" in parents.at(-2)) return true;
   // The rest are listed, each with the line of code that hides it.
   return allow.offerOnly.some((entry) => matchPath(path, entry.path) && used.add(entry));

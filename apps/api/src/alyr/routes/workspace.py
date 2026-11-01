@@ -26,16 +26,24 @@ def _refuse(error: Exception) -> HTTPException:
 
 @router.get("")
 async def shell(request: Request, staff: Staff = Depends(current_staff)) -> dict:
-    async with request.app.state.db.tenant(staff.tenant_id) as conn:
-        # Whether the products are open yet (ALY-212): the workspace shows a locked page
-        # with what to pay until they are.
-        return await workspace.state(conn, staff)
+    async def compute() -> dict:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            # Whether the products are open yet (ALY-212): the workspace shows a locked page
+            # with what to pay until they are.
+            return await workspace.state(conn, staff)
+
+    return await request.app.state.poll.get_json(
+        staff.tenant_id, ("shell", staff.user_id, staff.role), compute)
 
 
 @router.get("/home")
 async def home(request: Request, staff: Staff = Depends(current_staff)) -> dict:
-    async with request.app.state.db.tenant(staff.tenant_id) as conn:
-        return {"cards": await workspace.home(conn, staff)}
+    async def compute() -> dict:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            return {"cards": await workspace.home(conn, staff)}
+
+    return await request.app.state.poll.get_json(
+        staff.tenant_id, ("home", staff.user_id, staff.role), compute)
 
 
 @router.post("/products/{key}/enable")

@@ -33,6 +33,8 @@ SLOT_STEP_MINUTES = 30
 LEAD_MINUTES = 30
 REMIND_BEFORE = timedelta(hours=2)
 MAX_DAYS_AHEAD = 60
+MAX_SERVICES = 100
+MAX_RESOURCES = 50
 # Staff may enter a visit that has already started (a walk-in written down afterwards), up to
 # this long ago.
 STAFF_LOOK_BACK = timedelta(hours=12)
@@ -44,9 +46,11 @@ class BookingError(Exception):
     """A booking request that cannot be carried out; `code` is stable, the message is
     safe to show."""
 
-    def __init__(self, code: str, message: str) -> None:
+    def __init__(self, code: str, message: str, data: dict | None = None) -> None:
         super().__init__(message)
         self.code = code
+        # What the screen needs to say it well (for example the services left with nobody).
+        self.data = data or {}
 
 
 def deposit_amount(kind: str, value: int, price: int) -> int:
@@ -76,23 +80,83 @@ _SERVICE_COLUMNS = (
 )
 
 
-async def list_services(conn: asyncpg.Connection, only_active: bool = False) -> list[dict]:
+async def list_services(
+    conn: asyncpg.Connection, only_active: bool = False, detail: bool = False
+) -> list[dict]:
+    """The shop's services in their order. `detail` is for the workspace's own screen: who does
+    each one (`resource_ids`, empty for everyone who takes bookings) and how many bookings
+    still to come are on it (`upcoming`). The booking page asks for neither."""
     rows = await conn.fetch(
         f"select {_SERVICE_COLUMNS} from services "
         "where active or not $1 order by sort, created_at",
         only_active,
     )
-    return [_service(r) for r in rows]
+    out = [_service(r) for r in rows]
+    if detail:
+        who: dict[str, list[str]] = {}
+        for link in await conn.fetch("select service_id, resource_id from service_resources"):
+            who.setdefault(str(link["service_id"]), []).append(str(link["resource_id"]))
+        ahead = {
+            str(r["service_id"]): r["n"]
+            for r in await conn.fetch(
+                "select service_id, count(*)::int as n from bookings "
+                "where status = 'booked' and ends_at > now() group by 1"
+            )
+        }
+        for one in out:
+            one["resource_ids"] = who.get(one["id"], [])
+            one["upcoming"] = ahead.get(one["id"], 0)
+    return out
+
+
+def _clean_name(name: str) -> str:
+    name = name.strip()
+    if not name:
+        raise BookingError("bad_name", "A service needs a name.")
+    return name
+
+
+def _check_deposit(kind: str, value: int, price: int) -> int:
+    """The deposit a service may ask, as it is stored: none, a share of the price from 1% to
+    100%, or a fixed amount from QAR 1 and, when the service has a price, not above it."""
+    if kind == "none":
+        return 0
+    if kind == "percent":
+        if not 1 <= value <= 100:
+            raise BookingError("bad_deposit", "A deposit share is between 1% and 100%.")
+        if not price:
+            raise BookingError(
+                "deposit_needs_price", "A share of the price needs the service to have a price."
+            )
+        return value
+    if value < 100:
+        raise BookingError("bad_deposit", "A fixed deposit is at least QAR 1.")
+    if price and value > price:
+        raise BookingError("bad_deposit", "A deposit cannot be more than the service's price.")
+    return value
 
 
 async def add_service(
-    conn: asyncpg.Connection, name: str, name_ar: str, duration_minutes: int, price: int
+    conn: asyncpg.Connection, name: str, name_ar: str, duration_minutes: int, price: int,
+    deposit_kind: str = "none", deposit_value: int = 0, resource_ids: list[UUID] | None = None,
 ) -> str:
+    """Add a service, with its deposit and the people or chairs that do it if they are known.
+    The caller's transaction makes it all or nothing."""
+    name = _clean_name(name)
+    value = _check_deposit(deposit_kind, deposit_value, price)
+    if await conn.fetchval("select count(*) from services") >= MAX_SERVICES:
+        raise BookingError(
+            "too_many_services", f"A shop can list up to {MAX_SERVICES} services."
+        )
     service_id = await conn.fetchval(
-        "insert into services (name, name_ar, duration_minutes, price, sort) "
-        "values ($1, $2, $3, $4, (select coalesce(max(sort), 0) + 1 from services)) returning id",
-        name.strip(), name_ar.strip(), duration_minutes, price,
+        "insert into services (name, name_ar, duration_minutes, price, deposit_kind, "
+        "    deposit_value, sort) "
+        "values ($1, $2, $3, $4, $5, $6, (select coalesce(max(sort), 0) + 1 from services)) "
+        "returning id",
+        name, name_ar.strip(), duration_minutes, price, deposit_kind, value,
     )
+    if resource_ids:
+        await set_service_resources(conn, service_id, resource_ids)
     return str(service_id)
 
 
@@ -100,37 +164,41 @@ async def update_service(
     conn: asyncpg.Connection, service_id: UUID, name: str | None, name_ar: str | None,
     duration_minutes: int | None, price: int | None,
     deposit_kind: str | None = None, deposit_value: int | None = None,
+    resource_ids: list[UUID] | None = None,
 ) -> bool:
-    """Change a service's name, length, price or deposit. Bookings already made keep the name
-    and the deposit they were made with."""
-    if deposit_kind is not None:
-        value = 0 if deposit_kind == "none" else (deposit_value or 0)
-        if deposit_kind == "percent" and not 1 <= value <= 100:
-            raise BookingError("bad_deposit", "A deposit share is between 1% and 100%.")
-        if deposit_kind == "fixed":
-            if value < 100:
-                raise BookingError("bad_deposit", "A fixed deposit is at least QAR 1.")
-            current = await conn.fetchval("select price from services where id = $1", service_id)
-            final = price if price is not None else current
-            if final and value > final:
-                raise BookingError(
-                    "bad_deposit", "A deposit cannot be more than the service's price."
-                )
-    else:
-        value = None
-    updated = await conn.execute(
-        "update services set name = coalesce(nullif($2, ''), name), "
-        "name_ar = coalesce($3, name_ar), duration_minutes = coalesce($4, duration_minutes), "
-        "price = coalesce($5, price), deposit_kind = coalesce($6, deposit_kind), "
-        "deposit_value = coalesce($7, deposit_value) where id = $1",
-        service_id, name.strip() if name is not None else None,
-        name_ar.strip() if name_ar is not None else None, duration_minutes, price,
-        deposit_kind, value,
+    """Change a service's name, length, price, deposit or who does it (an empty list: all of
+    them). Bookings already made keep the name, the price and the deposit they were made with.
+    The deposit is checked against the price the service will have, so a price cannot be
+    lowered under a fixed deposit."""
+    current = await conn.fetchrow(
+        "select price, deposit_kind, deposit_value from services where id = $1 for update",
+        service_id,
     )
-    return updated == "UPDATE 1"
+    if current is None:
+        return False
+    final_price = price if price is not None else current["price"]
+    kind = deposit_kind if deposit_kind is not None else current["deposit_kind"]
+    value = _check_deposit(
+        kind,
+        (deposit_value or 0) if deposit_kind is not None else current["deposit_value"],
+        final_price,
+    )
+    await conn.execute(
+        "update services set name = coalesce($2, name), name_ar = coalesce($3, name_ar), "
+        "duration_minutes = coalesce($4, duration_minutes), price = coalesce($5, price), "
+        "deposit_kind = $6, deposit_value = $7 where id = $1",
+        service_id, _clean_name(name) if name is not None else None,
+        name_ar.strip() if name_ar is not None else None, duration_minutes, price,
+        kind, value,
+    )
+    if resource_ids is not None:
+        await set_service_resources(conn, service_id, resource_ids)
+    return True
 
 
 async def set_service_active(conn: asyncpg.Connection, service_id: UUID, active: bool) -> bool:
+    """Hide a service from the booking page, or show it again. Bookings already made on it
+    stay where they are."""
     updated = await conn.execute(
         "update services set active = $2 where id = $1", service_id, active
     )
@@ -175,8 +243,29 @@ async def _write_periods(
             ) from error
 
 
+def _check_week(periods: list[tuple[int, str, str]]) -> None:
+    """A week the engine can use: each period closes after it opens, and two periods of one
+    day do not overlap (a midday break is two periods with a gap between them). Times are
+    "HH:MM", so they sort as text."""
+    by_day: dict[int, list[tuple[str, str]]] = {}
+    for weekday, opens, closes in periods:
+        if closes <= opens:
+            raise BookingError(
+                "bad_hours", "Each working period needs a day and a closing time after opening."
+            )
+        by_day.setdefault(weekday, []).append((opens, closes))
+    for spans in by_day.values():
+        spans.sort()
+        for (_, closes), (opens, _) in zip(spans, spans[1:], strict=False):
+            if opens < closes:
+                raise BookingError(
+                    "bad_hours_overlap", "Two periods on one day cannot overlap."
+                )
+
+
 async def set_hours(conn: asyncpg.Connection, periods: list[tuple[int, str, str]]) -> None:
     """Replace the whole week's opening hours. Each period is (weekday, opens, closes)."""
+    _check_week(periods)
     await conn.execute("delete from business_hours")
     await _write_periods(conn, "business_hours", periods)
 
@@ -189,9 +278,100 @@ async def set_resource_hours(
         "select exists (select 1 from booking_resources where id = $1)", resource_id
     ):
         return False
+    _check_week(periods)
     await conn.execute("delete from resource_hours where resource_id = $1", resource_id)
     await _write_periods(conn, "resource_hours", periods, resource_id)
     return True
+
+
+# ------------------------------------------------------------------------ days off
+
+MAX_CLOSURES = 200
+MAX_CLOSURE_DAYS = 366
+
+
+async def shop_today(conn: asyncpg.Connection) -> date:
+    """Today on the shop's own calendar."""
+    return await conn.fetchval(f"select (now() at time zone {_TZ})::date")
+
+
+def _closure(row) -> dict:
+    return {
+        "id": str(row["id"]), "first": row["first_day"].isoformat(),
+        "last": row["last_day"].isoformat(), "reason": row["reason"],
+        "reason_ar": row["reason_ar"],
+        "resource": {
+            "id": str(row["resource_id"]), "name": row["resource_name"],
+            "name_ar": row["resource_name_ar"],
+        } if row["resource_id"] else None,
+        # Bookings still booked inside it: a closure never cancels one, the shop moves them.
+        "standing": row["standing"],
+    }
+
+
+_CLOSURE_ROWS = f"""
+    select c.id, c.resource_id, c.first_day, c.last_day, c.reason, c.reason_ar,
+           r.name as resource_name, r.name_ar as resource_name_ar,
+           (select count(*)::int from bookings b where b.status = 'booked'
+              and (b.starts_at at time zone {_TZ})::date between c.first_day and c.last_day
+              and (c.resource_id is null or b.resource_id = c.resource_id)) as standing
+    from booking_closures c left join booking_resources r on r.id = c.resource_id
+"""
+
+
+async def list_closures(conn: asyncpg.Connection) -> list[dict]:
+    """The days off that are not over yet, soonest first: the whole shop's (a holiday) and one
+    person's or chair's (their leave)."""
+    rows = await conn.fetch(
+        _CLOSURE_ROWS + "where c.last_day >= $1 order by c.first_day, c.created_at",
+        await shop_today(conn),
+    )
+    return [_closure(r) for r in rows]
+
+
+async def add_closure(
+    conn: asyncpg.Connection, first: date, last: date, resource_id: UUID | None,
+    reason: str, reason_ar: str,
+) -> dict:
+    """Close the shop, or one person or chair, from `first` to `last` (shop calendar days,
+    both included). Bookings already inside stay booked; the answer counts them."""
+    if last < first or (last - first).days >= MAX_CLOSURE_DAYS:
+        raise BookingError(
+            "bad_closure", "Choose a first day, and a last day that is the same or later "
+            "and within a year."
+        )
+    today = await shop_today(conn)
+    if last < today:
+        raise BookingError("closure_past", "That time has already passed.")
+    if resource_id is not None and not await conn.fetchval(
+        "select exists (select 1 from booking_resources where id = $1)", resource_id
+    ):
+        raise BookingError("unknown_resource", "That person or chair is not available.")
+    if await conn.fetchval(
+        "select count(*) from booking_closures where last_day >= $1", today
+    ) >= MAX_CLOSURES:
+        raise BookingError("too_many_closures", f"A shop can list up to {MAX_CLOSURES} days off.")
+    closure_id = await conn.fetchval(
+        "insert into booking_closures (resource_id, first_day, last_day, reason, reason_ar) "
+        "values ($1, $2, $3, $4, $5) returning id",
+        resource_id, first, last, reason.strip(), reason_ar.strip(),
+    )
+    return _closure(await conn.fetchrow(_CLOSURE_ROWS + "where c.id = $1", closure_id))
+
+
+async def remove_closure(conn: asyncpg.Connection, closure_id: UUID) -> bool:
+    return await conn.execute(
+        "delete from booking_closures where id = $1", closure_id
+    ) == "DELETE 1"
+
+
+async def shop_closed_on(conn: asyncpg.Connection, day: date) -> dict | None:
+    """Why the whole shop is closed on this day, if it is: {reason, reason_ar}."""
+    row = await conn.fetchrow(
+        "select reason, reason_ar from booking_closures where resource_id is null "
+        "and $1::date between first_day and last_day order by created_at limit 1", day,
+    )
+    return {"reason": row["reason"], "reason_ar": row["reason_ar"]} if row else None
 
 
 def _eligible(service: str, wanted: str) -> str:
@@ -208,20 +388,31 @@ def _eligible(service: str, wanted: str) -> str:
     """
 
 
+def _shut(day: str, rid: str) -> str:
+    """SQL for "the shop is closed that day, or this resource is off": a day in `booking_closures`
+    for the whole shop or for the resource (D-141). `day` is a query parameter, or an expression
+    that gives the shop's calendar day."""
+    return f"""exists (select 1 from booking_closures c
+                where {day}::date between c.first_day and c.last_day
+                  and (c.resource_id is null or c.resource_id = {rid}))"""
+
+
 def _working(day: str) -> str:
     """SQL for when each eligible resource works on the shop's calendar day `day` (a query
-    parameter number): its own hours if it has any, else the shop's opening hours. Needs a
-    CTE called `eligible` before it."""
+    parameter number): its own hours if it has any, else the shop's opening hours; nothing on
+    a day the shop or the resource is closed (D-141). Needs a CTE called `eligible` before it."""
     dow = f"extract(dow from {day}::date)::int"
     return f"""
         select e.id as rid, ({day}::date + rh.opens) at time zone {_TZ} as opens_at,
                ({day}::date + rh.closes) at time zone {_TZ} as closes_at
         from eligible e join resource_hours rh on rh.resource_id = e.id and rh.weekday = {dow}
+        where not {_shut(day, "e.id")}
         union all
         select e.id, ({day}::date + h.opens) at time zone {_TZ},
                ({day}::date + h.closes) at time zone {_TZ}
         from eligible e join business_hours h on h.weekday = {dow}
         where not exists (select 1 from resource_hours rh where rh.resource_id = e.id)
+          and not {_shut(day, "e.id")}
     """
 
 
@@ -231,11 +422,13 @@ async def has_resources(conn: asyncpg.Connection) -> bool:
 
 
 async def free_times(
-    conn: asyncpg.Connection, service_id: UUID, day: date, resource_id: UUID | None = None
+    conn: asyncpg.Connection, service_id: UUID, day: date, resource_id: UUID | None = None,
+    ignore_booking: UUID | None = None,
 ) -> list[datetime]:
     """Start times on `day` (the shop's calendar day) when this service can be booked: a
     resource that does it is working then and free, or `resource_id` is, when one is asked
-    for. Each resource's times start from its own opening on the shop's 30-minute step."""
+    for. Each resource's times start from its own opening on the shop's 30-minute step.
+    `ignore_booking` leaves one booking out, so a booking being moved does not block itself."""
     minutes = await conn.fetchval(
         "select duration_minutes from services where id = $1 and active", service_id
     )
@@ -253,15 +446,18 @@ async def free_times(
                      (($1::date + h.closes) at time zone {_TZ}) - make_interval(mins => $2),
                      make_interval(mins => $3)) s
             where h.weekday = extract(dow from $1::date)::int
+              and not exists (select 1 from booking_closures c where c.resource_id is null
+                              and $1::date between c.first_day and c.last_day)
               and s > now() + make_interval(mins => $4)
               and s < now() + make_interval(days => $5)
               and not exists (
                   select 1 from bookings b where b.status = 'booked'
+                    and b.id is distinct from $6::uuid
                     and tstzrange(b.starts_at, b.ends_at)
                         && tstzrange(s, s + make_interval(mins => $2)))
             order by s
             """,
-            day, minutes, SLOT_STEP_MINUTES, LEAD_MINUTES, MAX_DAYS_AHEAD,
+            day, minutes, SLOT_STEP_MINUTES, LEAD_MINUTES, MAX_DAYS_AHEAD, ignore_booking,
         )
         return [r["starts_at"] for r in rows]
     rows = await conn.fetch(
@@ -275,11 +471,13 @@ async def free_times(
           and s < now() + make_interval(days => $5)
           and not exists (
               select 1 from bookings b where b.status = 'booked' and b.resource_id = w.rid
+                and b.id is distinct from $8::uuid
                 and tstzrange(b.starts_at, b.ends_at)
                     && tstzrange(s, s + make_interval(mins => $2)))
         order by 1
         """,
         day, minutes, SLOT_STEP_MINUTES, LEAD_MINUTES, MAX_DAYS_AHEAD, service_id, resource_id,
+        ignore_booking,
     )
     return [r["starts_at"] for r in rows]
 
@@ -317,9 +515,13 @@ async def _pick_resource(
 
 # ----------------------------------------------------------------------- resources
 
-async def list_resources(conn: asyncpg.Connection, only_active: bool = False) -> list[dict]:
+async def list_resources(
+    conn: asyncpg.Connection, only_active: bool = False, detail: bool = False
+) -> list[dict]:
     """The shop's resources in their order, each with the services narrowed to it (an empty
-    list means it does every service) and its own week (empty: the shop's hours)."""
+    list means it does every service) and its own week (empty: the shop's hours). `detail` is
+    for the workspace's own screen: the services each does (`does`, and `does_all` when it does
+    every one the shop lists) and the bookings still to come with it (`upcoming`)."""
     rows = await conn.fetch(
         "select id, name, name_ar, active, kind from booking_resources "
         "where active or not $1 order by sort, created_at",
@@ -333,7 +535,7 @@ async def list_resources(conn: asyncpg.Connection, only_active: bool = False) ->
         "select resource_id, weekday, opens, closes from resource_hours order by weekday, opens"
     ):
         week.setdefault(period["resource_id"], []).append(period)
-    return [
+    out = [
         {
             "id": str(r["id"]), "name": r["name"], "name_ar": r["name_ar"],
             "active": r["active"], "kind": r["kind"],
@@ -341,6 +543,26 @@ async def list_resources(conn: asyncpg.Connection, only_active: bool = False) ->
         }
         for r in rows
     ]
+    if detail:
+        listed = [str(r["id"]) for r in await conn.fetch("select id from services where active")]
+        does: dict[str, list[str]] = {}
+        for service_id, people in (await doers(conn)).items():
+            if service_id in listed:
+                for resource_id in people:
+                    does.setdefault(resource_id, []).append(service_id)
+        ahead = {
+            str(r["resource_id"]): r["n"]
+            for r in await conn.fetch(
+                "select resource_id, count(*)::int as n from bookings "
+                "where status = 'booked' and ends_at > now() and resource_id is not null "
+                "group by 1"
+            )
+        }
+        for one in out:
+            one["does"] = does.get(one["id"], [])
+            one["does_all"] = bool(listed) and len(one["does"]) == len(listed)
+            one["upcoming"] = ahead.get(one["id"], 0)
+    return out
 
 
 async def add_resource(
@@ -348,12 +570,17 @@ async def add_resource(
 ) -> str:
     """Add a resource. The first one a shop adds takes over the bookings still to come, so
     they keep blocking it (until now they were all in the shop's one lane)."""
+    name = _clean_name(name)
+    if await conn.fetchval("select count(*) from booking_resources") >= MAX_RESOURCES:
+        raise BookingError(
+            "too_many_resources", f"A shop can list up to {MAX_RESOURCES} people or chairs."
+        )
     first = not await has_resources(conn)
     resource_id = await conn.fetchval(
         "insert into booking_resources (name, name_ar, kind, sort) "
         "values ($1, $2, $3, (select coalesce(max(sort), 0) + 1 from booking_resources)) "
         "returning id",
-        name.strip(), name_ar.strip(), kind,
+        name, name_ar.strip(), kind,
     )
     if first:
         await conn.execute(
@@ -362,6 +589,16 @@ async def add_resource(
             resource_id,
         )
     return str(resource_id)
+
+
+async def adoptable(conn: asyncpg.Connection) -> int:
+    """How many bookings still to come the shop's first person or chair would take over: all
+    of them while the shop lists none (they were in its one lane), nothing after."""
+    if await has_resources(conn):
+        return 0
+    return await conn.fetchval(
+        "select count(*)::int from bookings where status = 'booked' and ends_at > now()"
+    )
 
 
 async def update_resource(
@@ -387,10 +624,54 @@ async def set_resource_active(conn: asyncpg.Connection, resource_id: UUID, activ
             raise BookingError(
                 "last_resource", "Keep at least one resource active, or customers cannot book."
             )
+        # A service the shop limited to this one would have nobody: customers would be offered
+        # it and find no time. Say which, so the owner chooses someone else for it first.
+        stranded = [
+            r["name"] for r in await conn.fetch(
+                "select s.name from services s where s.active "
+                "and exists (select 1 from service_resources sr "
+                "            where sr.service_id = s.id and sr.resource_id = $1) "
+                "and not exists (select 1 from service_resources sr "
+                "                join booking_resources r on r.id = sr.resource_id "
+                "                where sr.service_id = s.id and r.active and r.id <> $1) "
+                "order by s.sort, s.created_at",
+                resource_id,
+            )
+        ]
+        if stranded:
+            raise BookingError(
+                "service_needs_someone",
+                "Some services are only done by this one: " + ", ".join(stranded) + ".",
+                {"services": stranded},
+            )
     updated = await conn.execute(
         "update booking_resources set active = $2 where id = $1", resource_id, active
     )
     return updated == "UPDATE 1"
+
+
+async def set_resource_order(conn: asyncpg.Connection, ids: list[UUID]) -> None:
+    """Put the shop's people and chairs in this order: the day view's columns, the booking
+    page's list, and who "anyone" takes first. The list must be all of them, once each."""
+    have = {r["id"] for r in await conn.fetch("select id from booking_resources")}
+    if len(ids) != len(set(ids)) or set(ids) != have:
+        raise BookingError("bad_order", "Send every person or chair once.")
+    await conn.execute(
+        "update booking_resources r set sort = o.n::int "
+        "from unnest($1::uuid[]) with ordinality as o(id, n) where r.id = o.id", ids,
+    )
+
+
+async def set_service_order(conn: asyncpg.Connection, ids: list[UUID]) -> None:
+    """Put the shop's services in this order, as the booking page lists them. The list must be
+    all of them (hidden ones too), once each."""
+    have = {r["id"] for r in await conn.fetch("select id from services")}
+    if len(ids) != len(set(ids)) or set(ids) != have:
+        raise BookingError("bad_order", "Send every service once.")
+    await conn.execute(
+        "update services s set sort = o.n::int "
+        "from unnest($1::uuid[]) with ordinality as o(id, n) where s.id = o.id", ids,
+    )
 
 
 async def set_service_resources(
@@ -416,6 +697,24 @@ async def set_service_resources(
             service_id, resource_id,
         )
     return True
+
+
+async def doers(conn: asyncpg.Connection) -> dict[str, list[str]]:
+    """For each service, the active people or chairs that do it, in the shop's order: all of
+    them for a service nobody was chosen for, else the ones chosen. The booking page offers
+    exactly these (a chair with nothing chosen for it does every service only while no service
+    is narrowed, so the page cannot guess it from the chair's own list)."""
+    out: dict[str, list[str]] = {}
+    for row in await conn.fetch(
+        "select s.id as service_id, r.id as resource_id from services s "
+        "join booking_resources r on r.active "
+        "where not exists (select 1 from service_resources sr where sr.service_id = s.id) "
+        "   or exists (select 1 from service_resources sr "
+        "              where sr.service_id = s.id and sr.resource_id = r.id) "
+        "order by r.sort, r.created_at"
+    ):
+        out.setdefault(str(row["service_id"]), []).append(str(row["resource_id"]))
+    return out
 
 
 async def resource(conn: asyncpg.Connection, resource_id: UUID | None) -> dict | None:
@@ -563,12 +862,25 @@ async def _customer(conn: asyncpg.Connection, contact_id: UUID) -> asyncpg.Recor
     return contact
 
 
+async def _told(conn: asyncpg.Connection, contact_id: UUID, result) -> dict:
+    """What staff need to know about a message to a customer: whether the outbound layer took it,
+    and when it did not (the customer said stop, never agreed to messages, ALYR's sending for the
+    shop is paused), why and where to reach them, so staff tell them themselves."""
+    sent = result.blocked is None
+    return {
+        "sent": sent, "reason": result.blocked,
+        "phone": None if sent else await conn.fetchval(
+            "select phone from contacts where id = $1", contact_id
+        ),
+    }
+
+
 async def _confirm(
     conn: asyncpg.Connection, outbound: Outbound, booking_id: UUID, number: int,
     contact: asyncpg.Record, starts_at: datetime,
-) -> str:
+) -> tuple[str, dict]:
     """Tell the customer the booking is confirmed and queue the reminder. Returns the time
-    as the customer reads it."""
+    as the customer reads it, and whether the customer was told (`_told`)."""
     arabic = contact["lang"] == "ar"
     when = await when_text(conn, starts_at, arabic)
     shop = await shop_name(conn, arabic)
@@ -579,11 +891,11 @@ async def _confirm(
         else f"Booking {number} confirmed at {shop}: {what}, {when}. "
              "To cancel, send \"my booking\"."
     )
-    await outbound.send(conn, templates.notice(
+    sent = await outbound.send(conn, templates.notice(
         contact["id"], "booking_confirmed", contact["lang"], body, number, shop, what, when,
     ))
     await schedule_reminder(conn, booking_id, starts_at)
-    return when
+    return when, await _told(conn, contact["id"], sent)
 
 
 async def create_booking(
@@ -623,7 +935,7 @@ async def create_booking(
         )
         out["when_text"] = await when_text(conn, starts_at, contact["lang"] == "ar")
     else:
-        out["when_text"] = await _confirm(conn, outbound, booking_id, number, contact, starts_at)
+        out["when_text"], _ = await _confirm(conn, outbound, booking_id, number, contact, starts_at)
     return out
 
 
@@ -652,13 +964,16 @@ async def staff_booking(
          "resource": named["name"] if named else None, "by_staff": True,
          "walk_in": walk_in or None},
     )
+    told = None
     if walk_in:
         when = await when_text(conn, starts_at, contact["lang"] == "ar")
     else:
-        when = await _confirm(conn, outbound, booking_id, number, contact, starts_at)
+        when, told = await _confirm(conn, outbound, booking_id, number, contact, starts_at)
     return {"id": str(booking_id), "number": number, "when_text": when,
             "starts_at": starts_at.isoformat(), "service": service["name"],
-            "resource": named["name"] if named else None, "walk_in": walk_in}
+            "resource": named["name"] if named else None, "walk_in": walk_in,
+            # None for a walk-in: the customer is standing there and nothing was sent.
+            "told": told}
 
 
 async def walk_in_customer(
@@ -684,13 +999,44 @@ async def walk_in_customer(
     )
 
 
+async def find_customers(conn: asyncpg.Connection, query: str, limit: int = 6) -> list[dict]:
+    """Customers of the shop whose name or phone number holds what was typed, for the desk to
+    choose one instead of typing them again. Two characters at least; the owner's own test
+    customers are left out."""
+    text = query.strip()
+    digits = "".join(ch for ch in text if ch.isdigit())
+    if len(text) < 2:
+        return []
+    rows = await conn.fetch(
+        "select id, name, phone, lang, consent_service from contacts "
+        "where role = 'customer' and (wa_user_id is null or wa_user_id not like 'TEST.%') "
+        "  and (name ilike '%' || $1 || '%' or (length($2) >= 3 and phone like '%' || $2 || '%')) "
+        "order by (name ilike $1 || '%') desc, name limit $3",
+        text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_"), digits, limit,
+    )
+    return [
+        {"id": str(r["id"]), "name": r["name"], "phone": r["phone"], "lang": r["lang"],
+         "consent": r["consent_service"]}
+        for r in rows
+    ]
+
+
 async def cancel(
     conn: asyncpg.Connection, outbound: Outbound, booking_id: UUID, notify: bool = True,
     actor: Actor = team.CUSTOMER, refund: bool | None = None,
 ) -> bool:
+    """Cancel a booking that has not been finished; False if there was none to cancel."""
+    return await cancel_booking(conn, outbound, booking_id, notify, actor, refund) is not None
+
+
+async def cancel_booking(
+    conn: asyncpg.Connection, outbound: Outbound, booking_id: UUID, notify: bool = True,
+    actor: Actor = team.CUSTOMER, refund: bool | None = None,
+) -> dict | None:
     """Cancel a booking that has not been finished. The time becomes free again. A deposit
     still waiting is no longer asked; a paid one is kept or refunded by the rule the booking
-    was made under (`deposits.on_cancel`), unless staff say to refund it."""
+    was made under (`deposits.on_cancel`), unless staff say to refund it. Returns what became of
+    the deposit and whether the customer was told, or None if there was no such booking."""
     from alyr.modules.bookings import deposits
 
     # The pay link first, in the order a payment arriving takes its locks.
@@ -701,7 +1047,7 @@ async def cancel(
         booking_id,
     )
     if row is None:
-        return False
+        return None
     state = deposits.on_cancel(row, refund)
     await conn.execute(
         "update bookings set status = 'cancelled', deposit_state = $2, hold_until = null "
@@ -714,6 +1060,7 @@ async def cancel(
          "deposit": state if row["deposit"] else None,
          "amount": fmt_qar(row["deposit"]) if row["deposit"] else None},
     )
+    told = None
     if notify:
         arabic = await conn.fetchval(
             "select lang = 'ar' from contacts where id = $1", row["contact_id"]
@@ -726,7 +1073,7 @@ async def cancel(
                 f"تم إلغاء حجزك رقم {row['number']} ({when}). {outcome}" if arabic
                 else f"Booking {row['number']} ({when}) has been cancelled. {outcome}"
             )
-            await outbound.send(conn, templates.notice(
+            sent = await outbound.send(conn, templates.notice(
                 row["contact_id"], "booking_cancelled_deposit", lang, body,
                 row["number"], when, outcome,
             ))
@@ -735,10 +1082,11 @@ async def cancel(
                 f"تم إلغاء حجزك رقم {row['number']} ({when})." if arabic
                 else f"Booking {row['number']} ({when}) has been cancelled."
             )
-            await outbound.send(conn, templates.notice(
+            sent = await outbound.send(conn, templates.notice(
                 row["contact_id"], "booking_cancelled", lang, body, row["number"], when,
             ))
-    return True
+        told = await _told(conn, row["contact_id"], sent)
+    return {"deposit_state": state, "told": told}
 
 
 async def reschedule(
@@ -788,7 +1136,7 @@ async def reschedule(
         f"تم تغيير موعد حجزك رقم {current['number']} إلى {when_with}." if arabic
         else f"Booking {current['number']} has been moved to {when_with}."
     )
-    await outbound.send(conn, templates.notice(
+    sent = await outbound.send(conn, templates.notice(
         current["contact_id"], "booking_moved", "ar" if arabic else "en", body,
         current["number"], when_with,
     ))
@@ -797,7 +1145,8 @@ async def reschedule(
     ):
         await schedule_reminder(conn, booking_id, starts_at)
     return {"id": str(booking_id), "when_text": when, "starts_at": starts_at.isoformat(),
-            "resource": named["name"] if named else None}
+            "resource": named["name"] if named else None,
+            "told": await _told(conn, current["contact_id"], sent)}
 
 
 async def set_outcome(
@@ -844,8 +1193,8 @@ async def list_bookings(
         f"""
         select b.id, b.number, b.service_id, b.service_name, b.starts_at, b.ends_at, b.status,
                b.note, b.walk_in, b.deposit, b.deposit_state, b.hold_until,
-               s.price, s.name_ar as service_name_ar,
-               c.id as contact_id, c.name as customer, c.phone,
+               b.price, s.name_ar as service_name_ar,
+               c.id as contact_id, c.name as customer, c.phone, c.consent_service as consent,
                b.assigned_to, u.name as assignee,
                b.resource_id, res.name as resource_name, res.name_ar as resource_name_ar,
                res.kind as resource_kind,
@@ -882,6 +1231,9 @@ async def list_bookings(
             "day": r["day"].isoformat(),
             "when_text": r["when_text"], "status": r["status"], "note": r["note"],
             "customer": r["customer"], "contact_id": str(r["contact_id"]), "phone": r["phone"],
+            # Whether ALYR may message this customer (they wrote first, or agreed): a move or a
+            # cancel tells them by WhatsApp only when it is "granted".
+            "consent": r["consent"],
             "assigned": {"id": str(r["assigned_to"]), "name": r["assignee"]}
             if r["assigned_to"] else None,
             # Which chair, person or room holds it; null for a shop with no resources.
@@ -913,11 +1265,22 @@ async def day_view(conn: asyncpg.Connection, day: date) -> dict:
         r for r in await list_resources(conn)
         if r["active"] or r["id"] in used
     ]
+    closed = await shop_closed_on(conn, day)
+    leave = {
+        str(r["resource_id"]): {"reason": r["reason"], "reason_ar": r["reason_ar"]}
+        for r in await conn.fetch(
+            "select resource_id, reason, reason_ar from booking_closures "
+            "where resource_id is not null and $1::date between first_day and last_day "
+            "order by created_at desc", day,
+        )
+    }
     for r in resources:
         own = [p for p in r["hours"] if p["weekday"] == weekday]
-        r["today"] = own if r["hours"] else shop_periods
-        r["off"] = bool(r["hours"]) and not own
-    return {"day": day.isoformat(), "weekday": weekday, "hours": shop_periods,
+        r["leave"] = leave.get(r["id"])
+        shut = closed is not None or r["leave"] is not None
+        r["today"] = [] if shut else (own if r["hours"] else shop_periods)
+        r["off"] = shut or (bool(r["hours"]) and not own)
+    return {"day": day.isoformat(), "weekday": weekday, "hours": shop_periods, "closed": closed,
             "resources": resources, "bookings": bookings}
 
 

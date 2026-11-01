@@ -24,7 +24,7 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi import Request
 
-from alyr.core import mail, ratelimit
+from alyr.core import mail, ratelimit, roles
 from alyr.db import Database
 
 log = logging.getLogger("alyr.staff_security")
@@ -89,11 +89,11 @@ async def announce_lock(db: Database, email: str, wrong: int) -> None:
     async with db.unscoped() as conn:
         until = await lifts_at(conn, email)
         name = await conn.fetchval("select name from users where email = $1", email) or ""
-    await _audit(
+    await audit_event(
         db, email, name, "staff.locked",
         {"wrong_codes": wrong, "window_hours": 24, "lifts_at": until.isoformat()},
     )
-    await _email(email, mail.staff_locked_message(name, email, wrong, until))
+    await send_email(email, mail.staff_locked_message(name, email, wrong, until))
     # An alert leaves ALYR (ntfy, email): counts only, never the address (alerts.py). Imported
     # here because alerts pulls in the whole message path, which itself imports this module.
     from alyr.core import alerts
@@ -143,8 +143,8 @@ async def _remember(conn, email: str, kind: str, value: str) -> bool:
     return bool(inserted)
 
 
-async def _audit(db: Database, email: str, name: str, action: str, detail: dict) -> None:
-    async with db.unscoped() as conn, conn.transaction():
+async def audit_event(db: Database, email: str, name: str, action: str, detail: dict) -> None:
+    async with roles.privileged(db).unscoped() as conn, conn.transaction():
         # The audit log takes a row only from a connection that has declared the back office
         # (migration 0016); this is the same declaration the back office's own routes make.
         await conn.execute("select set_config('app.platform_admin', 'on', true)")
@@ -155,7 +155,7 @@ async def _audit(db: Database, email: str, name: str, action: str, detail: dict)
         )
 
 
-async def _email(to: str, message: tuple[str, str, str]) -> str:
+async def send_email(to: str, message: tuple[str, str, str]) -> str:
     """Send one of the staff emails. Returns "sent", or why not."""
     if not mail.configured():
         return "mail_not_configured"
@@ -189,14 +189,14 @@ async def record_sign_in(db: Database, request: Request, email: str) -> dict | N
             new_address = await _remember(conn, email, "address", _digest(address))
         emailed = "not_needed"
         if new_device or new_address:
-            emailed = await _email(email, mail.staff_sign_in_message(
+            emailed = await send_email(email, mail.staff_sign_in_message(
                 name, datetime.now(UTC), device, shown, new_device, new_address,
             ))
         detail = {
             "device": device, "address": shown, "new_device": new_device,
             "new_address": new_address, "email": emailed,
         }
-        await _audit(db, email, name, "staff.sign_in", detail)
+        await audit_event(db, email, name, "staff.sign_in", detail)
         return detail
     except Exception:  # noqa: BLE001
         log.exception("the sign-in of a member of staff could not be recorded")

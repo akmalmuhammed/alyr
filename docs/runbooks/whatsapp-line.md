@@ -67,6 +67,62 @@ Then in `/ops`:
 is sent from it. The number stays in Meta. The line's trail keeps who attached it, when it was checked
 and when it was detached.
 
+## Health: what Meta says about a number and its account
+
+Spec 062, D-147. `/ops` → WhatsApp lines → a shop → **Health**, and **Today** for anything wrong. It comes from
+Meta's notices as they arrive, and from a read of every number every six hours; **Check** reads it again.
+Meta's pages, checked 31 Oct 2026:
+
+- Quality, throughput and the number's fields: https://developers.facebook.com/documentation/business-messaging/whatsapp/business-phone-numbers/phone-numbers
+- A number's limit and throughput changes: https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/reference/phone_number_quality_update
+- Account restrictions, violations, disables and partners: https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/reference/account_update
+- Alerts (limit increases, official business account, profile picture): https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/reference/account_alerts
+- Account review decisions: https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/reference/account_review_update
+- Display name decisions: https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/reference/phone_number_name_update
+- Messaging limits: https://developers.facebook.com/documentation/business-messaging/whatsapp/messaging-limits
+- The health status of a number: https://developers.facebook.com/documentation/business-messaging/whatsapp/support/health-status
+
+**For these notices to arrive at all,** the Meta app's webhook must be subscribed to the fields
+`account_update`, `account_alerts`, `account_review_update`, `phone_number_quality_update`,
+`phone_number_name_update`, `message_template_status_update` and `template_category_update`, as well as
+`messages` (the founder, in the app dashboard → WhatsApp → Configuration → Webhook fields), and the app must be
+subscribed to each account (Check's "Meta's messages reach ALYR" row). Until then only the six-hourly read works.
+
+### The states
+
+| Shows | Means | Do |
+|---|---|---|
+| Healthy | Meta has reported and nothing is wrong | Nothing |
+| Meta has not reported yet | No notice, no read since the number was attached | Press **Check** |
+| Needs a look (attention) | Something Meta calls a warning | Read the reasons; see below |
+| Needs action now (critical) | Flagged, restricted, blocked, or the account is | See below; it is also on Today and on the phone |
+
+### The reasons and what to do
+
+| Reason | What it is | Do |
+|---|---|---|
+| Quality rating red / number flagged | Customers are blocking or reporting this shop's messages. Meta can lower the messaging limit | Find out from the owner what is being sent that customers do not want (reminders to people who did not ask; a template nobody expects). Stop it at the source. Quality recovers over days; Meta says a flagged number returns to connected if quality improves |
+| Quality yellow | Medium quality | Same, earlier |
+| Restricted (the number) | Meta shows the number as restricted, often because it reached its limit | Wait for the 24-hour window to reset; look at the messaging limit; do not send more |
+| Sending blocked / limited | Meta's health status says a requirement is not met (an unapproved display name, a template not approved) | Read Meta's page above; the Health section says which |
+| Display name rejected | Meta refused the name; its reason code is shown | The owner edits the name in WhatsApp Manager to match the sign or registration (Meta's display name guidelines) |
+| The account is restricted | A restriction with a type and an end date (for example, no business-started messages until the date) | **Every shop on that account is affected.** Read Meta's remediation in WhatsApp Manager; do not send business-started messages until it ends; tell the founder |
+| The account is disabled / scheduled to be disabled | Meta is closing or will close the account | Founder now: appeal in WhatsApp Manager / Business Support; the shops on it will stop |
+| Meta reports a policy violation | A warning that precedes a restriction | Read what the violation says; find what was sent; it stops counting after 30 days |
+| The business removed ALYR from its account | An Embedded Signup shop disconnected ALYR | Ask the owner; nothing can be sent until they reconnect |
+| Review of the account rejected / not decided | Meta's policy review | Founder: Meta Business Support |
+| Meta raised an alert | For example a limit increase was deferred, or an official business account decision | Informational; read the type and Meta's page |
+
+### The alert on the phone
+
+One message, `line_health`, when any number is critical or any account is restricted, disabled or removed. It
+carries counts, never a name. The first step it names is this page. It repeats every two hours and says "cleared" when
+Meta's state improves (the next read, or the next notice).
+
+### What ALYR does not do
+
+It does not pause a shop's sending when its number is flagged, and it does not tell the owner. Both are the founder's call.
+
 ## What is checked and what is not
 
 A **check** reads from Meta (the number, the numbers on the account, the app subscribed to its webhooks)

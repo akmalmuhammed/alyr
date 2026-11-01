@@ -27,6 +27,7 @@ import asyncpg
 from alyr import catalog
 from alyr.catalog import Text
 from alyr.config import get_settings
+from alyr.core import whatsapp_signup
 
 
 class SetupError(Exception):
@@ -232,6 +233,8 @@ async def current(conn: asyncpg.Connection) -> dict:
         ],
         "note": saved["note"] if saved else "",
         "open": way in open_ways(),
+        # Whether the owner may connect now, with Meta's pop-up (spec 063): nothing but a yes or no.
+        "connect": whatsapp_signup.offer(get_settings(), way),
     }
 
 

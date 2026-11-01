@@ -91,6 +91,8 @@ async def maybe_handle(
             "contact_id": str(contact["id"]), "channel": message.channel,
             "media_id": message.media_id, "mime_type": message.mime_type,
             "caption": message.text, "message_id": message.message_id, "lang": lang,
+            # A file sent to a shop's own WhatsApp account is fetched with that shop's token.
+            "number_id": message.to_number_id,
         })
         return []
     if reply.startswith("undo:"):

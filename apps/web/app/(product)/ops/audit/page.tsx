@@ -23,6 +23,13 @@ const ACTION: Record<string, string> = {
   "today.unsnoozed": "Brought a Today item back", "staff.added": "Added staff", "staff.removed": "Removed staff",
   "staff.sign_in": "Signed in to the back office",
   "staff.locked": "Paused sign-in after wrong codes",
+  "staff.factor_enrolled": "Set up an authenticator app",
+  "staff.factor_replaced": "Replaced the authenticator app",
+  "staff.factor_removed": "Turned off the authenticator app",
+  "staff.factor_recovery_used": "Used a recovery code for the second step",
+  "staff.factor_recovery_new": "Made new recovery codes",
+  "staff.factor_paused": "Paused the authenticator after wrong codes",
+  "staff.breakglass": "Ran the break-glass",
 };
 
 function summary(entry: Entry) {
@@ -49,6 +56,7 @@ function summary(entry: Entry) {
     const fresh = [d.new_device && "new device", d.new_address && "new address"].filter(Boolean).join(", ");
     return `${entry.subject_id}: ${where}${fresh ? ` (${fresh})` : ""}`;
   }
+  if (entry.action === "staff.breakglass") return `${d.command}: ${d.reason}`;
   if (entry.action === "staff.locked") return `${entry.subject_id}: ${d.wrong_codes} wrong codes in ${d.window_hours} hours`;
   if (entry.subject_type === "staff") return entry.subject_id;
   return Object.keys(d).length ? JSON.stringify(d).slice(0, 140) : "";

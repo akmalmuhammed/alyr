@@ -127,11 +127,11 @@ export function Shell({
             </a>
             <ThemeSwitch locale={locale} place="bar" />
             {TRY_FREE_LIVE ? (
-              <a className="btn btn-volt btn-sm btn-notch" href={TRY_FREE_URL} data-cta="try-free-header">
+              <a className="btn btn-volt btn-sm" href={TRY_FREE_URL} data-cta="try-free-header">
                 <span>{t.tryFree.action}</span>
               </a>
             ) : (
-              <a className="btn btn-volt btn-sm btn-notch" href={contact}>
+              <a className="btn btn-volt btn-sm" href={contact}>
                 <span className="top-cta-full">{action}</span>
                 <span className="top-cta-short">{short}</span>
               </a>

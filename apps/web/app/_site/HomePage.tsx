@@ -1,6 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
 import { AgentFigure } from "./AgentFigure";
-import { Icon, type IconName } from "./brand";
 import { BusinessTabs } from "./BusinessTabs";
 import { Actions, ContactButton, ContactNote, TryFreeNote } from "./Contact";
 import { copy, type Locale, type Questions as QuestionSet } from "./copy";
@@ -21,9 +20,9 @@ import "./home.css";
 
 /**
  * The ALYR homepage: ALYR as the technology team an owner-run business never had (ALY-210,
- * D-048, after D-047, folded on 24 Oct 2026). The hero says so, with why in one line (a big
- * company has consultants and an IT team; you have us), beside a film of one afternoon at a
- * fictional bakery in the product's own screens (D-062); how we work, a loop of check, set up, see and improve; the
+ * D-048, after D-047, folded on 24 Oct 2026). The hero says so in two plain sentences, beside a
+ * film of one afternoon at a fictional bakery in the product's own screens (D-062); how we
+ * work: check, set up, see and improve, then check again; the
  * visitor's own business, as tabs, whose "Today" list is what a check-up finds; one order
  * followed from the first message to collection, as proof; ALYR Agent; the products; the
  * price (offer on); questions; the closing call. Every word from `copy.ts`; every
@@ -50,14 +49,9 @@ export function HomePage({ locale }: { locale: Locale }) {
 
 const n = (index: number) => ({ "--i": index }) as CSSProperties;
 
-/** A section rule with a cross at each end, where it meets the grid's edges. */
-function Rule({ dashed = false }: { dashed?: boolean }) {
-  return (
-    <div className={`rule${dashed ? " rule-dashed" : ""}`} aria-hidden="true">
-      <i />
-      <i />
-    </div>
-  );
+/** A section rule: one plain hairline. */
+function Rule() {
+  return <div className="rule" aria-hidden="true" />;
 }
 
 /** A section's heading. The eyebrow is kept only where it says something the heading does
@@ -67,7 +61,7 @@ function Head({ eyebrow, title, id, dark = false, children }: {
 }) {
   return (
     <div className="head">
-      {eyebrow && <p className={`eyebrow${dark ? " eyebrow-dark" : ""}`}>{rich(eyebrow)}</p>}
+      {eyebrow && <p className={`eyebrow${dark ? " eyebrow-dark" : ""}`}><span>{rich(eyebrow)}</span></p>}
       <h2 className="h2" id={id} data-split>{lines(title)}</h2>
       {children}
     </div>
@@ -75,7 +69,7 @@ function Head({ eyebrow, title, id, dark = false, children }: {
 }
 
 // ------------------------------------------------------------------------ hero
-/* The headline, the lead, the check-up and the facts on the start side; on the far side the
+/* The headline, the lead and the check-up on the start side; on the far side the
    film of one afternoon at Qirfa Bakery in the product (HeroFilm.tsx, D-062), on a Carbon plate
    cut by the fold and clear of the headline, which stays the page's largest paint. On a phone
    the plate comes under the text. */
@@ -93,15 +87,9 @@ function Hero({ locale }: { locale: Locale }) {
           <p className="hero-lead">{rich(hero.lead)}</p>
           <div className={TRY_FREE_LIVE ? "hero-actions is-pair" : "hero-actions"} data-hero-cta>
             <Actions locale={locale} lean label={hero.action} />
-            <a className="link hero-more" href="#how">
-              {hero.more}
-              <Icon name="arrow-right" className="ico ico-flip" />
-            </a>
+            <a className="link hero-more" href="#how">{hero.more}</a>
           </div>
-          {TRY_FREE_LIVE ? <TryFreeNote locale={locale} className="hero-note" /> : <ContactNote locale={locale} className="hero-note" />}
-          <ul className="hero-facts">
-            {(OFFER_LIVE ? hero.facts : hero.factsNoOffer).map((fact, index) => <li key={fact} style={n(index)}>{rich(fact)}</li>)}
-          </ul>
+          {TRY_FREE_LIVE ? <TryFreeNote locale={locale} className="hero-note" /> : <ContactNote locale={locale} className="hero-note" address={false} />}
         </div>
       </div>
       <HeroFilm locale={locale} />
@@ -114,14 +102,11 @@ function Spotlight({ locale }: { locale: Locale }) {
   const t = copy[locale];
   const s = t.home.spotlight;
   const callouts = (
-    <ol className="callouts" aria-label={s.calloutsLabel}>
-      {s.callouts.map((callout, index) => (
-        <li key={callout}>
-          <span className="co-n" aria-hidden="true"><bdi>{index + 1}</bdi></span>
-          <span>{rich(callout)}</span>
-        </li>
+    <ul className="callouts" aria-label={s.calloutsLabel}>
+      {s.callouts.map((callout) => (
+        <li key={callout}>{rich(callout)}</li>
       ))}
-    </ol>
+    </ul>
   );
   return (
     <section className="hs spot" id="agent" aria-labelledby="spot-title">
@@ -131,10 +116,7 @@ function Spotlight({ locale }: { locale: Locale }) {
           <Head eyebrow={s.eyebrow} title={s.title} id="spot-title" />
           <div className="open-end">
             <p className="lead">{rich(s.body)}</p>
-            <a className="link" href={PATHS.agent[locale]}>
-              <span>{rich(s.link)}</span>
-              <Icon name="arrow-right" className="ico ico-flip" />
-            </a>
+            <a className="link" href={PATHS.agent[locale]}><span>{rich(s.link)}</span></a>
           </div>
         </div>
         <AgentFigure
@@ -211,7 +193,7 @@ function Business({ locale }: { locale: Locale }) {
         </div>
         <BusinessTabs
           label={b.tabsLabel}
-          tabs={[...b.rows, b.other].map((row) => ({ id: row.id, name: row.tab, icon: <Icon name={BUSINESS_ICON[row.id] ?? "plus"} /> }))}
+          tabs={[...b.rows, b.other].map((row) => ({ id: row.id, name: row.tab }))}
         >
           {b.rows.map((row, index) => (
             <div key={row.id} id={row.id} className={`biz-panel${index === 0 ? " is-on" : ""}`} role="tabpanel" aria-labelledby={`biz-tab-${row.id}`}>
@@ -221,23 +203,13 @@ function Business({ locale }: { locale: Locale }) {
                 <div className="biz-col biz-day">
                   <p className="mono-k">{b.day}</p>
                   <ul>
-                    {row.day.map((line) => (
-                      <li key={line}>
-                        <span className="biz-mark" aria-hidden="true" />
-                        <span>{rich(line)}</span>
-                      </li>
-                    ))}
+                    {row.day.map((line) => <li key={line}>{rich(line)}</li>)}
                   </ul>
                 </div>
                 <div className="biz-col biz-with">
                   <p className="mono-k">{b.with}</p>
                   <ul>
-                    {row.with.map((line) => (
-                      <li key={line}>
-                        <span className="biz-tick" aria-hidden="true"><TickPath /></span>
-                        <span>{rich(line)}</span>
-                      </li>
-                    ))}
+                    {row.with.map((line) => <li key={line}>{rich(line)}</li>)}
                   </ul>
                 </div>
               </div>
@@ -254,10 +226,7 @@ function Business({ locale }: { locale: Locale }) {
                 </p>
                 <span className="biz-acts">
                   {pageOf(row.id) && (
-                    <a className="link biz-more" href={PATHS[sectorPage(pageOf(row.id)!)][locale]}>
-                      <span>{t.sectors.items[pageOf(row.id)!].more}</span>
-                      <Icon name="arrow-right" className="ico ico-flip" />
-                    </a>
+                    <a className="link biz-more" href={PATHS[sectorPage(pageOf(row.id)!)][locale]}>{t.sectors.items[pageOf(row.id)!].more}</a>
                   )}
                   <ContactButton locale={locale} variant="line" className="biz-ask" message={row} label={row.ask} />
                 </span>
@@ -267,20 +236,13 @@ function Business({ locale }: { locale: Locale }) {
           <div id={b.other.id} className="biz-panel biz-else" role="tabpanel" aria-labelledby={`biz-tab-${b.other.id}`}>
             <h3 className="biz-name">{rich(b.other.title)}</h3>
             <p className="biz-else-body">{rich(b.other.body)}</p>
-            <a className="link" href={contactHref()}>
-              {b.other.link}
-              <Icon name="arrow-right" className="ico ico-flip" />
-            </a>
+            <a className="link" href={contactHref()}>{b.other.link}</a>
           </div>
         </BusinessTabs>
       </div>
     </section>
   );
 }
-
-const BUSINESS_ICON: Record<string, IconName> = {
-  bakery: "bakery", groceries: "basket", wholesale: "crate", fashion: "hanger", restaurant: "cup", salon: "scissors", "home-services": "wrench",
-};
 
 // ------------------------------------------------------------ one order, start to finish
 function See({ locale }: { locale: Locale }) {
@@ -293,25 +255,12 @@ function See({ locale }: { locale: Locale }) {
             <Head eyebrow={see.eyebrow} title={see.title} id="see-title" dark />
             <div className="open-end">
               <p className="lead">{rich(see.body)}</p>
-              <a className="link link-dark" href={PATHS.chat[locale]}>
-                <span>{rich(see.link)}</span>
-                <Icon name="arrow-right" className="ico ico-flip" />
-              </a>
+              <a className="link link-dark" href={PATHS.chat[locale]}><span>{rich(see.link)}</span></a>
             </div>
           </div>
           <FlowDiagram flow={see} sample={copy[locale].fig.sample} note={copy[locale].agent.samples.bakery.fictional} />
         </div>
-        <div className="tally">
-          <h3 className="mono-k" id="tally-title">{see.tally.label}</h3>
-          <ul aria-labelledby="tally-title">
-            {see.tally.items.map((item, index) => (
-              <li key={item.text} data-m style={n(index)}>
-                <b className="tally-n"><bdi>{item.n}</bdi></b>
-                <span>{rich(item.text)}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <p className="lead see-tally">{rich(see.tally)}</p>
       </div>
     </section>
   );
@@ -320,8 +269,9 @@ function See({ locale }: { locale: Locale }) {
 // ---------------------------------------------------------------- how we work
 /**
  * Check, set up, see, improve: four cards, each a still canvas with one moving scene from
- * the product, and a line back from the last to the first, because the work starts again
- * (HowCards.tsx, ALY-226). Without motion every scene is finished and the line is drawn.
+ * the product (HowCards.tsx, ALY-226); the last card's words say that we check again. Without
+ * motion every scene is finished. Under them, what we need from you, with its button beside
+ * the words it belongs to (ALY-303).
  */
 function How({ locale }: { locale: Locale }) {
   const w = copy[locale].home.how;
@@ -337,23 +287,10 @@ function How({ locale }: { locale: Locale }) {
         </div>
         <HowCards locale={locale} />
         <div className="how-foot">
-          <div className="how-next">
+          <h3 className="how-need-k">{w.need.title}</h3>
+          <div className="how-need">
+            <p>{rich(w.need.body)}</p>
             <ContactButton locale={locale} variant="line" label={copy[locale].home.final.action} />
-          </div>
-          <div className="how-lists">
-            {[w.need].map((list) => (
-              <div key={list.title} className="inc-list">
-                <h3 className="mono-k">{list.title}</h3>
-                <ul className="checks">
-                  {list.items.map((item, index) => (
-                    <li key={item} data-m style={n(index)}>
-                      <TickPath />
-                      <span>{rich(item)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
           </div>
         </div>
       </div>
@@ -401,13 +338,8 @@ function Price({ locale }: { locale: Locale }) {
             <p className="sheet-setup">{rich(p.setup)}</p>
             <p className="sheet-first-month">{rich(p.firstMonth)}</p>
             <h3 className="mono-k">{p.includesLabel}</h3>
-            <ul className="checks sheet-incl">
-              {p.includes.map((item, index) => (
-                <li key={item} data-m style={n(index)}>
-                  <TickPath />
-                  <span>{rich(item)}</span>
-                </li>
-              ))}
+            <ul className="sheet-incl">
+              {p.includes.map((item) => <li key={item}>{rich(item)}</li>)}
             </ul>
             <p className="sheet-confirm">{rich(p.confirm)}</p>
             <p className="status-line sheet-early">
@@ -489,7 +421,6 @@ function Questions({ locale }: { locale: Locale }) {
               <details className="faq-more">
                 <summary>
                   <span>{q.more}</span>
-                  <span className="faq-more-n" aria-hidden="true"><bdi>{items.length - q.shown}</bdi></span>
                   <span className="qa-mark" aria-hidden="true" />
                 </summary>
                 {items.slice(q.shown).map((item) => (

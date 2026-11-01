@@ -37,10 +37,11 @@ words under `home` in `copy.ts`):
    (`Shell` takes them from `home.final`). Price only with the offer.
 2. **Hero:** no eyebrow on the page (`hero.eyebrow` is the social card's only), H1 "The tech
    team your business never had.", then one row under it: the lead on the start side, which
-   carries the one line of why ("We check how your business runs, set up what it needs and
-   keep improving it with you. It is the work a large company has an IT team for."), "Book a
-   check-up" and "See how we work" (to `#how`), who replies, and the facts as one quiet line
-   (one under the other beside the film), all on the start side; on the far side **the film**
+   says where we start and what we do in two plain sentences ("We come to your shop in Qatar
+   and see how your business runs. Then we set up what it needs and keep improving it with
+   you."), "Book a check-up" and "See how we work" (a plain link to `#how`), and who replies in
+   one short line, all on the start side, with no list of facts (D-150: `hero.facts` is the
+   social card's only); on the far side **the film**
    (D-062, the founder, 28 Oct 2026; `HeroFilm.tsx`, `alyr-design/motion.md`, "The hero
    film"): a Carbon plate cut by the fold, clear of the headline, from under the header to the
    hero's foot, with one afternoon at Qirfa Bakery in the product's own screens, three lanes
@@ -59,14 +60,12 @@ words under `home` in `copy.ts`):
    4 × `--play-stagger` apart), holds its finished state while its new words are read, fades
    and plays again, each card on its own cycle (founder, 26 Oct 2026: motion always on;
    `loops.ts`, `loopStyle.ts`); a hover, keyboard focus or press of its canvas (a `button` over
-   the drawing) replays a resting card at once. One Pause control under Improve, on the line of
-   "Then we check again.", stops all four. Under the row a solid line draws each time Improve
-   plays: down from under Improve, along the row's foot, up the page's gutter and along 45°
-   onto Check's cut, which takes one Volt line;
-   "Then we check again." under it (the founder's words; no "every month"). On phones the
-   line runs up the gutter from under the last card. The HTML is every finished state and the
-   line is drawn; without scripts or with reduced motion nothing plays. Then a line button
-   and "What we need from you".
+   the drawing) replays a resting card at once. One Pause control under Improve stops all four.
+   The last card's words end "Then we check again." (D-150: the line drawn back to Check and
+   its floating words are gone; no "every month"). The HTML is every finished state; without
+   scripts or with reduced motion nothing plays. Then "What we need from you": its heading on
+   the start columns and, on the end columns, one sentence (`need.body`) with the line button
+   under it.
 4. **Your business** (`#business`, `BusinessTabs.tsx`): one tab per business type plus
    "Something else"; each panel has an anchor (`#bakery`, `#groceries` (added 28 Oct 2026, ALY-232), `#wholesale`, `#fashion`,
    `#restaurant`, `#salon`, `#home-services`, `#other`), the "Today" list (what a check-up
@@ -74,8 +73,9 @@ words under `home` in `copy.ts`):
    the empty chair, regulars who owe, not knowing how the week compares), "With ALYR" row for
    row, the products it would use, and a line contact button whose message names that
    business (`ContactButton message`). Panels are server HTML: stacked without scripts, one
-   cell with scripts so the page below never moves. The tabs are cards with a line icon
-   (`brand.tsx`). Each panel opens on **the day split by the fold** (`FoldSplit.tsx`,
+   cell with scripts so the page below never moves. The tabs are the businesses' names, the
+   chosen one in ink with a line under it; under the day, "Today" and "With ALYR" are plain
+   lines, with no ticks, dots or ruled rows (D-150). Each panel opens on **the day split by the fold** (`FoldSplit.tsx`,
    `room.css`, ALY-209): the owner's WhatsApp chats on faded paper and the same customers as
    ALYR keeps them on Carbon (marked "Sample"), row for row (`chats` and `orders` on each
    `BusinessRow`; keep the unread counts adding up to the header's, and every status one ALYR
@@ -84,16 +84,16 @@ words under `home` in `copy.ts`):
    rest on "With ALYR" and swipe.
 5. **One order, start to finish** (`#see`): the `/chat` flow figure (`FlowDiagram`) told for
    Sara at Qirfa Bakery, on a cut-corner Carbon plate whose top holds the section's heading,
-   lead and link (no cross rule), marked "Sample" at the end of its tab row, and the tally of
-   who did what. Every step shown is built; keep the tally's counts true to the steps. The
+   lead and link, marked "Sample" at the end of its tab row, and who did what in one sentence
+   (`see.tally`). Every step shown is built; keep the sentence's counts true to the steps. The
    flow opens on a finished frame (its first story's last step) and plays from step 1 once
    60% of it is on screen; with reduced motion it stays finished.
-6. **ALYR Agent** (eyebrow "ALYR Agent · With every product") with numbered callouts and the
+6. **ALYR Agent** (eyebrow "ALYR Agent · With every product") with plain callouts that name
+   the screen's parts (no numbered discs, D-150) and the
    sample switch (its "Sample business" label is the mark), opening on the bakery. The hero
    already shows the screen's opening sentence, so this section shows it only inside "See the
-   whole screen": it opens on Needs you now and the suggestions with their reasons (marks 1
-   and 2), and the disclosure (a native `<details>`) opens the rest, marks 3 and 4 and their
-   callouts. Show the dashboard's sentence once per page. Not pinned.
+   whole screen": it opens on Needs you now and the suggestions with their reasons, and the
+   disclosure (a native `<details>`) opens the rest and their callouts. Show the dashboard's sentence once per page. Not pinned.
 
 **Section openings vary** (framer-review P3, 24 Oct 2026): a split opening (heading at the
 start, lead and link on the end column at its last baseline: How we work, ALYR Agent), a full
@@ -110,7 +110,7 @@ ALYR Agent's split), and land each section's content within about 300 px of its 
    columns) and Bookings; Agent, Accounts, and Shelf over Docs. Two columns on a tablet, one on
    a phone. Each tile is one link named "{name}, {descriptor}" (and its state), holding a
    fragment of the product's real screen (`inert`, cropped hard at the tile's edge, no fade)
-   and its name, descriptor and arrow. Numbers come from the engine's sample (`_agent/samples`),
+   and its name and descriptor (no arrow, D-150). Numbers come from the engine's sample (`_agent/samples`),
    Shelf's page copy and `paperData.ts`, never retyped; the Agent tile titles its card
    "Suggestions" and draws no rule line. **Every tile is finished before it is seen**, at
    every width; at 60% in view its moment plays (CSS keyed on `is-in`, which loops.ts adds;
@@ -130,7 +130,10 @@ start", with its six facts, the on-record slots and the tracking pages in two la
 and the rail of four numbered steps under How we work.
 Gone on 24 Oct and not to come back without the founder: the Why ALYR table, "What a check-up
 finds" as its own section, the pinned products room, eyebrows that repeat a heading or a
-header link, numbers on tabs and indexes, FIG captions. Gone on 25 Oct (the content audit,
+header link, numbers on tabs and indexes, FIG captions. Gone on 31 Oct (the founder, D-150):
+the hero's facts list, button icons and arrows, the line back to Check, the tally's three big
+numbers, the tabs' cards and icons, ticks, numbered discs, the grid behind the hero, crosses on
+rules. Gone on 25 Oct (the content audit,
 `docs/content-audit/`): `/agent`'s "The rules" section and its product-bar link, and every
 rule line drawn on the site.
 

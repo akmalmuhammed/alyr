@@ -118,7 +118,8 @@ class PhotoDrafts:
         try:
             # Outside any transaction: this is a slow call to the channel.
             data, _ = await channel.download_media(
-                payload["media_id"], self._settings.media_max_upload_bytes
+                payload["media_id"], self._settings.media_max_upload_bytes,
+                number_id=payload.get("number_id", ""),
             )
         except ValueError:  # larger than we take, or not at Meta: trying again will not help
             await self._say(tenant_id, contact_id, say("photo_failed", lang), lang)

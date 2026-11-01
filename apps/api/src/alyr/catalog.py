@@ -170,8 +170,7 @@ MODULES: tuple[Module, ...] = (
                 "unanswered",
                 Text("Unanswered chats", "محادثات بانتظار الرد"),
                 "(select count(*) from contacts c where c.role = 'customer' and c.inbox_status = 'open' "
-                "and exists (select 1 from messages m where m.contact_id = c.id and m.direction = 'in' "
-                "and m.created_at > coalesce(c.inbox_read_at, '-infinity')))",
+                "and c.last_in_message_at > coalesce(c.inbox_read_at, '-infinity'))",
             ),
         ),
     ),

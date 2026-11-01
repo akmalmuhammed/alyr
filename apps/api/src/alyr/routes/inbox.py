@@ -53,20 +53,28 @@ async def conversations(
     assigned: str = Query("any", pattern="^(any|me|none)$"),
     staff: Staff = Depends(current_staff),
 ) -> dict:
-    async with request.app.state.db.tenant(staff.tenant_id) as conn:
-        rows = await service.conversations(conn, status, assigned, staff.user_id)
-    return {"conversations": rows, "unread": sum(1 for r in rows if r["unread"])}
+    async def compute() -> dict:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            return await service.listing(conn, status, assigned, staff.user_id)
+
+    # Tabs that look at the same list within a moment share one run (core/pollcache.py).
+    mine = staff.user_id if assigned == "me" else None
+    return await request.app.state.poll.get_json(
+        staff.tenant_id, ("inbox", status, assigned, mine), compute)
 
 
 @router.get("/conversations/{contact_id}")
 async def thread(
     contact_id: UUID, request: Request, tenant_id: UUID = Depends(current_tenant)
 ) -> dict:
-    async with request.app.state.db.tenant(tenant_id) as conn:
-        found = await service.thread(conn, contact_id)
-    if found is None:
-        raise HTTPException(status_code=404, detail="conversation not found")
-    return found
+    async def compute() -> dict:
+        async with request.app.state.db.tenant(tenant_id) as conn:
+            found = await service.thread(conn, contact_id)
+        if found is None:  # a refusal is not kept (core/pollcache.py)
+            raise HTTPException(status_code=404, detail="conversation not found")
+        return found
+
+    return await request.app.state.poll.get_json(tenant_id, ("thread", contact_id), compute)
 
 
 @router.post("/conversations/{contact_id}/read")

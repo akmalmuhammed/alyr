@@ -543,6 +543,35 @@ _STAFF = {
             "If you did not, someone is guessing codes for your account. Your email inbox is "
             "the key to it, so check that it is safe. Then write to hello@alyr.qa."
         ),
+        "factor": {
+            "enrolled": (
+                "An authenticator app was set up on your ALYR account",
+                "An authenticator app was set up for your ALYR back-office account.",
+            ),
+            "replaced": (
+                "The authenticator app on your ALYR account was replaced",
+                "The authenticator app for your ALYR back-office account was replaced.",
+            ),
+            "removed": (
+                "The authenticator app on your ALYR account was turned off",
+                "The authenticator app for your ALYR back-office account was turned off.",
+            ),
+            "recovery_used": (
+                "A recovery code was used on your ALYR account",
+                "A recovery code was used to sign in to your ALYR back-office account. "
+                "That code cannot be used again.",
+            ),
+            "recovery_new": (
+                "New recovery codes were made for your ALYR account",
+                "New recovery codes were made for your ALYR back-office account. "
+                "The old ones no longer work.",
+            ),
+        },
+        "when": lambda when: f"When: {when} (Doha).",
+        "factor_no": (
+            "If it was not you, write to hello@alyr.qa at once. Then secure your email inbox "
+            "and your phone."
+        ),
         "small": "ALYR sends this to the member of staff whose account it is.",
     },
     "ar": {
@@ -574,6 +603,34 @@ _STAFF = {
         "lock_no": (
             "إذا لم تكن أنت، فهناك من يخمّن رموز حسابك. بريدك الإلكتروني هو مفتاحه، فتأكد أنه "
             "آمن. ثم اكتب إلى hello@alyr.qa."
+        ),
+        "factor": {
+            "enrolled": (
+                "تم إعداد تطبيق المصادقة لحسابك في ALYR",
+                "تم إعداد تطبيق المصادقة لحسابك في لوحة إدارة ALYR.",
+            ),
+            "replaced": (
+                "تم استبدال تطبيق المصادقة في حسابك في ALYR",
+                "تم استبدال تطبيق المصادقة في حسابك في لوحة إدارة ALYR.",
+            ),
+            "removed": (
+                "تم إيقاف تطبيق المصادقة في حسابك في ALYR",
+                "تم إيقاف تطبيق المصادقة في حسابك في لوحة إدارة ALYR.",
+            ),
+            "recovery_used": (
+                "استُخدم رمز استرداد في حسابك في ALYR",
+                "استُخدم رمز استرداد لتسجيل الدخول إلى حسابك في لوحة إدارة ALYR. "
+                "لا يمكن استخدام هذا الرمز مرة أخرى.",
+            ),
+            "recovery_new": (
+                "أُنشئت رموز استرداد جديدة لحسابك في ALYR",
+                "أُنشئت رموز استرداد جديدة لحسابك في لوحة إدارة ALYR. "
+                "الرموز القديمة لم تعد تعمل.",
+            ),
+        },
+        "when": lambda when: f"الوقت: {when} (بتوقيت الدوحة).",
+        "factor_no": (
+            "إذا لم تكن أنت، فاكتب إلى hello@alyr.qa فوراً. ثم أمّن بريدك الإلكتروني وهاتفك."
         ),
         "small": "ترسل ALYR هذه الرسالة إلى عضو الفريق صاحب الحساب.",
     },
@@ -652,3 +709,20 @@ def staff_locked_message(
 
     parts = _staff_parts(build)
     return _both("lock_subject"), _plain(parts), _letter(parts)
+
+
+def staff_factor_message(name: str, event: str, when: datetime) -> tuple[str, str, str]:
+    """Subject, plain text and HTML of "your authenticator was set up, replaced or turned off",
+    or "a recovery code was used", in both languages (ALY-125, D-136). `event` is a key of
+    `_STAFF[...]["factor"]`."""
+    first = _first(name)
+
+    def build(lang: str, w: dict) -> list[str]:
+        return [
+            w["hello"](first), w["factor"][event][1], w["when"](_doha(when, lang)),
+            w["new_yes"], w["factor_no"],
+        ]
+
+    parts = _staff_parts(build)
+    subject = f"{_STAFF['en']['factor'][event][0]} · {_STAFF['ar']['factor'][event][0]}"
+    return subject, _plain(parts), _letter(parts)
