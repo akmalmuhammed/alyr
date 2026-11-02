@@ -2,7 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { AgentFigure } from "./AgentFigure";
 import { BusinessTabs } from "./BusinessTabs";
 import { Actions, ContactButton, ContactNote, TryFreeNote } from "./Contact";
-import { copy, type Locale, type Questions as QuestionSet } from "./copy";
+import { copy, type FlipWords, type Locale, type Questions as QuestionSet } from "./copy";
 import { FigCaption } from "./Drawings";
 import { TickPath } from "./Frames";
 import { FlowDiagram } from "./FlowDiagram";
@@ -10,6 +10,7 @@ import { DaySplit } from "./DaySplit";
 import { HomeMotion } from "./HomeMotion";
 import { HeroFilm } from "./HeroFilm";
 import { HowCards } from "./HowCards";
+import { LoopToggle } from "./LoopToggle";
 import { SAMPLE_ORDER, SAMPLES } from "./samples";
 import { SuiteFrame } from "./SuiteFrame";
 import { contactHref, Shell } from "./Shell";
@@ -39,6 +40,7 @@ export function HomePage({ locale }: { locale: Locale }) {
       <Business locale={locale} />
       <See locale={locale} />
       <Spotlight locale={locale} />
+      <Office locale={locale} />
       <Suite locale={locale} />
       {OFFER_LIVE && <Price locale={locale} />}
       <Questions locale={locale} />
@@ -52,6 +54,28 @@ const n = (index: number) => ({ "--i": index }) as CSSProperties;
 /** A section rule: one plain hairline. */
 function Rule() {
   return <div className="rule" aria-hidden="true" />;
+}
+
+/** A line with one word taking turns (ALY-314). Screen readers get the whole sentence; the drawn
+ * line is hidden from them. The words stack in one grid cell, so the line keeps the widest
+ * word's width and nothing beside it moves. */
+function FlipLine({ className, lead, flip, player = false }: { className: string; lead: string; flip: FlipWords; player?: boolean }) {
+  return (
+    <p className={className} data-loop-play={player ? "" : undefined} data-flip={player ? "" : undefined}>
+      <span className="sr-only">{lead}</span>
+      <span aria-hidden="true">
+        {flip.before}{" "}
+        <span className="flip">
+          {flip.words.map((word, index) => (
+            <span key={word} className="flip-word" data-rest={index === flip.rest ? "" : undefined} style={n(index)}>
+              {word}
+            </span>
+          ))}
+        </span>
+        {flip.after}
+      </span>
+    </p>
+  );
 }
 
 /** A section's heading. The eyebrow is kept only where it says something the heading does
@@ -84,7 +108,7 @@ function Hero({ locale }: { locale: Locale }) {
             <span className="hl"><span>{hero.title[0]}</span></span>{" "}
             <span className="hl"><span>{hero.title[1]}</span></span>
           </h1>
-          <HeroLead lead={hero.lead} flip={hero.flip} />
+          <FlipLine className="hero-lead" lead={hero.lead} flip={hero.flip} />
           <div className={TRY_FREE_LIVE ? "hero-actions is-pair" : "hero-actions"} data-hero-cta>
             <Actions locale={locale} lean label={hero.action} />
             <a className="link hero-more" href="#how">{hero.more}</a>
@@ -94,33 +118,6 @@ function Hero({ locale }: { locale: Locale }) {
       </div>
       <HeroFilm locale={locale} />
     </section>
-  );
-}
-
-/** The line under the headline, with one word taking turns (ALY-314). Screen readers get the
- * whole sentence; the drawn line is hidden from them. The words stack in one grid cell, so the
- * line keeps the widest word's width and nothing beside it moves. */
-function HeroLead({ lead, flip }: { lead: string; flip: { before: string; words: string[]; after: string; rest: number } }) {
-  return (
-    <p className="hero-lead">
-      <span className="sr-only">{lead}</span>
-      <span aria-hidden="true">
-        {flip.before}{" "}
-        <span className="hero-flip">
-          {flip.words.map((word, index) => (
-            <span
-              key={word}
-              className="hero-word"
-              data-rest={index === flip.rest ? "" : undefined}
-              style={n(index)}
-            >
-              {word}
-            </span>
-          ))}
-        </span>{" "}
-        {flip.after}
-      </span>
-    </p>
   );
 }
 
@@ -158,6 +155,28 @@ function Spotlight({ locale }: { locale: Locale }) {
           aside={callouts}
           more={s.more}
         />
+      </div>
+    </section>
+  );
+}
+
+// ------------------------------------------- the statement before the products
+/* The office in the owner's phone (ALY-314, D-153): what the six products below are for. */
+function Office({ locale }: { locale: Locale }) {
+  const t = copy[locale];
+  const o = t.home.office;
+  return (
+    <section className="hs office" aria-labelledby="office-title">
+      <div className="wrap">
+        <Rule />
+        <div className="open-full">
+          <Head title={o.title} id="office-title">
+            <div className="of" data-loop>
+              <FlipLine className="lead of-line" lead={o.lead} flip={o.flip} player />
+              <LoopToggle words={t.loop} name={t.loop.names.line} className="of-toggle" />
+            </div>
+          </Head>
+        </div>
       </div>
     </section>
   );

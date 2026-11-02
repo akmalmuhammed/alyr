@@ -107,7 +107,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-132 | A process holds few database connections (4 for an API instance, 8 for the worker), gives up after 3 seconds and answers 503 with Retry-After; only so many documents are drawn at once; the worker keeps places for customers; the Sunday report can be spread but stays at nine | Accepted |
 | D-131 | What the workspace and the order page ask for again and again is kept three seconds and shared between tabs, thrown away by the shop's own writes; who is signed in and a shop's modules the same | Accepted |
 | D-130 | The inbox and the Orders screen read the newest rows off an index (a customer carries the times of their latest messages, kept by the database; the inbox lists 300 conversations, Orders the last 30 days and everything open), so a refresh costs the same in a shop's first week and its second year | Accepted |
-| D-153 | The homepage's headline and sub line become the founder's AI wording, with one word flipping on a pale Volt block | Proposed |
+| D-153 | The homepage's headline and sub line use the founder's AI wording, with one word taking turns on a pale Volt block, and a statement before the products keeps the plain line | Accepted |
 
 ---
 
@@ -2510,10 +2510,17 @@ The founder, 31 Oct 2026, of two screenshots of the homepage: "fix these items, 
 
 ## D-153 · The homepage's headline and flipping sub line
 
-**Date** 3 Nov 2026 · **Status** Proposed (the founder's wording, in a draft pull request, not published) · Linear ALY-314, under ALY-302
+**Date** 3 Nov 2026 · **Status** Accepted (the founder, 3 Nov 2026, after the risks were set out) · Linear ALY-314, under ALY-302 · An exception to D-012 and `honesty.md` section 1
 
-The founder, 3 Nov 2026: the headline becomes "The AI solution provider for your business." and the sub line "One agentic platform to [learn / operate / power / manage / scale] your business.", one word flipping at a time on a faint Volt highlight.
+The founder, 3 Nov 2026: the headline becomes "The AI solution provider for your business." and the sub line "One agentic platform to [learn / operate / power / manage / scale] your business.", one word flipping at a time on a faint Volt highlight. Offered a plainer version for now, the founder chose this one and put the plain line in a later section.
 
-**How it is built.** The whole sentence is `hero.lead`, for screen readers and machines. The words stack in one grid cell, so nothing beside them moves. The motion is CSS and starts with the page. The film's Pause stops it too (WCAG 2.2.2), it rests off screen, and with reduced motion or no scripts one word stays.
+**Decision.**
+- The homepage's headline, sub line, title and description use that wording, in English and Arabic.
+- Before the products, a statement: "Every business has an office, and yours is your phone." and "One platform for your [orders / bookings / stock / accounts / team]."
+- The whole sentence is `lead`, for screen readers and machines. The words stack in one grid cell, so nothing beside them moves. The motion is CSS and starts with the page. A Pause stops it, it rests off screen, and with reduced motion or no scripts one word stays.
 
-**Why it is held.** The honesty check fails on purpose. No AI model is in the product, so these words are outside `honesty.md` section 1, and only a use that is true belongs in `scripts/site/allow/banned.json`. Merging takes the founder's yes and six allow entries.
+**What the founder weighed.** No AI model is in the product on this date. Meta's App Review is open and was told "software for small businesses in Qatar". Qatar's consumer law expects a service to match how it is announced. Paddle bars IT services not tied to software. The risk is accepted for this wording only.
+
+**Scope.** It is an exception, not a change to the rule. Every other public line keeps to `honesty.md`. Each use is listed in `scripts/site/allow/banned.json`.
+
+**Revisit when.** Meta answers, a lawyer reads the wording (ALY-51), or the first AI job goes live.

@@ -306,9 +306,7 @@ type Home = {
     /** The whole line under the headline, for screen readers and machines. The page draws it
      * with one word taking turns (`flip`, ALY-314). */
     lead: string;
-    /** The drawn line: the words around the one that takes turns. `rest` is the word shown with
-     * no motion. Arabic writes its own, with the joined «لـ» inside each word. */
-    flip: { before: string; words: string[]; after: string; rest: number };
+    flip: FlipWords;
     /** The first step, on the main button: the check-up. */
     action: string;
     more: string;
@@ -337,6 +335,8 @@ type Home = {
      * and the suggestions, which the hero's crop does not reach (framer-review P2). */
     more: string;
   };
+  /** The statement before the products (ALY-314). `lead` is its whole line, as in the hero. */
+  office: { title: string; lead: string; flip: FlipWords };
   suite: {
     eyebrow?: string;
     title: string;
@@ -418,6 +418,10 @@ type Home = {
 export type ProductBar = { label: string; links: { id: string; label: string }[] };
 
 /** A product page's opening, on the Carbon block. */
+/** A line with one word taking turns (`FlipLine`). `after` carries its own space, if any. `rest`
+ * is the word shown with no motion. Arabic writes its own, with the joined «لـ» in each word. */
+export type FlipWords = { before: string; words: string[]; after: string; rest: number };
+
 export type ProductHero = { eyebrow: string; title: [string, string]; lead: string; facts: string[]; factsOffer?: string[] };
 
 /** A real workspace screen at true scale, with numbered callouts. */
@@ -588,7 +592,7 @@ export type Copy = {
   loop: {
     pause: string;
     play: string;
-    names: Record<"how" | "frame" | "figure" | "film", { pause: string; play: string }>;
+    names: Record<"how" | "frame" | "figure" | "film" | "line", { pause: string; play: string }>;
   };
   report: ReportCopy;
   agent: AgentFigure;
@@ -640,11 +644,11 @@ const en: Copy = {
       description: "ALYR is a product name of alyr software W.L.L., a limited liability company registered in Qatar. Commercial registration 255539, tax registration 5009341769.",
     },
     home: {
-      title: "ALYR · The tech team for small businesses in Qatar",
+      title: "ALYR · The AI solution provider for your business",
       description:
-        "ALYR is the tech team for owner-run businesses in Qatar. We set up your orders, bookings, credit accounts and stock on one screen, in your shop, and keep improving it with you. From QAR 449 a month.",
+        "ALYR is the AI solution provider for owner-run businesses in Qatar. We set up your orders, bookings, credit accounts and stock on one screen, in your shop, and keep improving it with you. From QAR 449 a month.",
       descriptionNoOffer:
-        "ALYR is the tech team for owner-run businesses in Qatar. We set up your orders, bookings, credit accounts and stock on one screen, in your shop, and keep improving it with you.",
+        "ALYR is the AI solution provider for owner-run businesses in Qatar. We set up your orders, bookings, credit accounts and stock on one screen, in your shop, and keep improving it with you.",
     },
     chat: {
       title: "ALYR Chat · WhatsApp orders and team inbox",
@@ -804,6 +808,7 @@ const en: Copy = {
       frame: { pause: "Pause the six products", play: "Play the six products" },
       figure: { pause: "Pause the drawing", play: "Play the drawing" },
       film: { pause: "Pause the film", play: "Play the film" },
+      line: { pause: "Pause the changing word", play: "Play the changing word" },
     },
   },
   report: {
@@ -902,7 +907,7 @@ const en: Copy = {
       eyebrow: "Technology for owner-run businesses in Qatar",
       title: ["The AI solution provider", "for your business."],
       lead: "One agentic platform to learn, operate, power, manage and scale your business.",
-      flip: { before: "One agentic platform to", words: ["learn", "operate", "power", "manage", "scale"], after: "your business.", rest: 3 },
+      flip: { before: "One agentic platform to", words: ["learn", "operate", "power", "manage", "scale"], after: " your business.", rest: 3 },
       action: "Book a check-up",
       more: "See how we work",
       facts: ["We come to your shop, in Qatar", "From QAR 449 a month, no commission", "Arabic and English"],
@@ -1066,6 +1071,11 @@ const en: Copy = {
       ],
       link: "See ALYR Agent",
       more: "See the whole screen",
+    },
+    office: {
+      title: "Every business has an office,\nand yours is your phone.",
+      lead: "One platform for your orders, bookings, stock, accounts and team.",
+      flip: { before: "One platform for your", words: ["orders", "bookings", "stock", "accounts", "team"], after: ".", rest: 0 },
     },
     suite: {
       title: "Six products in one workspace",
@@ -3008,11 +3018,11 @@ const ar: Copy = {
       description: "ALYR اسم لمنتجات شركة alyr software ذ.م.م.، شركة ذات مسؤولية محدودة مسجّلة في قطر. السجل التجاري 255539 والتسجيل الضريبي 5009341769.",
     },
     home: {
-      title: "ALYR · فريق التقنية للمشاريع الصغيرة في قطر",
+      title: "ALYR · مزوّد حلول الذكاء الاصطناعي لمشروعك",
       description:
-        "ALYR فريق التقنية للأنشطة التي يديرها أصحابها في قطر. نجهّز طلباتك وحجوزاتك وحساباتك الآجلة ومخزونك في شاشة واحدة، في محلك، ونواصل تحسينها معك. من 449 ر.ق شهرياً.",
+        "ALYR مزوّد حلول الذكاء الاصطناعي للأنشطة التي يديرها أصحابها في قطر. نجهّز طلباتك وحجوزاتك وحساباتك الآجلة ومخزونك في شاشة واحدة، في محلك، ونواصل تحسينها معك. من 449 ر.ق شهرياً.",
       descriptionNoOffer:
-        "ALYR فريق التقنية للأنشطة التي يديرها أصحابها في قطر. نجهّز طلباتك وحجوزاتك وحساباتك الآجلة ومخزونك في شاشة واحدة، في محلك، ونواصل تحسينها معك.",
+        "ALYR مزوّد حلول الذكاء الاصطناعي للأنشطة التي يديرها أصحابها في قطر. نجهّز طلباتك وحجوزاتك وحساباتك الآجلة ومخزونك في شاشة واحدة، في محلك، ونواصل تحسينها معك.",
     },
     chat: {
       title: "ALYR Chat · طلبات واتساب وصندوق الفريق",
@@ -3172,6 +3182,7 @@ const ar: Copy = {
       frame: { pause: "إيقاف حركة المنتجات الستة", play: "تشغيل حركة المنتجات الستة" },
       figure: { pause: "إيقاف حركة الرسم", play: "تشغيل حركة الرسم" },
       film: { pause: "إيقاف حركة الفيلم", play: "تشغيل حركة الفيلم" },
+      line: { pause: "إيقاف الكلمة المتغيرة", play: "تشغيل الكلمة المتغيرة" },
     },
   },
   report: {
@@ -3270,7 +3281,7 @@ const ar: Copy = {
       eyebrow: "التقنية للأنشطة التي يديرها أصحابها في قطر",
       title: ["مزوّد حلول الذكاء الاصطناعي", "لمشروعك."],
       lead: "منصة واحدة بوكلاء الذكاء الاصطناعي لفهم مشروعك وتشغيله وتمكينه وإدارته وتوسيعه.",
-      flip: { before: "منصة واحدة بوكلاء الذكاء الاصطناعي", words: ["لفهم", "لتشغيل", "لتمكين", "لإدارة", "لتوسيع"], after: "مشروعك.", rest: 3 },
+      flip: { before: "منصة واحدة بوكلاء الذكاء الاصطناعي", words: ["لفهم", "لتشغيل", "لتمكين", "لإدارة", "لتوسيع"], after: " مشروعك.", rest: 3 },
       action: "احجز فحصاً لمشروعك",
       more: "شاهد طريقة عملنا",
       facts: ["نأتي إلى محلك في قطر", "من 449 ر.ق شهرياً، بلا عمولة", "بالعربية والإنجليزية"],
@@ -3434,6 +3445,11 @@ const ar: Copy = {
       ],
       link: "تعرّف على ALYR Agent",
       more: "اعرض الشاشة كاملة",
+    },
+    office: {
+      title: "لكل نشاط مكتب،\nومكتبك هاتفك.",
+      lead: "منصة واحدة لطلباتك وحجوزاتك ومخزونك وحساباتك وفريقك.",
+      flip: { before: "منصة واحدة", words: ["لطلباتك", "لحجوزاتك", "لمخزونك", "لحساباتك", "لفريقك"], after: ".", rest: 0 },
     },
     suite: {
       title: "ستة منتجات في مساحة عمل واحدة",

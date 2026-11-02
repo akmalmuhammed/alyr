@@ -142,6 +142,13 @@ write its own timers.
    React's copy of it) moved `/`'s simulated LCP from 2.42 s to 2.52 s; injected, it moved
    nothing.
 
+## The word that takes turns (D-153, the founder, 3 Nov 2026)
+
+The one exception to "text arrives once": on the homepage, one word in the line under the
+headline and in the statement before the products changes on a pale Volt block. It is CSS,
+turns with `--play-4`, keeps the widest word's width so nothing moves, and shows one still word
+with reduced motion or no scripts. A Pause stops it: the film's in the hero, its own lower down.
+
 ## The hero film (D-062, the founder, 28 Oct 2026)
 
 The homepage hero is a film of one afternoon at Qirfa Bakery in the product's own screens
