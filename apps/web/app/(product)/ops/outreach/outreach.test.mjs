@@ -8,7 +8,7 @@ import { test } from "node:test";
 import {
   annotate, basesFor, checkCsv, countriesOffered, filterProspects, freeMailRefused, honeytokenList, isStaleHash,
   leftToday, numberSources, parseCsv, percent, policyFor, prospectErrors, settingsErrors, shortUrl, stageTone, words,
-  EMPTY_PROSPECT, POLICY,
+  EMPTY_PROSPECT, POLICY, groupPolicy,
 } from "./outreachLogic.ts";
 import { FINDING, GATEWAY_CHECK, STAGE, STAGE_ORDER } from "./copy.ts";
 
@@ -216,4 +216,22 @@ test("Outreach is in the console's main navigation, and nothing on its screens c
     const code = readFileSync(new URL(`./${f}`, import.meta.url), "utf8").replace(/^\s*\/\/.*$/gm, "");
     assert.doesNotMatch(code, /window\.confirm|\bconfirm\(/, f);
   }
+});
+
+test("the country rules shown in settings group countries whose rules are the same", () => {
+  const rows = [
+    { country: "QA", lane: "allowed", bases: ["opt_in"], cap: 1, time_zone: "Asia/Qatar", working_days: "Sun to Thu", hours: "08:30 to 16:30", free_mail_refused: true },
+    { country: "SA", lane: "allowed", bases: ["opt_in"], cap: 1, time_zone: "Asia/Riyadh", working_days: "Sun to Thu", hours: "08:30 to 16:30", free_mail_refused: true },
+    { country: "AE", lane: "allowed", bases: ["opt_in"], cap: 1, time_zone: "Asia/Dubai", working_days: "Mon to Fri", hours: "08:30 to 16:30", free_mail_refused: true, note: "to confirm" },
+  ];
+  const groups = groupPolicy(rows);
+  assert.equal(groups.length, 2);
+  assert.deepEqual(groups[0].countries, ["QA", "SA"]);
+  assert.deepEqual(groups[1].countries, ["AE"]);
+  assert.equal(groups[1].note, "to confirm");
+  assert.equal("time_zone" in groups[0], false);
+  // Every country of the screens' own copy appears exactly once.
+  const all = groupPolicy(POLICY).flatMap((g) => g.countries);
+  assert.equal(all.length, POLICY.length);
+  assert.equal(new Set(all).size, POLICY.length);
 });

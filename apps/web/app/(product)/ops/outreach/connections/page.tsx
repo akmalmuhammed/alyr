@@ -29,6 +29,7 @@ export default function ConnectionsPage() {
   }, [load]);
 
   const byKey = new Map((list ?? []).map((c) => [c.key, c]));
+  const simulated = (list ?? []).some((c) => c.simulated);
   return (
     <>
       <header className="sh-head">
@@ -37,6 +38,7 @@ export default function ConnectionsPage() {
         <p>{C.lead}</p>
       </header>
       {error && !list && <Failed message={error} retry={load} />}
+      {simulated && <p className="sh-note" role="note">{C.simulatedNote}</p>}
       {!list && !error && <p className="sh-note">{W.loading}</p>}
       {list && (
         <ul className="or-services">
@@ -54,7 +56,8 @@ function Service({ k, c, tested }: { k: ServiceKey; c: Connection | null; tested
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const words = SERVICE[k];
-  const configured = c?.configured ?? false;
+  // A simulator always answers, so its Test can run before any setting is present.
+  const configured = (c?.configured || c?.simulated) ?? false;
 
   async function test() {
     setBusy(true); setError("");
@@ -73,7 +76,9 @@ function Service({ k, c, tested }: { k: ServiceKey; c: Connection | null; tested
           <p className="or-card-sub">{words.does}</p>
         </div>
         <div className="or-pills">
-          <Pill tone={configured ? "active" : "wait"}>{configured ? C.configured : C.notConfigured}</Pill>
+          {c?.simulated
+            ? <Pill tone="idle">{C.simulated}</Pill>
+            : <Pill tone={configured ? "active" : "wait"}>{configured ? C.configured : C.notConfigured}</Pill>}
         </div>
       </header>
       {c && c.settings.length > 0 && (

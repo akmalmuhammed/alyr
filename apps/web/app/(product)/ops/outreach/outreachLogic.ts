@@ -52,6 +52,25 @@ export function policyFor(country: string, policy: CountryPolicy[] = POLICY): Co
 }
 
 /** The bases ALYR may record for a contact in this country, in the policy's order. */
+/** Countries whose rules are the same (lane, bases, cap, days, hours, free-mail, note) as one row,
+ *  in the order each rule first appears; time zones differ within a row and are left out. */
+export type PolicyGroup = Omit<CountryPolicy, "country" | "time_zone"> & { countries: string[] };
+export function groupPolicy(rows: CountryPolicy[]): PolicyGroup[] {
+  const groups = new Map<string, PolicyGroup>();
+  for (const r of rows) {
+    const key = JSON.stringify([r.lane, r.bases, r.cap, r.working_days, r.hours, r.free_mail_refused, r.note ?? ""]);
+    const seen = groups.get(key);
+    if (seen) seen.countries.push(r.country);
+    else {
+      groups.set(key, {
+        lane: r.lane, bases: r.bases, cap: r.cap, working_days: r.working_days, hours: r.hours,
+        free_mail_refused: r.free_mail_refused, note: r.note, countries: [r.country],
+      });
+    }
+  }
+  return [...groups.values()];
+}
+
 export function basesFor(country: string, policy?: CountryPolicy[]): Basis[] {
   return policyFor(country, policy).bases;
 }

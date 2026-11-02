@@ -194,8 +194,9 @@
 .or-kinds { flex-wrap: wrap; }
 @media (max-width: 56rem), (pointer: coarse) { .or .tm-seg button { min-height: 44px; } }
 @media (max-width: 56rem) {
-  .or-prospects td[data-label]::before, .or-activity td[data-label]::before { content: attr(data-label); display: block; font-size: var(--ui-caption); color: var(--ink-3); font-family: var(--face); }
+  .or-prospects td[data-label]::before, .or-activity td[data-label]::before, .or-policy td[data-label]::before { content: attr(data-label); display: block; font-size: var(--ui-caption); color: var(--ink-3); font-family: var(--face); }
   .or-activity tr { grid-template-columns: minmax(0, 1fr) auto; }
+  .or-policy tr { grid-template-columns: minmax(0, 1fr); }
   .or-activity td:nth-child(3), .or-activity td:nth-child(4) { grid-column: 1 / -1; }
   .or-prospects tr { grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
   .or-prospects td:first-child { grid-column: 1 / -1; }

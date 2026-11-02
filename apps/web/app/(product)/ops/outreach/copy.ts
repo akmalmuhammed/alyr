@@ -418,6 +418,8 @@ export const W = {
     setup: "How to set it up",
     runbook: "Full steps:",
     needsConfig: "Configure it first.",
+    simulated: "Simulator",
+    simulatedNote: "This copy of the engine runs on simulators: nothing reaches a real service, whatever is set. Production uses the real ones once their settings are present.",
   },
   settings: {
     eyebrow: "Outreach · settings",
@@ -453,5 +455,10 @@ export const W = {
     saving: "Saving…",
     saved: "Saved.",
     updated: (by: string, at: string) => `Last changed by ${by} · ${at}`,
+    policy: "Country rules",
+    policyLead: "What the gateway enforces for each country (outreach/policy.py). Hours are in each country's own time. Read only: a change is a code change with a decision behind it.",
+    policyColumns: { country: "Country", lane: "Lane", bases: "Allowed bases", cap: "Level cap", window: "Send window", freeMail: "Free-mail" },
+    freeMailRefused: "Refused unless they asked, know us or published it",
+    freeMailAllowed: "Allowed",
   },
 };

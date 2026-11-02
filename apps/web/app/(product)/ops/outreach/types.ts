@@ -233,7 +233,7 @@ export type Overview = {
  *  API sends it, the screens use it instead of their own copy (outreachLogic.ts POLICY). */
 export type CountryPolicy = {
   country: string; lane: Lane; bases: Basis[]; cap: Level; time_zone: string;
-  working_days: string; hours: string; free_mail_refused: boolean;
+  working_days: string; hours: string; free_mail_refused: boolean; note?: string;
 };
 
 export type Settings = {
@@ -257,6 +257,7 @@ export type Connection = {
   configured: boolean;                  // every setting it needs is present
   settings: { name: string; present: boolean }[]; // names only, never a value
   last_test: ConnectionTest | null;
+  simulated?: boolean;                  // true where every provider is its simulator (ALYR_ENV=local)
 };
 export type Connections = { connections: Connection[] };
 

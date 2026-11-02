@@ -6,11 +6,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../api";
-import { LEVEL, W } from "../copy";
+import { BASIS, LANE, LEVEL, W } from "../copy";
 import { useOverview } from "../Frame";
-import { honeytokenList, settingsErrors, when, type SettingsForm } from "../outreachLogic";
+import { POLICY, groupPolicy, honeytokenList, settingsErrors, when, type SettingsForm } from "../outreachLogic";
 import { Failed, Pill } from "../parts";
-import type { KillSwitch, Level, Settings, SettingsChange } from "../types";
+import type { CountryPolicy, KillSwitch, Level, Settings, SettingsChange } from "../types";
 
 const S = W.settings;
 
@@ -44,6 +44,7 @@ export default function SettingsPage() {
       {settings && <>
         <Kill kill={settings.kill_switch} changed={(k) => setSettings({ ...settings, kill_switch: k })} />
         <Form key={settings.updated_at ?? ""} settings={settings} saved={setSettings} />
+        <Policy rows={settings.policy?.length ? settings.policy : POLICY} />
       </>}
     </>
   );
@@ -172,5 +173,35 @@ function Form({ settings, saved }: { settings: Settings; saved: (s: Settings) =>
         {settings.updated_at && <small className="or-dim">{S.updated(settings.updated_by, when(settings.updated_at))}</small>}
       </div>
     </form>
+  );
+}
+
+/** The country rules the gateway enforces, as the API sends them (outreach/policy.py), or the
+ *  screens' own copy when it sends none; countries with the same rules share a row. Read only. */
+function Policy({ rows }: { rows: CountryPolicy[] }) {
+  const P = S.policyColumns;
+  return (
+    <section aria-labelledby="policy-title">
+      <h2 id="policy-title">{S.policy}</h2>
+      <p className="sh-note">{S.policyLead}</p>
+      <div className="tablewrap ops-list or-policy"><table>
+        <thead><tr>
+          <th scope="col">{P.country}</th><th scope="col">{P.lane}</th><th scope="col">{P.bases}</th>
+          <th scope="col">{P.cap}</th><th scope="col">{P.window}</th><th scope="col">{P.freeMail}</th>
+        </tr></thead>
+        <tbody>
+          {groupPolicy(rows).map((g) => (
+            <tr key={g.countries.join(" ")}>
+              <th scope="row">{g.countries.join(", ")}</th>
+              <td data-label={P.lane}><Pill tone={g.lane === "allowed" ? "active" : g.lane === "blocked" ? "bad" : "wait"}>{LANE[g.lane]}</Pill></td>
+              <td data-label={P.bases}>{g.bases.map((b) => BASIS[b] ?? b).join(", ")}</td>
+              <td data-label={P.cap}>{LEVEL[g.cap]}</td>
+              <td data-label={P.window}>{g.working_days} · {g.hours}{g.note ? <><br /><small className="or-dim">{g.note}</small></> : null}</td>
+              <td data-label={P.freeMail}>{g.free_mail_refused ? S.freeMailRefused : S.freeMailAllowed}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table></div>
+    </section>
   );
 }
