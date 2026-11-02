@@ -19,6 +19,7 @@ from alyr.config import get_settings
 from alyr.db import Database
 from alyr.modules.ledger import service as ledger
 from demo_into_support import bakery, mark, run, sql, table_counts
+from test_consent import owner_sql
 
 YES = "--yes-this-business-is-a-test"
 
@@ -247,3 +248,20 @@ def test_a_business_with_its_own_activity_is_refused(client):
     code, text = run("--owner-email", owner, YES, "--photos", "now")
     assert code == 1 and "activity of its own" in text
     assert counts_without_record(tenant_id) == before
+
+
+def test_a_business_with_no_settings_row_loads(client):
+    """The founder's business was made in the back office and had never opened a module, so it
+    had no `shop_settings` row: the first production dry run stopped on it (ALY-315)."""
+    tenant_id, _, owner = bakery(client)
+    mark(tenant_id)
+    owner_sql("delete from shop_settings where tenant_id = $1", tenant_id)
+    assert not sql("select 1 from shop_settings where tenant_id = $1", tenant_id)
+
+    code, text = run("--owner-email", owner, YES, "--dry-run", "--photos", "now")
+    assert code == 0, text
+    code, text = run("--owner-email", owner, YES, "--photos", "now")
+    assert code == 0, text
+    assert sql("select day_starts::text from shop_settings where tenant_id = $1",
+               tenant_id)[0]["day_starts"] == "00:00:00"
+

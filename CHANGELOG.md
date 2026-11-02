@@ -5,6 +5,7 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- The demo-data load works on a business that has no settings row yet (ALY-315; no migration, no new dependency): the second production dry run stopped because a business made in the back office had never opened a module, so its clock had no day start; midnight, the row's own default, is used. Nothing had been written.
 
 ## v0.3.6 (3 Nov 2026)
 - The demo-data dry run works on Google Cloud (ALY-312; no migration, no new dependency): the first production dry run stopped because a refused `set role` aborted the rehearsal's one transaction before the fallback could run; the first attempt now sits in a savepoint. Nothing had been written.
