@@ -29,7 +29,7 @@ Migration `0110_demo_data.sql`: `tenants.demo_data_allowed`; `admin_set_demo_dat
 
 ## Tests
 
-`tests/test_demo_data_switch.py` (the back office switch), `tests/test_demo_into_smoke.py` (dry run, load, remove returns every table), `tests/test_demo_into_business.py` (the refusals, the lifecycle and the dataset's invariants: stock log equals stock and never negative, order totals equal their lines, document numbers gapless per kind with a PDF each, no overlapping bookings, Arabic on every item, the credit screen's totals equal its customers', nothing queued or sent, other businesses unchanged, replace and remove).
+`tests/test_demo_data_switch.py` (the back office switch), `tests/test_demo_into_business.py` (the refusals, the lifecycle and the dataset's invariants: stock log equals stock and never negative, order totals equal their lines, document numbers gapless per kind with a PDF each, no overlapping bookings, Arabic on every item, the credit screen's totals equal its customers', nothing queued or sent, other businesses unchanged, replace and remove).
 
 ## Not in this spec
 

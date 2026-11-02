@@ -46,7 +46,7 @@ Mark the business first (a local business has no `/ops` unless you run it; set `
 
 ## How it was checked (1 Nov 2026)
 
-- Tests (real PostgreSQL): `test_demo_data_switch.py`, `test_demo_into_smoke.py`, `test_demo_into_business.py` (refusals, lifecycle, data invariants).
+- Tests (real PostgreSQL): `test_demo_data_switch.py`, `test_demo_into_business.py` (refusals, lifecycle, data invariants).
 - **Mutation checks**, each making one safety rule false and confirming a test fails: the `--yes` flag not required; the test-business mark not checked; the dry run not required; a business's own activity allowed; the queue not cleaned after the load (sending jobs left behind); the changed rows not restored on removal. All six failed a test; the "own activity" check first failed for a wrong reason (a bad row in the test) and was redone.
 - **Browser pass** (Chromium, a scratch business loaded locally): every workspace section at 375 and 1440 px, English and Arabic, 48 views: no page error, no server error, no horizontal overflow; screenshots of inbox, bookings, credit and documents looked like a working business.
 
