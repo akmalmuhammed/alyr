@@ -58,6 +58,9 @@ LEFT_OUT: dict[str, tuple[str, str]] = {
         "معرّفات رسائل واتساب التي عولجت، حتى لا تعالج مرتين",
     ),
     "media_ops": ("the photo store's own log", "سجل مخزن الصور الداخلي"),
+    "demo_seed_runs": (
+        "ALYR's own record of loading demo data", "سجل ALYR الداخلي لتحميل البيانات التجريبية",
+    ),
 }
 
 # Columns never written. Secrets, the spreadsheets the owner uploaded (they have them), and

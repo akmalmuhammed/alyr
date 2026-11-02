@@ -31,7 +31,7 @@ The risk is no longer "can it be built". It is building more before anyone has s
 
 ## Where this is heading
 
-ALYR's direction is the agentic business path (D-151, [master-plan.md](master-plan.md) section 0). It does not change the goal above. Nothing on that path may slow the first paying business. Agents are Product's work, their words are Site and brand's, rules and approvals are Company's, and anything touching Meta stays with Go-live.
+ALYR's direction is the agentic business path (D-152, [master-plan.md](master-plan.md) section 0). It does not change the goal above. Nothing on that path may slow the first paying business. Agents are Product's work, their words are Site and brand's, rules and approvals are Company's, and anything touching Meta stays with Go-live.
 
 ## The six lanes
 

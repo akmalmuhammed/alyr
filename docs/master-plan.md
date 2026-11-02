@@ -2,7 +2,7 @@
 
 Version 2, 1 November 2026. Owner: Akmal. This is the source of truth for what Alyr is, what it builds in what order, and why. Tasks live in Linear ("Alyr Launch"); this file explains the decisions behind them. When a decision changes, change it here first.
 
-Version 2 adds section 0, the agentic path (D-151). Sections 1 to 12 are version 1 of 7 October, kept as the record. Where they differ from section 0, `docs/status.md` or `docs/decisions.md`, those win (ALY-123). The company's fuller plan, with the founder's item-by-item map, is private: section 13 of the Eraser file "ALYR Company Master Plan".
+Version 2 adds section 0, the agentic path (D-152). Sections 1 to 12 are version 1 of 7 October, kept as the record. Where they differ from section 0, `docs/status.md` or `docs/decisions.md`, those win (ALY-123). The company's fuller plan, with the founder's item-by-item map, is private: section 13 of the Eraser file "ALYR Company Master Plan".
 
 ## 0. The agentic path
 

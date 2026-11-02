@@ -12,6 +12,8 @@ import {
 import { BusinessTemplate } from "./BusinessTemplate";
 import { ClientAccess } from "./ClientAccess";
 import { BusinessTerms } from "./BusinessTerms";
+import { BusinessDemoData } from "./BusinessDemoData";
+import { T as DEMO_WORDS } from "./BusinessDemoData.copy";
 
 type DraftLine = Line & { priceText: string };
 type Draft = { period_months: number; discount_pct: number; show_promise: boolean; note: string; lines: DraftLine[] };
@@ -226,6 +228,9 @@ export function Clients({ pricing, onChange, initialClient }: { pricing: Pricing
             {templateFor && detail.businesses.some((b) => b.id === templateFor) && (
               <BusinessTemplate key={templateFor} businessId={templateFor} businessName={businessName[templateFor]} onDone={onChange} onClose={() => setTemplateFor(null)} />
             )}
+
+            <h3>{DEMO_WORDS.en.heading} · <span lang="ar">{DEMO_WORDS.ar.heading}</span></h3>
+            {detail.businesses.map((b) => <BusinessDemoData key={b.id} business={b} />)}
 
             <h3>Price</h3>
             {open && draft && sums ? (
