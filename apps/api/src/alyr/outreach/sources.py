@@ -58,6 +58,10 @@ async def add(conn, data: dict, *, source: str, created_by: str, require_basis: 
     basis = str(data.get("basis") or "").strip()
     if basis and basis not in policy.BASES:
         raise Refused(f"basis must be one of: {', '.join(policy.BASES)}")
+    allowed = policy.country(country).bases
+    if basis and basis not in allowed:
+        # Refused here, where the founder typed it, not only at send time (gateway check 6).
+        raise Refused(f"{country} allows only these bases: {', '.join(allowed)}")
     language = str(data.get("language") or "en").strip().lower() or "en"
     if language not in ("en", "ar"):
         raise Refused("language is en or ar")

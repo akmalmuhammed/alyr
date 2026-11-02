@@ -237,3 +237,13 @@ def test_a_prospect_with_an_email_needs_a_basis(office):
     assert office.post(f"{ADMIN}/prospects", json={
         "company": "X", "country": "ZZ", "contact_email": "x@x-shop.example",
         "basis": "opt_in"}).status_code == 422
+
+
+def test_a_basis_the_country_does_not_allow_is_refused_when_it_is_typed(office):
+    answer = office.post(f"{ADMIN}/prospects", json={
+        "company": "X", "country": "QA", "contact_email": "x@x-shop.example",
+        "basis": "legitimate_interest"})
+    assert answer.status_code == 422 and "QA allows only" in answer.text
+    assert office.post(f"{ADMIN}/prospects", json={
+        "company": "X", "country": "GB", "contact_email": "x@x-shop.example",
+        "basis": "legitimate_interest"}).status_code == 200
