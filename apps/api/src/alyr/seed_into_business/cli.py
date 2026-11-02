@@ -94,7 +94,9 @@ class Rehearsal(Database):
             raise RuntimeError("the rehearsal cannot mix the owner and the product's role")
         if shared["depth"] == 0 and self._role:
             try:
-                await conn.execute(f'set role "{self._role}"')
+                # A savepoint: a refused `set role` must not abort the rehearsal's one transaction.
+                async with conn.transaction():
+                    await conn.execute(f'set role "{self._role}"')
             except asyncpg.InsufficientPrivilegeError:
                 # PostgreSQL 16: whoever created a role may let themselves act as it.
                 await conn.execute(f'grant "{self._role}" to current_user with set true')
