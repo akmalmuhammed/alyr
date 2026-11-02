@@ -84,7 +84,7 @@ function Hero({ locale }: { locale: Locale }) {
             <span className="hl"><span>{hero.title[0]}</span></span>{" "}
             <span className="hl"><span>{hero.title[1]}</span></span>
           </h1>
-          <p className="hero-lead">{rich(hero.lead)}</p>
+          <HeroLead lead={hero.lead} flip={hero.flip} />
           <div className={TRY_FREE_LIVE ? "hero-actions is-pair" : "hero-actions"} data-hero-cta>
             <Actions locale={locale} lean label={hero.action} />
             <a className="link hero-more" href="#how">{hero.more}</a>
@@ -94,6 +94,33 @@ function Hero({ locale }: { locale: Locale }) {
       </div>
       <HeroFilm locale={locale} />
     </section>
+  );
+}
+
+/** The line under the headline, with one word taking turns (ALY-314). Screen readers get the
+ * whole sentence; the drawn line is hidden from them. The words stack in one grid cell, so the
+ * line keeps the widest word's width and nothing beside it moves. */
+function HeroLead({ lead, flip }: { lead: string; flip: { before: string; words: string[]; after: string; rest: number } }) {
+  return (
+    <p className="hero-lead">
+      <span className="sr-only">{lead}</span>
+      <span aria-hidden="true">
+        {flip.before}{" "}
+        <span className="hero-flip">
+          {flip.words.map((word, index) => (
+            <span
+              key={word}
+              className="hero-word"
+              data-rest={index === flip.rest ? "" : undefined}
+              style={n(index)}
+            >
+              {word}
+            </span>
+          ))}
+        </span>{" "}
+        {flip.after}
+      </span>
+    </p>
   );
 }
 

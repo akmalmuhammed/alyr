@@ -303,9 +303,12 @@ type Home = {
     /** The social card's eyebrow only: the page shows none, its headline says who it is for (site audit R1). */
     eyebrow: string;
     title: [string, string];
-    /** One or two plain sentences beside the headline: we come to you, then what we do. It also
-     * says the place, because the opening has no list of facts (ALY-303, D-150). */
+    /** The whole line under the headline, for screen readers and machines. The page draws it
+     * with one word taking turns (`flip`, ALY-314). */
     lead: string;
+    /** The drawn line: the words around the one that takes turns. `rest` is the word shown with
+     * no motion. Arabic writes its own, with the joined «لـ» inside each word. */
+    flip: { before: string; words: string[]; after: string; rest: number };
     /** The first step, on the main button: the check-up. */
     action: string;
     more: string;
@@ -897,8 +900,9 @@ const en: Copy = {
   home: {
     hero: {
       eyebrow: "Technology for owner-run businesses in Qatar",
-      title: ["The tech team your", "business never had."],
-      lead: "We come to your shop in Qatar and see how your business runs. Then we set up what it needs and keep improving it with you.",
+      title: ["The AI solution provider", "for your business."],
+      lead: "One agentic platform to learn, operate, power, manage and scale your business.",
+      flip: { before: "One agentic platform to", words: ["learn", "operate", "power", "manage", "scale"], after: "your business.", rest: 3 },
       action: "Book a check-up",
       more: "See how we work",
       facts: ["We come to your shop, in Qatar", "From QAR 449 a month, no commission", "Arabic and English"],
@@ -3264,8 +3268,9 @@ const ar: Copy = {
   home: {
     hero: {
       eyebrow: "التقنية للأنشطة التي يديرها أصحابها في قطر",
-      title: ["فريق التقنية الذي", "لم يكن لدى مشروعك."],
-      lead: "نأتي إلى محلك في قطر ونرى كيف يسير عملك. ثم نجهّز ما يحتاجه، ونواصل تحسينه معك.",
+      title: ["مزوّد حلول الذكاء الاصطناعي", "لمشروعك."],
+      lead: "منصة واحدة بوكلاء الذكاء الاصطناعي لفهم مشروعك وتشغيله وتمكينه وإدارته وتوسيعه.",
+      flip: { before: "منصة واحدة بوكلاء الذكاء الاصطناعي", words: ["لفهم", "لتشغيل", "لتمكين", "لإدارة", "لتوسيع"], after: "مشروعك.", rest: 3 },
       action: "احجز فحصاً لمشروعك",
       more: "شاهد طريقة عملنا",
       facts: ["نأتي إلى محلك في قطر", "من 449 ر.ق شهرياً، بلا عمولة", "بالعربية والإنجليزية"],

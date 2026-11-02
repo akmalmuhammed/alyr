@@ -94,12 +94,12 @@
   "kept": [
     {
       "path": "en.home.hero.title",
-      "text": "The tech team your business never had.",
-      "reason": "The one slogan the site may have (content audit row 35; 02-decisions.md: keep the hero slogan)"
+      "text": "The AI solution provider for your business.",
+      "reason": "The one slogan the site may have (content audit row 35), reworded by the founder on 3 Nov 2026 (ALY-314)"
     },
     {
       "path": "ar.home.hero.title",
-      "text": "فريق التقنية الذي لم يكن لدى مشروعك.",
+      "text": "مزوّد حلول الذكاء الاصطناعي لمشروعك.",
       "reason": "The Arabic of the hero slogan (row 35)"
     },
     {

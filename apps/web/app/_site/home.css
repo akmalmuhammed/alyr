@@ -52,9 +52,14 @@ main[data-page="home"] .link:hover { text-decoration-thickness: 2px; }
 /* With "Try it free" on there are two buttons and the link: below the wide step the link takes
    its own row, so it never runs under the Carbon plate beside the text */
 @media (max-width: 81.99rem) { .hero-actions.is-pair .hero-more { flex-basis: 100%; } }
-/* the plain promise under the headline: where we start and what we do, in two sentences */
+/* the line under the headline */
 .hero-lead { max-width: 34rem; color: var(--text); font-size: clamp(1.1875rem, 1.05rem + .45vw, 1.375rem); font-weight: 600; line-height: 1.35; letter-spacing: -.012em; text-wrap: pretty; }
 [lang="ar"] .hero-lead { letter-spacing: 0; line-height: 1.65; }
+/* one word of it takes turns (ALY-314): the words stack in one cell, so the line keeps the
+   widest word's width; the pale Volt block stays and the words pass through it */
+.hero-flip { display: inline-grid; justify-items: center; overflow: clip; padding-inline: .3em; background: var(--volt-wash); }
+.hero-word { grid-area: 1 / 1; visibility: hidden; }
+.hero-word[data-rest] { visibility: visible; }
 .chip { display: inline-flex; align-items: center; min-height: 2.75rem; padding: .375rem .9375rem; border: 1px solid var(--line-strong); border-radius: 2px; background: var(--canvas); color: var(--text); font-size: .9375rem; font-weight: 500; line-height: 1.3; white-space: nowrap; text-decoration: none; transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease); }
 .chip:hover { border-color: var(--text); background: var(--surface); }
 
@@ -262,6 +267,12 @@ main[data-page="home"] .see-panel::before { content: none; }
 @keyframes hp-line { from { translate: 0 42%; } }
 @keyframes hp-settle { from { font-stretch: 88%; } }
 @keyframes hp-flash { 0% { opacity: 1; } 100% { opacity: 0; } }
+/* one of five turns: each word is up for a fifth of the cycle */
+@keyframes hp-word {
+  0% { opacity: 0; translate: 0 .7em; }
+  3%, 17% { opacity: 1; translate: 0 0; }
+  20%, 100% { opacity: 0; translate: 0 -.7em; }
+}
 
 @media (prefers-reduced-motion: no-preference) {
   /* the hero, before hydration, on the pace: the headline rises out of its mask and settles to
@@ -271,6 +282,9 @@ main[data-page="home"] .see-panel::before { content: none; }
   .motion .hl > span { animation: hp-line calc(1.3 * var(--play-4)) var(--ease) both; }
   .motion .hl + .hl > span { animation-delay: calc(2 * var(--play-stagger)); }
   .motion .hero-lead { animation: hp-rise-solid var(--play-4) var(--ease) both calc(6 * var(--play-stagger)); }
+  .motion .hero-word { --turn: calc(4 * var(--play-4)); visibility: visible; animation: hp-word calc(5 * var(--turn)) var(--ease) calc(var(--i) * var(--turn)) infinite both; }
+  /* the film's Pause stops it too (WCAG 2.2.2), and it rests off screen (film.ts) */
+  .hero[data-paused] .hero-word { animation-play-state: paused; }
   .motion .hero-actions { animation: hp-rise-solid var(--play-4) var(--ease) both calc(8 * var(--play-stagger)); }
   .motion .hero-note { animation: hp-rise-solid var(--play-4) var(--ease) both calc(9 * var(--play-stagger)); }
 
