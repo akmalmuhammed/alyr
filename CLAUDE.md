@@ -123,6 +123,8 @@ apps/web/                     Next.js. Three root layouts, one per route group:
   app/(product)/_customer/    Shared frame, styles, the price format and the Arabic search folding of the
                               customer pages; order/ is the order page (specs/005-order-page-v2)
   app/(product)/_workspace/   Workspace screens and styles
+  app/(product)/ops/          The back office (/ops, D-033); outreach/ is ALYR's own outreach (specs/065): review,
+                              prospects, replies, activity, connections, settings; types.ts is the API's shapes
   app/_agent/                 The owner's weekly view (ALYR Agent)
 docs/                         See docs/README.md for what lives where (docs/hygiene.md section 1)
 scripts/                      check.sh (everything CI runs), demo.sh (start and check the live demo),
@@ -133,6 +135,7 @@ scripts/                      check.sh (everything CI runs), demo.sh (start and 
                               document-page-browser-check.mjs (the hosted document page and its links),
                               documents-screens-browser-check.mjs (the workspace's Documents screens),
                               connect-browser-check.mjs (the connection screen, phone width, both languages),
+                              outreach-browser-check.mjs (/ops/outreach against fixture JSON, 390, 320 and 1440 px),
                               golive-truth-check.mjs (every onboarding sentence of every business type proved on the
                               finished order page and workspace, English and Arabic),
                               check-edge.sh (the edge and DNS of alyr.qa from outside, docs/runbooks/cloudflare-edge.md),
