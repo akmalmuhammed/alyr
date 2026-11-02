@@ -17,6 +17,7 @@ after the merge.
 | Firecrawl scrape and credit usage | https://docs.firecrawl.dev/api-reference/endpoint/scrape and .../credit-usage | 2 Nov 2026 | `POST https://api.firecrawl.dev/v2/scrape`, Bearer; `url`, `formats`, `onlyMainContent`, `timeout`; `success`, `data.markdown`, `data.links`, `data.metadata.url`; `GET /v2/team/credit-usage` → `data.remainingCredits` |
 | Overture Maps places | https://docs.overturemaps.org/guides/places/ | 2 Nov 2026 | Fields `names.primary`, `taxonomy.primary` (`categories.primary` before Dec 2025), `confidence`, `websites`, `emails`, `addresses[].country`; CDLA Permissive 2.0 / Apache 2.0; the DuckDB query shape (release `2026-10-21.0` in its example) |
 | **Google Places API (New) Text Search** | https://developers.google.com/maps/documentation/places/web-service/text-search | **Not read: the fetch was blocked (permission not answered in time), 2 Nov 2026** | Coded to the known shape (`POST https://places.googleapis.com/v1/places:searchText`, `X-Goog-Api-Key`, `X-Goog-FieldMask: places.id,places.displayName,places.websiteUri`, `textQuery`, `regionCode`, `pageSize`; `places[].id`, `displayName.text`, `websiteUri`). **Check before setting the key.** Its policies page was not read either; the terms used are the founder's reading |
+| Google Places (New): migrating to Text Search, and Place IDs | https://developers.google.com/maps/documentation/places/web-service/migrate-text and .../place-id | 3 Nov 2026 | Confirmed: `POST https://places.googleapis.com/v1/places:searchText`, headers `X-Goog-Api-Key` and `X-Goog-FieldMask`, body `textQuery`, `regionCode`, `languageCode`; field mask `places.displayName`; the place ID is `places.id` in Text Search. Place IDs are exempt from the caching limits, so storing them is allowed; Google suggests refreshing IDs older than 12 months. **Still not confirmed:** `pageSize` and `places.websiteUri` (the Text Search reference page could not be fetched) |
 
 ## New dependencies
 
@@ -28,7 +29,7 @@ html.parser.
 - No real provider was called: every test runs on simulators or on `httpx.MockTransport` fakes.
 - No real SMTP or IMAP server; Google Workspace's SMTP and IMAP behaviour, Gmail's handling of
   `List-Unsubscribe-Post`, and deliverability.
-- Google Places' request shape (docs not read).
+- Google Places: `pageSize` and `places.websiteUri` (the rest of the request shape was confirmed on 3 Nov 2026).
 - `tests/test_erase.py::test_it_works_for_an_owner_that_row_level_security_applies_to` was not run:
   it names the `alyr_test` database in its address, and this session tested on its own database.
 - The Arabic opt-out sentence and unsubscribe page text are unreviewed (ALY-66).
