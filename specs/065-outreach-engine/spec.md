@@ -26,7 +26,7 @@ This is ALYR's own selling, not a product feature: no shop, no shop's customer a
 | Markets | Qatar and global, both on from the start |
 | Who approves | The founder approves every first message. On the review screen he can approve the first message and its follow-ups together; each approval is bound to the exact text (a hash), so an edit needs a new approval |
 | Qatar and Saudi Arabia | Allowed, with a recorded basis per contact (published business contact, existing relationship, referral, opt-in, inbound). Autonomy capped at L1 (a person approves every message) until the lawyer answers ALY-51. Our reading: the PDPPL treats electronic direct marketing as needing consent, with no B2B carve-out stated; the founder accepts the risk for business contacts published by the business itself, pending ALY-51 |
-| Sending address | A dedicated outreach domain and mailbox, never `alyr.qa` (a cold-email complaint must not touch the domain that sends sign-in codes and invoices) |
+| Sending address | A dedicated outreach domain and mailbox, never `alyr.qa` (a cold-email complaint must not touch the domain that sends sign-in codes and invoices). Not the founder's Zoho free mailbox or an alias on alyr.qa: Zoho's usage policy (updated 13 Oct 2026) forbids promotional, bulk, marketing or automated mail, and IMAP, POP and SMTP are on paid plans only (a Zoho community report). Recommended: a new company-owned domain with a Google Workspace mailbox over SMTP and IMAP with an app password (2-step verification required). Microsoft 365 would need an OAuth adapter (Exchange Online is retiring basic-auth SMTP), so it is not supported by this build (founder, 2 Nov 2026) |
 | Channel | Email only. **Never WhatsApp** (hard rules 4 and 5). LinkedIn stays a human channel |
 | Provider for sending | The outreach mailbox over SMTP, replies over IMAP. Not Resend: Resend's acceptable use policy (updated 13 Oct 2026) forbids cold outreach, purchased lists and scraped contacts |
 
@@ -34,7 +34,7 @@ This is ALYR's own selling, not a product feature: no shop, no shop's customer a
 
 **In:** the tables, the providers (with a simulator each), research with the citation contract, scoring, drafting with a critic and a lint, the review and approval API, the send gateway, sequences and follow-ups, reply reading, one-click unsubscribe, the kill switch and honeytokens, the daily digest, settings, connections and their tests, staff-only routes, audit, the setup runbook, and the screens (ALY-311).
 
-**Not in:** the Leads pipeline of the internal tool (ALY-84; a prospect who says yes is converted to a lead there later), LinkedIn or WhatsApp outreach, buying lists, website-visitor identification, Gmail or Microsoft Graph APIs (SMTP and IMAP work with Zoho, Google Workspace and Microsoft 365 app passwords; an API adapter can be added behind the same interface later), auto-approval (L2 and L3) for any country capped at L1.
+**Not in:** the Leads pipeline of the internal tool (ALY-84; a prospect who says yes is converted to a lead there later), LinkedIn or WhatsApp outreach, buying lists, website-visitor identification, **any scraper of Google Maps, LinkedIn, Instagram or another site whose terms forbid automated collection** (browser-style reading, Firecrawl included, is only ever of a business's own public website; founder, 2 Nov 2026), Gmail or Microsoft Graph APIs (SMTP and IMAP work with Zoho, Google Workspace and Microsoft 365 app passwords; an API adapter can be added behind the same interface later), auto-approval (L2 and L3) for any country capped at L1.
 
 ## How it flows
 
@@ -74,10 +74,21 @@ Fetched pages are hostile input. They are fetched only over https from public ad
 ### Finding the email
 
 1. A contact the founder typed or imported, with its source.
-2. Otherwise the email-finder provider (Hunter: domain search, then the email verifier) for the business's domain, preferring owner, founder, director, general manager or marketing roles. Personal addresses are kept only with `type = personal` from the provider and a verifier result of `valid`; `accept_all` is allowed with a warning on the review card; `invalid`, `disposable` and `unknown` are refused.
-3. Otherwise `needs_human`.
+2. Otherwise an address the business **publishes on its own site** (founder, 2 Nov 2026): research reads the home, contact and about pages (and their footers) for `mailto:` links, visible addresses and schema.org `email`, and stores each with the exact page it was read from (`outreach_found_emails`). A named or role address (info@, sales@) on the business's own domain comes first; a free-mail address only if published on its own site, and flagged on the review card. The basis defaults to `published_business_contact`, which the founder confirms by approving. Nothing is guessed from a pattern. Telephones are not kept: email is the only channel.
+3. Otherwise the email-finder provider (Hunter: domain search, then the email verifier) for the business's domain, preferring owner, founder, director, general manager or marketing roles. Personal addresses are kept only with `type = personal` from the provider and a verifier result of `valid`; `accept_all` is allowed with a warning on the review card; `invalid`, `disposable` and `unknown` are refused.
+4. Otherwise `needs_human`.
 
-Free-mail addresses (gmail, hotmail, outlook.com, yahoo, icloud, live) are refused for cold outreach unless the basis is `opt_in`, `inbound` or `existing_relationship`.
+Free-mail addresses (gmail, hotmail, outlook.com, yahoo, icloud, live) are refused for cold outreach unless the basis is `opt_in`, `inbound` or `existing_relationship`, or the business published the address on its own website (step 2, flagged).
+
+### Where prospects come from
+
+| Source | How | What is kept |
+|---|---|---|
+| `manual` | Typed in `/ops` (a basis is required when an email is given) | What was typed |
+| `import` | A CSV through `POST /prospects/import` (`{csv}`) | The CSV's columns |
+| `overture` | An Overture Maps places GeoJSON file (CDLA Permissive 2.0 / Apache 2.0; monthly releases) through the same endpoint (`{geojson, release}`, or detected in `{csv}`): from the Overture Explorer ("Download Visible") or the DuckDB query in the runbook | Name, website, email, `taxonomy.primary` (or `categories.primary` before Dec 2025), the Overture ID and the release. Entries under 0.7 confidence or with neither website nor email are skipped. No phone, address or position |
+| `discovery` | A web search (Exa) filtered by the Scout | The business's site once our own fetcher read it |
+| `places` | Google Places API (New) Text Search (`ALYR_GOOGLE_PLACES_API_KEY`, optional), field mask `places.id,places.displayName,places.websiteUri` | **Only the place ID and the name** (Google's terms as the founder read them, 2 Nov 2026: the place ID may be cached; nothing else). The website Google gives is only fetched, and kept once our own fetcher has read it. Google is credited wherever a name from Google is shown |
 
 ### Sequences and follow-ups
 
@@ -163,7 +174,8 @@ Migration `0111_outreach.sql` (or the next free number on `main`). All tables ar
 |---|---|
 | `outreach_settings` | One row: kill switch and reason, global daily cap, default level, honeytokens, booking URL override, updated by and at |
 | `outreach_mailboxes` | The sending mailbox: from address, from name, first send date (for the ramp), paused and why |
-| `outreach_prospects` | Company, website, domain, country, business type, source (`manual`, `import`, `discovery`) and source URL, contact first and last name, role, email, email source and verifier result, basis and its note, language (`en` or `ar`), stage, fit score and reason, level, notes, created and updated |
+| `outreach_prospects` | Company, website, domain, country, business type, source (`manual`, `import`, `discovery`, `places`, `overture`), source URL and source reference (a Google place ID, or an Overture ID), contact first and last name, role, email, email source and verifier result, basis and its note, language (`en` or `ar`), stage, fit score and reason, level, notes, created and updated |
+| `outreach_found_emails` | Addresses the business published on its own site: prospect, email, the page it was on, kind (`named`, `role`, `free_mail`, `other_domain`); erased with the prospect |
 | `outreach_pages` | Fetched pages: prospect, URL, fetched at, text hash, text |
 | `outreach_claims` | Prospect, claim id, text, URL, quote, kept or dropped and why |
 | `outreach_drafts` | Prospect, step (1 to 3), version, subject, body, language, cited claim ids per sentence, critic result, lint result, body hash, status (`in_review`, `approved`, `rejected`, `superseded`, `sent`), created by (`model` or a staff id) |
@@ -179,20 +191,22 @@ Rules: every new table has a row in `core/erase_rules.py` (global ALYR records; 
 
 ## Providers
 
-One interface each under `outreach/providers/`, chosen by settings, with a simulator that is the default when `ALYR_ENV=local` or the key is missing. A missing or wrong value closes the provider; it never falls back to sending.
+One interface each under `outreach/providers/`, chosen by settings, with a simulator. On a developer machine (`ALYR_ENV=local`) every provider is its simulator, whatever keys are set. Anywhere else a provider whose key is missing is **closed**: it refuses every call and never falls back to a simulator (a simulated mailbox in production would pretend to send).
 
 | Service | Used for | Settings (secrets in Secret Manager in production) |
 |---|---|---|
 | Anthropic API (Messages API, structured outputs) | All model calls | `ALYR_ANTHROPIC_API_KEY`, `ALYR_OUTREACH_MODEL_FAST`, `ALYR_OUTREACH_MODEL_DRAFT` |
 | Exa (search API) | Discovery: businesses matching a query, with URLs | `ALYR_EXA_API_KEY` |
 | Hunter (domain search, email verifier) | Finding and verifying work emails | `ALYR_HUNTER_API_KEY` |
+| Google Places API (New), optional | Discovery of local businesses: place ID and name only | `ALYR_GOOGLE_PLACES_API_KEY` |
+| Firecrawl, optional | Reading a business's own page the built-in fetcher cannot (a site drawn by JavaScript); used only when set and only when the built-in fetcher read too little. Receives the page's public address only | `ALYR_FIRECRAWL_API_KEY` |
 | Outreach mailbox, SMTP | Sending | `ALYR_OUTREACH_SMTP_HOST`, `_PORT`, `_USER`, `_PASSWORD`, `ALYR_OUTREACH_FROM`, `ALYR_OUTREACH_FROM_NAME` |
 | Outreach mailbox, IMAP | Replies | `ALYR_OUTREACH_IMAP_HOST`, `_PORT`, `_USER`, `_PASSWORD` |
-| Engine settings | | `ALYR_OUTREACH` (`off` by default), `ALYR_OUTREACH_LEGAL_LINE`, `ALYR_OUTREACH_BOOKING_URL`, `ALYR_OUTREACH_UNSUBSCRIBE_SECRET`, `ALYR_OUTREACH_OFFER` (what ALYR offers, in the founder's words; the Composer may say nothing beyond it) |
+| Engine settings | | `ALYR_OUTREACH` (`off` by default), `ALYR_OUTREACH_LEGAL_LINE`, `ALYR_OUTREACH_BOOKING_URL`, `ALYR_OUTREACH_UNSUBSCRIBE_SECRET`, `ALYR_OUTREACH_UNSUBSCRIBE_BASE` (the API's public address that serves `/o/unsubscribe`), `ALYR_OUTREACH_OFFER` (what ALYR offers, in the founder's words; the Composer may say nothing beyond it), `ALYR_OUTREACH_DAILY_MODEL_USD` (default 5) |
 
 Each provider's request and response shapes are checked against its current documentation when it is written (CLAUDE.md, "How work is done" 2), and the PR says which pages were read and when.
 
-**Connections** (`GET /api/admin/outreach/connections`): each service with `configured` (all its settings present), the last test, and a test (`POST .../connections/{key}/test`): the model answers a one-word schema call; Exa runs a one-result search; Hunter reads the account; SMTP logs in without sending; IMAP logs in and counts unseen. A test never sends an email and never sends personal data.
+**Connections** (`GET /api/admin/outreach/connections`; keys `model`, `discovery`, `places`, `email_finder`, `page_reader`, `smtp`, `imap`, `engine`): each service with `configured` (all its settings present), the last test, and a test (`POST .../connections/{key}/test`): the model answers a one-word schema call; Exa runs a one-result search; Google Places one text search; Hunter and Firecrawl read the account; SMTP logs in without sending; IMAP logs in and counts unseen. A test never sends an email and never sends personal data.
 
 ## Jobs
 
@@ -244,3 +258,21 @@ The gateway: each of the eleven checks refuses on its own, in order; a retried i
 2. The keys in Secret Manager: Anthropic, Exa, Hunter, the mailbox, the unsubscribe secret; the legal line and the offer text.
 3. The lawyer's reading for Qatar and the GCC (ALY-51).
 4. Switching it on in production: `ALYR_OUTREACH=on`, after the first ten drafts are reviewed with it on in a test with the founder's own addresses.
+
+## Changes while building (2 Nov 2026, ALY-310)
+
+Recorded here so the spec stays the contract; each was in the founder's later messages or found while building.
+
+- **Migration number**: 0111 was free on `main` and on every branch (checked 2 Nov 2026).
+- **More sources** (founder): published contacts on the business's own site, Google Places Text Search, Overture Maps places files, and Firecrawl as an optional page reader (above). No scraping of sites that forbid it ("Not in").
+- **Mailbox guidance** (founder): Google Workspace with an app password; not Zoho free, not an alias on alyr.qa, not Microsoft 365 in this build (above).
+- **A manual prospect needs a basis only when an email is given.** Without one, research finds the published address and proposes `published_business_contact`; the founder confirms it by approving.
+- **Free-mail published on the business's own site is allowed**, flagged on the review card (founder's rule on published contacts; `policy.basis_refusal`).
+- **An auto-reply does not stop the sequence**: nobody answered. Bounces, opt-outs and every human reply do.
+- **Gateway check 1** also stops while the prospect is paused or no mailbox is configured; **check 8** stops while the mailbox is paused; **check 11** also holds a message when no unsubscribe link can be made (`ALYR_OUTREACH_UNSUBSCRIBE_SECRET` and `_BASE`).
+- **Uncertain sends**: a connection that breaks while the message is handed over keeps the intent claimed (`sending`), so it is never sent twice; the founder sees it on the prospect.
+- **The word limit counts the message**, not the footer the code adds (sender, legal line, opt-out sentence). The legal line must hold no link, since the first message carries none.
+- **The Concierge's reply is step 4** (`kind: booking_reply` on the screens) and needs the founder's approval at every level. L3's automatic "yes" template is **not built**.
+- **`POST /mailbox/resume`** added: only a person resumes a mailbox the gateway paused.
+- **Shapes**: the API answers in the shapes of `apps/web/app/(product)/ops/outreach/types.ts` (ALY-311): `contact_*` names, a stale hash is `409 {detail: {code: "stale_hash", message}}`, the critic and the lint are `{ok, findings: [{key, ok, note}]}`, `GET /settings` carries the country policy, `GET /activity` carries the gateway's check, CSV import is JSON `{csv}`.
+- **Not decided here, still open:** the lawyer's reading (ALY-51), whether Overture's listed emails count as a business's published contact (they are flagged in the basis note for the founder to confirm).

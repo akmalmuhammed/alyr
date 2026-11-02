@@ -2,7 +2,7 @@
 
 Every account ALYR depends on: who owns it, how it is signed in to, and what breaks if it is
 lost. **No passwords, keys, tokens, IDs or recovery codes here, ever.** Update in the same PR
-that adds a service (docs/hygiene.md). Reviewed weekly; last updated 17 Oct 2026 (ALY-114).
+that adds a service (docs/hygiene.md). Reviewed weekly; last updated 2 Nov 2026 (ALY-310: the outreach engine's accounts), on top of 17 Oct 2026 (ALY-114).
 
 The founder confirms the "2FA" column; until confirmed it says "check".
 
@@ -30,6 +30,12 @@ The founder confirms the "2FA" column; until confirmed it says "check".
 | ALYR API keys (a shop's machine access, `alyr_k1_...`; ALY-142) | Let a shop's other system send sales to ALYR and read its documents; never a person, never the workspace | The shop's owner or an admin makes and revokes them in the workspace (Connections, Connect another system); ALYR staff do not hold or see them | The key itself, shown once; ALYR stores only a hash and the public prefix | n/a | The shop revokes it and makes a new one; revoking is immediate. A leaked key is revoked from the same screen (no ALYR secret is involved); the activity record shows its last use |
 | Webhook signing secrets (a shop's outgoing events; ALY-142) | Let the shop's system check a message is from ALYR | The shop; shown once at creation and replaceable | In ALYR's database (it must sign) | n/a | Replace the secret in the workspace; the old one stops at once |
 | Anthropic (Claude) | AI-built development sessions | Founder | Founder's account | check | Development pauses |
+| Anthropic Console, API key for outreach (ALY-310) | The outreach engine's model calls | Founder | Sign-in method to be set | check | Research and drafting stop; the key is in Secret Manager (`anthropic-api-key`); rotate per runbook |
+| Exa (ALY-310) | Finding businesses for outreach | Founder | Sign-in method to be set | check | Discovery stops; key in Secret Manager (`exa-api-key`) |
+| Google Cloud, Places API key (optional, ALY-310) | Finding local businesses | Founder | The Google Cloud project's API key, restricted to the Places API | n/a | Places discovery stops; key in Secret Manager (`google-places-api-key`) |
+| Hunter (ALY-310) | Finding and verifying work emails | Founder | Sign-in method to be set | check | The finder stops (published contacts still work); key in Secret Manager (`hunter-api-key`) |
+| Firecrawl (optional, ALY-310) | Reading pages drawn by JavaScript | Founder | Sign-in method to be set | check | Such pages go to a person; key in Secret Manager (`firecrawl-api-key`) |
+| Outreach domain and mailbox (ALY-310, D-152) | Sending ALYR's outreach and reading replies; a domain owned by the company, never alyr.qa | Founder | Google Workspace account; an app password for SMTP and IMAP (2-step verification required) | check | Sending and replies stop; the app password is in Secret Manager (`outreach-smtp-password`, `outreach-imap-password`); **domain renewal date to record** |
 | Ministry of Commerce Single Window | Company registration SR3035824 | Owner (Beevi Jinan) | National authentication | | Registration cannot progress |
 
 ## Rules

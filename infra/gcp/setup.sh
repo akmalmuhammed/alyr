@@ -165,6 +165,29 @@ SECRETS=(
   ALYR_R2_SECRET_ACCESS_KEY=r2-secret-access-key
   ALYR_PADDLE_API_KEY=paddle-api-key ALYR_PADDLE_WEBHOOK_SECRET=paddle-webhook-secret
   ALYR_PADDLE_CLIENT_TOKEN=paddle-client-token
+  # ALYR's own outreach engine (ALY-310, docs/runbooks/outreach-setup.md). Every value, the switch
+  # and the words included, is a secret here so a full deploy (`apps`) keeps it. "unset" (made by
+  # `secrets`) reads as empty, and the switch is off unless it is exactly "on".
+  ALYR_OUTREACH=outreach-switch
+  ALYR_ANTHROPIC_API_KEY=anthropic-api-key ALYR_EXA_API_KEY=exa-api-key
+  ALYR_HUNTER_API_KEY=hunter-api-key ALYR_GOOGLE_PLACES_API_KEY=google-places-api-key
+  ALYR_FIRECRAWL_API_KEY=firecrawl-api-key
+  ALYR_OUTREACH_SMTP_HOST=outreach-smtp-host ALYR_OUTREACH_SMTP_USER=outreach-smtp-user
+  ALYR_OUTREACH_SMTP_PASSWORD=outreach-smtp-password
+  ALYR_OUTREACH_IMAP_HOST=outreach-imap-host ALYR_OUTREACH_IMAP_USER=outreach-imap-user
+  ALYR_OUTREACH_IMAP_PASSWORD=outreach-imap-password
+  ALYR_OUTREACH_FROM=outreach-from ALYR_OUTREACH_FROM_NAME=outreach-from-name
+  ALYR_OUTREACH_LEGAL_LINE=outreach-legal-line ALYR_OUTREACH_OFFER=outreach-offer
+  ALYR_OUTREACH_BOOKING_URL=outreach-booking-url
+  ALYR_OUTREACH_UNSUBSCRIBE_SECRET=outreach-unsubscribe-secret
+  ALYR_OUTREACH_UNSUBSCRIBE_BASE=outreach-unsubscribe-base
+)
+# The outreach engine's secrets: all optional, all "unset" until the founder sets them.
+OUTREACH_SECRETS=(
+  outreach-switch anthropic-api-key exa-api-key hunter-api-key google-places-api-key
+  firecrawl-api-key outreach-smtp-host outreach-smtp-user outreach-smtp-password
+  outreach-imap-host outreach-imap-user outreach-imap-password outreach-from outreach-from-name
+  outreach-legal-line outreach-offer outreach-booking-url outreach-unsubscribe-base
 )
 secrets_flag() { local IFS=,; local s=("${SECRETS[@]/%/:latest}"); echo "${s[*]}"; }
 env_flag() {
@@ -332,9 +355,11 @@ case "${1:-}" in
     # Cloud Run refuses to start with a missing secret; "unset" keeps optional ones from
     # blocking a deploy. The API treats them as not configured.
     for s in meta-app-secret meta-verify-token meta-access-token meta-phone-number-id meta-waba-id email-api-key \
-             paddle-api-key paddle-webhook-secret paddle-client-token; do
+             paddle-api-key paddle-webhook-secret paddle-client-token "${OUTREACH_SECRETS[@]}"; do
       secret_exists "$s" || put_secret "$s" "unset"
     done
+    # Signs the outreach engine's unsubscribe links (ALY-310): made once, like the link secret.
+    secret_exists outreach-unsubscribe-secret || put_secret outreach-unsubscribe-secret "$(openssl rand -hex 32)"
     echo "Done. Next: infra/gcp/push-images.sh <tag>, then infra/gcp/setup.sh apps <tag>"
     ;;
 
@@ -470,9 +495,11 @@ for s in json.load(sys.stdin).get('data', []):
       unset val
     done
     for s in meta-app-secret meta-verify-token meta-access-token meta-phone-number-id meta-waba-id email-api-key \
-             paddle-api-key paddle-webhook-secret paddle-client-token; do
+             paddle-api-key paddle-webhook-secret paddle-client-token "${OUTREACH_SECRETS[@]}"; do
       secret_exists "$s" || put_secret "$s" "unset"
     done
+    # Signs the outreach engine's unsubscribe links (ALY-310): made once, like the link secret.
+    secret_exists outreach-unsubscribe-secret || put_secret outreach-unsubscribe-secret "$(openssl rand -hex 32)"
     echo "Stored $stored values from the file."
     for s in r2-account-id r2-access-key-id r2-secret-access-key; do
       secret_exists "$s" || echo "  missing $s: run 'setup.sh secrets' and type it" >&2

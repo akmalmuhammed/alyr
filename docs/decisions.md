@@ -89,6 +89,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-122 | ALYR's own business keeps no test line: the "Try it" step says so and offers to skip, and the one-off first-admin job does not create one | Proposed |
 | D-145 | A shop's WhatsApp line is checked against Meta, tested with a message to the shop's own staff and kept on a trail; staff see every line on one screen (`/ops/whatsapp`, English and Arabic) | Proposed |
 | D-151 | Made-up demo data can be loaded into one existing business, only after ALYR staff mark it as a test business, only after a dry run, sending nothing, and it can be taken out again exactly | Proposed |
+| D-152 | ALYR's own outreach engine: agents propose, plain code disposes; Qatar and global both on; the founder approves every first message (bound to its text); email only, from a dedicated domain over SMTP and IMAP, never WhatsApp and never Resend; Qatar and the GCC capped at L1 until ALY-51 | Proposed |
 | D-150 | The homepage drops what made it look machine-made: buttons are their words with no icon or arrow (on every page), and on the homepage links are plain, labels are sentence case, and there is no facts list, no grid, no crosses, no ticks, no numbered badges; the idea of checking again is said in the last step | Proposed |
 | D-135 | ALYR staff sign-in: ten wrong codes in a day lock the account (the right code too, same words as any refusal), and every staff sign-in is written to the audit log with an email when the device or the address is new | Proposed |
 | D-136 | ALYR staff get a second factor in the app: an authenticator app (RFC 6238) with ten one-time recovery codes, enrolment before enforcement, enforcement behind `ALYR_STAFF_2FA` (off), a code that works once, a new session cookie after passing it, and a founder-run break-glass | Proposed |
@@ -2506,3 +2507,32 @@ The founder, 31 Oct 2026, of two screenshots of the homepage: "fix these items, 
 **Revisit when** a second person needs a demo business, or a table is added that the load must write (the load stops and says which).
 
 ---
+
+## D-152 · ALYR's own outreach engine: agents propose, plain code disposes
+
+**Date** 2 Nov 2026 · **Status** Proposed (the founder's answers of 2 Nov 2026; built in a pull request, not merged, not switched on) · Linear ALY-310 (engine and API), ALY-311 (screens) · Spec 065 · Builds on D-033 (the back office), D-077 and D-078 (jobs), D-137 (database logins)
+
+The founder, 2 Nov 2026: find prospects and their work emails, draft a message specific to each, he approves, the system sends from a dedicated outreach mailbox and follows up until a reply. Qatar and global, both on.
+
+**Decision.**
+
+| Question | Answer |
+|---|---|
+| Markets | Qatar and global, both on from the start |
+| Who approves | The founder approves every first message. He can approve the first message and its follow-ups together; each approval is bound to the exact text (a hash), so an edit needs a new approval |
+| Qatar and Saudi Arabia | Allowed, with a recorded basis per contact (published business contact, existing relationship, referral, opt-in, inbound). Autonomy capped at L1 until the lawyer answers ALY-51. Our reading: the PDPPL treats electronic direct marketing as needing consent, with no B2B carve-out stated; the founder accepts the risk for business contacts the business itself published, pending ALY-51 |
+| Sending address | A dedicated outreach domain and mailbox owned by the company, never `alyr.qa`. Google Workspace with an app password; not the Zoho free mailbox (its usage policy, updated 13 Oct 2026, forbids promotional, bulk or automated mail, and SMTP and IMAP are paid-plan only), not Microsoft 365 in this build (basic-auth SMTP is being retired; it needs OAuth) |
+| Channel | Email only. Never WhatsApp (hard rules 4 and 5). LinkedIn stays a human channel |
+| Provider for sending | The outreach mailbox over SMTP, replies over IMAP. Not Resend: its acceptable use policy (updated 13 Oct 2026) forbids cold outreach, purchased lists and scraped contacts |
+| Model | Anthropic's Messages API with structured outputs (`claude-haiku-5-5` fast, `claude-sonnet-5-5` drafts); no managed agents. Every call has no tools and returns a schema; no email address or phone number is ever sent (tested); a daily spend cap (USD 5 by default) |
+| Sources | The business's own website (published contacts first), a web search (Exa), Google Places Text Search (place ID and name only), Overture Maps places files, and the email finder (Hunter) only for addresses it saw on the web. No scraping of Google Maps, LinkedIn, Instagram or any site whose terms forbid it |
+| Sending | One gateway, plain code, eleven ordered checks (switch and kill switch, honeytokens, idempotency, approval, suppression, country and basis, frequency, mailbox health, caps, send window, final lint); one-click unsubscribe (RFC 8058); no open or click tracking |
+
+**Why.** The founder sells alone; the slow part is finding the right person and writing something specific. Letting a model draft from checked facts saves that time, and keeping every send behind plain code, a person's approval and a kill switch keeps a model's mistake from reaching anyone. A separate domain keeps a complaint away from the domain that sends sign-in codes and invoices.
+
+**Chosen over** a sales tool (Apollo, Instantly, Lemlist: data leaves for the US with no control over what is said, and some sell scraped lists); Resend (its policy forbids it); WhatsApp (hard rules 4 and 5); a free-running agent with tools (it could be steered by what a web page says).
+
+**Not decided here.** The lawyer's reading for Qatar and the GCC (ALY-51); L2 and L3 for any country capped at L1; whether Overture's listed emails count as published by the business (flagged for the founder to confirm). Switching it on in production is the founder's, after the steps in `docs/runbooks/outreach-setup.md`.
+
+**Revisit when** ALY-51 is answered, a complaint or a bounce rate over 2% arrives, or a provider's terms change.
+

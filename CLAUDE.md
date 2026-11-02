@@ -105,7 +105,18 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               SKUs and items/wa_order.py orders by them in the chat (specs/010);
                               owner/ is what an owner or staff member can ask from WhatsApp, and
                               LINK proves a staff phone (specs/029-owner-actions, D-065)
+  src/alyr/outreach/          ALYR's own outreach engine, not a shop's (specs/065, D-152): policy.py (the country
+                              policy and send windows), llm.py (every model call: structured output, no
+                              email or phone ever sent, a daily spend cap), research.py (pages, the citation
+                              contract, published contacts, the email finder), compose.py (drafts, critic,
+                              lint), gateway.py (the only code that sends: eleven ordered checks), replies.py,
+                              sequences.py (approval, the worker's tick, the digest), sources.py (manual, CSV,
+                              Overture, Exa, Google Places), unsubscribe.py, erase.py, connections.py,
+                              store.py (its tables, on ALYR's own business with the back office declared),
+                              engine.py (its jobs) and providers/ (llm, search, finder, web, mailbox: one
+                              interface each, a simulator each; ALYR_ENV=local uses only simulators)
   src/alyr/routes/            HTTP routes. deps.py: who is calling, which shop, which modules are on
+                              admin_outreach.py: /api/admin/outreach (staff only) and /o/unsubscribe/{token}
                               account.py: your account (switch business, change the sign-in email, all of a
                               business's data as one ZIP; core/account.py, core/export.py, specs/040, D-081)
   src/alyr/catalog.py         What ALYR sells: modules and products (D-027)
