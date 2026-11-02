@@ -45,10 +45,12 @@ from alyr.modules.items.service import count_active
 from alyr.modules.orders import holds as order_holds
 from alyr.modules.orders import staff_alert
 from alyr.modules.orders.service import EXPIRE_JOB
+from alyr.outreach.engine import Outreach
 from alyr.routes import account as account_routes
 from alyr.routes import admin as admin_routes
 from alyr.routes import admin_factor as admin_factor_routes
 from alyr.routes import admin_media as admin_media_routes
+from alyr.routes import admin_outreach as admin_outreach_routes
 from alyr.routes import admin_templates as admin_template_routes
 from alyr.routes import admin_whatsapp as admin_whatsapp_routes
 from alyr.routes import agent as agent_routes
@@ -248,6 +250,9 @@ def create_app() -> FastAPI:
     app.state.jobs.register(
         account_notes.NOTICE, account_notes.AccountNotices(app.state.db).run
     )
+    # ALYR's own outreach engine (ALY-310, specs/065): research, drafts, the send gateway.
+    app.state.outreach = Outreach(app.state.db, settings)
+    app.state.outreach.register(app.state.jobs)
     last_logged = {"at": 0.0, "count": 0}
 
     async def busy(request: Request, error: Exception) -> JSONResponse:
@@ -391,6 +396,8 @@ def create_app() -> FastAPI:
     app.include_router(admin_media_routes.router)
     app.include_router(admin_template_routes.router)
     app.include_router(admin_whatsapp_routes.router)
+    app.include_router(admin_outreach_routes.router)
+    app.include_router(admin_outreach_routes.public)
     app.include_router(media_routes.router)
     app.include_router(media_routes.public)
     app.include_router(onboarding_routes.router)

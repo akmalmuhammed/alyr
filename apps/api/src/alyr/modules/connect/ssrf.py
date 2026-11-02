@@ -193,3 +193,51 @@ async def post(
                     if len(data) >= MAX_ANSWER_BYTES:
                         break
                 return Answer(response.status_code, _snippet(bytes(data[:MAX_ANSWER_BYTES])))
+
+
+@dataclass(frozen=True)
+class Page:
+    url: str  # the address the page was read from, after any redirect
+    status: int
+    content_type: str
+    body: bytes
+
+
+async def get(
+    url: str, *, max_bytes: int = 2_000_000, redirects: int = 3, allow_local: bool = False,
+    transport: httpx.AsyncBaseTransport | None = None,
+) -> Page:
+    """GET a public page with the same guard as `post` (ALY-310, the outreach engine's research):
+    https only, every address the name gives checked, the connection made to the checked IP. A
+    redirect is followed only to an address that passes the same checks, at most `redirects`
+    times; a redirect to a private address is `Blocked`. Ten seconds and `max_bytes` in all."""
+    for _ in range(redirects + 1):
+        target, ip = await vet(url, allow_local=allow_local)
+        literal = f"[{ip}]" if ":" in ip else ip
+        connect_to = f"{target.scheme}://{literal}:{target.port}{target.path}"
+        host_header = target.host if target.port in (80, 443) else f"{target.host}:{target.port}"
+        async with asyncio.timeout(TOTAL_SECONDS):
+            async with httpx.AsyncClient(
+                transport=transport, follow_redirects=False, trust_env=False,
+                timeout=httpx.Timeout(CONNECT_SECONDS, read=8.0, write=5.0, pool=CONNECT_SECONDS),
+            ) as client:
+                async with client.stream(
+                    "GET", connect_to,
+                    headers={"Host": host_header, "Accept": "text/html,text/plain",
+                             "User-Agent": "ALYR-research/1.0 (+https://alyr.qa)"},
+                    extensions={"sni_hostname": target.host},
+                ) as response:
+                    if response.status_code in (301, 302, 303, 307, 308):
+                        location = response.headers.get("location", "")
+                        if not location:
+                            raise Blocked("redirect")
+                        url = str(httpx.URL(url).join(location))
+                        continue
+                    data = bytearray()
+                    async for chunk in response.aiter_bytes():
+                        data.extend(chunk)
+                        if len(data) >= max_bytes:
+                            break
+                    return Page(url, response.status_code,
+                                response.headers.get("content-type", ""), bytes(data[:max_bytes]))
+    raise Blocked("redirects")

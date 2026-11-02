@@ -49,6 +49,12 @@ GLOBAL_TABLES = {
     # What owners are asked to accept: every shop may read it, only the back office adds to it
     # (ALY-167). Forced row-level security.
     "terms_versions",
+    # ALYR's own outreach engine (ALY-310, specs/065): businesses ALYR writes to, not a shop's
+    # data. Forced row-level security for the back office (migration 0111).
+    "outreach_settings", "outreach_mailboxes", "outreach_prospects", "outreach_found_emails",
+    "outreach_pages", "outreach_claims", "outreach_drafts", "outreach_approvals",
+    "outreach_intents", "outreach_sends", "outreach_replies", "outreach_suppression",
+    "outreach_events", "outreach_connection_tests",
 }
 
 

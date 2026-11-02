@@ -6,3 +6,6 @@
 # word true, not a key. Its commit, and the commit that first explained it in this file:
 3ab41a465bc2e6206148328b4ae6421fb95b6e89:infra/gcp/setup.sh:generic-api-key:493
 81d1c6924439fe5ea1497cff7ad851ea227513f2:.gitleaksignore:generic-api-key:5
+# The outreach tests' made-up unsubscribe signing value in apps/api/tests/outreach_support.py
+# (ALY-310): a fixed test string, used only against the simulators, not a key.
+18932c3f83d7bdaefe32bbbafad3c9cccef2e9f0:apps/api/tests/outreach_support.py:generic-api-key:18
