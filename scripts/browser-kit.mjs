@@ -28,7 +28,8 @@ function signedPath(page, purpose, tenantId, slug, id, { days = 7, secret = proc
 export const trackPath = (tenantId, slug, orderId, options) => signedPath("t", 5, tenantId, slug, orderId, options);
 export const payPath = (tenantId, slug, paymentId, options) => signedPath("pay", 6, tenantId, slug, paymentId, options);
 
-export async function launch({ edge, port, profile, width = 375, height = 812, scheme = "light" }) {
+// `args` adds browser flags: a cloud session runs Chrome as root, which needs --no-sandbox.
+export async function launch({ edge, port, profile, width = 375, height = 812, scheme = "light", args = [] }) {
   mkdirSync(profile, { recursive: true });
   // A debugging port that something already answers on is somebody else's browser (another
   // session's run): never drive it. Pick another port.
@@ -37,7 +38,7 @@ export async function launch({ edge, port, profile, width = 375, height = 812, s
   const proc = spawn(edge, [
     "--headless=new", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "--no-first-run",
     "--no-default-browser-check", "--disable-extensions", "--disable-gpu", "--hide-scrollbars",
-    `--window-size=${width},${height}`, "about:blank",
+    `--window-size=${width},${height}`, ...args, "about:blank",
   ], { stdio: "ignore", windowsHide: true });
   let page = null;
   for (let i = 0; i < 80 && !page; i++) {
