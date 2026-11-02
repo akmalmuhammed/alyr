@@ -205,6 +205,24 @@ RULES: dict[str, Rule] = {
         "terms_versions": "the texts ALYR published; the same for every client",
         "today_snoozes": "items ALYR's staff set aside; they expire by themselves",
         "worker_heartbeats": "the worker's check-ins",
+        # ALYR's own outreach (specs/065, D-152): businesses ALYR writes to, never a client's
+        # data. A prospect's personal fields are erased by the engine's own daily job
+        # (`outreach/erase.py`: 30 days after an opt-out, a bounce or a disqualification, or
+        # after 12 months without activity), not by a client's erasure.
+        "outreach_settings": "ALYR's outreach switches: one row",
+        "outreach_mailboxes": "ALYR's own outreach mailbox",
+        "outreach_prospects": "businesses ALYR writes to; erased by the outreach engine's job",
+        "outreach_found_emails": "addresses a prospect's business published; erased with it",
+        "outreach_pages": "a prospect's public pages; erased with it",
+        "outreach_claims": "facts about a prospect's business; erased with it",
+        "outreach_drafts": "ALYR's messages to a prospect; scrubbed with it",
+        "outreach_approvals": "who approved which outreach text",
+        "outreach_intents": "ALYR's outreach sends waiting or done",
+        "outreach_sends": "ALYR's outreach sends, with a hash of the address",
+        "outreach_replies": "replies to ALYR's outreach; scrubbed with the prospect",
+        "outreach_suppression": "hashes of addresses that asked not to be written to: kept",
+        "outreach_events": "the outreach timeline: no address, no message",
+        "outreach_connection_tests": "tests of the outreach engine's outside services",
     }.items()},
 }
 

@@ -292,6 +292,53 @@ class Settings(BaseSettings):
     # off again and it is as if it never was.
     staff_2fa: bool = False
 
+    # ALYR's own outreach engine (ALY-310, specs/065-outreach-engine, D-152). Fails safe: sending,
+    # follow-ups and reading replies happen only while this is exactly "on"; anything else is off.
+    # Research and drafting work while it is off, so drafts can be read before anything goes out.
+    outreach: str = "off"
+    # The model provider (Anthropic Messages API with structured outputs). Secret. Empty outside a
+    # developer machine: every model call is refused (a developer machine uses the simulator).
+    anthropic_api_key: str = ""
+    outreach_model_fast: str = "claude-haiku-5-5"
+    outreach_model_draft: str = "claude-sonnet-5-5"
+    # What the model may cost in a day, in US dollars; over it research and drafting wait for the
+    # next day (Doha) and the digest says so.
+    outreach_daily_model_usd: int = 5
+    # Discovery (Exa search) and finding work emails (Hunter). Secrets.
+    exa_api_key: str = ""
+    hunter_api_key: str = ""
+    # Optional (founder, 2 Nov 2026): discovery of local businesses by Google Places API (New) Text
+    # Search. Only the place ID and the name are kept (Google's terms); the website it gives is only
+    # fetched, and kept once our own fetcher has read it. Secret.
+    google_places_api_key: str = ""
+    # Optional (founder, 2 Nov 2026): a page the built-in fetcher cannot read (a site drawn by
+    # JavaScript) is read through Firecrawl, only while this key is set. Secret.
+    firecrawl_api_key: str = ""
+    # The dedicated outreach mailbox (never alyr.qa): SMTP to send, IMAP to read replies. The
+    # passwords are app passwords, secrets in Secret Manager.
+    outreach_smtp_host: str = ""
+    outreach_smtp_port: int = 465
+    outreach_smtp_user: str = ""
+    outreach_smtp_password: str = ""
+    outreach_from: str = ""
+    outreach_from_name: str = ""
+    outreach_imap_host: str = ""
+    outreach_imap_port: int = 993
+    outreach_imap_user: str = ""
+    outreach_imap_password: str = ""
+    # ALYR's legal name and postal address, as one line, written at the foot of every message
+    # (no link in it: the first message carries none).
+    outreach_legal_line: str = ""
+    # What ALYR offers, in the founder's words. The Composer may say nothing beyond it.
+    outreach_offer: str = ""
+    # The booking link a "yes" is answered with.
+    outreach_booking_url: str = ""
+    # Signs the one-click unsubscribe links (HMAC-SHA256). Secret, at least 32 characters.
+    outreach_unsubscribe_secret: str = ""
+    # Where /o/unsubscribe/{token} is served (the API's public address, e.g. https://api.alyr.qa).
+    # Empty: the gateway refuses to send, since a message must carry a working unsubscribe link.
+    outreach_unsubscribe_base: str = ""
+
     # Per shop, to start (D-039; our estimate). A cap stops new items or photos with a
     # clear message and never deletes anything.
     catalog_max_items: int = 1000

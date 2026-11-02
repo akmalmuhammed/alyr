@@ -149,6 +149,18 @@ async def keep_erased_files_removed(db, store) -> None:
         await asyncio.sleep(3600)
 
 
+async def keep_outreach_ticking(outreach) -> None:
+    """ALYR's outreach engine (specs/065): queue the sends that are due, read replies every 5
+    minutes while it is on, the digest at 07:00 Doha and the daily erasure. Every minute; each
+    run is claimed in the database, so two workers never repeat one."""
+    while True:
+        try:
+            await outreach.tick()
+        except Exception:  # never let outreach stop the worker
+            log.exception("could not run the outreach engine's recurring work")
+        await asyncio.sleep(60)
+
+
 async def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     # The worker answers customers too ("order" in the chat makes a signed link), so it
@@ -183,6 +195,7 @@ async def main() -> None:
     # Every attached number's health, read from Meta (reads only; spec 062).
     lines = asyncio.create_task(whatsapp_health.keep_lines_polled(
         app.state.db, app.state.outbound.channels["meta"], get_settings().line_poll_minutes))
+    outreach = asyncio.create_task(keep_outreach_ticking(app.state.outreach))
     try:
         await app.state.jobs.run_forever(heartbeat=heartbeat(app.state.db))
         log.info("stopped: the jobs that had started finished, the rest went back in the queue")
@@ -196,6 +209,7 @@ async def main() -> None:
         purger.cancel()
         erased.cancel()
         lines.cancel()
+        outreach.cancel()
         await app.state.db.close()
         await close_channels(app)
 
