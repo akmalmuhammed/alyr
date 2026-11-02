@@ -5,6 +5,8 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+
+## v0.3.6 (3 Nov 2026)
 - The demo-data dry run works on Google Cloud (ALY-312; no migration, no new dependency): the first production dry run stopped because a refused `set role` aborted the rehearsal's one transaction before the fallback could run; the first attempt now sits in a savepoint. Nothing had been written.
 
 ## v0.3.5 (2 Nov 2026)
