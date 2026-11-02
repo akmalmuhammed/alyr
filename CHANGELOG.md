@@ -5,6 +5,7 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- The demo-data dry run works on Google Cloud (ALY-312; no migration, no new dependency): the first production dry run stopped because a refused `set role` aborted the rehearsal's one transaction before the fallback could run; the first attempt now sits in a savepoint. Nothing had been written.
 
 ## v0.3.5 (2 Nov 2026)
 - Demo data for the founder's test business (ALY-309, D-151 proposed, spec 064; migration 0110, no new dependency): `python -m alyr.seed_into_business` loads ten weeks of a made-up bakery (items, customers on credit, orders, bookings, English and Arabic conversations, receipts, invoices and credit notes with PDFs) into one existing business. ALYR staff mark a business as a test business in the back office first (a switch, audited, off for every business); the command refuses any other business, refuses without a dry run made in the last day, sends nothing, never deletes the business's own rows, and `--remove` takes out exactly what it added. Built and tested locally, not run on production; the Cloud Run job `infra/gcp/demo-data.sh` is not applied (`docs/runbooks/demo-data.md`).
