@@ -117,6 +117,24 @@ export const SERVICE: Record<ServiceKey, { name: string; does: string; steps: st
       "Press Test: it reads the account and looks nobody up.",
     ],
   },
+  places: {
+    name: "Places (optional)",
+    does: "Finds businesses by place and keeps only Google's place ID; the web address comes from the business's own site.",
+    steps: [
+      "In ALYR's Google Cloud project, switch on Places API (New) and create a key limited to it.",
+      "Put it in Secret Manager as ALYR_GOOGLE_PLACES_API_KEY.",
+      "Press Test: it runs a one-result search.",
+    ],
+  },
+  page_reader: {
+    name: "Page reader (optional)",
+    does: "Reads pages that the built-in reader cannot, such as sites drawn by script.",
+    steps: [
+      "Create a Firecrawl API key (the free plan is enough to start).",
+      "Put it in Secret Manager as ALYR_FIRECRAWL_API_KEY.",
+      "Press Test: it reads the credits left and fetches nothing.",
+    ],
+  },
   smtp: {
     name: "Outreach mailbox (sending)",
     does: "Sends approved messages from the outreach domain, never from alyr.qa.",
@@ -136,8 +154,20 @@ export const SERVICE: Record<ServiceKey, { name: string; does: string; steps: st
       "Press Test: it signs in and counts unseen messages.",
     ],
   },
+  engine: {
+    name: "Engine settings",
+    does: "The legal line and offer every message carries, the booking link, and the unsubscribe secret and address.",
+    steps: [
+      "Write the legal line (company name and address, no link) and the offer in one sentence, as the runbook shows.",
+      "Run infra/gcp/setup.sh secrets once: it makes the unsubscribe secret in Doha.",
+      "Set the rest with infra/gcp/setup.sh set-secret: outreach-legal-line, outreach-offer, outreach-booking-url and outreach-unsubscribe-base (https://api.alyr.qa).",
+      "Press Test: it lists anything still missing.",
+    ],
+  },
 };
-export const SERVICE_ORDER: ServiceKey[] = ["model", "discovery", "email_finder", "smtp", "imap"];
+export const SERVICE_ORDER: ServiceKey[] = [
+  "model", "discovery", "places", "email_finder", "page_reader", "smtp", "imap", "engine",
+];
 export const RUNBOOK = "docs/runbooks/outreach-setup.md";
 
 export const W = {
@@ -292,8 +322,8 @@ export const W = {
     email: "Email",
     noEmail: "No email yet",
     source: "Found by",
-    sources: { manual: "Added by hand", import: "Imported", discovery: "Discovery" } as Record<string, string>,
-    emailSource: { manual: "typed", import: "imported", finder: "email finder" } as Record<string, string>,
+    sources: { manual: "Added by hand", import: "Imported", discovery: "Discovery", places: "Google Places", overture: "Overture places" } as Record<string, string>,
+    emailSource: { manual: "typed", import: "imported", finder: "email finder", published: "published on their site", overture: "listed in Overture, confirm it" } as Record<string, string>,
     basis: "Basis",
     noBasis: "No basis recorded: nothing can be sent.",
     language: "Language",

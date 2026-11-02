@@ -1,7 +1,7 @@
 // The shapes the outreach screens read from `/api/admin/outreach` (specs/065, ALY-311). The API's
-// Pydantic models in `routes/admin_outreach.py` (ALY-310) are the authority; these were written
-// from the spec's tables before those models existed, so every field the screens rely on is here
-// in one place for the backend to match (or for the screens to follow when it differs).
+// answers in `routes/admin_outreach.py` (ALY-310) are the authority; these follow them. The API also
+// sends fields the screens do not read (simulated, stage_reason, published_emails, pages, source_ref,
+// basis_problem, warnings, kind, erased); they are left out here.
 // Times are ISO 8601 strings in UTC. No secret ever appears in any of these.
 
 // ── words the engine uses ───────────────────────────────────────────────────────────────────
@@ -24,13 +24,17 @@ export type Level = 0 | 1 | 2 | 3;
 /** The email verifier's answer; null when nobody verified the address (typed or imported by hand). */
 export type Verifier = "valid" | "accept_all" | "invalid" | "disposable" | "unknown" | null;
 
-export type ProspectSource = "manual" | "import" | "discovery";
-export type EmailSource = "manual" | "import" | "finder";
+export type ProspectSource = "manual" | "import" | "discovery" | "places" | "overture";
+/** "published": found on the business's own site; "overture": listed in the Overture places data. */
+export type EmailSource = "manual" | "import" | "finder" | "published" | "overture";
 export type Language = "en" | "ar";
 export type DraftStatus = "in_review" | "approved" | "rejected" | "superseded" | "sent";
 export type ReplyLabel =
   | "interested" | "question" | "not_now" | "not_interested" | "wrong_person" | "referral" | "opt_out" | "other";
-export type ServiceKey = "model" | "discovery" | "email_finder" | "smtp" | "imap";
+/** "places" and "page_reader" are optional; "engine" is the engine's own settings (legal line, offer,
+ *  booking link, unsubscribe secret and address). */
+export type ServiceKey =
+  | "model" | "discovery" | "places" | "email_finder" | "page_reader" | "smtp" | "imap" | "engine";
 
 // ── the brief and the drafts ────────────────────────────────────────────────────────────────
 
@@ -62,11 +66,11 @@ export type Draft = {
   body: string;
   language: Language;
   sentences: Sentence[];
-  critic: CheckResult | null;           // null until the critic has run
+  critic: CheckResult | null;           // null until the critic has run, and always on follow-ups (only step 1 is criticised)
   lint: CheckResult;
   body_hash: string;                    // what an approval is bound to
   status: DraftStatus;
-  created_by: string;                   // "model" or the staff email that edited it
+  created_by: string;                   // "model", or who edited it
   created_at: string;
   wait_working_days: number | null;     // follow-ups: working days after the step before (3, then 7)
 };
@@ -120,7 +124,7 @@ export type OutreachEvent = {
   at: string;
   kind: string;                         // "stage", "research", "draft", "approval", "send", "reply",
                                         // "refusal", "pause", "resume", "disqualify", "opt_out", "bounce"
-  actor: string;                        // "engine" or a staff email
+  actor: "staff" | "engine";            // never an address: the timeline holds none
   detail: Record<string, unknown>;      // never an email address or a phone number
 };
 
@@ -151,7 +155,11 @@ export type NewProspect = {
 };
 
 /** POST /prospects/import answers: what was added and each refused row (1 is the first data row). */
-export type ImportResult = { added: number; skipped: { row: number; reason: string }[] };
+/** POST /prospects/import takes `{ csv }` or `{ geojson, release, country }` (GeoJSON sent as `csv` is
+ *  detected too). */
+export type ImportResult = {
+  added: number; ids: string[]; skipped: { row: number; reason: string }[]; source: ProspectSource;
+};
 
 /** POST /discover answers. */
 export type DiscoverResult = { queued: boolean; job_id: string };
@@ -261,7 +269,7 @@ export type ActivityItem = {
   company: string;
   step: 1 | 2 | 3 | null;
   check: number | null;                 // refusals: the gateway check that refused, 1 to 11
-  outcome: string;                      // refusals: "held", "blocked", "rescheduled", "dropped"
+  outcome: string;                      // refusals: "held", "blocked", "rescheduled", "dropped", "waiting", "paused"
   detail: string;                       // plain words, never an address
 };
 export type Activity = { items: ActivityItem[]; today: Today; counts: Partial<Record<ActivityKind, number>> };
