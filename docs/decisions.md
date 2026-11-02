@@ -88,6 +88,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-121 | The owner is emailed once when ALYR publishes their price, ahead of the rest of the payment path: English or Arabic as they signed up, claimed on the quote so it never goes twice, nothing sent for a price they already saw or an address that cannot be real. The part of D-093 that shipped on its own | Proposed (the founder signs off the wording) |
 | D-122 | ALYR's own business keeps no test line: the "Try it" step says so and offers to skip, and the one-off first-admin job does not create one | Proposed |
 | D-145 | A shop's WhatsApp line is checked against Meta, tested with a message to the shop's own staff and kept on a trail; staff see every line on one screen (`/ops/whatsapp`, English and Arabic) | Proposed |
+| D-151 | Made-up demo data can be loaded into one existing business, only after ALYR staff mark it as a test business, only after a dry run, sending nothing, and it can be taken out again exactly | Proposed |
 | D-150 | The homepage drops what made it look machine-made: buttons are their words with no icon or arrow (on every page), and on the homepage links are plain, labels are sentence case, and there is no facts list, no grid, no crosses, no ticks, no numbered badges; the idea of checking again is said in the last step | Proposed |
 | D-135 | ALYR staff sign-in: ten wrong codes in a day lock the account (the right code too, same words as any refusal), and every staff sign-in is written to the audit log with an email when the device or the address is new | Proposed |
 | D-136 | ALYR staff get a second factor in the app: an authenticator app (RFC 6238) with ten one-time recovery codes, enrolment before enforcement, enforcement behind `ALYR_STAFF_2FA` (off), a code that works once, a new session cookie after passing it, and a founder-run break-glass | Proposed |
@@ -2485,3 +2486,23 @@ The founder, 31 Oct 2026, of two screenshots of the homepage: "fix these items, 
 **What this does not change.** The positioning, the headline, the claims and the Carbon and Volt look. It adds no gradient and no AI word.
 
 **Not done, for the founder to decide.** Other pages keep their mono labels and link arrows; the footer and the Products menu keep their mono labels, because they are shared. The cards under How we work stay, since the founder approved them on the Framer prototype.
+
+## D-151 · Made-up demo data can be loaded into one existing business, only a marked test business, only after a dry run, and taken out again exactly
+**Date** 1 Nov 2026 · **Status** Proposed · Linear ALY-309 · Spec 064 · Follows D-042 (documents are immutable), D-116 to D-118 (erasure) and the seven demo shops
+
+**Decision.**
+- **A business is a test business only when ALYR staff say so** in the back office (`tenants.demo_data_allowed`, false for every business, audited). The command `python -m alyr.seed_into_business` refuses every other business.
+- **A real load needs a dry run** of the same seed in the last day. The dry run is the whole load in a transaction that is always rolled back, so what it prints is exact.
+- **It sends nothing.** Customers are on the business's private simulator line; every job the load made is deleted except the photo store's own writes; the Cloud Run job is given only the two database addresses.
+- **The load is measured, not trusted:** primary keys of every table before and after. New keys are the load's, a changed row is allowed only in a short named list, anything else stops the load and takes it out. `--remove` deletes exactly the new keys and restores the changed columns, including the document numbering.
+- **Existing rows are never deleted.** A business with activity of its own is refused unless `--replace`, which removes only the previous load after writing a copy.
+
+**Why.** A client sees a working product only if it has history, and the founder must be able to show it from his phone on production without a second business, a laptop or a real customer. A flag, a dry run and an exact removal make it safe to keep on a production business that real people may also use.
+
+**Chosen over** a separate demo business (the founder's own test business is the one the client signs in to, and its sign-in, team and plan are already real), a SQL dump (it names rows, so a removal would be a guess, and it breaks when a table changes), and letting the load delete what it finds (a mistake would destroy a real business).
+
+**Not decided here.** Applying the Cloud Run job (`infra/gcp/demo-data.sh`, nothing of it has run on Google Cloud); loading into a business other than the founder's.
+
+**Revisit when** a second person needs a demo business, or a table is added that the load must write (the load stops and says which).
+
+---
