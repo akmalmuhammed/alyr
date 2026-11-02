@@ -22,7 +22,7 @@ import logging
 import re
 from datetime import UTC, date, datetime, time, timedelta
 
-from alyr.outreach import compose, policy, store
+from alyr.outreach import compose, connections, policy, store
 from alyr.outreach.providers.web import html_text
 
 log = logging.getLogger("alyr.outreach.replies")
@@ -96,6 +96,8 @@ def _address(msg) -> str:
 async def poll(engine) -> int:
     """Read the unread replies; returns how many were handled."""
     if engine.settings.outreach != "on":
+        return 0
+    if not engine.providers.simulated and connections.missing(engine.settings, "imap"):
         return 0
     handled, done = 0, []
     for uid, raw in await engine.providers.mailbox.unseen(50):

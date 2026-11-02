@@ -18,6 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
+from alyr import brand
 from alyr.core import backoffice
 from alyr.core.auth import Staff
 from alyr.outreach import connections, policy, sequences, sources, store, unsubscribe
@@ -792,6 +793,9 @@ async def activity(request: Request, kind: str = Query(default="", max_length=30
 # ── one-click unsubscribe (public) ─────────────────────────
 
 
+L, D = brand.LIGHT, brand.DARK
+
+
 def _page(title: str, text: str, button: bool, token: str = "") -> HTMLResponse:
     form = (f'<form method="post" action="/o/unsubscribe/{html.escape(token)}">'
             '<button type="submit">Unsubscribe · إلغاء الاشتراك</button></form>') if button else ""
@@ -799,11 +803,13 @@ def _page(title: str, text: str, button: bool, token: str = "") -> HTMLResponse:
         "<!doctype html><html><head><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width, initial-scale=1'>"
         "<meta name='robots' content='noindex'><title>ALYR</title>"
-        "<style>body{font:16px/1.5 system-ui,sans-serif;max-width:32rem;margin:3rem auto;"
-        "padding:0 1rem;color:#111;background:#fff}button{font:inherit;padding:.7rem 1.2rem;"
-        "border:1px solid #111;background:#111;color:#fff;border-radius:4px;cursor:pointer}"
-        "@media (prefers-color-scheme:dark){body{background:#111;color:#eee}"
-        "button{background:#eee;color:#111;border-color:#eee}}</style></head><body>"
+        f"<style>body{{font:16px/1.5 {brand.CSS_FONT['email']};max-width:32rem;"
+        f"margin:3rem auto;padding:0 1rem;color:{L['text']};background:{L['canvas']}}}"
+        f"button{{font:inherit;padding:.7rem 1.2rem;border:1px solid {L['text']};"
+        f"background:{L['text']};color:{L['text-inverse']};border-radius:4px;cursor:pointer}}"
+        f"@media (prefers-color-scheme:dark){{body{{background:{D['canvas']};color:{D['text']}}}"
+        f"button{{background:{D['text']};color:{D['canvas']};border-color:{D['text']}}}}}"
+        "</style></head><body>"
         f"<h1>{title}</h1><p>{text}</p>{form}</body></html>",
         headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"})
 

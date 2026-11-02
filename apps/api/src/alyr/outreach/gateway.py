@@ -31,7 +31,7 @@ from email.utils import formataddr, make_msgid
 from zoneinfo import ZoneInfo
 
 from alyr.core import alerts
-from alyr.outreach import compose, policy, store, unsubscribe
+from alyr.outreach import compose, connections, policy, store, unsubscribe
 from alyr.outreach.providers.mailbox import NotSent, Uncertain
 
 log = logging.getLogger("alyr.outreach.gateway")
@@ -83,7 +83,8 @@ async def checks(engine, conn, intent, now: datetime) -> tuple[int, str, str, da
         return 1, "stop", "outreach is off (ALYR_OUTREACH)", None
     if row["kill_switch"]:
         return 1, "stop", "the kill switch is on", None
-    if not (s.outreach_from and engine.providers.mailbox):
+    if "@" not in s.outreach_from or not (
+            engine.providers.simulated or not connections.missing(s, "smtp")):
         return 1, "stop", "no outreach mailbox configured", None
     if p["paused"]:
         return 1, "stop", "the prospect is paused", None
@@ -135,7 +136,7 @@ async def checks(engine, conn, intent, now: datetime) -> tuple[int, str, str, da
                 policy.after_working_days(country, now, 1)
         due = policy.after_working_days(country, last, GAPS[intent["step"]])
         if now < due:
-            return 7, "reschedule", "too soon after the step before", due
+            return 7, "reschedule", "the gap after the step before is not over", due
     # 8
     box = await store.mailbox(conn, s.outreach_from, s.outreach_from_name)
     if box["paused_at"] is not None:

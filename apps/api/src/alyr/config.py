@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -338,6 +339,19 @@ class Settings(BaseSettings):
     # Where /o/unsubscribe/{token} is served (the API's public address, e.g. https://api.alyr.qa).
     # Empty: the gateway refuses to send, since a message must carry a working unsubscribe link.
     outreach_unsubscribe_base: str = ""
+
+    @field_validator(
+        "outreach", "anthropic_api_key", "exa_api_key", "hunter_api_key", "google_places_api_key",
+        "firecrawl_api_key", "outreach_smtp_host", "outreach_smtp_user", "outreach_smtp_password",
+        "outreach_imap_host", "outreach_imap_user", "outreach_imap_password", "outreach_from",
+        "outreach_from_name", "outreach_legal_line", "outreach_offer", "outreach_booking_url",
+        "outreach_unsubscribe_secret", "outreach_unsubscribe_base",
+    )
+    @classmethod
+    def _outreach_unset(cls, value: str) -> str:
+        """Secret Manager holds "unset" for an outreach value nobody set yet
+        (infra/gcp/setup.sh): it reads as empty, so the engine treats it as not configured."""
+        return "" if value.strip() == "unset" else value.strip()
 
     # Per shop, to start (D-039; our estimate). A cap stops new items or photos with a
     # clear message and never deletes anything.
