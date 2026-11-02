@@ -22,6 +22,8 @@ const MAIN: NavItem[] = [
   { href: "/ops/clients", label: "Clients", icon: "clients" },
   { href: "/ops/onboarding", label: "Onboarding", icon: "onboarding" },
   { href: "/ops/requests", label: "Requests", icon: "asks" },
+  // ALYR's own outreach (specs/065, ALY-311): the founder approves drafts from his phone.
+  { href: "/ops/outreach", label: "Outreach", icon: "outreach" },
 ];
 const SETTINGS: NavItem[] = [
   { href: "/ops/whatsapp", label: "WhatsApp lines", icon: "line" },
@@ -48,6 +50,7 @@ const PATHS: Record<string, string> = {
   staff: "M12 3 4 6v5c0 5.2 3.4 8.4 8 10 4.6-1.6 8-4.8 8-10V6z",
   lock: "M6 11V8a6 6 0 0 1 12 0v3 M5 11h14v10H5z M12 15v2",
   audit: "M9 4h10v16H5V8z M9 4v4H5 M9 13h6 M9 17h4",
+  outreach: "M3 6h18v12H3z M3 7l9 6 9-6",
   more: "M5 12h.01 M12 12h.01 M19 12h.01",
   out: "M10 17l-5-5 5-5 M5 12h12 M14 4h5v16h-5",
 };

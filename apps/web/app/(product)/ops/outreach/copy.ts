@@ -171,7 +171,7 @@ export const W = {
   review: {
     eyebrow: "Outreach · review",
     title: "Review",
-    lead: "Each first message waits here for you. Approving binds your yes to this exact text; an edit needs a new approval.",
+    lead: "Approving binds your yes to this exact text; an edit needs a new approval.",
     none: "Nothing waiting.",
     count: (n: number) => (n === 1 ? "1 draft waits for you." : `${n} drafts wait for you.`),
     emptyTitle: "Drafts waiting for your approval show here",
