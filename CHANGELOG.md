@@ -5,6 +5,7 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- Removing demo data now also removes its photo files (ALY-309; no migration, no new dependency): `python -m alyr.seed_into_business --remove` queues the load's photos for deletion the way a shop's own deleted photo is, and the worker deletes the files from the photo store. Before, it removed every row and left the files behind. A load made with v0.3.5 and removed leaves its photo files in the store (42 small tiles); deploy this before loading demo data on production.
 
 ## v0.3.6 (3 Nov 2026)
 - The demo-data dry run works on Google Cloud (ALY-312; no migration, no new dependency): the first production dry run stopped because a refused `set role` aborted the rehearsal's one transaction before the fallback could run; the first attempt now sits in a savepoint. Nothing had been written.
