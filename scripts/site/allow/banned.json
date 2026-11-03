@@ -66,13 +66,43 @@
       "context": "\"className\":\"rule",
       "where": "html",
       "reason": "The section rule's CSS class (the hairline with crosses above a section) in Next's page data, a class name, not a word on the page."
+    },
+    {
+      "term": "AI",
+      "context": "The AI solution provider",
+      "reason": "The founder's decision, 3 Nov 2026 (ALY-314, D-153), made knowing no AI model is in the product. An exception to honesty.md section 1 for the homepage's headline, sub line, title and description only."
+    },
+    {
+      "term": "agentic",
+      "context": "One agentic platform",
+      "reason": "The founder's decision, 3 Nov 2026 (ALY-314, D-153), made knowing no AI model is in the product. An exception to honesty.md section 1 for the homepage's headline, sub line, title and description only."
+    },
+    {
+      "term": "ذكاء",
+      "context": "حلول الذكاء الاصطناعي",
+      "reason": "The founder's decision, 3 Nov 2026 (ALY-314, D-153), made knowing no AI model is in the product. An exception to honesty.md section 1 for the homepage's headline, sub line, title and description only."
+    },
+    {
+      "term": "ذكاء",
+      "context": "بوكلاء الذكاء الاصطناعي",
+      "reason": "The founder's decision, 3 Nov 2026 (ALY-314, D-153), made knowing no AI model is in the product. An exception to honesty.md section 1 for the homepage's headline, sub line, title and description only."
     }
   ],
   "pricePages": {
     "reason": "The pricing page (ALY-301) exists to show prices. The founder decided on 31 Oct 2026 to publish them with the homepage's offer switch (NEXT_PUBLIC_ALYR_OFFER) still off, because Paddle, ALYR's card-payment provider, needs the price a buyer is charged to be visible before it approves the domain (D-074). So a price shape may sit in the copy under pricing.** and in the built pages and markdown copies of that one page, and nowhere else: the check still refuses a price on every other page, in the homepage's lines, in llms.txt and in the rest of llms-full.txt.",
-    "copy": ["pricing.**"],
-    "files": ["pricing.html", "ar/pricing.html", "pricing.md", "ar/pricing.md"],
-    "sections": ["/pricing.md", "/ar/pricing.md"]
+    "copy": [
+      "pricing.**"
+    ],
+    "files": [
+      "pricing.html",
+      "ar/pricing.html",
+      "pricing.md",
+      "ar/pricing.md"
+    ],
+    "sections": [
+      "/pricing.md",
+      "/ar/pricing.md"
+    ]
   },
   "offerOnly": [
     {
@@ -94,12 +124,12 @@
   "kept": [
     {
       "path": "en.home.hero.title",
-      "text": "The tech team your business never had.",
-      "reason": "The one slogan the site may have (content audit row 35; 02-decisions.md: keep the hero slogan)"
+      "text": "The AI solution provider for your business.",
+      "reason": "The one slogan the site may have (content audit row 35), reworded by the founder on 3 Nov 2026 (ALY-314)"
     },
     {
       "path": "ar.home.hero.title",
-      "text": "فريق التقنية الذي لم يكن لدى مشروعك.",
+      "text": "مزوّد حلول الذكاء الاصطناعي لمشروعك.",
       "reason": "The Arabic of the hero slogan (row 35)"
     },
     {
