@@ -144,6 +144,7 @@ async def remove(conn: asyncpg.Connection, tenant_id: UUID, manifest: dict) -> d
         "insert into erasing_businesses (business_id) values ($1) on conflict do nothing",
         tenant_id,
     )
+    await queue_file_deletes(conn, tenant_id, inserted.get("media_assets", []))
     for table in order:
         done = await conn.execute(
             f'delete from "{table}" x where x.tenant_id = $1 and {key_sql(pks[table])} = any($2::text[])',  # noqa: E501
@@ -158,6 +159,36 @@ async def remove(conn: asyncpg.Connection, tenant_id: UUID, manifest: dict) -> d
         for row in rows:
             await _restore_row(conn, tenant_id, table, pks[table], row)
     return deleted
+
+
+async def queue_file_deletes(conn, tenant_id: UUID, asset_ids: list[str]) -> None:
+    """The load's photos leave the photo store the way a shop's own deleted photo does: its
+    `delete` operations and one `media.sync` job per photo, for the worker (which holds the
+    store's keys) to carry out. A write still waiting in the queue is dropped, and so is its
+    old sync job, so nothing writes a file after this removes the row it belongs to."""
+    if not asset_ids:
+        return
+    from alyr.core import jobs  # noqa: PLC0415 - only a removal needs the queue
+    from alyr.core.media import SYNC, SYNC_ATTEMPTS  # noqa: PLC0415
+
+    await conn.execute(
+        "delete from jobs where tenant_id = $1 and kind = $2 "
+        "and payload->>'asset_id' = any($3::text[])",
+        tenant_id, SYNC, asset_ids)
+    await conn.execute(
+        "delete from media_ops where tenant_id = $1 and op = 'put' "
+        "and asset_id::text = any($2::text[])",
+        tenant_id, asset_ids)
+    for asset in await conn.fetch(
+            "select id, variants from media_assets where tenant_id = $1 "
+            "and id::text = any($2::text[])",
+            tenant_id, asset_ids):
+        for variant in asset["variants"]:
+            await conn.execute(
+                "insert into media_ops (tenant_id, asset_id, op, key) "
+                "values ($1, $2, 'delete', $3)",
+                tenant_id, asset["id"], variant["key"])
+        await jobs.enqueue(conn, SYNC, {"asset_id": str(asset["id"])}, max_attempts=SYNC_ATTEMPTS)
 
 
 async def _restore_row(conn, tenant_id: UUID, table: str, cols: list[str], row: dict) -> None:

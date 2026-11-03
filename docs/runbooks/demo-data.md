@@ -21,7 +21,7 @@ It **sends nothing**: customers sit on the business's private simulator line, so
 7. **Click through** at `app.alyr.qa` as the owner: Inbox, Bookings (today), Orders, Menu, Documents (open an invoice's PDF), Credit accounts (an account over its limit), Team. In Arabic too (the globe button).
 8. **Photos** are stored by the worker a minute or two after the load (the job holds no photo-store key). Until then item tiles may be blank.
 
-Refresh the dates later with `replace` (`infra/gcp/demo-data.sh replace <email>`, after a new dry run); take it all out with `remove`. `remove` deletes exactly what the load added, puts back the counters it moved (including document numbering), and leaves the business as it was. The record of the load stays as history, marked `removed`.
+Refresh the dates later with `replace` (`infra/gcp/demo-data.sh replace <email>`, after a new dry run); take it all out with `remove`. `remove` deletes exactly what the load added, puts back the counters it moved (including document numbering), queues the photo files for deletion (the worker removes them from the photo store within minutes; until then the queue holds one `media.sync` job per photo), and leaves the business as it was. The record of the load stays as history, marked `removed`.
 
 ## Refusals you may see
 
@@ -48,10 +48,11 @@ Mark the business first (a local business has no `/ops` unless you run it; set `
 
 - Tests (real PostgreSQL): `test_demo_data_switch.py`, `test_demo_into_business.py` (refusals, lifecycle, data invariants).
 - **Mutation checks**, each making one safety rule false and confirming a test fails: the `--yes` flag not required; the test-business mark not checked; the dry run not required; a business's own activity allowed; the queue not cleaned after the load (sending jobs left behind); the changed rows not restored on removal. All six failed a test; the "own activity" check first failed for a wrong reason (a bad row in the test) and was redone.
+- **Photo store:** with `--photos queue` (production) the load only queues the photos; a test runs the worker's step, then `--remove` and the worker's step again, and the store is back to the files it had. The first version of `--remove` left every written file behind; that was found and fixed on 3 Nov 2026, and the test fails when the fix is taken out. **A load made with v0.3.5 and removed leaves its photo files in the store**: deploy the release that holds the fix before loading.
+- **Back office switch**, clicked as staff on a local stack: it saves, shows English and Arabic, survives a reload, fits at 375 px, and writes `business.demo_data_on` to the audit log; the command then ran on the business marked that way. `--hide-existing-items` hid a business's own live item and `--remove` brought it back.
 - **Browser pass** (Chromium, a scratch business loaded locally): every workspace section at 375 and 1440 px, English and Arabic, 48 views: no page error, no server error, no horizontal overflow; screenshots of inbox, bookings, credit and documents looked like a working business.
 
 ## Not checked
 
-- Anything on Google Cloud: the job, its image, the photo path with `--photos queue` and the worker, the back office switch on production.
+- Anything on Google Cloud: the job, its image, the real photo store (R2) with the worker, the back office switch on production.
 - Arabic wording of the story (customers' messages, item names, document text) has not been read by a native speaker (ALY-66). Names and the brand "Zaman Bakehouse" are not checked against real businesses.
-- The back office switch screen was built and type-checked, and its API tested, but was not clicked in a browser.
