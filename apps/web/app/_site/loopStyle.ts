@@ -42,11 +42,12 @@ export const LOOP_CSS = `
 .hw-see{--hw-end:calc(44 * var(--play-stagger) + var(--play-3))}
 .hw-improve{--hw-end:calc(18 * var(--play-stagger) + var(--play-3))}
 .hw-toggle{bottom:-2.75rem;inset-inline-end:-.75rem}
+.of-toggle{top:50%;translate:0 -50%;inset-inline-end:-.75rem}
 .sf .sf-toggle{top:calc((3.5rem - 2.75rem) / 2);inset-inline-end:calc(var(--space-4) - .75rem);color:var(--on-band-quiet)}
 .sf .sf-toggle:hover{color:var(--on-band)}
 .sf .sf-toggle:focus-visible{outline-color:var(--focus-on-band);outline-offset:-2px}
-.hw .hw-toggle,.sf .sf-toggle{opacity:0;transition:opacity var(--dur-2) var(--ease)}
-.hw:hover .hw-toggle,.hw .hw-toggle:focus-visible,.hw[data-paused] .hw-toggle,.sf:hover .sf-toggle,.sf .sf-toggle:focus-visible,.sf[data-paused] .sf-toggle{opacity:1}
+.hw .hw-toggle,.sf .sf-toggle,.of .of-toggle{opacity:0;transition:opacity var(--dur-2) var(--ease)}
+.hw:hover .hw-toggle,.hw .hw-toggle:focus-visible,.hw[data-paused] .hw-toggle,.of:hover .of-toggle,.of .of-toggle:focus-visible,.of[data-paused] .of-toggle,.sf:hover .sf-toggle,.sf .sf-toggle:focus-visible,.sf[data-paused] .sf-toggle{opacity:1}
 .sf-chat{--sf-end:calc(11 * var(--play-stagger) + var(--play-3))}
 .sf-bookings{--sf-end:calc(14 * var(--play-stagger) + var(--play-3))}
 .sf-agent{--sf-end:var(--play-4)}

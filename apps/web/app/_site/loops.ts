@@ -173,10 +173,14 @@ export function startLoops(): () => void {
           try {
             animation.finish();
           } catch {
-            /* an animation that cannot finish is left as it is */
+            // one that cannot finish (the word taking turns has no end) stops where it is
+            animation.pause();
           }
         }
       } else {
+        for (const animation of group.root.getAnimations({ subtree: true })) {
+          if (isScene(animation) && animation.playState === "paused") animation.play();
+        }
         for (const player of group.players) play(player, "again");
       }
     };
@@ -195,6 +199,9 @@ export function startLoops(): () => void {
   if (reduce.matches) return () => off.forEach((fn) => fn());
 
   // -------------------------------------------- when each player first plays
+  // A line with a word taking turns already runs from the CSS: it only needs its Pause shown.
+  for (const line of document.querySelectorAll<HTMLElement>("[data-loop] [data-flip]")) play(line, "first");
+
   // "How we work with you": each card once half of its canvas is in view (how.css staggers a
   // row); a hover with a mouse, the keyboard's focus or a press of its canvas plays it again.
   for (const card of document.querySelectorAll<HTMLElement>("[data-hw-card]")) {

@@ -87,6 +87,8 @@ export function startFilm(): () => void {
   function run() {
     // `data-hold` keeps it where it is (the capture scripts set it to draw one moment)
     const playing = on && !paused && seen && document.visibilityState === "visible" && !root.hasAttribute("data-hold");
+    // the word taking turns beside the film stops with its Pause and rests off screen
+    root.closest(".hero")?.toggleAttribute("data-paused", paused || !seen);
     for (const a of running()) {
       if (playing && a.playState === "paused") a.play();
       else if (!playing && a.playState === "running") a.pause();

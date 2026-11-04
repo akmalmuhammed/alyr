@@ -223,10 +223,6 @@ async def remove_active(owner: Database, tenant_id: UUID, say) -> bool:
             await remove_global(conn, tenant_id, run["manifest"].get(kind, []), key)
         await restore_name(conn, tenant_id, run["manifest"])
         await conn.execute(
-            "delete from jobs where tenant_id = $1 and kind = 'media.sync' and "
-            "payload->>'asset_id' = any($2::text[])", tenant_id,
-            run["manifest"].get("inserted", {}).get("media_assets", []))
-        await conn.execute(
             "update demo_seed_runs set status = 'removed', removed_at = now() where id = $1",
             run["id"])
     say(f"Removed the load of {run['created_at']:%d %b %Y %H:%M}: "
