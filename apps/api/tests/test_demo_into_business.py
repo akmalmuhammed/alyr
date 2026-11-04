@@ -14,9 +14,11 @@ The rules proved here, each with a mutation check written in the runbook's test 
 """
 
 import asyncio
+from datetime import UTC, datetime
 
 from alyr.config import get_settings
 from alyr.db import Database
+from alyr.modules import report
 from alyr.modules.ledger import service as ledger
 from demo_into_support import bakery, mark, run, sql, table_counts
 from test_consent import owner_sql
@@ -265,3 +267,25 @@ def test_a_business_with_no_settings_row_loads(client):
     assert sql("select day_starts::text from shop_settings where tenant_id = $1",
                tenant_id)[0]["day_starts"] == "00:00:00"
 
+
+def test_a_business_with_last_weeks_own_report_loads(client):
+    """The founder's business had already been sent a real weekly report, so the load's own
+    insert for the same week hit the primary key and the third production dry run stopped
+    (ALY-315). The business's row is left as it was."""
+    tenant_id, _, owner = bakery(client)
+    mark(tenant_id)
+    week = report.last_full_week(datetime.now(UTC), "Asia/Qatar")
+    owner_sql("insert into weekly_reports (tenant_id, week_start, sections) "
+              "values ($1, $2, '{}'::jsonb)", tenant_id, week)
+
+    code, text = run("--owner-email", owner, YES, "--dry-run", "--photos", "now")
+    assert code == 0, text
+    code, text = run("--owner-email", owner, YES, "--photos", "now")
+    assert code == 0, text
+    rows = sql("select sections::text as s from weekly_reports where tenant_id = $1 "
+               "and week_start = $2", tenant_id, week)
+    assert [r["s"] for r in rows] == ["{}"]
+    code, text = run("--owner-email", owner, YES, "--remove")
+    assert code == 0, text
+    assert sql("select 1 from weekly_reports where tenant_id = $1 and week_start = $2",
+               tenant_id, week)
