@@ -23,9 +23,12 @@ KEEP_JOBS = ("media.sync",)
 async def load(run: Run) -> dict:
     """Write the whole story. Returns the counts the summary prints."""
     world.require(run)
+    async with run.app.tenant(run.id) as conn:
+        existing = [r["id"] for r in await conn.fetch("select id from contacts")]
     await world.private_line(run)
     made, profiles, rng = await world.setup(run)
     story = world.story_for(run, made, rng, profiles)
+    story.existing_contacts = existing
     owner_actor = made.owner
     async with run.app.tenant(run.id) as conn:
         made.conn = conn

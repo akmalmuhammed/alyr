@@ -289,3 +289,24 @@ def test_a_business_with_last_weeks_own_report_loads(client):
     assert code == 0, text
     assert sql("select 1 from weekly_reports where tenant_id = $1 and week_start = $2",
                tenant_id, week)
+
+
+def test_a_conversation_the_business_already_had_is_left_alone(client):
+    """The founder's business already had a customer who had written to it, left open. The load
+    set the state of every conversation, that one too, and stopped on it (ALY-315)."""
+    tenant_id, _, owner = bakery(client)
+    mark(tenant_id)
+    contact = owner_sql(
+        "insert into contacts (tenant_id, phone, name, inbox_status, last_inbound_at) "
+        "values ($1, '97455123456', 'Real customer', 'open', now() - interval '6 days') "
+        "returning id", tenant_id)[0]["id"]
+    owner_sql("insert into messages (tenant_id, contact_id, direction, kind, body, created_at) "
+              "values ($1, $2, 'in', 'text', 'hello', now() - interval '6 days')",
+              tenant_id, contact)
+
+    code, text = run("--owner-email", owner, YES, "--dry-run", "--photos", "now")
+    assert code == 0, text
+    code, text = run("--owner-email", owner, YES, "--photos", "now")
+    assert code == 0, text
+    row = sql("select inbox_status, inbox_read_at from contacts where id = $1", contact)[0]
+    assert (row["inbox_status"], row["inbox_read_at"]) == ("open", None)
