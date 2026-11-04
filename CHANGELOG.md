@@ -5,6 +5,8 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+
+## v0.3.9 (5 Nov 2026)
 - The demo-data load works on a business that has no settings row yet (ALY-315; no migration, no new dependency): the second production dry run stopped because a business made in the back office had never opened a module, so its clock had no day start; midnight, the row's own default, is used. Two more stops found by the next dry runs are fixed the same way: the job had no link key to sign the order links in its made-up chats (it now gets a throwaway one made at deploy, not the live key), and a business that already had last week's real report hit its primary key (the load now leaves that report as it is). Nothing had been written.
 
 ## v0.3.8 (4 Nov 2026)
