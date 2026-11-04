@@ -51,11 +51,14 @@ change() { # what it does (shown), then the gcloud arguments
 }
 
 deploy_job() { # tag
+  # The load signs the order links in its made-up chats, which needs a link key. A throwaway one,
+  # made here and kept nowhere else: those links open nothing on the live site, and the real key
+  # (`link-secret`) is not given to this job.
   local tag="$1" images="$REGION-docker.pkg.dev/$PROJECT/$REPO"
   change "make or update the job $JOB (image alyr-api:$tag, runs as $RUNS_AS, no schedule)" \
     run jobs deploy "$JOB" --region="$REGION" --image="$images/alyr-api:$tag" \
     --args=python,-m,alyr.seed_into_business --service-account="$(sa "$RUNS_AS")" "${private_net[@]}" \
-    --set-env-vars=ALYR_ENV=production \
+    --set-env-vars="ALYR_ENV=production,ALYR_LINK_SECRET=$(openssl rand -hex 32)" \
     --set-secrets=ALYR_MIGRATION_URL=migration-url:latest,ALYR_DATABASE_URL=database-url:latest \
     --cpu=1 --memory=1Gi --max-retries=0 --task-timeout=30m
 }

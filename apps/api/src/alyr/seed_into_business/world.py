@@ -18,7 +18,7 @@ them one order at a time.
 """
 
 import random
-from datetime import timedelta
+from datetime import time, timedelta
 from uuid import UUID
 
 from alyr import capabilities
@@ -288,9 +288,10 @@ async def setup(run: Run) -> tuple[build.Made, dict, random.Random]:
     owner_member = persona.TEAM[0]
     async with run.app.tenant(run.id) as conn:
         setup_data = setup_for("bakery")
-        clock = ShopClock(run.now, build.TZ, await conn.fetchval(
-            "select day_starts from shop_settings") if await conn.fetchval(
-            "select 1 from shop_settings") else None)
+        # A business made in the back office has no settings row until a module needs one:
+        # its day then starts at midnight, as the row's own default does.
+        day_starts = await conn.fetchval("select day_starts from shop_settings")
+        clock = ShopClock(run.now, build.TZ, day_starts or time(0))
         made = build.Made(conn, shop, run.now, setup_data, clock)
         made.zones = []
         await add_team(run, conn, history_start)

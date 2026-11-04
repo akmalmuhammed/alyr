@@ -13,7 +13,7 @@ It **sends nothing**: customers sit on the business's private simulator line, so
 ## Steps (production)
 
 1. **Release.** v0.3.5 per `docs/runbooks/release.md` (the founder approves `production`). Migration 0110 adds `tenants.demo_data_allowed` and `demo_seed_runs`; nothing changes for any business.
-2. **Make the job** (founder's machine, `gcloud auth login`): `infra/gcp/demo-data.sh plan v0.3.5`, read it, then `infra/gcp/demo-data.sh deploy v0.3.5`. It makes a job with no schedule that holds only the two database addresses.
+2. **Make the job** (founder's machine, `gcloud auth login`): `infra/gcp/demo-data.sh plan v0.3.5`, read it, then `infra/gcp/demo-data.sh deploy v0.3.5`. It makes a job with no schedule that holds only the two database addresses and a throwaway link key made at deploy (the made-up chats carry order links; they open nothing on the live site).
 3. **Mark the business as a test business.** Back office (`/ops`) → Clients → the business → "Test business: demo data may be loaded". Staff only; audited.
 4. **Download all data** in the workspace (Account) if the business has anything you care about. A load into a business with its own customers or orders is refused anyway.
 5. **Dry run:** `infra/gcp/demo-data.sh dry-run akmal@alyr.qa`. It rehearses the whole load in a transaction that is rolled back and prints what a real run would leave. Nothing is written except one marker row.

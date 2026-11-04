@@ -1063,7 +1063,8 @@ class Fortnight:
 
     async def finish_contacts(self) -> None:
         """Each conversation's state follows its last message, as the inbox expects; and the
-        report the owner got last Sunday."""
+        report the owner got last Sunday, unless the business already has that week's own. A
+        conversation the business already had keeps the state it has."""
         conn = self.conn
         await conn.execute(
             "update contacts c set last_inbound_at = m.last_in, inbox_read_at = m.last_any, "
@@ -1071,15 +1072,16 @@ class Fortnight:
             "then 'open' else 'closed' end "
             "from (select contact_id, max(created_at) filter (where direction = 'in') as last_in, "
             "max(created_at) as last_any from messages group by contact_id) m "
-            "where m.contact_id = c.id and c.role = 'customer'",
-            self.now,
+            "where m.contact_id = c.id and c.role = 'customer' and c.id <> all($2::uuid[])",
+            self.now, getattr(self, "existing_contacts", []),
         )
         week = report.last_full_week(self.now, await report._timezone(conn))
         built = await report.build(conn, week)
         sent = datetime.combine(week + timedelta(days=7), time(report.SEND_HOUR), TZ)
         await conn.execute(
             "insert into weekly_reports (week_start, sections, sent_at, created_at) "
-            "values ($1, $2, $3, $3)", week, built["sections"], sent,
+            "values ($1, $2, $3, $3) on conflict do nothing",
+            week, built["sections"], sent,
         )
 
 
