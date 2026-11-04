@@ -20,7 +20,11 @@ Until a model is in the product (D-012, D-035), nothing says or implies AI, not 
 
 ALYR's direction is the agentic business path (D-152). That changes the plan and not this rule.
 A private concept may use the words if it is marked as a concept. Anything public keeps to this
-section until a model is in the product and the founder changes it.
+section until a model is in the product and the founder changes it, apart from the one exception
+below.
+
+**One exception (D-153, the founder, 3 Nov 2026):** the homepage's headline, sub line, title and
+description use the founder's AI wording. Nothing else takes it from them.
 
 - **Words:** AI, artificial intelligence, smart, intelligent, intelligence (including
   "business intelligence"), learns, understands, thinks, predicts, forecast, knows,

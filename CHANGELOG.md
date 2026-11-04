@@ -6,6 +6,12 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 
 ## Unreleased
 
+## v0.3.8 (4 Nov 2026)
+- The homepage's new headline, the founder's wording (ALY-314, D-153; no migration, no new dependency): "The AI solution provider for your business.", and under it one line, "One agentic platform to learn, operate, power, manage and scale your business.", whose verb takes turns on a faint Volt highlight. The word stops with the film's Pause, rests on "manage" when motion is reduced, and a screen reader hears the whole sentence once. A new section before the products, "Every business has an office, and yours is your phone.", takes turns through orders, bookings, stock, accounts and team with its own Pause. The homepage's title and description follow, in English and Arabic. This is a recorded exception to the rule against AI words on the site (D-153, `honesty.md`), limited to the headline, that line, the title and the description; no model is in the product yet. The Arabic is a draft until the native review (ALY-66).
+
+## v0.3.7 (3 Nov 2026)
+- Removing demo data now also removes its photo files (ALY-309; no migration, no new dependency): `python -m alyr.seed_into_business --remove` queues the load's photos for deletion the way a shop's own deleted photo is, and the worker deletes the files from the photo store. Before, it removed every row and left the files behind. A load made with v0.3.5 and removed leaves its photo files in the store (42 small tiles); deploy this before loading demo data on production.
+
 ## v0.3.6 (3 Nov 2026)
 - The demo-data dry run works on Google Cloud (ALY-312; no migration, no new dependency): the first production dry run stopped because a refused `set role` aborted the rehearsal's one transaction before the fallback could run; the first attempt now sits in a savepoint. Nothing had been written.
 

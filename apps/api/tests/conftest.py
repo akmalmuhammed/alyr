@@ -111,6 +111,22 @@ def client_factory(monkeypatch, tmp_path):
     yield build
     stack.close()
     get_settings.cache_clear()
+    _forget_fastapi_route_caches()
+
+
+def _forget_fastapi_route_caches() -> None:
+    """FastAPI keeps module-level caches keyed by each endpoint function (4,096 entries each).
+    `create_app` defines endpoints inside itself (`ready`, `health`...), and each holds its app, so
+    every test's app, with its pools and engines, stayed alive for the whole run: 6 to 13 MB a
+    test, enough to run CI's runner out of memory (ALY-313). Clearing them once the test's app is
+    closed lets it go. Production runs one app per process, so it is not affected."""
+    from fastapi.dependencies import models
+
+    for name in ("_is_gen_callable_cached", "_is_async_gen_callable_cached",
+                 "_is_coroutine_callable_cached"):
+        cached = getattr(models, name, None)
+        if cached is not None:
+            cached.cache_clear()
 
 
 @pytest.fixture

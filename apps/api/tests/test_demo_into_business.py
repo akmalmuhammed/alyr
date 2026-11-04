@@ -14,8 +14,12 @@ The rules proved here, each with a mutation check written in the runbook's test 
 """
 
 import asyncio
+import json
+from pathlib import Path
 
 from alyr.config import get_settings
+from alyr.core.media import MediaService
+from alyr.core.storage import LocalStore
 from alyr.db import Database
 from alyr.modules.ledger import service as ledger
 from demo_into_support import bakery, mark, run, sql, table_counts
@@ -24,9 +28,38 @@ YES = "--yes-this-business-is-a-test"
 
 
 def counts_without_record(tenant_id) -> dict:
+    """Every table's rows, without the record of the loads and the two queues the photo store's
+    worker empties (a removal leaves its deletions there; `test_photos_leave_the_store`)."""
     out = table_counts(tenant_id)
-    out.pop("demo_seed_runs")
+    for name in ("demo_seed_runs", "jobs", "media_ops"):
+        out.pop(name)
     return out
+
+
+def photo_files(root) -> set[str]:
+    return {str(p) for p in Path(root).rglob("*") if p.is_file()}
+
+
+def worker_syncs_photos(tenant_id) -> int:
+    """What the worker does with the `media.sync` jobs: carry out each photo's queued writes and
+    deletions in a local store. Returns how many photos it went through."""
+    ids = {r["payload"]["asset_id"] if isinstance(r["payload"], dict)
+           else json.loads(r["payload"])["asset_id"] for r in sql(
+        "select payload from jobs where tenant_id = $1 and kind = 'media.sync'", tenant_id)}
+
+    async def go():
+        settings = get_settings()
+        db = Database(settings.database_url)
+        await db.connect()
+        try:
+            service = MediaService(db, LocalStore(Path(settings.media_local_dir)), settings)
+            for asset_id in ids:
+                await service.sync(tenant_id, {"asset_id": asset_id})
+        finally:
+            await db.close()
+    asyncio.run(go())
+    sql("delete from jobs where tenant_id = $1 and kind = 'media.sync'", tenant_id)
+    return len(ids)
 
 
 def scoped(tenant_id, work):
@@ -93,7 +126,7 @@ def test_a_real_load_refuses_without_a_dry_run(client):
     code, text = run("--owner-email", owner, YES, "--photos", "now")
     assert code == 1 and "dry run" in text
     assert counts_without_record(tenant_id) == {
-        k: v for k, v in before.items() if k != "demo_seed_runs"}
+        k: v for k, v in before.items() if k not in ("demo_seed_runs", "jobs", "media_ops")}
 
 
 # ── a whole life: dry run, load, look, load again, replace, remove ────────────────────────
@@ -247,3 +280,35 @@ def test_a_business_with_its_own_activity_is_refused(client):
     code, text = run("--owner-email", owner, YES, "--photos", "now")
     assert code == 1 and "activity of its own" in text
     assert counts_without_record(tenant_id) == before
+
+
+def test_photos_leave_the_store(client):
+    """In production the load only queues the photos (`--photos queue`) and the worker, which holds
+    the store's keys, writes them. A removal must leave nothing behind in the store either."""
+    tenant_id, _, owner = bakery(client)
+    mark(tenant_id)
+    root = get_settings().media_local_dir
+    files_before = photo_files(root)
+    assert run("--owner-email", owner, YES, "--dry-run", "--photos", "queue")[0] == 0
+    code, text = run("--owner-email", owner, YES, "--photos", "queue")
+    assert code == 0, text
+    # queued, not written: a job per photo, bytes waiting in the database, no file yet
+    queued = sql("select count(*) n from jobs where tenant_id = $1 and kind = 'media.sync'",
+                 tenant_id)[0]["n"]
+    assert queued >= 35
+    assert photo_files(root) == files_before
+    assert worker_syncs_photos(tenant_id) == queued
+    assert len(photo_files(root) - files_before) >= queued
+    assert sql("select 1 from media_assets where tenant_id = $1 and state <> 'ready'",
+               tenant_id) == []
+
+    code, text = run("--owner-email", owner, YES, "--remove")
+    assert code == 0, text
+    # the files are still there until the worker has run, and the queue says exactly what to do
+    assert photo_files(root) - files_before
+    assert sql("select 1 from media_ops where tenant_id = $1 and op <> 'delete'", tenant_id) == []
+    assert sql("select 1 from jobs where tenant_id = $1 and kind <> 'media.sync'", tenant_id) == []
+    assert worker_syncs_photos(tenant_id) == queued
+    assert photo_files(root) == files_before
+    assert sql("select 1 from media_ops where tenant_id = $1", tenant_id) == []
+    assert sql("select 1 from media_assets where tenant_id = $1", tenant_id) == []

@@ -107,7 +107,8 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-132 | A process holds few database connections (4 for an API instance, 8 for the worker), gives up after 3 seconds and answers 503 with Retry-After; only so many documents are drawn at once; the worker keeps places for customers; the Sunday report can be spread but stays at nine | Accepted |
 | D-131 | What the workspace and the order page ask for again and again is kept three seconds and shared between tabs, thrown away by the shop's own writes; who is signed in and a shop's modules the same | Accepted |
 | D-130 | The inbox and the Orders screen read the newest rows off an index (a customer carries the times of their latest messages, kept by the database; the inbox lists 300 conversations, Orders the last 30 days and everything open), so a refresh costs the same in a shop's first week and its second year | Accepted |
-| D-152 | ALYR's direction is the agentic business path: an owner can start, run, operate and scale a business on ALYR's products and agents. A plan, not a claim: no AI model is in the product and the public words do not change until one is | Accepted |
+| D-152 | ALYR's direction is the agentic business path: an owner can start, run, operate and scale a business on ALYR's products and agents. A plan, not a claim: no AI model is in the product, and public words keep to `honesty.md` until one is, apart from the homepage wording the founder chose (D-153) | Accepted |
+| D-153 | The homepage's headline and sub line use the founder's AI wording, with one word taking turns on a pale Volt block, and a statement before the products keeps the plain line | Accepted |
 
 ---
 
@@ -2498,13 +2499,15 @@ The founder, 31 Oct 2026, of two screenshots of the homepage: "fix these items, 
 
 The founder, 31 Oct and 1 Nov 2026: ALYR is changing who it is and is going the agentic business path. A user can start, run, operate and scale their business with ALYR's agents and products, with many solutions planned and custom solutions too.
 
+**Updated by D-153 (3 Nov 2026).** The founder made one exception to the rule on public words: the homepage's headline, sub line, title and description carry the founder's AI wording, live on alyr.qa since v0.3.8 (4 Nov 2026). The rest of this decision stands.
+
 **Decision.** This is the company's direction, and every plan follows it. The founder's Suite Stack is the map: eleven product families across start, run, operate and scale.
 
 **What this does not change.**
 - The goal for this stage: one real business live on its own number and paying, then the first 50 clients.
 - Every owner-run business, Qatar first (D-043). Paid from the first customer, sold in person. Product first (no fork per client).
 - Non-custodial payments and every other hard rule in `CLAUDE.md`.
-- The rule on public words. No AI model is in the product, so `honesty.md` stands until one is and the founder changes it. A public claim has to be true on the day it is made.
+- The rule on public words. No AI model is in the product, so `honesty.md` stands until one is and the founder changes it, apart from the homepage's headline, sub line, title and description (D-153). A public claim has to be true on the day it is made.
 - The current homepage. The founder rejected a concept homepage built from the plan on 31 Oct, so the homepage is not being rebuilt.
 
 **Why this order.** The direction is the founder's call and it is made. The claim has to wait for the product. Phases 0 to 6 in the master plan tie each public word to a job that has passed its test.
@@ -2533,3 +2536,20 @@ The founder, 31 Oct and 1 Nov 2026: ALYR is changing who it is and is going the 
 **Revisit when** a second person needs a demo business, or a table is added that the load must write (the load stops and says which).
 
 ---
+
+## D-153 · The homepage's headline and flipping sub line
+
+**Date** 3 Nov 2026 · **Status** Accepted (the founder, 3 Nov 2026, after the risks were set out) · Linear ALY-314, under ALY-302 · An exception to D-012 and `honesty.md` section 1
+
+The founder, 3 Nov 2026: the headline becomes "The AI solution provider for your business." and the sub line "One agentic platform to [learn / operate / power / manage / scale] your business.", one word flipping at a time on a faint Volt highlight. Offered a plainer version for now, the founder chose this one and put the plain line in a later section.
+
+**Decision.**
+- The homepage's headline, sub line, title and description use that wording, in English and Arabic.
+- Before the products, a statement: "Every business has an office, and yours is your phone." and "One platform for your [orders / bookings / stock / accounts / team]."
+- The whole sentence is `lead`, for screen readers and machines. The words stack in one grid cell, so nothing beside them moves. The motion is CSS and starts with the page. A Pause stops it, it rests off screen, and with reduced motion or no scripts one word stays.
+
+**What the founder weighed.** No AI model is in the product on this date. Meta's App Review is open and was told "software for small businesses in Qatar". Qatar's consumer law expects a service to match how it is announced. Paddle bars IT services not tied to software. The risk is accepted for this wording only.
+
+**Scope.** It is an exception, not a change to the rule. Every other public line keeps to `honesty.md`. Each use is listed in `scripts/site/allow/banned.json`.
+
+**Revisit when.** Meta answers, a lawyer reads the wording (ALY-51), or the first AI job goes live.

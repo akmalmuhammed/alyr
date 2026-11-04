@@ -8,7 +8,7 @@ Version 2 adds section 0, the agentic path (D-152). Sections 1 to 12 are version
 
 **Where ALYR is going.** ALYR is becoming an agentic business suite: an owner can start, run, operate and scale a business on ALYR's products and agents, with many solutions planned and custom solutions alongside them.
 
-**This is a plan, not a claim.** On 1 November 2026 no AI model is in the product, and ALYR Agent is a set of rules (D-012). Nothing a customer sees says or implies AI until a model is in the product and the founder changes the rule in `.claude/skills/alyr-design/honesty.md`.
+**This is a plan, not a claim.** On 1 November 2026 no AI model is in the product, and ALYR Agent is a set of rules (D-012). Nothing a customer sees says or implies AI until a model is in the product and the founder changes the rule in `.claude/skills/alyr-design/honesty.md`, with one exception the founder made on 3 Nov: the homepage's headline, sub line, title and description (D-153, live in v0.3.8 on 4 Nov 2026).
 
 **What stays the same.** The goal for this stage is one real business live on its own number and paying, then the first 50 clients. Every owner-run business, Qatar first, then the GCC (D-043). Paid from the first customer, sold in person. Payments stay non-custodial. The current homepage stays.
 
@@ -62,7 +62,7 @@ Phases, not dates. A phase ends when its test passes. This order is proposed unt
 
 Phase 0 can start now. Code for Phase 1 starts after the first paying business is live, so this does not delay go-live.
 
-**The words follow the work.** "Agent" is used only for a named job that has passed its test. "Agentic business suite" is used only after phase 6. The website changes last, after the reviews in progress have passed, the documents are updated, owners are told and one consenting shop has tried a job.
+**The words follow the work.** "Agent" is used only for a named job that has passed its test. "Agentic business suite" is used only after phase 6. The website changes last, after the reviews in progress have passed, the documents are updated, owners are told and one consenting shop has tried a job. The homepage's headline is the founder's exception (D-153) and does not change this order for anything else.
 
 ## 1. The one-paragraph plan
 
