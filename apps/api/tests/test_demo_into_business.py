@@ -14,8 +14,8 @@ The rules proved here, each with a mutation check written in the runbook's test 
 """
 
 import asyncio
-from datetime import UTC, datetime
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 
 from alyr.config import get_settings
