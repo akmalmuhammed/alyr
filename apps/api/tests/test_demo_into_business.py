@@ -339,7 +339,12 @@ def test_a_conversation_the_business_already_had_is_left_alone(client):
 
     code, text = run("--owner-email", owner, YES, "--dry-run", "--photos", "now")
     assert code == 0, text
+    # A business with a customer of its own is refused a plain load; `--replace` (a copy first,
+    # nothing of its own deleted) is the way in, and it is how production was loaded.
     code, text = run("--owner-email", owner, YES, "--photos", "now")
+    assert code == 1 and "activity of its own" in text
+    code, text = run("--owner-email", owner, YES, "--replace", "--photos", "now",
+                     "--export-dir", "/tmp")
     assert code == 0, text
     row = sql("select inbox_status, inbox_read_at from contacts where id = $1", contact)[0]
     assert (row["inbox_status"], row["inbox_read_at"]) == ("open", None)
