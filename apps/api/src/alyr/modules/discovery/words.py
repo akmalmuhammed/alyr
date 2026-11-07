@@ -379,7 +379,7 @@ ERRORS: dict[str, tuple[str, str]] = {
     "finding_closed": ("A check-up has already closed this item.", "أغلق فحص سابق هذا البند."),
     "run_in_progress": (
         "A check-up is running. Wait for it to finish, then change the places.",
-        "هناك فحص قيد التنفيذ. انتظر انتهاءه ثم عدّل الفروع.",
+        "هناك فحص يعمل الآن. انتظر انتهاءه ثم عدّل الفروع.",
     ),
     "run_failed": ("The check-up could not finish. Try again.", "تعذّر إكمال الفحص. حاول مرة أخرى."),
 }

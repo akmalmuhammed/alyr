@@ -127,7 +127,7 @@ def _review(ctx, branch, n, rating, days, who, body, replied=False, language="en
     )
 
 
-THANKS = "Thank you for coming. We are glad it went well."
+THANKS = "Thank you for your visit. We are glad it went well."
 
 
 def _branch(number: int, location: Location, stage: int, ctx: RunContext) -> PlaceSnapshot:
