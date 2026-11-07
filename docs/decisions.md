@@ -107,6 +107,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-132 | A process holds few database connections (4 for an API instance, 8 for the worker), gives up after 3 seconds and answers 503 with Retry-After; only so many documents are drawn at once; the worker keeps places for customers; the Sunday report can be spread but stays at nine | Accepted |
 | D-131 | What the workspace and the order page ask for again and again is kept three seconds and shared between tabs, thrown away by the shop's own writes; who is signed in and a shop's modules the same | Accepted |
 | D-130 | The inbox and the Orders screen read the newest rows off an index (a customer carries the times of their latest messages, kept by the database; the inbox lists 300 conversations, Orders the last 30 days and everything open), so a refresh costs the same in a shop's first week and its second year | Accepted |
+| D-155 | The light page is pure white, with cool Carbon-family greys for wells and lines, instead of the yellow-green off-white Paper | Accepted |
 | D-153 | The homepage's headline and sub line use the founder's AI wording, with one word taking turns on a pale Volt block, and a statement before the products keeps the plain line | Accepted |
 | D-154 | The homepage is trimmed: no film beside the headline (ends D-062), the sub line's word takes turns between discover, manage and scale with its own Pause, and How we work's lead, "What we need from you" and the order flow's tally go | Accepted |
 
@@ -2539,3 +2540,20 @@ The founder, 7 Nov 2026, on screenshots of the live homepage: "one agentic platf
 - The order flow ends on its steps. The tally ("In Sara's order, ALYR sent 5 messages by itself…") goes.
 
 **Scope.** D-153's exception is unchanged: the same four places, the same allowlist entries. The page's title and description are unchanged.
+
+## D-155 · The light page is white
+
+**Date** 7 Nov 2026 · **Status** Accepted (the founder, 7 Nov 2026: "make the background white") · Changes the light canvas set in D-040; the open question from 5 Nov (option A, B, C or today)
+
+The page's light colour was Paper, #F6F7F3: a yellow-green tint (hue 118°) against Carbon and every muted text, which are blue-grey (hue about 258°). On 5 Nov the founder was shown four options; on 7 Nov they said to make the background white. That is option A.
+
+**Decision.**
+- `semantic.canvas` is #FFFFFF in light mode. Sheets (`surface`) were already white, so a section is now told from the page by its rule and its space, which the design already preferred to cards.
+- The greys that carried the green tint go cool, from the Carbon family: `surface-subtle` #F1F3F5, `line` #E3E6EA, `line-strong`, `text-faint` and `pending` #83868B (3.65:1 on white; was 3:1 on Paper). `text-muted` #5F666D is unchanged (5.8:1 on white).
+- `theme-color` follows `semantic.canvas`, so the browser bar is white too.
+- Dark mode is unchanged. Whether it takes the cooler white text (#F2F4F7) or goes deeper is still the founder's question.
+
+**Scope.** Site and product screens, through the semantic tokens. Not changed, on purpose: the printed documents (invoices, receipts, quotes keep their own greys, pinned in `documents/colours.py`, so nothing already issued changes), the report card and email (still Paper), and the drawn product screens (the drawings keep their tokens). Each can follow when the founder asks.
+
+**Checked.** axe finds nothing on /, /ar and /chat in either theme at 1440 and 390; the drift check and the tokens' generated files agree.
+

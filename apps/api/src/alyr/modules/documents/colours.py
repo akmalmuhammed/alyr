@@ -18,9 +18,12 @@ TEXT_CONTRAST = 4.5
 PAPER = brand.LIGHT["surface"]
 INK = brand.LIGHT["text"]
 MUTED = brand.LIGHT["text-muted"]
-HAIRLINE = brand.LIGHT["line"]
-STRONG_LINE = brand.LIGHT["line-strong"]
-WASH = brand.LIGHT["surface-subtle"]
+# The greys a printed document had before the site's page turned white (D-155). The screens'
+# greys went cool; a document keeps its own until it is redrawn on purpose, so no invoice or
+# receipt already issued changes.
+HAIRLINE = brand.COLOR["grey"]["873"]
+STRONG_LINE = brand.COLOR["grey"]["595"]
+WASH = brand.COLOR["grey"]["945"]
 # What a shop with no colour of its own uses: ALYR's neutral.
 NEUTRAL_ACCENT = brand.COLOR["brand"]["carbon"]
 

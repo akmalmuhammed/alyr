@@ -5,7 +5,10 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+
+## v0.3.10 (7 Nov 2026)
 - The homepage trimmed, the founder's word (D-154, under ALY-302; no migration, no new dependency): the film beside the headline is gone, and its code with it (D-062 ends); the line under the headline reads "One agentic platform to discover, manage and scale your business.", its word taking turns between those three with its own Pause and resting on "manage" when motion is reduced; How we work opens on its heading and the four cards, without its lead or "What we need from you"; the order flow ends on its steps, without the sentence of who did what. English and Arabic; the Arabic word «لاستكشاف» is a draft until ALY-66.
+- The light page is white (D-155; no migration, no new dependency): the yellow-green off-white is gone from the site and the product screens, and the light greys for wells, lines and small labels are now cool like Carbon, so the page and its ink no longer pull against each other. The browser bar is white too. Dark mode, printed documents, the report card and email are unchanged.
 
 ## v0.3.9 (5 Nov 2026)
 - The demo-data load works on a business that has no settings row yet (ALY-315; no migration, no new dependency): the second production dry run stopped because a business made in the back office had never opened a module, so its clock had no day start; midnight, the row's own default, is used. Two more stops found by the next dry runs are fixed the same way: the job had no link key to sign the order links in its made-up chats (it now gets a throwaway one made at deploy, not the live key), and a business that already had last week's real report hit its primary key (the load now leaves that report as it is). Nothing had been written.
