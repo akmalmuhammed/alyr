@@ -52,7 +52,7 @@ The founder's **Brand & Growth Playbook** (a Claude Docs document in the founder
 - **Honesty.** No invented metrics, logos or testimonials. Sample screens are labelled as samples and use a fictional business.
 - **Words.** Every word is in `apps/web/app/_site/copy.ts`, in English and Arabic. Components hold no text.
 
-One deliberate addition: `--line-strong` (`semantic.line-strong` in the tokens) is darker than the design system's strong border, which is only 2.1:1 on Paper and too faint for controls.
+One deliberate addition: `--line-strong` (`semantic.line-strong` in the tokens) is darker than the design system's strong border, which is only 2.1:1 on the old Paper and too faint for controls.
 
 ## Extensions adopted with the 2026 homepage (ALY-56)
 
@@ -65,8 +65,8 @@ The homepage is "a working drawing of an owner's business" (`docs/site-redesign/
 | Colour, two additions only | `--volt-wash` (the product's pale Volt, for the current row) and `--pending`, a hollow grey dot for something not yet available. The pending contact state is a status line with that dot, never an error box or a disabled button |
 | Solid and dashed rules | A solid rule is true today; a dashed rule is a slot waiting to become true (the next products, "When you need more", the agreement's blank) |
 | The 45° cut corner | On the main button (which holds only its words, D-150), its outlined twin (`btn-line`, a 1.5 px line along the same notch, for a second way in further down the page), the drawn phones, the agreement, the shop monogram and the hero plate. Every cut and diagonal is mirrored in Arabic, because `clip-path` does not flip |
-| The fold | The page's signature: three Carbon planes with the symbol's gaps (a 6 px Paper line across and a 6 px line down the 45° diagonal), at the entry to the Carbon band and again at the top of the closing call. The page shows through the gaps, so the fold stays drawn |
-| The hero plate | The hero figure sits on a Carbon plate with its top start corner cut at 45° (6 rem) and a 0.5 rem Paper slit along the same angle above the order record |
+| The fold | The page's signature: three Carbon planes with the symbol's gaps (a 6 px page-coloured line across and a 6 px line down the 45° diagonal), at the entry to the Carbon band and again at the top of the closing call. The page shows through the gaps, so the fold stays drawn |
+| The hero plate | The hero figure sits on a Carbon plate with its top start corner cut at 45° (6 rem) and a 0.5 rem page-coloured slit along the same angle above the order record |
 | `--band` | The Carbon blocks: the band, the plate, the closing call and the ALYR Chat page's two panels. Carbon in light mode, `#1d2024` in dark mode so it still stands apart from the dark page; the header turns `--band` while it sits over a full-bleed one |
 | The "Sample" mark | Every product drawing is marked as a sample once, in its own chrome: a small mono "SAMPLE" tag beside the shop's name in the window's bar or at the end of its tab row, "Sample business" in a drawn phone's header (Arabic «مثال», «نشاط توضيحي», no capitals). A caption ("what it shows · Sample", no number) only where the drawing needs words. Founder, 24 Oct 2026; it replaced the FIG captions |
 | One sample business | Qirfa Bakery / مخبز قرفة on every homepage figure, with sample prices said so |
@@ -88,7 +88,7 @@ Every public page, in both languages, has a light and a dark theme. Light is sti
 **Behaviour.**
 - The site follows the visitor's device until they use the switch. The choice is kept in `localStorage` (`alyr-theme`, `light` or `dark`) and applies on every page in both languages. With no choice stored, a change of the device's setting is followed at once.
 - A script in `<head>` (`document.tsx`) puts the stored choice on `<html>` as `data-theme` before the first paint, so a stored dark choice never flashes light. The same script answers the switch, so it works before the framework's scripts start (they start after the first paint). Without JavaScript the switch is not shown and the page follows the device.
-- `theme-color` follows the theme: the page sets one pair for the device (`#f6f7f3`, `#0e1012`), and a choice adds its own tag first in `<head>`. The page's own tags are never edited, because React would add copies when it hydrates.
+- `theme-color` follows the theme: the page sets one pair for the device (white `#ffffff` and `#0e1012`), and a choice adds its own tag first in `<head>`. The page's own tags are never edited, because React would add copies when it hydrates.
 
 **The switch.**
 - A 44 px icon button beside the language link: the moon while the page is light, the sun while it is dark, so the glyph names what pressing it does. Its name says the same: "Switch to dark mode" / «التبديل إلى الوضع الداكن», and the light pair. Drawn on the 24 px icon grid in the icon set's line (1.7 px, square ends, mitred corners); the moon's bite comes in along 45° from the top end.
