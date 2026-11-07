@@ -438,7 +438,12 @@ def test_the_run_records_who_started_it_and_the_activity_names_the_channel(shop)
     [row] = owner_sql("select created_by from discovery_runs where id = $1",
                       UUID(started["id"]))
     assert row["created_by"] is not None
-    acts = owner_sql("select action, channel, actor_name from activity where tenant_id = $1 "
-                     "and subject = 'discovery'", shop.tenant_id)
-    assert [(a["action"], a["channel"], a["actor_name"]) for a in acts][-1] == (
-        "run.start", "portal", "Agent")
+    acts = owner_sql("select action, channel, actor_name, subject_id from activity "
+                     "where tenant_id = $1 and subject = 'discovery' and action = 'run.start'",
+                     shop.tenant_id)
+    assert [(a["action"], a["channel"], a["actor_name"], str(a["subject_id"])) for a in acts] == [
+        ("run.start", "portal", "Agent", started["id"])]
+    # turning the connection on was recorded too, by the owner
+    on = owner_sql("select actor_name from activity where tenant_id = $1 "
+                   "and action = 'connection.on'", shop.tenant_id)
+    assert [a["actor_name"] for a in on] == ["Owner"]
