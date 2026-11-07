@@ -1,0 +1,37 @@
+/* "Your business, in four stages" (ALY-330). Scoped to .bs; the tabs and the panel's base are
+   home.css's .biz / .biz-panel, which BusinessTabs.tsx drives. Tokens only, logical properties,
+   no per-theme rules: every colour is a semantic token, so both themes follow. */
+
+/* the four stages read left to right as the funnel: one ruled column each */
+.bs-stages { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-5) var(--col-gap); margin-top: var(--space-5); counter-reset: none; }
+.bs-stage { display: grid; align-content: start; gap: var(--space-2); min-width: 0; padding-top: var(--space-3); border-top: 1px solid var(--line-strong); }
+.bs-k { display: flex; align-items: baseline; gap: .625rem; color: var(--text); }
+.bs-n { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+/* the stage's one phrase, in ink and larger than its line: what the owner gets */
+.bs-say { font-size: clamp(1.125rem, 1rem + .5vw, 1.375rem); font-weight: var(--weight-semibold); line-height: 1.2; letter-spacing: -.015em; text-wrap: balance; }
+[lang="ar"] .bs-say { letter-spacing: 0; line-height: 1.5; }
+.bs-line { color: var(--text-muted); line-height: 1.5; text-wrap: pretty; }
+/* who does it: "Our team" on the lighter tag, the built products on the outlined one */
+.bs-who { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .5rem; margin-top: var(--space-1); }
+.bs-on { flex-basis: 100%; }
+.bs-who .tag-plus + .bs-on { margin-top: var(--space-1); }
+.bs-tag { min-height: 2.125rem; }
+
+/* the fold under the four lines, with its own caption */
+.bs-fold-k { margin-top: var(--space-6); margin-bottom: var(--space-3); }
+.bs-foot { justify-content: flex-start; }
+
+@media (min-width: 40rem) {
+  .bs-stages { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 62rem) {
+  .bs-stages { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 39.99rem) {
+  .bs-foot { display: grid; grid-template-columns: minmax(0, 1fr); }
+}
+
+/* the four stages arrive in turn when a tab is chosen, once; home.css already rises each li */
+@media (prefers-reduced-motion: no-preference) {
+  .al-js .bs .biz-panel.is-on .bs-stage { animation-delay: calc(var(--i) * 2 * var(--play-stagger)); }
+}
