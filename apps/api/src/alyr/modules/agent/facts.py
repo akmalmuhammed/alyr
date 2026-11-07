@@ -59,6 +59,8 @@ class Facts:
     first_name: str = ""
     money: bool = True
     has_records: bool = True
+    # What each file in `rules/` gathered, by its rule's key
+    extra: dict = field(default_factory=dict)
     # Messages that did not reach a customer in the last 48 hours (specs/036), any module
     not_sent: list = field(default_factory=list)
     # The team inbox
@@ -271,6 +273,9 @@ async def gather(conn: asyncpg.Connection, staff: Staff, now: datetime | None = 
     await _done(conn, f, span)
     await _hours(conn, f)
     await _report(conn, f)
+    from alyr.modules.agent import rules  # here: rules read this file's Facts
+
+    await rules.gather_all(conn, f)
     return f
 
 
