@@ -8,7 +8,6 @@ import { TickPath } from "./Frames";
 import { FlowDiagram } from "./FlowDiagram";
 import { DaySplit } from "./DaySplit";
 import { HomeMotion } from "./HomeMotion";
-import { HeroFilm } from "./HeroFilm";
 import { HowCards } from "./HowCards";
 import { LoopToggle } from "./LoopToggle";
 import { SAMPLE_ORDER, SAMPLES } from "./samples";
@@ -21,8 +20,8 @@ import "./home.css";
 
 /**
  * The ALYR homepage: ALYR as the technology team an owner-run business never had (ALY-210,
- * D-048, after D-047, folded on 24 Oct 2026). The hero says so in two plain sentences, beside a
- * film of one afternoon at a fictional bakery in the product's own screens (D-062); how we
+ * D-048, after D-047, folded on 24 Oct 2026). The hero says so in two plain sentences, on their
+ * own since 7 Nov 2026 (the founder took the film out); how we
  * work: check, set up, see and improve, then check again; the
  * visitor's own business, as tabs, whose "Today" list is what a check-up finds; one order
  * followed from the first message to collection, as proof; ALYR Agent; the products; the
@@ -65,7 +64,7 @@ function FlipLine({ className, lead, flip, player = false }: { className: string
       <span className="sr-only">{lead}</span>
       <span aria-hidden="true">
         {flip.before}{" "}
-        <span className="flip">
+        <span className="flip" data-n={flip.words.length}>
           {flip.words.map((word, index) => (
             <span key={word} className="flip-word" data-rest={index === flip.rest ? "" : undefined} style={n(index)}>
               {word}
@@ -93,10 +92,9 @@ function Head({ eyebrow, title, id, dark = false, children }: {
 }
 
 // ------------------------------------------------------------------------ hero
-/* The headline, the lead and the check-up on the start side; on the far side the
-   film of one afternoon at Qirfa Bakery in the product (HeroFilm.tsx, D-062), on a Carbon plate
-   cut by the fold and clear of the headline, which stays the page's largest paint. On a phone
-   the plate comes under the text. */
+/* The headline, the line under it and the check-up, on their own (the founder took the film
+   out on 7 Nov 2026). The line's changing word has its own Pause (WCAG 2.2.2), as the Office
+   line has. */
 function Hero({ locale }: { locale: Locale }) {
   const t = copy[locale];
   const hero = t.home.hero;
@@ -108,7 +106,10 @@ function Hero({ locale }: { locale: Locale }) {
             <span className="hl"><span>{hero.title[0]}</span></span>{" "}
             <span className="hl"><span>{hero.title[1]}</span></span>
           </h1>
-          <FlipLine className="hero-lead" lead={hero.lead} flip={hero.flip} />
+          <div className="of hero-flip" data-loop>
+            <FlipLine className="hero-lead" lead={hero.lead} flip={hero.flip} player />
+            <LoopToggle words={t.loop} name={t.loop.names.line} className="of-toggle" />
+          </div>
           <div className={TRY_FREE_LIVE ? "hero-actions is-pair" : "hero-actions"} data-hero-cta>
             <Actions locale={locale} lean label={hero.action} />
             <a className="link hero-more" href="#how">{hero.more}</a>
@@ -116,7 +117,6 @@ function Hero({ locale }: { locale: Locale }) {
           {TRY_FREE_LIVE ? <TryFreeNote locale={locale} className="hero-note" /> : <ContactNote locale={locale} className="hero-note" address={false} />}
         </div>
       </div>
-      <HeroFilm locale={locale} />
     </section>
   );
 }
@@ -306,7 +306,6 @@ function See({ locale }: { locale: Locale }) {
           </div>
           <FlowDiagram flow={see} sample={copy[locale].fig.sample} note={copy[locale].agent.samples.bakery.fictional} />
         </div>
-        <p className="lead see-tally">{rich(see.tally)}</p>
       </div>
     </section>
   );
@@ -316,8 +315,7 @@ function See({ locale }: { locale: Locale }) {
 /**
  * Check, set up, see, improve: four cards, each a still canvas with one moving scene from
  * the product (HowCards.tsx, ALY-226); the last card's words say that we check again. Without
- * motion every scene is finished. Under them, what we need from you, with its button beside
- * the words it belongs to (ALY-303).
+ * motion every scene is finished. The heading stands alone (the founder, 7 Nov 2026).
  */
 function How({ locale }: { locale: Locale }) {
   const w = copy[locale].home.how;
@@ -325,20 +323,10 @@ function How({ locale }: { locale: Locale }) {
     <section className="hs how" id="how" aria-labelledby="how-title">
       <div className="wrap">
         <Rule />
-        <div className="open-split">
+        <div className="open-full">
           <Head eyebrow={w.eyebrow} title={w.title} id="how-title" />
-          <div className="open-end">
-            <p className="lead">{rich(w.lead)}</p>
-          </div>
         </div>
         <HowCards locale={locale} />
-        <div className="how-foot">
-          <h3 className="how-need-k">{w.need.title}</h3>
-          <div className="how-need">
-            <p>{rich(w.need.body)}</p>
-            <ContactButton locale={locale} variant="line" label={copy[locale].home.final.action} />
-          </div>
-        </div>
       </div>
     </section>
   );

@@ -20,9 +20,6 @@ import { sectorMeta, sectorsAr, sectorsEn, type SectorsCopy } from "./copySector
 import { privacyAr, privacyEn, type PrivacyPage } from "./copyPrivacy";
 import { refundAr, refundEn, termsAr, termsEn, type LegalPage } from "./copyLegal";
 import { pricingAr, pricingEn, type PricingPage } from "./copyPricing";
-import { filmAr, filmEn, type HeroFilmWords } from "./copyFilm";
-
-export type { HeroFilmWords };
 
 export type Locale = "en" | "ar";
 
@@ -314,13 +311,9 @@ type Home = {
      * ALY-303. `factsNoOffer` is the card's while prices are off (`OFFER_LIVE`). */
     facts: string[];
     factsNoOffer: string[];
-    /** The film beside the headline (D-062, HeroFilm.tsx). */
-    film: HeroFilmWords;
   };
-  /** One order followed from the first message to collection (FlowDiagram), and who did what
-   * in it, said as a sentence (ALY-303; its counts stay true to the steps). */
+  /** One order followed from the first message to collection (FlowDiagram). */
   see: FlowSet & {
-    tally: string;
     link: string;
   };
   spotlight: {
@@ -360,18 +353,15 @@ type Home = {
   };
   /** How we work (ALY-210, as four cards with a moving scene since ALY-226): check, set up,
    * see and improve, each a card with its title and two lines (`steps`), the last saying that
-   * we check again, and what the owner brings. */
+   * we check again. */
   how: {
     eyebrow?: string;
     title: string;
-    lead: string;
     steps: Titled[];
     /** The four scenes drawn in the cards (HowCards.tsx), for the sample bakery. */
     scenes: HowScenes;
     /** The set-up line, under the price (offer on). */
     note: string;
-    /** How little the owner has to bring, said in a sentence beside the button (ALY-303). */
-    need: { title: string; body: string };
   };
   price: {
     eyebrow: string;
@@ -592,7 +582,7 @@ export type Copy = {
   loop: {
     pause: string;
     play: string;
-    names: Record<"how" | "frame" | "figure" | "film" | "line", { pause: string; play: string }>;
+    names: Record<"how" | "frame" | "figure" | "line", { pause: string; play: string }>;
   };
   report: ReportCopy;
   agent: AgentFigure;
@@ -807,7 +797,6 @@ const en: Copy = {
       how: { pause: "Pause the four scenes", play: "Play the four scenes" },
       frame: { pause: "Pause the six products", play: "Play the six products" },
       figure: { pause: "Pause the drawing", play: "Play the drawing" },
-      film: { pause: "Pause the film", play: "Play the film" },
       line: { pause: "Pause the changing word", play: "Play the changing word" },
     },
   },
@@ -906,13 +895,12 @@ const en: Copy = {
     hero: {
       eyebrow: "Technology for owner-run businesses in Qatar",
       title: ["The AI solution provider", "for your business."],
-      lead: "One agentic platform to learn, operate, power, manage and scale your business.",
-      flip: { before: "One agentic platform to", words: ["learn", "operate", "power", "manage", "scale"], after: " your business.", rest: 3 },
+      lead: "One agentic platform to discover, manage and scale your business.",
+      flip: { before: "One agentic platform to", words: ["discover", "manage", "scale"], after: " your business.", rest: 1 },
       action: "Book a check-up",
       more: "See how we work",
       facts: ["We come to your shop, in Qatar", "From QAR 449 a month, no commission", "Arabic and English"],
       factsNoOffer: ["We come to your shop, in Qatar", "Six products, one workspace", "Arabic and English"],
-      film: filmEn,
     },
     see: {
       title: "One order, from the first message to collection",
@@ -1053,7 +1041,6 @@ const en: Copy = {
           ],
         },
       ],
-      tally: "In Sara’s order, ALYR sent 5 messages by itself and Yusuf pressed Confirm, Ready and Done. Nobody copied the order out of a chat by hand.",
       link: "See everything in ALYR Chat",
     },
     spotlight: {
@@ -1394,7 +1381,6 @@ const en: Copy = {
     },
     how: {
       title: "How we work with you",
-      lead: "You don’t need to know anything technical. We do each step with you, and we keep going after you go live.",
       steps: [
         {
           title: "We check how your business runs.",
@@ -1453,10 +1439,6 @@ const en: Copy = {
         },
       },
       note: "We set ALYR up with each business ourselves, and agree your go-live date at the visit.",
-      need: {
-        title: "What we need from you",
-        body: "Your menu or price list (a photo of it is fine) and a phone or a computer at the counter. Then an hour for the check-up, and time to train your team.",
-      },
     },
     price: {
       eyebrow: "Price",
@@ -3181,7 +3163,6 @@ const ar: Copy = {
       how: { pause: "إيقاف حركة المشاهد الأربعة", play: "تشغيل حركة المشاهد الأربعة" },
       frame: { pause: "إيقاف حركة المنتجات الستة", play: "تشغيل حركة المنتجات الستة" },
       figure: { pause: "إيقاف حركة الرسم", play: "تشغيل حركة الرسم" },
-      film: { pause: "إيقاف حركة الفيلم", play: "تشغيل حركة الفيلم" },
       line: { pause: "إيقاف الكلمة المتغيرة", play: "تشغيل الكلمة المتغيرة" },
     },
   },
@@ -3280,13 +3261,12 @@ const ar: Copy = {
     hero: {
       eyebrow: "التقنية للأنشطة التي يديرها أصحابها في قطر",
       title: ["مزوّد حلول الذكاء الاصطناعي", "لمشروعك."],
-      lead: "منصة واحدة بوكلاء الذكاء الاصطناعي لفهم مشروعك وتشغيله وتمكينه وإدارته وتوسيعه.",
-      flip: { before: "منصة واحدة بوكلاء الذكاء الاصطناعي", words: ["لفهم", "لتشغيل", "لتمكين", "لإدارة", "لتوسيع"], after: " مشروعك.", rest: 3 },
+      lead: "منصة واحدة بوكلاء الذكاء الاصطناعي لاستكشاف مشروعك وإدارته وتوسيعه.",
+      flip: { before: "منصة واحدة بوكلاء الذكاء الاصطناعي", words: ["لاستكشاف", "لإدارة", "لتوسيع"], after: " مشروعك.", rest: 1 },
       action: "احجز فحصاً لمشروعك",
       more: "شاهد طريقة عملنا",
       facts: ["نأتي إلى محلك في قطر", "من 449 ر.ق شهرياً، بلا عمولة", "بالعربية والإنجليزية"],
       factsNoOffer: ["نأتي إلى محلك في قطر", "ستة منتجات في مساحة عمل واحدة", "بالعربية والإنجليزية"],
-      film: filmAr,
     },
     see: {
       title: "طلب واحد، من الرسالة الأولى إلى الاستلام",
@@ -3427,7 +3407,6 @@ const ar: Copy = {
           ],
         },
       ],
-      tally: "في طلب سارة، أرسلت ALYR إليها 5 رسائل من تلقاء نفسها، وضغط يوسف على تأكيد، ثم جاهز، ثم مكتمل. ولم ينسخ أحد الطلب من محادثة باليد.",
       link: "تعرّف على كل ما في ALYR Chat",
     },
     spotlight: {
@@ -3768,7 +3747,6 @@ const ar: Copy = {
     },
     how: {
       title: "كيف نعمل معك",
-      lead: "لا تحتاج إلى أي خبرة تقنية. ننجز كل خطوة معك، ونواصل العمل بعد بدء التشغيل.",
       steps: [
         {
           title: "نفحص كيف يسير عملك.",
@@ -3827,10 +3805,6 @@ const ar: Copy = {
         },
       },
       note: "نجهّز ALYR مع كل منشأة بأنفسنا، ونتفق معك على موعد بدء التشغيل خلال الزيارة.",
-      need: {
-        title: "ما نحتاجه منك",
-        body: "قائمتك أو قائمة أسعارك، وتكفي صورة لها، مع هاتف أو حاسوب عند الكاونتر. ثم ساعة للفحص، ووقت لتدريب فريقك.",
-      },
     },
     price: {
       eyebrow: "السعر",

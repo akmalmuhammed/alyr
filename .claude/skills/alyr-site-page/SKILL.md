@@ -35,21 +35,15 @@ words under `home` in `copy.ts`):
    the button "Book a check-up" (`home.final.action`; its `short`, "Check-up", below 62rem so
    the line never overflows). Every page's header, closing call and sticky bar say the same
    (`Shell` takes them from `home.final`). Price only with the offer.
-2. **Hero:** no eyebrow on the page (`hero.eyebrow` is the social card's only), H1 "The tech
-   team your business never had.", then one row under it: the lead on the start side, which
-   says where we start and what we do in two plain sentences ("We come to your shop in Qatar
-   and see how your business runs. Then we set up what it needs and keep improving it with
-   you."), "Book a check-up" and "See how we work" (a plain link to `#how`), and who replies in
-   one short line, all on the start side, with no list of facts (D-150: `hero.facts` is the
-   social card's only); on the far side **the film**
-   (D-062, the founder, 28 Oct 2026; `HeroFilm.tsx`, `alyr-design/motion.md`, "The hero
-   film"): a Carbon plate cut by the fold, clear of the headline, from under the header to the
-   hero's foot, with one afternoon at Qirfa Bakery in the product's own screens, three lanes
-   at once, ending on the real ALYR Agent home at 16:20 (`ruleLines={false}`), which is also
-   the still. One "Sample" mark in the plate's bar, Pause at its end; it stops off screen, in
-   a hidden tab and with reduced motion. Its stage steps down with the screen (`--fz`); on a
-   tablet it sits under the text, and on a phone under the text, full width, with the plate's
-   cut corner. The hero's live Agent figure (D-058) is now `/agent`'s only.
+2. **Hero:** no eyebrow on the page (`hero.eyebrow` is the social card's only), H1 "The AI
+   solution provider for your business." (D-153), then the sub line "One agentic platform to
+   [discover / manage / scale] your business.", whose word takes turns on a pale Volt block
+   with its own Pause at the line's end (the Office line's control, on show on hover, focus or
+   paused) and rests on "manage" with reduced motion or no scripts (D-154); then "Book a
+   check-up", "See how we work" (a plain link to `#how`) and who replies in one short line, all
+   on the start side, with no list of facts (D-150: `hero.facts` is the social card's only).
+   Nothing beside them: the film (D-062) was taken out on 7 Nov 2026 (D-154), and the hero's
+   live Agent figure (D-058) is `/agent`'s only.
 3. **How we work** (`#how`, ALY-226, the founder's yes on the Framer prototype, 25 Oct 2026;
    `HowCards.tsx`, `how.css`): four cards, check, set up, see and improve, each a still Carbon
    canvas cut at 45° (mirrored) holding one drawn window of the product for Qirfa Bakery, then
@@ -63,9 +57,8 @@ words under `home` in `copy.ts`):
    the drawing) replays a resting card at once. One Pause control under Improve stops all four.
    The last card's words end "Then we check again." (D-150: the line drawn back to Check and
    its floating words are gone; no "every month"). The HTML is every finished state; without
-   scripts or with reduced motion nothing plays. Then "What we need from you": its heading on
-   the start columns and, on the end columns, one sentence (`need.body`) with the line button
-   under it.
+   scripts or with reduced motion nothing plays. The section opens on its heading alone: its
+   lead and "What we need from you" were taken out on 7 Nov 2026 (D-154).
 4. **Your business** (`#business`, `BusinessTabs.tsx`): one tab per business type plus
    "Something else"; each panel has an anchor (`#bakery`, `#groceries` (added 28 Oct 2026, ALY-232), `#wholesale`, `#fashion`,
    `#restaurant`, `#salon`, `#home-services`, `#other`), the "Today" list (what a check-up
@@ -84,8 +77,8 @@ words under `home` in `copy.ts`):
    rest on "With ALYR" and swipe.
 5. **One order, start to finish** (`#see`): the `/chat` flow figure (`FlowDiagram`) told for
    Sara at Qirfa Bakery, on a cut-corner Carbon plate whose top holds the section's heading,
-   lead and link, marked "Sample" at the end of its tab row, and who did what in one sentence
-   (`see.tally`). Every step shown is built; keep the sentence's counts true to the steps. The
+   lead and link, marked "Sample" at the end of its tab row; it ends on its steps (the sentence
+   of who did what under it was taken out on 7 Nov 2026, D-154). Every step shown is built. The
    flow opens on a finished frame (its first story's last step) and plays from step 1 once
    60% of it is on screen; with reduced motion it stays finished.
 6. **ALYR Agent** (eyebrow "ALYR Agent · With every product") with plain callouts that name
@@ -133,7 +126,8 @@ finds" as its own section, the pinned products room, eyebrows that repeat a head
 header link, numbers on tabs and indexes, FIG captions. Gone on 31 Oct (the founder, D-150):
 the hero's facts list, button icons and arrows, the line back to Check, the tally's three big
 numbers, the tabs' cards and icons, ticks, numbered discs, the grid behind the hero, crosses on
-rules. Gone on 25 Oct (the content audit,
+rules. Gone on 7 Nov (the founder, D-154): the hero's film, How we work's lead, "What we need
+from you", the order flow's tally. Gone on 25 Oct (the content audit,
 `docs/content-audit/`): `/agent`'s "The rules" section and its product-bar link, and every
 rule line drawn on the site.
 
