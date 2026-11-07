@@ -2,13 +2,17 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Screens, type WorkspaceTab } from "../../_workspace/Screens";
 import { TeamReport } from "../../_workspace/Team";
 import { WhatsappLink } from "../../_workspace/WhatsappLink";
 import { Catalog } from "../../_workspace/Catalog";
 import { NotSent } from "../../_workspace/NotSent";
 import { Documents } from "../../_workspace/Documents";
+import { Discovery } from "../../_workspace/Discovery";
+import { SubNav, ViewReporter } from "../../_workspace/DiscoveryMenu";
+import { T as DISCOVERY } from "../../_workspace/discoveryCopy";
+import { subItems, viewHref, type View } from "../../_workspace/discoveryLogic";
 import { BillingBanner } from "../../_workspace/BillingBanner";
 import { TermsBanner } from "../../_workspace/TermsBanner";
 import { keepLang, savedLang, type Lang } from "../../_workspace/lang";
@@ -45,7 +49,7 @@ type State = {
 type Card = { key: string; module: string; label: Text; value: number; text: string };
 // The go-live readiness check (ALY-165, D-049): the same answer as /start and the back office.
 type Readiness = { stage: "setting_up" | "ready" | "live"; checks: { key: string; label: Text; status: string }[]; left: string[] };
-type Command = { id: string; group: string; label: string; icon: string; run: () => void };
+type Command = { id: string; group: string; label: string; icon: string; run: () => void; current?: boolean };
 
 const WORK_SCREENS: WorkspaceTab[] = ["inbox", "ledger", "orders", "bookings", "team"];
 
@@ -218,6 +222,8 @@ export default function WorkspaceShell() {
   const [agentRise, setAgentRise] = useState(false);
   // ALYR Agent's links open a screen filtered to the rows a rule counted (`?show=`).
   const [show, setShow] = useState<string | null>(null);
+  // The view Discovery's address names (`?view=`), told to the shell by `ViewReporter` so the menu can mark it.
+  const [discoveryView, setDiscoveryView] = useState<View>("home");
   const agentLoaded = useRef(false);
   const [offline, setOffline] = useState(false);
   const [lang, setLang] = useState<Lang>("en");
@@ -375,10 +381,17 @@ export default function WorkspaceShell() {
   );
 
   const commands: Command[] = useMemo(() => {
-    const list: Command[] = allNav.map((item) => ({
-      id: `go-${item.key}`, group: t.go, label: pick(item.label), icon: item.icon,
-      run: () => router.push(item.key === "home" ? "/app" : `/app/${item.key}`),
-    }));
+    // A section with views beneath it (only Discovery) lists them under its own name, the current one marked.
+    const list: Command[] = allNav.flatMap((item) => [
+      {
+        id: `go-${item.key}`, group: t.go, label: pick(item.label), icon: item.icon,
+        run: () => router.push(item.key === "home" ? "/app" : `/app/${item.key}`),
+      },
+      ...subItems(item.key).map((v) => ({
+        id: `go-${item.key}-${v}`, group: t.go, label: `${pick(item.label)} · ${DISCOVERY[lang].views[v]}`, icon: item.icon,
+        run: () => router.push(viewHref(v)), current: section === item.key && discoveryView === v,
+      })),
+    ]);
     list.push(
       { id: "ask", group: t.actions, label: t.ask, icon: "chat", run: () => router.push("/app#ask") },
       // Not in the navigation: ALYR Agent links to it when a message fails (specs/036).
@@ -389,7 +402,7 @@ export default function WorkspaceShell() {
     return list;
     // signOut only uses router, which is stable
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allNav, lang, pick, router, state?.me.signed_in, t]);
+  }, [allNav, discoveryView, lang, pick, router, section, state?.me.signed_in, t]);
 
   const matches = commands.filter((c) => c.label.toLowerCase().includes(query.trim().toLowerCase()));
 
@@ -416,13 +429,18 @@ export default function WorkspaceShell() {
 
   const navLink = (item: NavItem) => {
     const count = item.key === "inbox" ? cards.find((c) => c.key === "unanswered")?.value ?? 0 : 0;
-    return (
+    // An item with views beneath it (Discovery) opens them while its section is open; the current
+    // view carries the mark and the item itself only says it is open.
+    const withViews = subItems(item.key).length > 0 && section === item.key;
+    const link = (
       <Link key={item.key} href={item.key === "home" ? "/app" : `/app/${item.key}`}
-        className={`sh-link ${section === item.key ? "on" : ""}`} aria-current={section === item.key ? "page" : undefined}>
+        className={`sh-link ${section === item.key && !withViews ? "on" : ""} ${withViews ? "open" : ""}`}
+        aria-current={section === item.key ? (withViews ? "true" : "page") : undefined}>
         <Icon name={item.icon} />{pick(item.label)}
         {count > 0 && <span className="sh-count num">{count}</span>}
       </Link>
     );
+    return withViews ? [link, <SubNav key={`${item.key}-views`} itemKey={item.key} lang={lang} view={discoveryView} />] : link;
   };
 
   const stepAction = (product: Product, step: Step) => {
@@ -631,6 +649,12 @@ export default function WorkspaceShell() {
     body = <Catalog lang={lang} title={current ? pick(current.label) : t.productsTitle} show={show} onRenamed={() => void load()} />;
   } else if (section === "documents" && enabledScreens.has("documents")) {
     body = <Documents lang={lang} title={current ? pick(current.label) : t.productsTitle} show={show} />;
+  } else if (section === "discovery" && enabledScreens.has("discovery")) {
+    body = (
+      <Suspense fallback={<p className="sh-note">{DISCOVERY[lang].loading}</p>}>
+        <Discovery lang={lang} canManage={state.can_manage} />
+      </Suspense>
+    );
   } else if ((WORK_SCREENS as string[]).includes(section) && enabledScreens.has(section)) {
     body = (
       <Screens embedded section={section as WorkspaceTab} lang={lang} show={show}
@@ -693,7 +717,10 @@ export default function WorkspaceShell() {
       <div className="sh-sheet">
         <header className="sh-top">
           <div className="sh-crumbs">
-            <span>{shopName}</span><i>/</i><b>{current ? pick(current.label) : t.productsTitle}</b>
+            <span>{shopName}</span><i>/</i>
+            {section === "discovery" && current
+              ? <><span>{pick(current.label)}</span><i>/</i><b>{DISCOVERY[lang].views[discoveryView]}</b></>
+              : <b>{current ? pick(current.label) : t.productsTitle}</b>}
           </div>
           <span className="spacer" />
           {clock && <span className="sh-clock" dir="ltr">{t.doha} {clock.text.split(" · ")[1]}</span>}
@@ -711,6 +738,7 @@ export default function WorkspaceShell() {
             {offline && <div className="error" role="status">{t.offline}</div>}
             <TermsBanner lang={lang} canAccept={state.me.signed_in && (state.me.role === "owner" || state.me.role === "admin")} />
             <BillingBanner lang={lang} canSee={state.me.signed_in && (state.me.role === "owner" || state.me.role === "admin")} />
+            {section === "discovery" && <Suspense fallback={null}><ViewReporter onView={setDiscoveryView} /></Suspense>}
             {body}
           </main>
         </div>
@@ -748,7 +776,7 @@ export default function WorkspaceShell() {
                 return (
                   <li key={command.id}>
                     {header && <div className="grp">{header}</div>}
-                    <button role="option" aria-selected={i === cursor} onMouseEnter={() => setCursor(i)} onClick={() => runCommand(command)}>
+                    <button role="option" aria-selected={i === cursor} aria-current={command.current ? "true" : undefined} className={command.current ? "cur" : undefined} onMouseEnter={() => setCursor(i)} onClick={() => runCommand(command)}>
                       <Icon name={command.icon} />{command.label}<Icon name="enter" className="sh-ico ret" />
                     </button>
                   </li>
