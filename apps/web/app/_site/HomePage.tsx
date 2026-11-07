@@ -1,19 +1,18 @@
 import type { CSSProperties, ReactNode } from "react";
-import { BusinessTabs } from "./BusinessTabs";
-import { Actions, ContactButton, ContactNote, TryFreeNote } from "./Contact";
+import { BizStages } from "./BizStages";
+import { Actions, ContactNote, TryFreeNote } from "./Contact";
 import { copy, type FlipWords, type Locale, type Questions as QuestionSet } from "./copy";
 import { FigCaption } from "./Drawings";
 import { TickPath } from "./Frames";
 import { FiveNumbers } from "./FiveNumbers";
 import { FunnelFigure } from "./FunnelFigure";
-import { DaySplit } from "./DaySplit";
 import { HomeMotion } from "./HomeMotion";
 import { HowCards } from "./HowCards";
 import { LoopToggle } from "./LoopToggle";
 import { Stages } from "./Stages";
 import { SuiteFrame } from "./SuiteFrame";
-import { contactHref, Shell } from "./Shell";
-import { CONTACT_STATE, INCLUDED, OFFER_LIVE, PATHS, PRODUCTS, productPath, SECTORS, sectorPage, TRY_FREE_LIVE } from "./site";
+import { Shell } from "./Shell";
+import { CONTACT_STATE, OFFER_LIVE, TRY_FREE_LIVE } from "./site";
 import { lines, rich } from "./Text";
 import "./kit.css";
 import "./home.css";
@@ -38,7 +37,7 @@ export function HomePage({ locale }: { locale: Locale }) {
       <Hero locale={locale} />
       <FiveNumbers locale={locale} />
       <Stages locale={locale} />
-      <Business locale={locale} />
+      <BizStages locale={locale} />
       <Suite locale={locale} />
       <How locale={locale} />
       {OFFER_LIVE && <Price locale={locale} />}
@@ -144,87 +143,6 @@ function Suite({ locale }: { locale: Locale }) {
             <p key={note.title}><b>{rich(note.title)}</b> {rich(note.body)}</p>
           ))}
         </div>
-      </div>
-    </section>
-  );
-}
-
-// ----------------------------------------------------------------- by business
-function Business({ locale }: { locale: Locale }) {
-  const t = copy[locale];
-  const b = t.home.business;
-  // the sector page that draws this business's afternoon (ALY-232), if it has one
-  const pageOf = (id: string) => SECTORS.find((key) => t.sectors.items[key].row === id);
-  const tags = (products: (typeof PRODUCTS)[number][]) =>
-    // in the suite's order; ALYR Agent and ALYR Shelf come with each, so they close the row, lighter
-    [...products]
-      .sort((a, c) => Number(INCLUDED.includes(a)) - Number(INCLUDED.includes(c)) || PRODUCTS.indexOf(a) - PRODUCTS.indexOf(c))
-      .map((key) => {
-        const name = t.products.items[key].name;
-        // the tag shows the product's own word ("Chat"); its name is the whole one
-        const short = name.replace(/^ALYR\s+/, "");
-        const plus = INCLUDED.includes(key);
-        return (
-          <a key={key} className={`tag tag-link${plus ? " tag-plus" : ""}`} href={productPath(key, locale)} aria-label={name}>
-            {plus && <span aria-hidden="true">{"+ "}</span>}<bdi>{short}</bdi>
-          </a>
-        );
-      });
-  return (
-    <section className="hs bizs" id="business" aria-labelledby="business-title">
-      <div className="wrap">
-        <Rule />
-        <div className="open-full">
-          <Head eyebrow={b.eyebrow} title={b.title} id="business-title" />
-        </div>
-        <BusinessTabs
-          label={b.tabsLabel}
-          tabs={[...b.rows, b.other].map((row) => ({ id: row.id, name: row.tab }))}
-        >
-          {b.rows.map((row, index) => (
-            <div key={row.id} id={row.id} className={`biz-panel${index === 0 ? " is-on" : ""}`} role="tabpanel" aria-labelledby={`biz-tab-${row.id}`}>
-              <h3 className="biz-name">{rich(row.name)}</h3>
-              <DaySplit row={row} words={b.split} sample={t.fig.sample} />
-              <div className="biz-cols">
-                <div className="biz-col biz-day">
-                  <p className="mono-k">{b.day}</p>
-                  <ul>
-                    {row.day.map((line) => <li key={line}>{rich(line)}</li>)}
-                  </ul>
-                </div>
-                <div className="biz-col biz-with">
-                  <p className="mono-k">{b.with}</p>
-                  <ul>
-                    {row.with.map((line) => <li key={line}>{rich(line)}</li>)}
-                  </ul>
-                </div>
-              </div>
-              {row.note && (
-                <p className="biz-note status-line">
-                  <span className="dot-pending" aria-hidden="true" />
-                  <span>{rich(row.note)}</span>
-                </p>
-              )}
-              <div className="biz-foot">
-                <p className="biz-uses">
-                  <span className="biz-k">{b.uses}</span>
-                  <span className="biz-tags">{tags(row.products)}</span>
-                </p>
-                <span className="biz-acts">
-                  {pageOf(row.id) && (
-                    <a className="link biz-more" href={PATHS[sectorPage(pageOf(row.id)!)][locale]}>{t.sectors.items[pageOf(row.id)!].more}</a>
-                  )}
-                  <ContactButton locale={locale} variant="line" className="biz-ask" message={row} label={row.ask} />
-                </span>
-              </div>
-            </div>
-          ))}
-          <div id={b.other.id} className="biz-panel biz-else" role="tabpanel" aria-labelledby={`biz-tab-${b.other.id}`}>
-            <h3 className="biz-name">{rich(b.other.title)}</h3>
-            <p className="biz-else-body">{rich(b.other.body)}</p>
-            <a className="link" href={contactHref()}>{b.other.link}</a>
-          </div>
-        </BusinessTabs>
       </div>
     </section>
   );
