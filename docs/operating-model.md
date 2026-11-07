@@ -29,6 +29,10 @@ The risk is no longer "can it be built". It is building more before anyone has s
 
 **Rule for the Product lane until gate B:** build only what a named pilot business needs. No new modules on a guess. **One exception (D-039, 17 Oct):** the Catalog (ALY-101: items, stock, photos) is built complete before go-live, at the founder's instruction, because an owner who cannot manage their own menu has no sellable product.
 
+## Where this is heading
+
+ALYR's direction is the agentic business path (D-152, [master-plan.md](master-plan.md) section 0). It does not change the goal above. Nothing on that path may slow the first paying business. Agents are Product's work, their words are Site and brand's, rules and approvals are Company's, and anything touching Meta stays with Go-live.
+
 ## The six lanes
 
 Each lane has one brief in `docs/lanes/`, one Linear label under "Lane", and one agent definition in `.claude/agents/`. A task belongs to exactly one lane.

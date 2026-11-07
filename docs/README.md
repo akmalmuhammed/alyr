@@ -9,7 +9,7 @@ Where each kind of document lives is set by [hygiene.md](hygiene.md). Read in th
 | [operating-model.md](operating-model.md) | The six lanes and what only the founder does |
 | [status.md](status.md) | Where things stand on `main` today |
 | [decisions.md](decisions.md) | Every decision and why (append only) |
-| [master-plan.md](master-plan.md) | What we build, in what order (v1, 7 Oct; partly superseded, see ALY-123) |
+| [master-plan.md](master-plan.md) | Where ALYR is going and in what order (v2, 1 Nov: section 0, the agentic path, D-152; sections 1 to 12 are v1 of 7 Oct, partly superseded, see ALY-123) |
 | [stack.md](stack.md) | Tools, free limits, when we swap |
 | [access.md](access.md) | Who holds which account; 2FA; renewals |
 | [data-residency.md](data-residency.md) | Personal data that leaves Qatar, and why it may |

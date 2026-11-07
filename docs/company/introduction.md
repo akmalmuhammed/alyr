@@ -2,6 +2,8 @@
 
 The one source for who ALYR is, what it does and how it wins clients. The site, the deck, the leave-behind, the visit script and every profile (LinkedIn, Instagram, WhatsApp, Google) take their words from here. Decision D-043. Version 1, 19 Oct 2026.
 
+**Direction, 1 Nov 2026:** ALYR is on the agentic business path (D-152). That is a plan. Every line on this page stays as it is, and no introduction says "agentic" or "AI", until a job works in the product and the founder changes this page. The homepage's headline is the founder's one exception (D-153, live 4 Nov); introductions do not take it.
+
 ## Decided by the founder (19 Oct 2026)
 
 | Question | Answer |
@@ -134,5 +136,5 @@ The brand speaks alone, so trust has to come from what an owner can check:
 |---|---|
 | ALYR's WhatsApp number | The first thing an owner checks |
 | Setup fee: the site says "from QAR 1,500", the back office drafts QAR 2,500 | One number at the counter |
-| "ALYR Agent" with no AI: explain it as rules in every introduction, or rename before launch | "Agent" reads as AI in 2026 |
+| "ALYR Agent" with no AI: explain it as rules in every introduction, or rename before launch (ALY-302) | "Agent" reads as AI in 2026 |
 | Founding shops: yes or no, and the terms | Gives early shops a reason to commit |
