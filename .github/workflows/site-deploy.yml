@@ -40,6 +40,10 @@ on:
         description: "The release, v0.x.y. Its section must be cut in CHANGELOG.md (docs/runbooks/release.md)"
         type: string
         required: true
+      skip_ci:
+        description: "Do not wait for the ci run on this commit. Off unless the founder says so"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -152,6 +156,7 @@ jobs:
     uses: ./.github/workflows/release-gate.yml
     with:
       version: ${{ inputs.version }}
+      skip_ci: ${{ inputs.skip_ci }}
     permissions:
       actions: read
       contents: read

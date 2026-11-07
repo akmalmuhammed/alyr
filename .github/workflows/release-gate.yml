@@ -4,7 +4,8 @@ name: release gate
 # site deploy as the first job, before their `production` job asks the founder to approve:
 #
 # 1. It runs from main. Nothing else is released.
-# 2. The `ci` workflow finished green on this exact commit. Pull request runs do not count: they
+# 2. The `ci` workflow finished green on this exact commit (unless the run was started with
+#    skip_ci, which the summary records). Pull request runs do not count: they
 #    tested a merge with an older main, not the commit that is about to ship.
 # 3. The version (v0.x.y) is cut in CHANGELOG.md, is the newest cut section, nothing is left
 #    under "Unreleased", and the tag is unused or already on this commit (scripts/release.sh).
@@ -18,6 +19,11 @@ on:
         description: "The release tag, v0.x.y"
         required: true
         type: string
+      skip_ci:
+        description: "Do not wait for the ci run on this commit (the founder's call, 7 Nov 2026). The run is still named in the summary"
+        required: false
+        type: boolean
+        default: false
 
 permissions: {}
 
@@ -38,7 +44,12 @@ jobs:
             exit 1
           fi
 
+      - name: ci wait skipped by the founder
+        if: ${{ inputs.skip_ci }}
+        run: echo "::warning::The ci run for this commit was NOT required (skip_ci)." | tee -a "$GITHUB_STEP_SUMMARY"
+
       - name: ci is green on this commit
+        if: ${{ !inputs.skip_ci }}
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
