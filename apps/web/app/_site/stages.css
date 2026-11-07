@@ -1,0 +1,118 @@
+/* The five numbers and the four stages (FiveNumbers.tsx, Stages.tsx, StageIndex.tsx, ALY-330,
+   D-156). Part of home.css's bundle. Hairlines and space before cards; one Carbon plate per
+   drawn visual, cut at 45° and mirrored in Arabic; Volt only on what is done. */
+
+/* ----------------------------------------------------------- the five numbers */
+.nums .head { max-width: 46rem; }
+.nums .lead { margin-top: var(--space-3); max-width: 38rem; color: var(--text-muted); }
+.nm { margin: clamp(2rem, 4vw, 3rem) 0 0; }
+.nm-bar { display: flex; align-items: center; gap: var(--space-2); padding-bottom: var(--space-3); font-size: var(--fs-small); }
+.nm-bar b { font-weight: var(--weight-semibold); }
+.nm-bar .mark-sample { margin-inline-start: 0; }
+.nm-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-top: 2px solid var(--text); }
+.nm-item { display: grid; align-content: start; gap: var(--space-1); padding: var(--space-3) var(--space-3) var(--space-4); min-width: 0; }
+.nm-item + .nm-item { border-inline-start: 1px solid var(--line); }
+.nm-k { font-size: var(--fs-small); font-weight: var(--weight-medium); color: var(--text-muted); }
+.nm-v { font-size: clamp(1.75rem, 1rem + 1.9vw, 2.625rem); font-weight: 620; line-height: 1.05; letter-spacing: -.035em; font-variant-numeric: tabular-nums; }
+[lang="ar"] .nm-v { letter-spacing: 0; line-height: 1.3; }
+.nm-u { font-size: var(--fs-small); color: var(--text); }
+.nm-note { margin-top: var(--space-2); font-size: var(--fs-small); line-height: 1.45; color: var(--text-muted); text-wrap: pretty; }
+
+@media (max-width: 61.99rem) {
+  .nm-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .nm-item { border-bottom: 1px solid var(--line); }
+  .nm-item + .nm-item { border-inline-start: 0; }
+  .nm-item:nth-child(even) { border-inline-start: 1px solid var(--line); }
+  .nm-item:last-child { grid-column: 1 / -1; border-inline-start: 0; }
+}
+@media (max-width: 30rem) {
+  .nm-row { grid-template-columns: minmax(0, 1fr); }
+  .nm-item:nth-child(even) { border-inline-start: 0; }
+  .nm-item { padding-inline: 0; }
+}
+
+/* ------------------------------------------------------------- the four stages */
+.stages .head { max-width: 46rem; }
+.stages .lead { margin-top: var(--space-3); max-width: 38rem; color: var(--text-muted); }
+.st-layout { display: grid; grid-template-columns: minmax(0, 1fr); margin-top: clamp(2rem, 4vw, 3rem); }
+.st-nav { display: none; }
+@media (min-width: 75rem) {
+  .st-layout { grid-template-columns: 11rem minmax(0, 1fr); column-gap: var(--col-gap); }
+  /* the chapter index sticks under the header while the four panels pass */
+  .st-nav { display: block; position: sticky; top: calc(var(--header) + var(--space-5)); align-self: start; }
+  .st-nav ol { display: grid; gap: var(--space-1); }
+  .st-nav a { display: flex; align-items: baseline; gap: var(--space-2); min-height: 2.75rem; padding-block: .5rem; color: var(--text-muted); font-weight: var(--weight-medium); text-decoration: none; border-inline-start: 2px solid var(--line); padding-inline-start: var(--space-3); transition: color var(--fast) var(--ease), border-color var(--fast) var(--ease); }
+  .st-nav a:hover, .st-nav a[aria-current] { color: var(--text); }
+  .st-nav a[aria-current] { border-inline-start-color: var(--text); }
+  .st-nav-n { font-variant-numeric: tabular-nums; font-size: var(--fs-small); }
+}
+
+.st { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--col-gap); row-gap: var(--space-5); align-items: start; padding-block: clamp(2.5rem, 5vw, 4rem); border-top: 1px solid var(--line); }
+.st:first-child { border-top: 0; padding-top: 0; }
+.st-text { grid-column: 1 / span 5; display: grid; gap: var(--space-4); align-content: start; min-width: 0; }
+.st-lead, .st-lists { display: grid; gap: var(--space-3); align-content: start; min-width: 0; }
+.st-lists { gap: var(--space-4); }
+.st-vis { grid-column: 6 / -1; min-width: 0; }
+.st-chip { display: inline-flex; align-items: center; gap: var(--space-2); justify-self: start; font-size: var(--fs-small); font-weight: var(--weight-semibold); }
+.st-chip-n { display: inline-grid; place-items: center; min-width: 1.75rem; height: 1.75rem; padding-inline: .25rem; background: var(--text); color: var(--text-inverse); font-variant-numeric: tabular-nums; font-size: var(--fs-small); }
+.st-title { font-size: clamp(1.875rem, 1.2rem + 2.1vw, 3rem); font-weight: 650; line-height: 1.05; letter-spacing: -.04em; text-wrap: balance; }
+[lang="ar"] .st-title { letter-spacing: 0; line-height: 1.35; font-weight: 600; }
+.st-title .line { display: block; }
+.st-quiet { color: var(--text-faint); }
+.st-body { max-width: 30rem; color: var(--text-muted); font-size: 1.125rem; line-height: 1.5; text-wrap: pretty; }
+.st-list-block { display: grid; gap: var(--space-2); padding-inline-start: var(--space-3); max-width: 30rem; }
+.st-k { font-size: var(--fs-small); font-weight: var(--weight-semibold); color: var(--text); }
+.st-list-block ul { display: grid; gap: var(--space-2); }
+.st-list-block li { font-size: var(--fs-small); line-height: 1.5; color: var(--text-muted); text-wrap: pretty; }
+/* solid rule: it runs today, with the product's own name; dashed rule: our team does it by hand */
+.st-list-block.is-runs { border-inline-start: 2px solid var(--text); }
+.st-list-block.is-team { border-inline-start: 2px dashed var(--line-strong); }
+
+/* the order's flow is three columns wide: its panel puts the words above it, in two columns */
+.st.is-wide .st-vis { grid-column: 1 / -1; }
+.st.is-wide .st-text { grid-column: 1 / -1; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--col-gap); }
+.st.is-wide .st-lead { grid-column: 1 / span 5; }
+.st.is-wide .st-lists { grid-column: 7 / -1; align-self: end; }
+
+/* a drawn visual on its Carbon plate, cut at 45° */
+.st-plate { --fold: 28px; padding: clamp(1.25rem, 3vw, 2.25rem); background: var(--band); color: var(--on-band); clip-path: polygon(0 0, calc(100% - var(--fold)) 0, 100% var(--fold), 100% 100%, 0 100%); box-shadow: inset 0 0 0 1px var(--band-edge); }
+[dir="rtl"] .st-plate { clip-path: polygon(var(--fold) 0, 100% 0, 100% 100%, 0 100%, 0 var(--fold)); }
+.sp-win { --n: var(--cut-notch); display: grid; gap: var(--space-3); max-width: 28rem; margin-inline: auto; padding: var(--space-4); background: var(--window); color: var(--text); box-shadow: inset 0 0 0 1px var(--window-line); clip-path: polygon(0 0, calc(100% - var(--n)) 0, 100% var(--n), 100% 100%, 0 100%); }
+[dir="rtl"] .sp-win { clip-path: polygon(var(--n) 0, 100% 0, 100% 100%, 0 100%, 0 var(--n)); }
+.sp-bar { display: flex; align-items: center; gap: var(--space-2); padding-bottom: var(--space-3); border-bottom: 1px solid var(--line); font-size: var(--fs-small); padding-inline-end: var(--space-3); }
+.sp-bar b { font-weight: var(--weight-semibold); }
+.sp-bar .mark-sample { margin-inline-start: auto; }
+.sp-title { font-size: 1.1875rem; font-weight: var(--weight-semibold); line-height: 1.25; letter-spacing: -.015em; }
+[lang="ar"] .sp-title { letter-spacing: 0; line-height: 1.5; }
+.sp-kicker { margin-top: calc(-1 * var(--space-2)); font-size: var(--fs-small); color: var(--text-muted); }
+.sp-rows { display: grid; }
+.sp-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); padding-block: var(--space-3); border-top: 1px solid var(--line); font-size: var(--fs-small); line-height: 1.4; }
+.sp-row:last-child { border-bottom: 1px solid var(--line); }
+.sp-label { min-width: 0; text-wrap: pretty; }
+.sp-state { color: var(--text-muted); white-space: nowrap; }
+.sp-box { display: inline-grid; place-items: center; width: 1.25rem; height: 1.25rem; background: var(--volt); color: var(--on-volt); }
+.sp-box svg { width: .8125rem; height: .8125rem; stroke-width: 3; }
+.sp-row .dot-pending { margin-inline: .3125rem; }
+.sp-foot { font-size: var(--fs-small); color: var(--text-muted); }
+
+/* the order's flow keeps its own plate and heading-less layout */
+.st-flow { border-radius: 0; padding: clamp(1rem, 2.4vw, 1.75rem); }
+.st-flow.see-panel { --fold: 28px; }
+
+/* the Agent's real screen sits on the page, as it does on its own page */
+.st-vis .afig { margin-top: 0; }
+
+@media (max-width: 61.99rem) {
+  .st-text, .st-vis, .st.is-wide .st-text { grid-column: 1 / -1; }
+  .st.is-wide .st-text { grid-template-columns: minmax(0, 1fr); }
+  .st.is-wide .st-lead, .st.is-wide .st-lists { grid-column: 1 / -1; }
+  .st-body, .st-list-block { max-width: none; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* the drawn rows arrive once, as the visual comes into view; the done boxes pop */
+  .sp-row { transition: translate var(--play-3) var(--ease) calc(var(--i, 0) * var(--play-stagger)), opacity var(--play-3) var(--ease) calc(var(--i, 0) * var(--play-stagger)); }
+  .sp-box { transition: scale var(--play-3) var(--spring) calc(var(--play-2) + var(--i, 0) * var(--play-stagger)); }
+  .motion .st-plate:not(.is-in) .sp-row { opacity: 0; translate: 0 8px; }
+  .motion .st-plate:not(.is-in) .sp-box { scale: 0; }
+}

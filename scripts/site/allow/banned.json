@@ -141,16 +141,6 @@
       "path": "ar.footer.line",
       "text": "علينا التقنية، وعليك شغلك.",
       "reason": "Kept by the founder (row 5), Gulf «شغلك» and all, until the Arabic review (ALY-66)"
-    },
-    {
-      "path": "en.home.spotlight.title",
-      "text": "Every day, see what changed\nand what to do next.",
-      "reason": "Kept by the founder (row 18, 02-decisions.md, 25 Oct 2026)"
-    },
-    {
-      "path": "ar.home.spotlight.title",
-      "text": "كل يوم، اعرف ما تغيّر\nوما الخطوة التالية.",
-      "reason": "The Arabic of row 18, kept with it"
     }
   ]
 }

@@ -1,6 +1,8 @@
 /* "How we work with you" (HowCards.tsx) is part of this stylesheet, so the homepage asks for
    no extra render-blocking file (ALY-226). */
 @import "./how.css";
+@import "./funnel.css";
+@import "./stages.css";
 
 /* ALYR homepage: the suite, led by ALYR Agent (docs/agent-dashboard/07-site-brief.md).
    Still a working drawing of an owner's business: Paper, hairline rules, real ALYR screens in

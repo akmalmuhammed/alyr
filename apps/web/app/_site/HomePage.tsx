@@ -1,16 +1,16 @@
 import type { CSSProperties, ReactNode } from "react";
-import { AgentFigure } from "./AgentFigure";
 import { BusinessTabs } from "./BusinessTabs";
 import { Actions, ContactButton, ContactNote, TryFreeNote } from "./Contact";
 import { copy, type FlipWords, type Locale, type Questions as QuestionSet } from "./copy";
 import { FigCaption } from "./Drawings";
 import { TickPath } from "./Frames";
-import { FlowDiagram } from "./FlowDiagram";
+import { FiveNumbers } from "./FiveNumbers";
+import { FunnelFigure } from "./FunnelFigure";
 import { DaySplit } from "./DaySplit";
 import { HomeMotion } from "./HomeMotion";
 import { HowCards } from "./HowCards";
 import { LoopToggle } from "./LoopToggle";
-import { SAMPLE_ORDER, SAMPLES } from "./samples";
+import { Stages } from "./Stages";
 import { SuiteFrame } from "./SuiteFrame";
 import { contactHref, Shell } from "./Shell";
 import { CONTACT_STATE, INCLUDED, OFFER_LIVE, PATHS, PRODUCTS, productPath, SECTORS, sectorPage, TRY_FREE_LIVE } from "./site";
@@ -19,14 +19,15 @@ import "./kit.css";
 import "./home.css";
 
 /**
- * The ALYR homepage: ALYR as the technology team an owner-run business never had (ALY-210,
- * D-048, after D-047, folded on 24 Oct 2026). The hero says so in two plain sentences, on their
- * own since 7 Nov 2026 (the founder took the film out); how we
- * work: check, set up, see and improve, then check again; the
- * visitor's own business, as tabs, whose "Today" list is what a check-up finds; one order
- * followed from the first message to collection, as proof; ALYR Agent; the products; the
- * price (offer on); questions; the closing call. Every word from `copy.ts`; every
- * screen is the product's own, with fictional businesses, each marked as a sample once.
+ * The ALYR homepage, rebuilt around the four stages of a business's funnel (ALY-330, D-156,
+ * after the founder's plan of 8 Nov 2026): Discover, Convert, Manage, Scale. In order: the
+ * headline and the line under it (D-153, D-154) with one drawn figure of an enquiry moving
+ * through the four stages; the five numbers a check-up records; one panel for each stage, with
+ * a chapter index; the visitor's own business, as tabs; the products on one record; how we
+ * work, ending on "then we check again"; the price (offer on); questions; the closing call.
+ * Every word from `copy.ts`; every screen is the product's own, with fictional businesses,
+ * each marked as a sample once. Where our software is not built yet, the page says our team
+ * does the step.
  */
 export function HomePage({ locale }: { locale: Locale }) {
   const t = copy[locale];
@@ -35,12 +36,11 @@ export function HomePage({ locale }: { locale: Locale }) {
   return (
     <Shell locale={locale} page="home" cta={h.final}>
       <Hero locale={locale} />
-      <How locale={locale} />
+      <FiveNumbers locale={locale} />
+      <Stages locale={locale} />
       <Business locale={locale} />
-      <See locale={locale} />
-      <Spotlight locale={locale} />
-      <Office locale={locale} />
       <Suite locale={locale} />
+      <How locale={locale} />
       {OFFER_LIVE && <Price locale={locale} />}
       <Questions locale={locale} />
       <HomeMotion />
@@ -116,67 +116,7 @@ function Hero({ locale }: { locale: Locale }) {
           </div>
           {TRY_FREE_LIVE ? <TryFreeNote locale={locale} className="hero-note" /> : <ContactNote locale={locale} className="hero-note" address={false} />}
         </div>
-      </div>
-    </section>
-  );
-}
-
-// ------------------------------------------------- ALYR Agent, the whole screen
-function Spotlight({ locale }: { locale: Locale }) {
-  const t = copy[locale];
-  const s = t.home.spotlight;
-  const callouts = (
-    <ul className="callouts" aria-label={s.calloutsLabel}>
-      {s.callouts.map((callout) => (
-        <li key={callout}>{rich(callout)}</li>
-      ))}
-    </ul>
-  );
-  return (
-    <section className="hs spot" id="agent" aria-labelledby="spot-title">
-      <div className="wrap">
-        <Rule />
-        <div className="open-split">
-          <Head eyebrow={s.eyebrow} title={s.title} id="spot-title" />
-          <div className="open-end">
-            <p className="lead">{rich(s.body)}</p>
-            <a className="link" href={PATHS.agent[locale]}><span>{rich(s.link)}</span></a>
-          </div>
-        </div>
-        <AgentFigure
-          variant="spot"
-          views={SAMPLES[locale]}
-          order={SAMPLE_ORDER}
-          start="bakery"
-          text={t.agent}
-          label={s.label}
-          switcher
-          headingLevel={3}
-          aside={callouts}
-          more={s.more}
-        />
-      </div>
-    </section>
-  );
-}
-
-// ------------------------------------------- the statement before the products
-/* The office in the owner's phone (ALY-314, D-153): what the six products below are for. */
-function Office({ locale }: { locale: Locale }) {
-  const t = copy[locale];
-  const o = t.home.office;
-  return (
-    <section className="hs office" aria-labelledby="office-title">
-      <div className="wrap">
-        <Rule />
-        <div className="open-full">
-          <Head title={o.title} id="office-title">
-            <div className="of" data-loop>
-              <FlipLine className="lead of-line" lead={o.lead} flip={o.flip} player />
-              <LoopToggle words={t.loop} name={t.loop.names.line} className="of-toggle" />
-            </div>
-          </Head>
-        </div>
+        <FunnelFigure locale={locale} />
       </div>
     </section>
   );
@@ -285,27 +225,6 @@ function Business({ locale }: { locale: Locale }) {
             <a className="link" href={contactHref()}>{b.other.link}</a>
           </div>
         </BusinessTabs>
-      </div>
-    </section>
-  );
-}
-
-// ------------------------------------------------------------ one order, start to finish
-function See({ locale }: { locale: Locale }) {
-  const see = copy[locale].home.see;
-  return (
-    <section className="hs see" id="see" aria-labelledby="see-title">
-      <div className="wrap">
-        <div className="how-panel see-panel">
-          <div className="open-split open-plate">
-            <Head eyebrow={see.eyebrow} title={see.title} id="see-title" dark />
-            <div className="open-end">
-              <p className="lead">{rich(see.body)}</p>
-              <a className="link link-dark" href={PATHS.chat[locale]}><span>{rich(see.link)}</span></a>
-            </div>
-          </div>
-          <FlowDiagram flow={see} sample={copy[locale].fig.sample} note={copy[locale].agent.samples.bakery.fictional} />
-        </div>
       </div>
     </section>
   );

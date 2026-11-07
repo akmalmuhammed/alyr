@@ -5,6 +5,7 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- The homepage rebuilt around the four stages (D-156, ALY-330; no migration, no new dependency; not published): a drawn figure of one enquiry through discover, convert, manage and scale under the headline, the five numbers a check-up records, and one panel for each stage with what runs today and what our team does. The Agent spotlight, the Office statement and "One order" are no longer sections. The Arabic is a draft until the native review (ALY-66).
 
 ## v0.3.10 (7 Nov 2026)
 - The homepage trimmed, the founder's word (D-154, under ALY-302; no migration, no new dependency): the film beside the headline is gone, and its code with it (D-062 ends); the line under the headline reads "One agentic platform to discover, manage and scale your business.", its word taking turns between those three with its own Pause and resting on "manage" when motion is reduced; How we work opens on its heading and the four cards, without its lead or "What we need from you"; the order flow ends on its steps, without the sentence of who did what. English and Arabic; the Arabic word «لاستكشاف» is a draft until ALY-66.
