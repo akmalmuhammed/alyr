@@ -157,3 +157,105 @@ API on real PostgreSQL through HTTP (`tests/test_discovery_*.py`): the migration
 ## Not in this spec
 
 Proposals, approvals, WhatsApp asks and the morning brief line (ALY-324); Google Business Profile read and writes (ALY-325); AI-answer tracking and the category check (ALY-326); MCP tools (ALY-327); the admin console (ALY-328); scheduled runs beyond the field; an export; a public audit page.
+
+## As built (Phase 1 backend, ALY-318 to ALY-321, branch `aly-318-discovery-api`)
+
+What is built: migration `0120_discovery.sql` (the six tables), the `discovery` module
+(`modules/discovery/`: `connectors/`, `engine.py`, `rules.py`, `scoring.py`, `actions.py`, `words.py`,
+`errors.py`), `routes/discovery.py`, the `discovery.run` job on the existing worker, the `sample`
+connector, and `python -m alyr.discovery_demo`. The routes and their shapes are the ones in "API" above;
+everything below is where the build chose, added or differs. **The shapes of the spec are kept; every
+addition is a new key, never a changed one.**
+
+### Deviations and choices
+
+1. **Module off answers 404 `module_off`, with its own dependency** (`routes/discovery.module_on`), not
+   `require_module("discovery")`, because `require_module` answers 403 and this spec says 404. The error
+   body is the Documents shape: `{detail, code, message_ar, ...}`. `forbidden` (403) is a role refusal.
+2. **`places` is not built, and nothing stands in for it** (no placeholder, no `DISCOVERY_PLACES_KEY`).
+   Google's Places API policies (read 8 Nov 2026,
+   `developers.google.com/maps/documentation/places/web-service/policies`) allow a place ID to be kept
+   indefinitely and latitude and longitude for at most 30 consecutive days, and say the rest of Google
+   Maps content (names, addresses, user reviews, ratings, photos) is not to be copied or saved unless
+   the service terms expressly permit it. Phase 1's design keeps what a listing showed (as evidence) and
+   review text (as `discovery_reviews`), so a Google source cannot ship as specified. It also needs a
+   Google Cloud key with billing, which is the founder's. Needs: the lawyer (ALY-51), or a design that
+   stores place IDs only and reads the rest at run time, and a key. The product is complete on `sample`.
+3. **The sample business is "Nuqta Car Care" (Arabic: نقطة لعناية السيارات)**, five fictional branches in
+   Doha (West Bay, Al Wakra, Lusail, Al Sadd, Industrial Area). **Checked 7 Nov 2026 by web search only:**
+   the name with Doha, car care, car wash, detailing and Qatar found no business of that name, and
+   "Nuqta" alone found no company in Qatar (only unrelated ones in Libya, the UAE and Kuwait). A first
+   candidate, "Tarfa", was dropped because Al Tarfa is a real district of Doha. Google Maps, Instagram and
+   the trademark register were NOT checked: they are the founder's before the name is shown outside ALYR.
+   Phone numbers are in the 5555 01xx range and web addresses end in `.example`. It does not resemble Auto
+   Fast Track or any prospect.
+4. **The sample turns on with its five branches.** The spec says a shop with no places gets one made from
+   the shop's own name; for `sample` the five fictional branches are made instead (one place could not
+   make every rule fire). Any other connector would get one place from the shop's name. A shop that
+   already has places keeps them; the sample maps them to its branches by `place_ref` (`sample:<key>`),
+   else by position, and a place past the fifth is "not found".
+5. **One connector is on at a time.** Turning one on turns the others off (the table allows one `on` row
+   per kind; this keeps a real source from mixing with the fictional one). `PUT /connection` and `GET
+   /connection` answer `{kind, status, available, connections: [{kind, status, created_at}]}`;
+   `available` is `["sample"]`.
+6. **Scoring weights.** A part's value is the share of its checks that pass, each check counting its rule's
+   `weight` (listing_missing 3; listing_unclaimed, hours_missing, hours_conflict, phone_conflict,
+   website_location_missing, whatsapp_link_missing, review_unanswered, rating_low 2; the rest 1). Parts
+   are worth presence 40, reviews 25, website 15, whatsapp 10, ai 10 before the unmeasured ones are left
+   out and the rest renormalised. Exact fractions, rounded half up (`scoring.py`, pinned by tests).
+7. **Which rule is which kind and severity** (the spec left it open): `agent` (ALYR could do it after
+   approval, Phase 2): hours_missing (high), hours_conflict, phone_conflict (high), category_missing;
+   `owner`: listing_missing (high), listing_unclaimed (high), photos_few (low), website_location_missing,
+   whatsapp_link_missing, review_unanswered; `process`: name_conflict, rating_low. Unmarked ones are
+   medium.
+8. **`phone_conflict`** is the listing against the website's number, per place. "Differs between branches
+   where one is expected" is read as the same check (a branch whose listing differs from the number the
+   website shows for it); no number is guessed as the expected one. `rating_low` is `not_measured` under
+   10 reviews. `whatsapp_link_missing` compares the link's number with the place's `whatsapp_e164` when it
+   has one (without it, it asks only for a link); the listing's own link is `None` (not measured) for a
+   real source and for the sample.
+9. **Findings.** `GET /findings?status=` also accepts `done` (owner_done, verified and gone) and `all`;
+   `counts` has a fifth key, `gone`. The overview's `done` list is those three statuses, newest change
+   first. A finding closed by a run can be neither skipped nor marked done (409 `finding_closed`). A rule
+   that is `not_measured` in a run leaves its finding exactly as it was (never closed on missing data).
+   `Finding` also carries `rule` (the rule in one plain sentence); `GET /findings/{id}` adds `run_id` and
+   `steps` (the snapshot step and the rule family's step of the run that last saw it).
+10. **Runs.** `Run` also carries `connector`, `error` (a plain sentence in the reader's language),
+    `error_code`, `steps_used`, `step_budget` and `created_at`. `GET /runs/latest` answers `null` when there
+    is no run. Steps: `connector.snapshot`, `rules.presence`, `rules.reviews`, `rules.website`,
+    `rules.whatsapp`, `findings.save`, `reviews.save`, `score.compute`. The cost budget is 100 units and the
+    step budget 60 (written on the run); 200 findings in one run stops it (`too_many_findings`). A run
+    queued or running for 15 minutes is ended by the next start (`run_interrupted`). The ten minutes
+    between manual runs is `ALYR_DISCOVERY_RUN_GAP_SECONDS` (600); 429 carries `retry_after` and the header.
+    **In local development jobs run inside the API, so a check-up is already `done` when `POST /runs` has
+    answered; in production the worker runs it a moment later.** A screen must poll either way.
+11. **Locations.** `GET` and `PUT /locations` use `{items: Location[]}` both ways. `PUT` replaces the list:
+    entries with an `id` of this shop are changed, entries without are added, entries left out are
+    removed with their findings and reviews. At least 1, at most 50 (422 `too_many_locations`), a name
+    each, `website_url` http(s) only, `whatsapp_e164` as `+` and 7 to 15 digits. Refused while a run is
+    queued or running (409 `run_in_progress`).
+12. **Reviews.** `summary` counts all the shop's reviews (the filters change the list, not the summary);
+    `unanswered` is every review with no reply, of any stars; the list is the newest 200.
+13. **Report.** The month is the shop's own (its time zone). `score_start` and `score_end` are the first and
+    last done run of the month, `change` is null with fewer than two runs, `new` are findings first seen
+    in a run of the month, `fixed` are findings closed by a run of the month, `still_open` are those not
+    closed by the month's last run. A month with no run answers `runs: 0` and empty lists.
+14. **The default language** is the business's own (`tenants.owner_lang`), since a person has none.
+15. **Overview** also carries `headline`, one sentence by rule in the reader's language.
+16. **Switching it on.** Discovery is in no product, so there is no price and no switch on the Products
+    screen; the back office switches it for one business (`SWITCHABLE_MODULES`, `/ops`), and on a developer's
+    machine `uv run python -m alyr.discovery_demo [--tenant ID] [--off]` switches it on and turns the sample
+    on (local only). Seeds are untouched.
+17. **Activity.** The record's subject list learned `discovery` (read from the constraint as it stands, so a
+    parallel branch's subjects are kept). Changes record `run.start`, `finding.status`, `locations.edit`,
+    `connection.on` and `connection.off` with the channel.
+18. **Added columns** beyond the spec: `discovery_runs.error_ar`, `error_code`, `cost_budget`, `created_at`;
+    `discovery_findings.updated_at`; `discovery_connections.updated_at`. `discovery_connections.status`
+    defaults to `on`.
+19. **Erasure** (`core/erase_rules.py`): all six tables are deleted with the business. They are in the
+    account download automatically (it reads every table with a `tenant_id`).
+
+### Not built in Phase 1 (as specified)
+
+Scheduled runs (only the `schedule` value of `trigger` exists), `places`, Google writes, proposals and
+approvals, the MCP tools, the admin console, the web screens (another session), a WhatsApp command.
