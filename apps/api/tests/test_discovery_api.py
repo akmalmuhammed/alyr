@@ -2,6 +2,7 @@
 shop's rows, the answers' shapes in both languages, the places, the reviews as data, the report.
 Real PostgreSQL, HTTP in and out."""
 
+import json
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo
@@ -170,7 +171,6 @@ def test_the_role_matrix(role_shop):
     assert client.get(f"/api/discovery/runs/{ids['run']}").status_code == expect["read"]
     assert client.get("/api/discovery/locations").status_code == expect["read"]
     assert client.get("/api/discovery/connection").status_code == expect["read"]
-    assert client.post("/api/discovery/runs").status_code == expect["run"]
     status = client.post(f"/api/discovery/findings/{ids['finding']}/status",
                          json={"status": "skipped"})
     assert status.status_code == expect["status"]
@@ -184,6 +184,8 @@ def test_the_role_matrix(role_shop):
         # and nothing changed
         assert owner_sql("select status from discovery_findings where id = $1",
                          UUID(ids["finding"]))[0]["status"] == "open"
+    # a check-up last: it closes findings, so it must not come between the changes above
+    assert client.post("/api/discovery/runs").status_code == expect["run"]
 
 
 # ── every route against another shop's rows ─────────────────────────────────────────────
@@ -370,7 +372,8 @@ def test_set_aside_done_and_undo(ran):
     acts = owner_sql("select action, detail from activity where tenant_id = $1 and subject = "
                      "'discovery' and action = 'finding.status' order by created_at",
                      ran.tenant_id)
-    assert [a["detail"]["to"] for a in acts] == ["skipped", "owner_done", "skipped", "open"]
+    assert [json.loads(a["detail"])["to"] for a in acts] == [
+        "skipped", "owner_done", "skipped", "open"]
     assert ran.owner.post(path, json={"status": "open"}).status_code == 200  # no change, no record
     # a closed finding cannot be set
     run_check_up(ran.owner)

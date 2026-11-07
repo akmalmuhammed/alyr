@@ -174,8 +174,11 @@ begin
     select array_agg(m[1]) into subjects from regexp_matches(def, '''([a-z_]+)''::text', 'g') as m;
     if not ('discovery' = any(subjects)) then
         alter table activity drop constraint activity_subject_check;
+        -- Written as ARRAY['a'::text, ...], the form the database prints, so a later migration can
+        -- read the list the same way.
         execute format(
-            'alter table activity add constraint activity_subject_check check (subject = any (%L::text[]))',
-            array_append(subjects, 'discovery'));
+            'alter table activity add constraint activity_subject_check '
+            'check (subject = any (array[%s]::text[]))',
+            (select string_agg(quote_literal(s), ', ') from unnest(array_append(subjects, 'discovery')) s));
     end if;
 end $$;

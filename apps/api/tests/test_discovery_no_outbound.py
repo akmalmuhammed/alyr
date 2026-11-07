@@ -59,10 +59,12 @@ def test_no_file_of_discovery_names_the_outbound_layer_or_a_channel(path):
 
 def test_the_sample_connector_imports_only_dates_and_discoveries_own_plain_data():
     sample = SRC / "modules" / "discovery" / "connectors" / "sample.py"
-    assert {n for n in imports_of(sample) if not n.startswith("alyr.")} <= {"datetime"}
+    def outside(path):
+        return {n.split(".")[0] for n in imports_of(path) if not n.startswith("alyr")}
+
+    assert outside(sample) <= {"datetime"}
     base = SRC / "modules" / "discovery" / "connectors" / "base.py"
-    assert {n for n in imports_of(base) if not n.startswith("alyr.")} <= {
-        "dataclasses", "datetime", "typing", "uuid"}
+    assert outside(base) <= {"dataclasses", "datetime", "typing", "uuid"}
     # no `async` that waits on anything either: the snapshot only builds data
     text = sample.read_text(encoding="utf-8")
     assert "await " not in text and "sleep" not in text
@@ -85,8 +87,9 @@ def test_a_whole_check_up_makes_no_http_call_and_queues_no_message(client_factor
     async def refuse_async(*args, **kwargs):
         raise AssertionError("Discovery made an outside call")
 
-    monkeypatch.setattr(httpx.Client, "send", refuse)
-    monkeypatch.setattr(httpx.AsyncClient, "send", refuse_async)
+    # The real network transports, not `Client.send`: the test client is an httpx client too.
+    monkeypatch.setattr(httpx.HTTPTransport, "handle_request", refuse)
+    monkeypatch.setattr(httpx.AsyncHTTPTransport, "handle_async_request", refuse_async)
     for name in ("send", "deliver", "gave_up"):
         if hasattr(Outbound, name):
             monkeypatch.setattr(Outbound, name, refuse_async)
