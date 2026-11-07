@@ -109,6 +109,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-130 | The inbox and the Orders screen read the newest rows off an index (a customer carries the times of their latest messages, kept by the database; the inbox lists 300 conversations, Orders the last 30 days and everything open), so a refresh costs the same in a shop's first week and its second year | Accepted |
 | D-155 | The light page is pure white, with cool Carbon-family greys for wells and lines, instead of the yellow-green off-white Paper | Accepted |
 | D-153 | The homepage's headline and sub line use the founder's AI wording, with one word taking turns on a pale Volt block, and a statement before the products keeps the plain line | Accepted |
+| D-154 | The homepage is trimmed: no film beside the headline (ends D-062), the sub line's word takes turns between discover, manage and scale with its own Pause, and How we work's lead, "What we need from you" and the order flow's tally go | Accepted |
 
 ---
 
@@ -2525,6 +2526,20 @@ The founder, 3 Nov 2026: the headline becomes "The AI solution provider for your
 **Scope.** It is an exception, not a change to the rule. Every other public line keeps to `honesty.md`. Each use is listed in `scripts/site/allow/banned.json`.
 
 **Revisit when.** Meta answers, a lawyer reads the wording (ALY-51), or the first AI job goes live.
+
+## D-154 · The homepage trimmed
+
+**Date** 7 Nov 2026 · **Status** Accepted (the founder, 7 Nov 2026) · Under ALY-302 · Ends D-062; changes the sub line of D-153
+
+The founder, 7 Nov 2026, on screenshots of the live homepage: "one agentic platform to discover, manage, scale remove the rest", "remove the video", and remove How we work's lead, "What we need from you" and the sentence under the order flow.
+
+**Decision.**
+- The hero is the headline, the sub line, the check-up and the note, with nothing beside them. The film of one afternoon at Qirfa Bakery (D-062) is gone from the page and its code is removed; it is in the history at `aa65402b` if it is wanted again.
+- The sub line is "One agentic platform to [discover / manage / scale] your business." The Arabic is «منصة واحدة بوكلاء الذكاء الاصطناعي [لاستكشاف / لإدارة / لتوسيع] مشروعك.», a draft until ALY-66. With reduced motion or no scripts it rests on "manage". Its Pause was the film's; it now has its own, the Office line's control (WCAG 2.2.2).
+- How we work opens on its heading and the four cards. Its lead ("You don't need to know anything technical…") and "What we need from you" with its button go.
+- The order flow ends on its steps. The tally ("In Sara's order, ALYR sent 5 messages by itself…") goes.
+
+**Scope.** D-153's exception is unchanged: the same four places, the same allowlist entries. The page's title and description are unchanged.
 
 ## D-155 · The light page is white
 

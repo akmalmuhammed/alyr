@@ -62,8 +62,7 @@ curves, which the workspace's `.sh` still calls `--ease` and `--spring`).
    product at work keeps playing while it is on screen, as the hero's live Agent figure does
    (below): the flows and demos (they cycle through their steps and tabs), the homepage's How
    we work cards, the products frame's six tiles and the product pages' signature figures
-   (`_site/loops.ts`, "Figures that keep playing" below), and the homepage hero's film (D-062,
-   "The hero film" below).
+   (`_site/loops.ts`, "Figures that keep playing" below).
    **What stays one-shot:** text and sections arriving as they are read (`data-reveal`,
    `data-m`, the heading splits), the closing call's fold and mark, the business day's fold
    (`FoldSplit`: a control the visitor drags, with words to read on both sides; a timer moving
@@ -121,8 +120,8 @@ write its own timers.
    (and "Play" / «تشغيل») with the demo's icon, its full name from `copy.ts` (`loop.names`),
    starting with that word. It is `hidden` in the HTML and placed out of the flow over room
    the figure keeps for it (the frame's bar keeps 5 rem at its end), so it never moves
-   anything; loops.ts shows it once the figure plays. On the homepage (the film, How we work,
-   the products frame and the flow) it is not on show: it fades in only while the pointer is
+   anything; loops.ts shows it once the figure plays. On the homepage (the changing words, How
+   we work, the products frame and the flow) it is not on show: it fades in only while the pointer is
    over its figure, with keyboard focus, or while paused, so the page plays like a video and
    still has a way to stop (D-071). Pause finishes every move at once and
    holds the finished state (`data-paused`); Play plays every player from its start. Per
@@ -147,50 +146,15 @@ write its own timers.
 The one exception to "text arrives once": on the homepage, one word in the line under the
 headline and in the statement before the products changes on a pale Volt block. It is CSS,
 turns with `--play-4`, keeps the widest word's width so nothing moves, and shows one still word
-with reduced motion or no scripts. A Pause stops it: the film's in the hero, its own lower down.
+with reduced motion or no scripts. Each line has its own Pause at its end (`LoopToggle`, the
+`.of` group; D-154). A line of three words takes `hp-word-3`, of five `hp-word` (`data-n`).
 
-## The hero film (D-062, the founder, 28 Oct 2026)
+## The hero film (D-062, 28 Oct 2026; taken out 7 Nov 2026, D-154)
 
-The homepage hero is a film of one afternoon at Qirfa Bakery in the product's own screens
-(`HeroFilm.tsx`, `FilmCanvas.tsx`, `FilmDash.tsx`, `filmScript.ts`, `film.ts`, `film.css`,
-`filmStyle.ts`; words in `copyFilm.ts`). It is the one timed piece that is a film, not a
-cycle of play, hold and fade, so it has its own small controller, `film.ts`; the rules are the
-same as the figures above.
-
-1. **One clock, CSS only.** Every moving part has one keyframe track (`filmScript.ts`
-   `tracks()`), all of them `calc(64 * var(--play-4))` long and infinite, so `--pace` scales
-   the whole film. Times are written as seconds at the pace it was timed at (1.3) and become
-   fractions of the loop; arrivals take `--play-*` and the `--ease` curve from the tokens. The
-   camera (translate and scale of one canvas) and the closing fold (a `clip-path` on a
-   stage-sized cover, never a box that reaches past the plate: axe read one as the header's
-   background) are sampled into keyframes. Transform, opacity and clip-path only.
-2. **The HTML is the still and the first frame.** The server draws only the plate, its bar
-   and the last shot (the real ALYR Agent home at 16:20, `ruleLines={false}`) under its
-   caption: that is the first paint, the page without scripts, and the page with reduced
-   motion. Every track starts at that moment (`--hf-at`), so starting is seamless.
-3. **The rest of the canvas is drawn after load, unseen.** `FilmScenes` loads `FilmCanvas`
-   (and the words in `copyFilm.ts`) in its own chunk when `film.ts` asks, half a live beat
-   after the page settles; its windows wait under `content-visibility: hidden` until they
-   start. Its parts start in two frames (what the still shows first) and are then set to the
-   camera's time. Reasons, measured: the canvas in the HTML grew the payload past a round
-   trip in Lighthouse's model (+0.15 s LCP on `/ar`); and the canvas goes in as one commit, so
-   the page re-styles once. (Every DOM insertion used to re-style the whole page: the cause was
-   a `:not()` inside the Agent figure's `:has()` rules, not the `:root:has(...)` ones; rewritten
-   on 28 Oct 2026, and `scripts/site/has-check.mjs` in `pnpm site:check` keeps it out. The
-   header's and product bar's states are now marks on `<html>`, the header and `<main>`.)
-   **A window that steps back stays only on the far side of the fold.** The plate's diagonal
-   cuts whatever reaches it, so a dimmed window left on the fold's side reads as a grey triangle
-   beside the hero's text (D-150, the founder's screenshot). `SHOTS` in `filmScript.ts` names
-   the one neighbour that stays dimmed in a close shot, and the rest are 0. A window crossing
-   the fold during a camera move is fine: it is moving and bright.
-4. **Pause holds the frame,** as a film does (the figures above finish their moves instead), and
-   so does a click on the film; the control shows only on hover, focus or paused (D-071). The
-   film starts at load, on the last moment before the fold closes (`STILL`), so it moves at once;
-   off screen and in a hidden tab every track is paused where it is. The last shot's numbers
-   are the dashboard's own: `film.ts` tells `FilmDash` when the film reaches 16:20 (it rolls,
-   one Volt rule under the count that went up) and when it goes back to 16:19 under the fold.
-5. **Volt** only on the event happening now, at most two at once; captions are mono words on a
-   hairline ending in a tick, one at a time; Arabic captions arrive as one block.
+The homepage hero carried a film of one afternoon at Qirfa Bakery from 28 Oct to 7 Nov 2026.
+The founder took it out and its code is removed; it is in the history at `aa65402b` (its rules
+were here: one CSS clock for every track, the HTML as the still, the canvas drawn after load,
+Pause holding the frame).
 
 ## The live Agent figure (`/agent`; the homepage hero until 28 Oct 2026)
 
