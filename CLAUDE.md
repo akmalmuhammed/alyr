@@ -132,6 +132,7 @@ scripts/                      check.sh (everything CI runs), demo.sh (start and 
                               (the customer's order page, same way), booking-page-browser-check.mjs (the booking page and its links),
                               document-page-browser-check.mjs (the hosted document page and its links),
                               documents-screens-browser-check.mjs (the workspace's Documents screens),
+                              discovery-browser-check.mjs (the workspace's Discovery screens and the menu that opens to them: a real API or a fixture, both languages, light and dark, phone and laptop),
                               connect-browser-check.mjs (the connection screen, phone width, both languages),
                               golive-truth-check.mjs (every onboarding sentence of every business type proved on the
                               finished order page and workspace, English and Arabic),

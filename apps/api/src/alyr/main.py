@@ -33,6 +33,8 @@ from alyr.modules import report
 from alyr.modules.bookings import deposits as booking_deposits
 from alyr.modules.bookings.service import REMINDER, Reminders
 from alyr.modules.connect import webhooks as connect_webhooks
+from alyr.modules.discovery import engine as discovery_engine
+from alyr.modules.discovery.errors import DiscoveryError
 from alyr.modules.documents.delivery import JOB as DELIVERY_JOB
 from alyr.modules.documents.delivery import DocumentSender
 from alyr.modules.documents.errors import DocumentError
@@ -62,6 +64,7 @@ from alyr.routes import costs as cost_routes
 from alyr.routes import custom_fields as custom_field_routes
 from alyr.routes import delivery as delivery_routes
 from alyr.routes import discounts as discount_routes
+from alyr.routes import discovery as discovery_routes
 from alyr.routes import (
     document_page,
     inbox,
@@ -207,6 +210,10 @@ def create_app() -> FastAPI:
         booking_deposits.EXPIRE_JOB,
         booking_deposits.DepositExpiry(app.state.db, app.state.outbound).run,
     )
+    # A Discovery check-up (spec 065): background work, so a customer's job goes first (D-078).
+    app.state.jobs.register(
+        discovery_engine.JOB, discovery_engine.DiscoveryRuns(app.state.db).run, background=True
+    )
     # The staff numbers marked for new orders are told about each one (D-079).
     app.state.jobs.register(
         staff_alert.JOB,
@@ -268,6 +275,7 @@ def create_app() -> FastAPI:
     app.add_exception_handler(asyncpg.exceptions.IdleInTransactionSessionTimeoutError, busy)
     app.add_exception_handler(PhotoRefused, media_routes.refused)
     app.add_exception_handler(DocumentError, documents_routes.refused)
+    app.add_exception_handler(DiscoveryError, discovery_routes.refused)
     app.add_exception_handler(connect_routes.Invalid, connect_routes.invalid)
     # A quantity is a JSON number everywhere (spec 013); FastAPI would write a Decimal as text.
     qty.install_json(app)
@@ -355,6 +363,11 @@ def create_app() -> FastAPI:
     # Documents (ALY-138): the engine, off for every shop until the screens and hooks exist.
     app.include_router(
         documents_routes.router, dependencies=[Depends(require_module("documents"))]
+    )
+    # Discovery (spec 065): how customers find the business, checked by rules. Off for every shop
+    # until switched on; off answers 404 `module_off`.
+    app.include_router(
+        discovery_routes.router, dependencies=[Depends(discovery_routes.module_on)]
     )
     # Connected mode (ALY-142): the machine's door (it answers to an API key, never a session,
     # and checks the shop has Documents on itself) and the person's setup of it.
