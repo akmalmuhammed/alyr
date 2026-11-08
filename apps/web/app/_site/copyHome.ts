@@ -115,7 +115,7 @@ export const homeStagesEn: HomeStages = {
       },
       {
         key: "convert", n: "02", name: "Convert",
-        title: ["Every enquiry,", "one inbox, paid."],
+        title: ["Every channel, every enquiry,", "one inbox."],
         body: "Chats, orders and bookings in one place. Your team answers, and every order has an owner.",
         runs: [
           "ALYR Chat: one inbox. ALYR Shelf: your menu and an order page.",
@@ -211,7 +211,7 @@ export const homeStagesAr: HomeStages = {
       },
       {
         key: "convert", n: "02", name: "التحويل",
-        title: ["كل استفسار", "في صندوق واحد، ومدفوع."],
+        title: ["كل قناة، وكل استفسار،", "في صندوق واحد."],
         body: "المحادثات والطلبات والحجوزات في مكان واحد. يرد فريقك، ولكل طلب مسؤول.",
         runs: [
           "ALYR Chat: صندوق واحد. ALYR Shelf: قائمتك وصفحة طلب.",
