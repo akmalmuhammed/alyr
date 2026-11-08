@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { copy, type Locale } from "./copy";
-import type { HowStackCopy, HowStackStepId } from "./copyHowStack";
+import type { HowStackCopy } from "./copyHowStack";
 import { HOW_SCENES } from "./HowCards";
 import { HowStackPlay } from "./HowStackPlay";
 import { rich } from "./Text";
@@ -20,8 +20,6 @@ import "./howstack.css";
 //
 // The HTML is every scene's finished state; the figure set holds one "Sample" mark (in the
 // check-up sheet) and a sentence for screen readers that the bakery is fictional.
-
-const KEYS: HowStackStepId[] = ["check", "setup", "see", "improve"];
 
 export function HowStack({ locale, words }: { locale: Locale; words: HowStackCopy }) {
   const t = copy[locale];
