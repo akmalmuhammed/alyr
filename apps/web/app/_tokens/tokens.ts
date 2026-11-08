@@ -456,6 +456,8 @@ export const radius = {
   "md": ".5rem",
   "lg": ".75rem",
   "phone": "1.75rem",
+  "panel": "1.75rem",
+  "pill": "999px",
   "round": "50%"
 } as const;
 

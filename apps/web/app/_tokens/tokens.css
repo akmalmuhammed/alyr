@@ -180,6 +180,8 @@
   --radius-md: .5rem;
   --radius-lg: .75rem;
   --radius-phone: 1.75rem;
+  --radius-panel: 1.75rem;
+  --radius-pill: 999px;
   --radius-round: 50%;
   --rule-hairline: 1px;
   --rule-strong: 2px;
