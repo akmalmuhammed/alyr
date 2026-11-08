@@ -8,6 +8,7 @@ and run `node scripts/tokens-build.mjs`. design/README.md says how to use these.
 COLOR = {
     "brand": {
         "carbon": "#15171a",
+        "film-ink": "#141819",
         "volt": "#b7f34a",
         "volt-hover": "#a5e238",
         "volt-pressed": "#8fc42d",

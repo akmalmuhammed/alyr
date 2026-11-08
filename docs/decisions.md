@@ -108,6 +108,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-131 | What the workspace and the order page ask for again and again is kept three seconds and shared between tabs, thrown away by the shop's own writes; who is signed in and a shop's modules the same | Accepted |
 | D-130 | The inbox and the Orders screen read the newest rows off an index (a customer carries the times of their latest messages, kept by the database; the inbox lists 300 conversations, Orders the last 30 days and everything open), so a refresh costs the same in a shop's first week and its second year | Accepted |
 | D-157 | The homepage, version 3: a centred hero, a window for the film, the four stages as a switch, how we work as stacked panels, one workspace as a mosaic; the numbers band, business tabs, price and questions leave the page; rounded panel and pill tokens | Proposed, 8 Nov 2026 |
+| D-159 | The home film plays in the window (web copy, 18.6 MB, on its own background); the homepage stops saying a person replies | Proposed, 8 Nov 2026 |
 | D-158 | The homepage window at Notion's size (960 x 600), and two animated scenes in the stage switch: a check-up score that moves after one fix (Discover) and five places drawn into one ALYR Chat inbox (Convert) | Proposed, 8 Nov 2026 |
 | D-156 | The homepage is rebuilt around the four stages (discover, convert, manage, scale), with one drawn funnel figure, the five numbers of a check-up and one panel per stage; where software is not built, our team does the step and the page says so | Proposed |
 | D-160 | Discovery is one module with one agent and two doors: ALYR Agent in the workspace and WhatsApp, the owner's own AI through the MCP connector, both calling the same actions; Phase 1 is read-only and rule-based, no model | Accepted |
@@ -2601,6 +2602,16 @@ The founder, 8 Nov 2026: rebuild the homepage with a modern approach, in the sam
 - Scale shows the same fictional bakery's week: 50 orders against 45 on the same days last week (Sunday to Thursday, 8, 11, 10, 12 and 9 against 9, 8, 10, 9 and 9), the busiest day in Volt, then the three actions of the monthly review agreed one by one. It replaces the old Carbon plate, so no tab keeps the old look. The three actions are the words already on the page.
 - All three scenes play once when the tab is opened, are complete in the HTML, and show only the end state with reduced motion or without scripts. Every time is a multiple of `--play-3`. The number counters animate a registered integer property (paint, not transform), a deliberate exception to "animate transform and opacity only", kept to these two scenes.
 - The panels still share one height (the tallest, Manage), so the page below never moves when a tab changes.
+- The Arabic is a draft until ALY-66.
+
+## D-159 · The home film plays in the window; the homepage stops saying a person replies
+
+**Date** 8 Nov 2026 · **Status** Proposed (the founder's brief; in a pull request, not published) · Linear ALY-330 · Follows D-158
+
+- The window under the headline now plays the home film, `ALYR-your-business-1080.mp4` from the video studio (2:06, music and words on screen, no narration), as a web copy (1280 x 720, 30 fps, 18.6 MB, under Cloudflare's 25 MiB file limit; the studio's 1080p master is 48 MB) with a poster taken from its logo card. The film is on by default; `NEXT_PUBLIC_ALYR_HOME_VIDEO=off` brings the drawn figure back. It never starts by itself and has the browser's own controls. The film is 16:9 in a 16:10 window, so it is shown whole on its own background (new token `film`, #141819), never cropped.
+- The film has no captions file, because it has no speech. Add `home.vtt` and `captions` in `site.ts` if it ever does.
+- The film is the founder's and was not checked line by line against `honesty.md` before this record. Lines the founder should confirm before it is public are listed in the pull request.
+- The homepage no longer says "A person from ALYR replies": the note under the hero buttons is gone and the closing call reads "Send us a message, and we show you what we would change first." The line stays on the other pages, in the pricing list and in the questions.
 - The Arabic is a draft until ALY-66.
 
 ## D-160 · Discovery: one module, one agent, two doors

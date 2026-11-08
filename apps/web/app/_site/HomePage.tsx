@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { Actions, ContactNote, TryFreeNote } from "./Contact";
+import { Actions, TryFreeNote } from "./Contact";
 import { copy, type FlipWords, type Locale } from "./copy";
 import { HomeMotion } from "./HomeMotion";
 import { LoopToggle } from "./LoopToggle";
@@ -84,7 +84,7 @@ function Hero({ locale }: { locale: Locale }) {
             <Actions locale={locale} lean label={hero.action} />
             <a className="link hero-more" href="#stages">{hero.more}</a>
           </div>
-          {TRY_FREE_LIVE ? <TryFreeNote locale={locale} className="hero-note" /> : <ContactNote locale={locale} className="hero-note" address={false} />}
+          {TRY_FREE_LIVE && <TryFreeNote locale={locale} className="hero-note" />}
         </div>
         <VideoWindow locale={locale} />
       </div>

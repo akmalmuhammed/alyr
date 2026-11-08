@@ -6,6 +6,7 @@
 export const color = {
   "brand": {
     "carbon": "#15171a",
+    "film-ink": "#141819",
     "volt": "#b7f34a",
     "volt-hover": "#a5e238",
     "volt-pressed": "#8fc42d",
@@ -169,6 +170,7 @@ export const semantic = {
 export const component = {
   "band": {
     "band": "#15171a",
+    "film": "#141819",
     "band-edge": "transparent",
     "dark-canvas": "#0e1012",
     "dark-surface": "#191c1f",

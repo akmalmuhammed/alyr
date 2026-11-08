@@ -4,6 +4,7 @@
 :root {
   color-scheme: light;
   --carbon: #15171a;
+  --film-ink: #141819;
   --volt: #b7f34a;
   --volt-hover: #a5e238;
   --volt-pressed: #8fc42d;
@@ -34,6 +35,7 @@
   --bad: #b42318;
   --bad-soft: #fbe5e2;
   --band: #15171a;
+  --film: #141819;
   --band-edge: transparent;
   --dark-canvas: #0e1012;
   --dark-surface: #191c1f;

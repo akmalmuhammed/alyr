@@ -768,7 +768,7 @@ const en: Copy = {
     bar: "Try ALYR free",
     final: {
       title: "Try it free, or book a check-up.",
-      body: "Set up your business and try it as your own customer. Or send us a message, and a person from ALYR replies.",
+      body: "Set up your business and try it as your own customer. Or send us a message, and we reply.",
     },
   },
   footer: {
@@ -1598,7 +1598,7 @@ const en: Copy = {
     },
     final: {
       title: "Book a check-up of your business.",
-      body: "Send us a message. A person from ALYR replies, then shows you what we would change first.",
+      body: "Send us a message, and we show you what we would change first.",
       action: "Book a check-up",
       short: "Check-up",
     },
@@ -3118,7 +3118,7 @@ const ar: Copy = {
     bar: "جرّب ALYR مجاناً",
     final: {
       title: "جرّب مجاناً، أو احجز فحصاً.",
-      body: "جهّز نشاطك وجرّبه كأنك عميل عندك. أو أرسل لنا رسالة، فيردّ عليك شخص من ALYR.",
+      body: "جهّز نشاطك وجرّبه كأنك عميل عندك. أو أرسل لنا رسالة، فنردّ عليك.",
     },
   },
   footer: {
@@ -3948,7 +3948,7 @@ const ar: Copy = {
     },
     final: {
       title: "احجز فحصاً لمشروعك.",
-      body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يريك ما سنغيّره أولاً.",
+      body: "أرسل لنا رسالة، ونريك ما سنغيّره أولاً.",
       action: "احجز فحصاً لمشروعك",
       short: "احجز فحصاً",
     },

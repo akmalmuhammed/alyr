@@ -20,7 +20,7 @@ export function VideoWindow({ locale }: { locale: Locale }) {
         {HOME_VIDEO ? (
           <video className="vw-video" controls playsInline preload="metadata" poster={HOME_VIDEO.poster} aria-label={v.label}>
             <source src={HOME_VIDEO.src} type="video/mp4" />
-            <track kind="captions" src={HOME_VIDEO.captions} srcLang={locale} label={v.captions} />
+            {HOME_VIDEO.captions && <track kind="captions" src={HOME_VIDEO.captions} srcLang={locale} label={v.captions} />}
           </video>
         ) : (
           <FunnelFigure locale={locale} />
