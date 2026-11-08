@@ -72,7 +72,7 @@ export function Shell({
   const at = (hash: string) => (page === "home" ? hash : `${home}${hash}`);
   const sections = [
     [at("#business"), t.nav.business],
-    [at("#how"), t.nav.how],
+    [at("#stages"), t.nav.how],
     [at("#questions"), t.nav.questions],
     // The pricing page is its own page and always built (ALY-301); the homepage's price section
     // is behind the offer switch and has no link of its own.

@@ -7,10 +7,8 @@ import { TickPath } from "./Frames";
 import { FiveNumbers } from "./FiveNumbers";
 import { FunnelFigure } from "./FunnelFigure";
 import { HomeMotion } from "./HomeMotion";
-import { HowCards } from "./HowCards";
 import { LoopToggle } from "./LoopToggle";
 import { Stages } from "./Stages";
-import { SuiteFrame } from "./SuiteFrame";
 import { Shell } from "./Shell";
 import { CONTACT_STATE, OFFER_LIVE, TRY_FREE_LIVE } from "./site";
 import { lines, rich } from "./Text";
@@ -38,8 +36,6 @@ export function HomePage({ locale }: { locale: Locale }) {
       <FiveNumbers locale={locale} />
       <Stages locale={locale} />
       <BizStages locale={locale} />
-      <Suite locale={locale} />
-      <How locale={locale} />
       {OFFER_LIVE && <Price locale={locale} />}
       <Questions locale={locale} />
       <HomeMotion />
@@ -111,59 +107,11 @@ function Hero({ locale }: { locale: Locale }) {
           </div>
           <div className={TRY_FREE_LIVE ? "hero-actions is-pair" : "hero-actions"} data-hero-cta>
             <Actions locale={locale} lean label={hero.action} />
-            <a className="link hero-more" href="#how">{hero.more}</a>
+            <a className="link hero-more" href="#stages">{hero.more}</a>
           </div>
           {TRY_FREE_LIVE ? <TryFreeNote locale={locale} className="hero-note" /> : <ContactNote locale={locale} className="hero-note" address={false} />}
         </div>
         <FunnelFigure locale={locale} />
-      </div>
-    </section>
-  );
-}
-
-// --------------------------------------------------------------- the products
-/* One shop, six products (framer-review P1): the suite as one fictional bakery's workspace on
-   a Carbon plate, a tile per product, each one link to its page (SuiteFrame.tsx); then what
-   holds for every product. It opens full (the heading across the grid, the lead under it), so
-   it never repeats the split opening of ALYR Agent just before it. */
-function Suite({ locale }: { locale: Locale }) {
-  const s = copy[locale].home.suite;
-  return (
-    <section className="hs suite" id="products" aria-labelledby="products-title">
-      <div className="wrap">
-        <Rule />
-        <div className="open-full">
-          <Head eyebrow={s.eyebrow} title={s.title} id="products-title">
-            <p className="lead">{rich(s.body)}</p>
-          </Head>
-        </div>
-        <SuiteFrame locale={locale} />
-        <div className="suite-notes">
-          {s.notes.map((note) => (
-            <p key={note.title}><b>{rich(note.title)}</b> {rich(note.body)}</p>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ---------------------------------------------------------------- how we work
-/**
- * Check, set up, see, improve: four cards, each a still canvas with one moving scene from
- * the product (HowCards.tsx, ALY-226); the last card's words say that we check again. Without
- * motion every scene is finished. The heading stands alone (the founder, 7 Nov 2026).
- */
-function How({ locale }: { locale: Locale }) {
-  const w = copy[locale].home.how;
-  return (
-    <section className="hs how" id="how" aria-labelledby="how-title">
-      <div className="wrap">
-        <Rule />
-        <div className="open-full">
-          <Head eyebrow={w.eyebrow} title={w.title} id="how-title" />
-        </div>
-        <HowCards locale={locale} />
       </div>
     </section>
   );
