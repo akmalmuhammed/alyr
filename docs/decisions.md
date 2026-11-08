@@ -2591,14 +2591,15 @@ The founder, 8 Nov 2026: rebuild the homepage with a modern approach, in the sam
 - The closing call no longer says someone comes to the shop (the check-up is remote, 5 Nov).
 - The Arabic is a draft until ALY-66.
 
-## D-158 · The homepage window at Notion's size, and two animated scenes in the stage switch
+## D-158 · The homepage window at Notion's size, and animated scenes in the stage switch
 
 **Date** 8 Nov 2026 · **Status** Proposed (the founder's brief; in a pull request, not published) · Linear ALY-330 · Follows D-157
 
 - The window under the headline is the size and shape of the product window on notion.com, measured there at 1440 x 900 on 8 Nov 2026: 960 x 600 (16:10), centred, an 8 px radius, a hairline and six soft shadow layers, no title bar. New token `shadow.stage`. The film should be made at 1920 x 1200 so it is sharp at that size; until it is switched on the window shows the drawn figure.
 - Discover shows a sample check-up of the fictional Qirfa Bakery: the score as a ring, four measured parts as bars (Google listing, website, WhatsApp, reviews: the parts Discovery measures, spec 065), one recommendation. A pointer presses "I did this" and then "Run check-up", the score counts from 58 to 71 and the two parts that changed fill in Volt. Instagram and TikTok are not parts of the score: Discovery does not measure them.
 - Convert shows five places customers come from (Instagram and TikTok link in bio, a Google profile link, the order page's button, the counter QR card) drawn into one ALYR Chat inbox, the chats arriving one by one. Each chat is the customer's own words naming where they came from, so nothing says that ALYR tags or reads the source. Instagram and TikTok direct messages are not connected to Chat and the scene does not show them. No brand logos are used: the icons are generic.
-- Both scenes play once when the tab is opened, are complete in the HTML, and show only the end state with reduced motion or without scripts. Every time is a multiple of `--play-3`. The number counters animate a registered integer property (paint, not transform), a deliberate exception to "animate transform and opacity only", kept to these two scenes.
+- Scale shows the same fictional bakery's week: 50 orders against 45 on the same days last week (Sunday to Thursday, 8, 11, 10, 12 and 9 against 9, 8, 10, 9 and 9), the busiest day in Volt, then the three actions of the monthly review agreed one by one. It replaces the old Carbon plate, so no tab keeps the old look. The three actions are the words already on the page.
+- All three scenes play once when the tab is opened, are complete in the HTML, and show only the end state with reduced motion or without scripts. Every time is a multiple of `--play-3`. The number counters animate a registered integer property (paint, not transform), a deliberate exception to "animate transform and opacity only", kept to these two scenes.
 - The panels still share one height (the tallest, Manage), so the page below never moves when a tab changes.
 - The Arabic is a draft until ALY-66.
 

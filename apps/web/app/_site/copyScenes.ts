@@ -41,6 +41,22 @@ export type StageScenesCopy = {
     rows: { who: string; text: string; at: string }[];
     foot: string;
   };
+  scale: {
+    label: string;
+    shop: string;
+    title: string;
+    ordersLabel: string;
+    /** Under the big number: what it is counted against. */
+    prev: string;
+    change: string;
+    legendNow: string;
+    legendPrev: string;
+    /** Sunday to Thursday, the days counted so far. */
+    days: string[];
+    /** Orders each day; the totals are the sums (50 and 45). */
+    now: number[];
+    before: number[];
+  };
 };
 
 export const stageScenesEn: StageScenesCopy = {
@@ -89,6 +105,20 @@ export const stageScenesEn: StageScenesCopy = {
     ],
     foot: "Your team answers, and every order has an owner.",
   },
+  scale: {
+    label:
+      "A sample week for Qirfa Bakery, a fictional business: 50 orders this week against 45 on the same days last week, then three actions agreed for next month.",
+    shop: "Qirfa Bakery",
+    title: "This week",
+    ordersLabel: "Orders this week",
+    prev: "Same days last week: 45",
+    change: "+5 on last week",
+    legendNow: "This week",
+    legendPrev: "Last week",
+    days: ["Sun", "Mon", "Tue", "Wed", "Thu"],
+    now: [8, 11, 10, 12, 9],
+    before: [9, 8, 10, 9, 9],
+  },
 };
 
 export const stageScenesAr: StageScenesCopy = {
@@ -136,5 +166,19 @@ export const stageScenesAr: StageScenesCopy = {
       { who: "مريم", text: "مسحت البطاقة عند الكاونتر. هل يمكنني الحصول على القائمة؟", at: "9:50" },
     ],
     foot: "يردّ فريقك، ولكل طلب مسؤول.",
+  },
+  scale: {
+    label:
+      "مثال على أسبوع لمخبز قرفة، وهو نشاط تخيّلي: 50 طلباً هذا الأسبوع مقابل 45 في الأيام نفسها من الأسبوع الماضي، ثم ثلاثة إجراءات متفق عليها للشهر القادم.",
+    shop: "مخبز قرفة",
+    title: "هذا الأسبوع",
+    ordersLabel: "طلبات هذا الأسبوع",
+    prev: "الأيام نفسها من الأسبوع الماضي: 45",
+    change: "زادت 5 عن الأسبوع الماضي",
+    legendNow: "هذا الأسبوع",
+    legendPrev: "الأسبوع الماضي",
+    days: ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"],
+    now: [8, 11, 10, 12, 9],
+    before: [9, 8, 10, 9, 9],
   },
 };

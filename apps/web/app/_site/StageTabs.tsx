@@ -3,8 +3,7 @@ import { AgentFigure } from "./AgentFigure";
 import { Icon } from "./brand";
 import { copy, type Locale } from "./copy";
 import type { StageTabsCopy } from "./copyStageTabs";
-import { ChannelScene, ScoreScene } from "./StageScenes";
-import { SampleMark, TickPath } from "./Frames";
+import { ChannelScene, ScaleScene, ScoreScene } from "./StageScenes";
 import { SAMPLE_ORDER, SAMPLES } from "./samples";
 import { StageTabsClient } from "./StageTabsClient";
 import { lines, rich } from "./Text";
@@ -21,49 +20,12 @@ import "./stagetabs.css";
 
 const n = (index: number) => ({ "--i": index }) as CSSProperties;
 
-/** A row of a drawn list: a Volt tick when it is done, the hollow pending dot when it is next. */
-function Row({ label, state, done, index }: { label: string; state: string; done: boolean; index: number }) {
-  return (
-    <li className="stt-row" style={n(index)}>
-      {done ? (
-        <span className="stt-box-done"><TickPath /></span>
-      ) : (
-        <span className="dot-pending" aria-hidden="true" />
-      )}
-      <span className="stt-row-label">{rich(label)}</span>
-      <span className="stt-row-state">{state}</span>
-    </li>
-  );
-}
-
-/** A drawn window on a Carbon plate: the title, the "Sample" mark, then its rows. */
-function Plate({ title, shop, kicker, rows, foot, sample }: {
-  title: string; shop: string; kicker?: string; rows: { label: string; state: string; done: boolean }[]; foot?: string; sample: string;
-}) {
-  return (
-    <div className="stt-plate">
-      <div className="stt-win">
-        <div className="stt-bar">
-          <b>{rich(shop)}</b>
-          <SampleMark label={sample} />
-        </div>
-        <h4 className="stt-win-title">{title}</h4>
-        {kicker && <p className="stt-kicker">{kicker}</p>}
-        <ul className="stt-rows">
-          {rows.map((row, index) => <Row key={row.label} {...row} index={index} />)}
-        </ul>
-        {foot && <p className="stt-foot">{foot}</p>}
-      </div>
-    </div>
-  );
-}
-
 export function StageTabs({ locale, words }: { locale: Locale; words: StageTabsCopy }) {
   const t = copy[locale];
   const s = t.home.stages;
   const visual = (key: string) => {
     if (key === "discover") return <ScoreScene words={words.scenes.score} sample={t.fig.sample} />;
-    if (key === "scale") return <Plate title={s.scale.title} shop={t.home.funnel.shop} kicker={s.scale.kicker} rows={s.scale.rows} foot={s.scale.foot} sample={t.fig.sample} />;
+    if (key === "scale") return <ScaleScene words={words.scenes.scale} review={s.scale} sample={t.fig.sample} />;
     if (key === "convert") return <ChannelScene words={words.scenes.chat} sample={t.fig.sample} shop={t.home.funnel.shop} />;
     return (
       <AgentFigure

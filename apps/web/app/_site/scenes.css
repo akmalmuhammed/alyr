@@ -105,6 +105,37 @@
   .sc-wires { display: none; }
 }
 
+/* ============================================================== Scale: the week, then the month */
+.sc-scale .sc-win { max-width: 40rem; margin-inline: auto; }
+.sc-sales { display: grid; grid-template-columns: minmax(0, 11rem) minmax(0, 1fr); gap: var(--space-4); align-items: end; }
+.sc-big { --v: var(--to); display: grid; gap: var(--space-1); justify-items: start; align-content: end; }
+.sc-big-k { font-size: var(--fs-note); color: var(--text-muted); }
+.sc-big-n { font-size: var(--ui-display); font-weight: var(--weight-semibold); line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.sc-big-n .sc-count { font-style: normal; }
+.sc-big-s { font-size: var(--fs-caption); color: var(--text-muted); }
+.sc-big .sc-delta { margin-top: var(--space-1); }
+.sc-chart { display: grid; gap: var(--space-2); min-width: 0; }
+.sc-cols { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-2); align-items: end; }
+.sc-col { display: grid; gap: var(--space-1); justify-items: center; }
+.sc-col small { font-size: var(--fs-caption); color: var(--text-muted); }
+.sc-pair { display: flex; align-items: end; gap: 3px; width: 100%; height: 7.5rem; border-bottom: 1px solid var(--line-strong); }
+.sc-b { flex: 1; height: calc(var(--h) * 100%); transform-origin: bottom; border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
+.sc-b.is-prev { background: var(--line-strong); }
+.sc-b.is-now { background: var(--text); }
+.sc-b.is-peak { background: var(--volt); box-shadow: inset 0 0 0 1px var(--text); }
+.sc-legend { display: flex; gap: var(--space-3); font-size: var(--fs-caption); color: var(--text-muted); }
+.sc-legend span::before { content: ""; display: inline-block; width: .625rem; height: .625rem; margin-inline-end: var(--space-1); background: var(--text); border-radius: 2px; }
+.sc-legend .is-prev::before { background: var(--line-strong); }
+.sc-review { display: grid; gap: var(--space-1); padding: var(--space-3); background: var(--surface-subtle); border-radius: var(--radius-md); box-shadow: 0 0 0 1px var(--hair); }
+.sc-review ul { display: grid; }
+.sc-review li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); padding-block: var(--space-2); border-top: 1px solid var(--line); font-size: var(--fs-note); line-height: 1.35; }
+.sc-review li:first-child { border-top: 0; }
+.sc-review li b { font-weight: var(--weight-medium); color: var(--text-muted); white-space: nowrap; }
+.sc-review .dot-pending { margin-inline: .3125rem; }
+@media (max-width: 36rem) {
+  .sc-sales { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* ============================================================================ the motion */
 @keyframes sc-in { from { opacity: 0; translate: calc(var(--dir) * var(--travel) * -1) var(--travel); } }
 @keyframes sc-pop { from { opacity: 0; scale: .85; } }
@@ -134,6 +165,12 @@
 @keyframes sc-b { 0%, 82% { visibility: hidden; opacity: 0; translate: 0 var(--travel); } 83% { visibility: visible; } 90%, 100% { visibility: visible; opacity: 1; translate: 0 0; } }
 @keyframes sc-delta { 0%, 88% { opacity: 0; scale: .8; } 94%, 100% { opacity: 1; scale: 1; } }
 
+/* the week: the number counts up, the bars grow day by day, the change appears, then the three
+   actions are agreed one after another. */
+@keyframes sc-grow { from { transform: scaleY(0); } }
+@keyframes sc-total { 0%, 6% { --v: 0; } 40%, 100% { --v: var(--to); } }
+@keyframes sc-late { 0%, 38% { opacity: 0; scale: .85; } 46%, 100% { opacity: 1; scale: 1; } }
+
 @keyframes sc-badge { 0%, 43.9% { --c: 0; } 44%, 55.9% { --c: 1; } 56%, 67.9% { --c: 2; } 68%, 79.9% { --c: 3; } 80%, 91.9% { --c: 4; } 92%, 100% { --c: 5; } }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -149,6 +186,12 @@
   .motion .stt-box[data-seen] .stt-panel.is-on .sc-find-a { animation: sc-a calc(var(--u) * 20) var(--ease) both; }
   .motion .stt-box[data-seen] .stt-panel.is-on .sc-find-b { animation: sc-b calc(var(--u) * 20) var(--ease) both; }
   .motion .stt-box[data-seen] .stt-panel.is-on .sc-find-b .sc-delta { animation: sc-delta calc(var(--u) * 20) var(--ease) both; }
+  .motion .stt-box[data-seen] .stt-panel.is-on .sc-big { animation: sc-total calc(var(--u) * 12) var(--ease) both; }
+  .motion .stt-box[data-seen] .stt-panel.is-on .sc-big .sc-delta { animation: sc-late calc(var(--u) * 12) var(--ease) both; }
+  .motion .stt-box[data-seen] .stt-panel.is-on .sc-b { animation: sc-grow calc(var(--u) * 2.5) var(--ease) calc(var(--u) * (1 + var(--i, 0) * .6)) both; }
+  .motion .stt-box[data-seen] .stt-panel.is-on .sc-b.is-now { animation-delay: calc(var(--u) * (1.4 + var(--i, 0) * .6)); }
+  .motion .stt-box[data-seen] .stt-panel.is-on .sc-review li { animation: sc-in var(--play-3) var(--ease) calc(var(--u) * (7 + var(--i) * 1.5)) both; }
+  .motion .stt-box[data-seen] .stt-panel.is-on .sc-review .sc-tick { animation: sc-pop var(--play-3) var(--spring) calc(var(--u) * (7.6 + var(--i) * 1.5)) both; }
   /* the ring and the number follow --v, so the ring has no animation of its own */
 
   /* the inbox: 14 units; chip i at 1.5i, its line draws, a packet rides it, then its chat lands */

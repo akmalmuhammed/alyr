@@ -99,6 +99,62 @@ export function ScoreScene({ words: w, sample }: { words: StageScenesCopy["score
   );
 }
 
+export function ScaleScene({ words: w, review, sample }: {
+  words: StageScenesCopy["scale"];
+  review: { title: string; kicker: string; rows: { label: string; state: string; done: boolean }[]; foot: string };
+  sample: string;
+}) {
+  const total = w.now.reduce((a, b) => a + b, 0);
+  const peak = Math.max(...w.now);
+  const top = Math.max(...w.now, ...w.before);
+  return (
+    <figure className="sc sc-scale" aria-label={w.label}>
+      <div className="sc-win" aria-hidden="true">
+        <header className="sc-bar">
+          <b>{rich(w.shop)}</b>
+          <span>{w.title}</span>
+          <SampleMark label={sample} />
+        </header>
+        <div className="sc-sales">
+          <div className="sc-big" style={{ "--to": total } as CSSProperties}>
+            <p className="sc-big-k">{w.ordersLabel}</p>
+            <p className="sc-big-n"><i className="sc-count" /></p>
+            <p className="sc-big-s">{w.prev}</p>
+            <span className="sc-delta">{w.change}</span>
+          </div>
+          <div className="sc-chart">
+            <div className="sc-cols">
+              {w.days.map((day, index) => (
+                <div key={day} className="sc-col" style={i(index)}>
+                  <div className="sc-pair">
+                    <span className="sc-b is-prev" style={{ "--h": w.before[index] / top } as CSSProperties} />
+                    <span className={`sc-b is-now${w.now[index] === peak ? " is-peak" : ""}`} style={{ "--h": w.now[index] / top } as CSSProperties} />
+                  </div>
+                  <small>{day}</small>
+                </div>
+              ))}
+            </div>
+            <p className="sc-legend"><span className="is-now">{w.legendNow}</span><span className="is-prev">{w.legendPrev}</span></p>
+          </div>
+        </div>
+        <div className="sc-review">
+          <p className="sc-kicker">{review.title} · {review.kicker}</p>
+          <ul>
+            {review.rows.map((row, index) => (
+              <li key={row.label} className={row.done ? "is-done" : "is-next"} style={i(index)}>
+                {row.done ? <span className="sc-tick"><TickPath /></span> : <span className="dot-pending" aria-hidden="true" />}
+                <span>{rich(row.label)}</span>
+                <b>{row.state}</b>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <p className="sc-foot">{review.foot}</p>
+      </div>
+    </figure>
+  );
+}
+
 export function ChannelScene({ words: w, sample, shop }: { words: StageScenesCopy["chat"]; sample: string; shop: string }) {
   const count = w.rows.length;
   return (
