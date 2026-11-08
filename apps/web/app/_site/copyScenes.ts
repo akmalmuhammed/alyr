@@ -33,7 +33,8 @@ export type StageScenesCopy = {
   };
   chat: {
     label: string;
-    sources: { name: string; how: string }[];
+    /** `id` picks the mark (ChannelIcons.tsx): instagram, tiktok, whatsapp, google, page, qr. */
+    sources: { id: string; name: string; how: string }[];
     inbox: string;
     inboxSub: string;
     /** The badge's accessible name; `{n}` is how many chats arrived. */
@@ -85,13 +86,14 @@ export const stageScenesEn: StageScenesCopy = {
   },
   chat: {
     label:
-      "Five customers of Qirfa Bakery, a fictional business, write from Instagram, TikTok, Google, the order page and the QR card at the counter. Every chat arrives in one ALYR Chat inbox.",
+      "Six customers of Qirfa Bakery, a fictional business, write from Instagram, TikTok, WhatsApp, Google, the order page and the QR card at the counter. Every chat arrives in one ALYR Chat inbox.",
     sources: [
-      { name: "Instagram", how: "Link in bio" },
-      { name: "TikTok", how: "Link in bio" },
-      { name: "Google", how: "Profile link" },
-      { name: "Order page", how: "Order button" },
-      { name: "Counter", how: "QR card" },
+      { id: "instagram", name: "Instagram", how: "Link in bio" },
+      { id: "tiktok", name: "TikTok", how: "Link in bio" },
+      { id: "whatsapp", name: "WhatsApp", how: "Direct message" },
+      { id: "google", name: "Google", how: "Profile link" },
+      { id: "page", name: "Order page", how: "Order button" },
+      { id: "qr", name: "Counter", how: "QR card" },
     ],
     inbox: "ALYR Chat",
     inboxSub: "One inbox",
@@ -99,6 +101,7 @@ export const stageScenesEn: StageScenesCopy = {
     rows: [
       { who: "Noura", text: "Saw your cakes on Instagram. Is the 30 cm one free on Friday?", at: "9:41" },
       { who: "Hamad", text: "Saw the reel on TikTok. Do you deliver to Lusail?", at: "9:42" },
+      { who: "Salma", text: "Is my order #1442 ready?", at: "9:43" },
       { who: "Sara", text: "Found you on Google. Are you open until 10 tonight?", at: "9:44" },
       { who: "Ali", text: "Ordering from your page. Can I collect at 5?", at: "9:47" },
       { who: "Mariam", text: "Scanned the card at the counter. Menu, please?", at: "9:50" },
@@ -147,13 +150,14 @@ export const stageScenesAr: StageScenesCopy = {
   },
   chat: {
     label:
-      "خمسة عملاء لمخبز قرفة، وهو نشاط تخيّلي، يكتبون من إنستغرام وتيك توك وجوجل وصفحة الطلب وبطاقة QR عند الكاونتر. تصل كل المحادثات إلى صندوق واحد في ALYR Chat.",
+      "ستة عملاء لمخبز قرفة، وهو نشاط تخيّلي، يكتبون من إنستغرام وتيك توك وواتساب وجوجل وصفحة الطلب وبطاقة QR عند الكاونتر. تصل كل المحادثات إلى صندوق واحد في ALYR Chat.",
     sources: [
-      { name: "إنستغرام", how: "رابط السيرة" },
-      { name: "تيك توك", how: "رابط السيرة" },
-      { name: "جوجل", how: "رابط الصفحة" },
-      { name: "صفحة الطلب", how: "زر الطلب" },
-      { name: "الكاونتر", how: "بطاقة QR" },
+      { id: "instagram", name: "إنستغرام", how: "رابط السيرة" },
+      { id: "tiktok", name: "تيك توك", how: "رابط السيرة" },
+      { id: "whatsapp", name: "واتساب", how: "رسالة مباشرة" },
+      { id: "google", name: "جوجل", how: "رابط الصفحة" },
+      { id: "page", name: "صفحة الطلب", how: "زر الطلب" },
+      { id: "qr", name: "الكاونتر", how: "بطاقة QR" },
     ],
     inbox: "ALYR Chat",
     inboxSub: "صندوق واحد",
@@ -161,6 +165,7 @@ export const stageScenesAr: StageScenesCopy = {
     rows: [
       { who: "نورة", text: "رأيت كعكاتكم في إنستغرام. هل الكعكة 30 سم متوفرة الجمعة؟", at: "9:41" },
       { who: "حمد", text: "شاهدت الفيديو في تيك توك. هل توصلون إلى لوسيل؟", at: "9:42" },
+      { who: "سلمى", text: "هل طلبي رقم 1442 جاهز؟", at: "9:43" },
       { who: "سارة", text: "وجدتكم في جوجل. هل أنتم مفتوحون حتى 10 الليلة؟", at: "9:44" },
       { who: "علي", text: "أطلب من صفحتكم. هل أستلم الساعة 5؟", at: "9:47" },
       { who: "مريم", text: "مسحت البطاقة عند الكاونتر. هل يمكنني الحصول على القائمة؟", at: "9:50" },

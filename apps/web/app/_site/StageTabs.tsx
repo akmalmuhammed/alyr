@@ -70,7 +70,6 @@ export function StageTabs({ locale, words }: { locale: Locale; words: StageTabsC
                   <p className="stt-body stt-r" style={n(1)}>{rich(p.body)}</p>
                   {p.runs.length > 0 && (
                     <div className="stt-list is-runs stt-r" style={n(2)}>
-                      <h4 className="stt-k">{s.runsLabel}</h4>
                       <ul>{p.runs.map((item) => <li key={item}>{rich(item)}</li>)}</ul>
                     </div>
                   )}

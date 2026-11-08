@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { ChannelIcon } from "./ChannelIcons";
 import { SampleMark, TickPath } from "./Frames";
 import type { StageScenesCopy } from "./copyScenes";
 import { rich } from "./Text";
@@ -15,27 +16,9 @@ import "./scenes.css";
 // The HTML is the finished scene (score 71, every chat in the inbox); the motion lives in
 // scenes.css, starts when the panel is opened (`.stt-panel.is-on` under `data-seen`), plays once
 // and is held back by reduced motion. Every word is in copyScenes.ts; the icons are drawn on the
-// 24 px grid and carry no brand marks. One "Sample" mark each.
+// 24 px grid. One "Sample" mark each.
 
 const i = (index: number) => ({ "--i": index }) as CSSProperties;
-
-/** Line icons on the 24 px grid: 1.7 stroke, square ends. Generic glyphs, never a brand's mark. */
-const ICON: Record<string, string> = {
-  camera: "M4 8h4l1.5-2h5L16 8h4v11H4z M12 16.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z",
-  note: "M10 18.5V6l9-2v12.5 M10 18.5a2.5 2.5 0 1 1-2.5-2.5 M19 16.5a2.5 2.5 0 1 1-2.5-2.5",
-  pin: "M12 21s6-5.6 6-10.5a6 6 0 0 0-12 0C6 15.4 12 21 12 21z M12 12.6a2.1 2.1 0 1 0 0-4.2 2.1 2.1 0 0 0 0 4.2z",
-  page: "M6 3h9l4 4v14H6z M15 3v4h4 M9 12h7 M9 16h7",
-  qr: "M4 4h6v6H4z M14 4h6v6h-6z M4 14h6v6H4z M14 14h2v2h-2z M18 14h2v2h-2z M14 18h2v2h-2z M18 18h2v2h-2z",
-};
-const SOURCE_ICON = ["camera", "note", "pin", "page", "qr"];
-
-function Glyph({ name }: { name: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className="sc-glyph" aria-hidden="true" focusable="false">
-      <path d={ICON[name]} />
-    </svg>
-  );
-}
 
 /** The mouse pointer that drives the demonstration; decoration only. */
 function Cursor() {
@@ -159,11 +142,11 @@ export function ChannelScene({ words: w, sample, shop }: { words: StageScenesCop
   const count = w.rows.length;
   return (
     <figure className="sc sc-chat" aria-label={w.label}>
-      <div className="sc-chat-grid" aria-hidden="true">
+      <div className="sc-chat-grid" aria-hidden="true" style={{ "--n": count } as CSSProperties}>
         <ul className="sc-srcs">
           {w.sources.map((s, index) => (
             <li key={s.name} className="sc-src" style={i(index)}>
-              <span className="sc-src-ico"><Glyph name={SOURCE_ICON[index]} /></span>
+              <span className="sc-src-ico"><ChannelIcon id={s.id} /></span>
               <span className="sc-src-txt"><b>{s.name}</b><small>{s.how}</small></span>
             </li>
           ))}

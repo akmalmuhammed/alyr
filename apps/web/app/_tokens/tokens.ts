@@ -4,6 +4,19 @@
 // read CSS (images drawn with next/og, SVG fills, theme-color).
 
 export const color = {
+  "channel": {
+    "ig-a": "#fcaf45",
+    "ig-b": "#e1306c",
+    "ig-c": "#833ab4",
+    "ig-d": "#5851db",
+    "tt-black": "#010101",
+    "tt-cyan": "#25f4ee",
+    "tt-red": "#fe2c55",
+    "g-red": "#ea4335",
+    "g-yellow": "#fbbc05",
+    "g-blue": "#4285f4",
+    "g-green": "#34a853"
+  },
   "brand": {
     "carbon": "#15171a",
     "volt": "#b7f34a",

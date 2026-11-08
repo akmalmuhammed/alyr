@@ -108,6 +108,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-131 | What the workspace and the order page ask for again and again is kept three seconds and shared between tabs, thrown away by the shop's own writes; who is signed in and a shop's modules the same | Accepted |
 | D-130 | The inbox and the Orders screen read the newest rows off an index (a customer carries the times of their latest messages, kept by the database; the inbox lists 300 conversations, Orders the last 30 days and everything open), so a refresh costs the same in a shop's first week and its second year | Accepted |
 | D-157 | The homepage, version 3: a centred hero, a window for the film, the four stages as a switch, how we work as stacked panels, one workspace as a mosaic; the numbers band, business tabs, price and questions leave the page; rounded panel and pill tokens | Proposed, 8 Nov 2026 |
+| D-161 | The Convert scene: WhatsApp, the real channel marks in colour (exception, this scene only), "every channel, every enquiry, one inbox"; "Runs today" removed | Proposed, 8 Nov 2026 |
 | D-158 | The homepage window at Notion's size (960 x 600), and two animated scenes in the stage switch: a check-up score that moves after one fix (Discover) and five places drawn into one ALYR Chat inbox (Convert) | Proposed, 8 Nov 2026 |
 | D-156 | The homepage is rebuilt around the four stages (discover, convert, manage, scale), with one drawn funnel figure, the five numbers of a check-up and one panel per stage; where software is not built, our team does the step and the page says so | Proposed |
 | D-160 | Discovery is one module with one agent and two doors: ALYR Agent in the workspace and WhatsApp, the owner's own AI through the MCP connector, both calling the same actions; Phase 1 is read-only and rule-based, no model | Accepted |
@@ -2601,6 +2602,16 @@ The founder, 8 Nov 2026: rebuild the homepage with a modern approach, in the sam
 - Scale shows the same fictional bakery's week: 50 orders against 45 on the same days last week (Sunday to Thursday, 8, 11, 10, 12 and 9 against 9, 8, 10, 9 and 9), the busiest day in Volt, then the three actions of the monthly review agreed one by one. It replaces the old Carbon plate, so no tab keeps the old look. The three actions are the words already on the page.
 - All three scenes play once when the tab is opened, are complete in the HTML, and show only the end state with reduced motion or without scripts. Every time is a multiple of `--play-3`. The number counters animate a registered integer property (paint, not transform), a deliberate exception to "animate transform and opacity only", kept to these two scenes.
 - The panels still share one height (the tallest, Manage), so the page below never moves when a tab changes.
+- The Arabic is a draft until ALY-66.
+
+## D-161 · The Convert scene: WhatsApp, the real channel marks in colour, "every channel, every enquiry, one inbox"
+
+**Date** 8 Nov 2026 · **Status** Proposed (the founder's brief; in a pull request, not published) · Linear ALY-330 · Follows D-158
+
+- Convert now draws six places customers come from into one ALYR Chat inbox: Instagram, TikTok, WhatsApp, Google, the order page and the counter QR card. WhatsApp was missing; it is the channel Chat is built on. The headline reads "Every channel, every enquiry, one inbox." ("paid" is gone).
+- The founder asked for the real marks in their own colours instead of black line icons. This is a recorded exception to the design system's "no WhatsApp logo, no WhatsApp green on ALYR's own surfaces", "no logo walls" and "no second accent", limited to this scene: Instagram, TikTok, WhatsApp and Google's G are drawn on their own colours (Simple Icons, CC0 1.0, and Devicon, MIT; the marks stay their owners' trademarks), the order page and the counter card on a Volt tile. The colours are tokens (`--ch-*`), the same in both themes. The disclaimer that ALYR is not affiliated with WhatsApp or Meta stays on every page, and no message says a channel is "connected": each place is a link or a card that opens the same chat.
+- Instagram and TikTok direct messages are still not connected to Chat. The scene shows links in a bio, a profile link, a button and a QR card opening the chat, and each chat is the customer's own words.
+- "Runs today" is gone from the four stage panels (the founder: it does not sound professional). The solid and dashed rules still tell what runs from what our team does by hand; "Our team does" stays.
 - The Arabic is a draft until ALY-66.
 
 ## D-160 · Discovery: one module, one agent, two doors
