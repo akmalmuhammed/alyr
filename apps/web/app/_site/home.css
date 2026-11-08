@@ -2,7 +2,6 @@
    no extra render-blocking file (ALY-226). */
 @import "./how.css";
 @import "./funnel.css";
-@import "./stages.css";
 
 /* ALYR homepage: the suite, led by ALYR Agent (docs/agent-dashboard/07-site-brief.md).
    Still a working drawing of an owner's business: Paper, hairline rules, real ALYR screens in
@@ -58,6 +57,7 @@ main[data-page="home"] .link:hover { text-decoration-thickness: 2px; }
 .flip-word[data-rest] { visibility: visible; }
 /* the hero's line has its own Pause at its end, as the Office line has (loopStyle.ts) */
 .hero-flip { max-width: 46rem; }
+@media (min-width: 40rem) { .hero-lead { white-space: nowrap; } }
 /* the statement before the products, and its Pause at the end of the line */
 .of { position: relative; max-width: 42rem; }
 .of-line { color: var(--text); font-weight: 600; }

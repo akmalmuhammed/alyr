@@ -13,6 +13,9 @@
 // native speaker's review before launch (ALY-66).
 
 import { homeStagesAr, homeStagesEn, type HomeStages } from "./copyHome";
+import { howStackAr, howStackEn, type HowStackCopy } from "./copyHowStack";
+import { stageTabsAr, stageTabsEn, type StageTabsCopy } from "./copyStageTabs";
+import { workspaceGridAr, workspaceGridEn, type WorkspaceGridCopy } from "./copyWorkspaceGrid";
 import type { ContactState, PageKey, ProductKey } from "./site";
 import { docsAr, docsEn, type DocLinkPage, type DocsPage } from "./copyDocs";
 import { shelfAr, shelfEn, type ShelfPage } from "./copyShelf";
@@ -297,6 +300,10 @@ export type ChatScene = {
 };
 
 type Home = HomeStages & {
+  /** The homepage v3 sections (D-157). */
+  stageTabs: StageTabsCopy;
+  howStack: HowStackCopy;
+  workspaceGrid: WorkspaceGridCopy;
   hero: {
     /** The social card's eyebrow only: the page shows none, its headline says who it is for (site audit R1). */
     eyebrow: string;
@@ -761,7 +768,7 @@ const en: Copy = {
     bar: "Try ALYR free",
     final: {
       title: "Try it free, or book a check-up.",
-      body: "Set up your business and try it as your own customer. Or send us a message, and a person from ALYR replies and visits your shop.",
+      body: "Set up your business and try it as your own customer. Or send us a message, and a person from ALYR replies.",
     },
   },
   footer: {
@@ -881,6 +888,9 @@ const en: Copy = {
   },
   home: {
     ...homeStagesEn,
+    stageTabs: stageTabsEn,
+    howStack: howStackEn,
+    workspaceGrid: workspaceGridEn,
     hero: {
       eyebrow: "Technology for owner-run businesses in Qatar",
       title: ["The AI solution provider", "for your business."],
@@ -1588,7 +1598,7 @@ const en: Copy = {
     },
     final: {
       title: "Book a check-up of your business.",
-      body: "Send us a message. A person from ALYR replies, then comes to your shop to show you what we would change first.",
+      body: "Send us a message. A person from ALYR replies, then shows you what we would change first.",
       action: "Book a check-up",
       short: "Check-up",
     },
@@ -3108,7 +3118,7 @@ const ar: Copy = {
     bar: "جرّب ALYR مجاناً",
     final: {
       title: "جرّب مجاناً، أو احجز فحصاً.",
-      body: "جهّز نشاطك وجرّبه كأنك عميل عندك. أو أرسل لنا رسالة، فيردّ عليك شخص من ALYR ويزور محلك.",
+      body: "جهّز نشاطك وجرّبه كأنك عميل عندك. أو أرسل لنا رسالة، فيردّ عليك شخص من ALYR.",
     },
   },
   footer: {
@@ -3228,6 +3238,9 @@ const ar: Copy = {
   },
   home: {
     ...homeStagesAr,
+    stageTabs: stageTabsAr,
+    howStack: howStackAr,
+    workspaceGrid: workspaceGridAr,
     hero: {
       eyebrow: "التقنية للأنشطة التي يديرها أصحابها في قطر",
       title: ["مزوّد حلول الذكاء الاصطناعي", "لمشروعك."],
@@ -3935,7 +3948,7 @@ const ar: Copy = {
     },
     final: {
       title: "احجز فحصاً لمشروعك.",
-      body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يأتي إلى محلك ليريك ما سنغيّره أولاً.",
+      body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يريك ما سنغيّره أولاً.",
       action: "احجز فحصاً لمشروعك",
       short: "احجز فحصاً",
     },

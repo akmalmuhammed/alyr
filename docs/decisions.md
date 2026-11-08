@@ -2576,3 +2576,14 @@ The founder, 8 Nov 2026: rebuild the homepage with a modern approach, in the sam
 **Scope.** No new dependency, no new font, no change to the tokens. The Arabic is a draft until the native review (ALY-66). D-153's exception is unchanged: no other public line says "agentic" or AI.
 
 **Revisit when.** The founder has seen the preview, the Discover tools exist (then Discover gets a "Runs today" list), or the plan's rules change (ALY-302, questions A to E).
+
+## D-157 · The homepage, version 3: centred, a window for the film, a switch, a stack, a mosaic
+
+**Date** 8 Nov 2026 · **Status** Proposed (the founder's brief; in PR #270, not published) · Linear ALY-330 · Follows D-156 and replaces its section order
+
+- The page is, in order: a centred hero with a thick headline and the sub line's changing word in a chip; a window under it for the home film; the four stages as a segmented switch (Discover, Convert, Manage, Scale); how we work with you as four panels that stack as you scroll; one workspace for every kind of business as a mosaic of every product and what our team does; the footer and closing call.
+- Off the page: the five numbers band, the business tabs with the day split, the price and the questions. The price stays on /pricing. The header's "Questions" link goes; it gains "Workspace".
+- The window shows the drawn funnel figure until the film is switched on (`NEXT_PUBLIC_ALYR_HOME_VIDEO=on`, with `home.mp4`, `home-poster.jpg` and `home.vtt` in `apps/web/site-media/`). The film never starts by itself.
+- New tokens: `radius.panel`, `radius.pill`, `weight.hero`. This is the first rounded panel and pill on the site; the founder asked for it with Apple, Notion and Clay as the references. The cut corner stays on buttons and drawn windows.
+- The closing call no longer says someone comes to the shop (the check-up is remote, 5 Nov).
+- The Arabic is a draft until ALY-66.
