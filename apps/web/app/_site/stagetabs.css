@@ -32,7 +32,7 @@
   line-height: 1.2; white-space: nowrap; cursor: pointer;
 }
 .stt-tab:hover, .stt-tab[aria-selected="true"] { color: var(--text); }
-.stt-tab-n { font-variant-numeric: tabular-nums; color: var(--text-faint); }
+.stt-tab-n { font-variant-numeric: tabular-nums; color: var(--text-muted); }
 .stt-tab:focus-visible { border-radius: var(--radius-pill); outline-offset: calc(-1 * var(--focus-width)); }
 @media (max-width: 30rem) {
   .stt-tab { padding-inline: var(--space-1); }
