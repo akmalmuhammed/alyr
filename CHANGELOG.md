@@ -5,6 +5,9 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+
+## v0.3.11 (8 Nov 2026)
+- Discovery, Phase 1 screens (ALY-322, spec 065; no new dependency): for a shop whose back office switched Discovery on, the workspace menu gains **Discovery** with Home, To do, Reviews and Reports under it (phone: the More sheet), English and Arabic, light and dark. Home shows the score and what to do next with "I did this" and "Skip"; the first check-up is watched as it runs; To do groups what the rules found by who does it, with the evidence; Reviews and Reports (with a print view) read the same check-ups. Every screen says while the source is the sample business. Nothing is sent and no model is used; the Arabic is a draft until ALY-66.
 - Discovery, Phase 1 backend (D-160, ALY-318 to ALY-321, spec 065, migration 0120; no new dependency): `/api/discovery/*` checks how customers find a business with twelve readable rules over a fictional sample source, keeps findings and a log of every check-up, and scores only what it measured. Off for every shop (the back office switches it on for one); nothing is sent and nothing leaves ALYR.
 
 ## v0.3.10 (7 Nov 2026)
