@@ -107,6 +107,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-132 | A process holds few database connections (4 for an API instance, 8 for the worker), gives up after 3 seconds and answers 503 with Retry-After; only so many documents are drawn at once; the worker keeps places for customers; the Sunday report can be spread but stays at nine | Accepted |
 | D-131 | What the workspace and the order page ask for again and again is kept three seconds and shared between tabs, thrown away by the shop's own writes; who is signed in and a shop's modules the same | Accepted |
 | D-130 | The inbox and the Orders screen read the newest rows off an index (a customer carries the times of their latest messages, kept by the database; the inbox lists 300 conversations, Orders the last 30 days and everything open), so a refresh costs the same in a shop's first week and its second year | Accepted |
+| D-160 | Discovery is one module with one agent and two doors: ALYR Agent in the workspace and WhatsApp, the owner's own AI through the MCP connector, both calling the same actions; Phase 1 is read-only and rule-based, no model | Accepted |
 | D-155 | The light page is pure white, with cool Carbon-family greys for wells and lines, instead of the yellow-green off-white Paper | Accepted |
 | D-153 | The homepage's headline and sub line use the founder's AI wording, with one word taking turns on a pale Volt block, and a statement before the products keeps the plain line | Accepted |
 | D-154 | The homepage is trimmed: no film beside the headline (ends D-062), the sub line's word takes turns between discover, manage and scale with its own Pause, and How we work's lead, "What we need from you" and the order flow's tally go | Accepted |
@@ -2557,3 +2558,19 @@ The page's light colour was Paper, #F6F7F3: a yellow-green tint (hue 118°) agai
 
 **Checked.** axe finds nothing on /, /ar and /chat in either theme at 1440 and 390; the drift check and the tokens' generated files agree.
 
+
+## D-160 · Discovery: one module, one agent, two doors
+
+**Date** 7 Nov 2026 · **Status** Accepted (the founder, 7 Nov 2026: "yes agree, go ahead and start building it") · ALY-316, spec 065 · Builds on D-035 (the Agent), D-065 (the action layer), D-012 (no model required), D-152 (the agentic path)
+
+Customers lose a business when its listing, hours, number, website and reviews disagree. Discovery checks that and turns it into a short list of fixes the owner can understand.
+
+**Decision.**
+- **One agent, two doors.** ALYR owns the layer: the tools (actions), the rules, the approval queue and the audit trail. Door one is ALYR Agent, in the workspace and on WhatsApp, which also runs scheduled work. Door two is the MCP connector (ALY-286): the owner's own Claude or ChatGPT calls the same actions. There is never a second agent and never a second copy of the logic. The model, where one is used, is replaceable and sits behind the actions.
+- **Phase 1 is read-only and rule-based.** It reads through a connector (a fictional sample first, public listing data later), applies rules anyone can read, scores only what it measured, and explains with evidence. It changes nothing outside ALYR, sends nothing and calls no model with personal data (hard rule 2). A part that was not measured says so and is left out of the score.
+- **Every public change is a proposal the owner approves** (Phase 2). Nothing is published without a yes, and the next run checks that it worked.
+- **Off for every shop** until switched on, like Documents. The words keep the Agent's voice: by rule, with the evidence, no AI words until the product says it honestly.
+
+**Why.** The founder's rule of 7 Nov (show the best product, build after signing) was overtaken by a go to build it now. The module reuses what exists (module switches, the Agent's registry, the action layer, the jobs worker), so Phase 1 is a module and four screens, not a platform. A model is the one part that needs a legal decision (ALY-329, ALY-51), so it is kept out of Phase 1 and the product does not wait for it.
+
+**Reserved.** Migrations 0120 to 0129 and decisions D-160 to D-169 belong to Discovery.
