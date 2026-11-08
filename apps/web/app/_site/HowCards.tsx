@@ -74,7 +74,10 @@ function money(dirhams: number, unit: string, unitFirst: boolean) {
 }
 
 // ---------------------------------------------------------------- 1. check
-function Check({ locale }: { locale: Locale }) {
+/** What every scene takes. `title` replaces the sheet's title (HowStack words it for a remote check-up). */
+export type SceneProps = { locale: Locale; title?: string };
+
+export function Check({ locale, title }: SceneProps) {
   const t = copy[locale];
   const s = t.home.how.scenes.check;
   const bakery = t.agent.samples.bakery;
@@ -86,7 +89,7 @@ function Check({ locale }: { locale: Locale }) {
         <SampleMark label={t.fig.sample} />
       </div>
       <div className="hw-pad">
-        <b className="hw-h">{s.title}</b>
+        <b className="hw-h">{title ?? s.title}</b>
         <ul className="hw-rows">
           {s.rows.map((row, index) => (
             <li key={row.what}>
@@ -104,7 +107,7 @@ function Check({ locale }: { locale: Locale }) {
 }
 
 // ---------------------------------------------------------------- 2. set up
-function Setup({ locale }: { locale: Locale }) {
+export function Setup({ locale }: SceneProps) {
   const s = copy[locale].home.how.scenes.setup;
   const sub = (n: number) => s.sub.replace("{n}", String(n));
   return (
@@ -146,7 +149,7 @@ function Setup({ locale }: { locale: Locale }) {
 }
 
 // ---------------------------------------------------------------- 3. see
-function See({ locale }: { locale: Locale }) {
+export function See({ locale }: SceneProps) {
   const view: AgentView = SAMPLES[locale].bakery;
   const labels = AGENT_LABELS[view.lang];
   const s = copy[locale].home.how.scenes.see;
@@ -203,7 +206,7 @@ function See({ locale }: { locale: Locale }) {
 }
 
 // ---------------------------------------------------------------- 4. improve
-function Improve({ locale }: { locale: Locale }) {
+export function Improve({ locale }: SceneProps) {
   const view: AgentView = SAMPLES[locale].bakery;
   const s = copy[locale].home.how.scenes.improve;
   const sales = view.kpis.find((kpi) => kpi.key === "sales");
@@ -244,7 +247,8 @@ function Improve({ locale }: { locale: Locale }) {
   );
 }
 
-const SCENE = { check: Check, setup: Setup, see: See, improve: Improve } as const;
+export const HOW_SCENES = { check: Check, setup: Setup, see: See, improve: Improve } as const;
+const SCENE = HOW_SCENES;
 
 /** The words a scene adds as it plays, read while its finished state holds before it plays
  * again (`--words`; loopStyle.ts sums the hold with `--read-word`, `--dwell-beat`, `--dwell-min`). */
