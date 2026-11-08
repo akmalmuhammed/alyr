@@ -327,6 +327,9 @@ def test_the_cost_tables_are_not_read_by_any_route_that_serves_an_agent_or_a_cus
         # Names the tables to delete when a stopped client is erased; it reads nothing
         # (spec 042).
         "core/erase_rules.py",
+        # The Agent's margin card: gathered only for an owner or an admin and only while the
+        # feature is on (tests/test_agent_rule_margin.py proves both).
+        "modules/agent/rules/margin.py",
     }
     readers = set()
     for path in src.rglob("*.py"):
