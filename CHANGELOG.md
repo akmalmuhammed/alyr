@@ -5,8 +5,9 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
-- The homepage, version 3 (D-157, ALY-330; no migration, no new dependency; not published): a centred hero with a window for the home film, the four stages as a switch, how we work as stacked panels, one workspace as a mosaic of every product; the numbers band, business tabs, price and questions leave the page; new tokens `radius.panel`, `radius.pill`, `weight.hero`; the film is off until `NEXT_PUBLIC_ALYR_HOME_VIDEO=on`.
-- The homepage rebuilt around the four stages (D-156, ALY-330; no migration, no new dependency; not published): a drawn figure of one enquiry through discover, convert, manage and scale under the headline, the five numbers a check-up records, and one panel for each stage with what runs today and what our team does. The Agent spotlight, the Office statement and "One order" are no longer sections. The Arabic is a draft until the native review (ALY-66).
+
+## v0.3.11 (8 Nov 2026)
+- The homepage, version 3 (D-156 and D-157, ALY-330; no migration, no new dependency; replaces the page built around the four stages that was never published): a centred hero with a window for the home film, the four stages as a switch, how we work as stacked panels, one workspace as a mosaic of every product; the numbers band, business tabs, price and questions leave the page; new tokens `radius.panel`, `radius.pill`, `weight.hero`; the film is off until `NEXT_PUBLIC_ALYR_HOME_VIDEO=on`.
 - Discovery, Phase 1 backend (D-160, ALY-318 to ALY-321, spec 065, migration 0120; no new dependency): `/api/discovery/*` checks how customers find a business with twelve readable rules over a fictional sample source, keeps findings and a log of every check-up, and scores only what it measured. Off for every shop (the back office switches it on for one); nothing is sent and nothing leaves ALYR.
 
 ## v0.3.10 (7 Nov 2026)
