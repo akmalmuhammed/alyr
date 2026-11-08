@@ -21,9 +21,10 @@ import asyncpg
 
 from alyr.modules.agent.facts import Facts
 from alyr.modules.agent.model import Insight, applies
+from alyr.modules.agent.rules import second_order, top_customers
 
 # One line per rule file, in the order the file was added.
-RULES: tuple[ModuleType, ...] = ()
+RULES: tuple[ModuleType, ...] = (second_order, top_customers)
 
 INSIGHTS: tuple[Insight, ...] = tuple(r.INSIGHT for r in RULES)
 
