@@ -480,6 +480,7 @@ export const shadow = {
   "menu-shadow": "0 24px 70px rgb(21 23 26 / .14)",
   "window-shadow": "0 34px 80px -44px rgb(0 0 0 / .55)",
   "lift": "0 1px 0 rgb(255 255 255 / .7) inset, 0 1px 2px rgb(21 23 26 / .05), 0 0 0 1px var(--hair)",
+  "stage": "0 .7px 3.5px rgb(21 23 26 / .008), 0 3px 7px rgb(21 23 26 / .016), 0 7px 14px rgb(21 23 26 / .02), 0 14px 28px rgb(21 23 26 / .024), 0 23px 52px rgb(21 23 26 / .03), 0 36px 89px rgb(21 23 26 / .04), 0 0 0 1px var(--hair)",
   "float": "0 18px 50px -14px rgb(21 23 26 / .32), 0 0 0 1px var(--hair-strong)"
 } as const;
 
@@ -648,6 +649,7 @@ export const dark = {
     "menu-shadow": "0 24px 70px rgb(0 0 0 / .5)",
     "window-shadow": "0 24px 60px -30px #000",
     "lift": "0 1px 0 rgb(255 255 255 / .04) inset, 0 0 0 1px var(--hair)",
+    "stage": "0 24px 60px -30px rgb(0 0 0 / .7), 0 0 0 1px var(--hair)",
     "float": "0 24px 60px -18px rgb(0 0 0 / .8), 0 0 0 1px var(--hair-strong)"
   }
 } as const;

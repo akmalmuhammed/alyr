@@ -5,6 +5,7 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- The homepage window and two animated scenes (D-158, ALY-330; no migration, no new dependency; not published): the window under the headline is Notion's size, 960 x 600 at 1440 wide (16:10, an 8 px radius, six soft shadows, no title bar), with the film still off until `NEXT_PUBLIC_ALYR_HOME_VIDEO=on`; Discover shows a fictional bakery's check-up score moving from 58 to 71 after one fix, and Convert shows five places customers come from drawn into one ALYR Chat inbox; new token `shadow.stage`. English and Arabic; the Arabic is a draft until ALY-66.
 
 ## v0.3.11 (8 Nov 2026)
 - The homepage, version 3 (D-156 and D-157, ALY-330; no migration, no new dependency; replaces the page built around the four stages that was never published): a centred hero with a window for the home film, the four stages as a switch, how we work as stacked panels, one workspace as a mosaic of every product; the numbers band, business tabs, price and questions leave the page; new tokens `radius.panel`, `radius.pill`, `weight.hero`; the film is off until `NEXT_PUBLIC_ALYR_HOME_VIDEO=on`.

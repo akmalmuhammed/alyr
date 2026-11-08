@@ -1,0 +1,161 @@
+/* The two animated scenes in the stage switch (StageScenes.tsx, D-158). Tokens only; logical
+   properties; every time is a multiple of --u (the pace token --play-3), so the founder's one
+   `pace` value tunes them with the rest of the site. The HTML is the finished scene; the motion
+   below plays once when the panel is opened (`.stt-panel.is-on` under `data-seen`), and reduced
+   motion shows the end state. The number counters use registered integer properties; the end
+   value is the default, so a browser without @property shows the finished number. */
+
+@property --v { syntax: "<integer>"; inherits: true; initial-value: 0; }
+@property --c { syntax: "<integer>"; inherits: true; initial-value: 0; }
+
+.sc { --u: var(--play-3); margin: 0; min-width: 0; }
+
+/* ------------------------------------------------------------------ the shared window */
+.sc-win {
+  display: grid; gap: var(--space-3); min-width: 0; padding: var(--space-3) var(--space-4) var(--space-4);
+  background: var(--surface); color: var(--text); border-radius: var(--radius-lg); box-shadow: var(--shadow-lift);
+}
+.sc-bar { display: flex; flex-wrap: nowrap; align-items: center; gap: var(--space-2); white-space: nowrap; padding-bottom: var(--space-3); border-bottom: 1px solid var(--line); font-size: var(--fs-small); }
+.sc-bar b { font-weight: var(--weight-semibold); }
+.sc-bar span { color: var(--text-muted); }
+.sc-bar .mark-sample { margin-inline-start: auto; }
+.sc-foot { font-size: var(--fs-note); color: var(--text-muted); text-wrap: pretty; }
+.sc-count::before { counter-reset: c var(--v); content: counter(c); }
+.sc-glyph { width: 1.25rem; height: 1.25rem; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: square; stroke-linejoin: miter; }
+
+/* ===================================================================== Discover: the score */
+.sc-score .sc-win { max-width: 40rem; margin-inline: auto; }
+.sc-top { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--space-4); }
+.sc-dial { --v: var(--to); position: relative; display: grid; place-items: center; width: 8.25rem; aspect-ratio: 1; }
+.sc-dial svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.sc-dial circle { fill: none; stroke-width: 9; }
+.sc-ring-bg { stroke: var(--line); }
+.sc-ring { stroke: var(--text); stroke-linecap: butt; stroke-dasharray: 100 100; stroke-dashoffset: calc(100 - var(--v)); }
+.sc-num { position: relative; display: grid; justify-items: center; line-height: 1; }
+.sc-num .sc-count { font-style: normal; font-size: var(--ui-display-sm); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; letter-spacing: -.03em; }
+.sc-num small { margin-top: var(--space-1); font-size: var(--fs-caption); color: var(--text-muted); }
+.sc-parts { display: grid; gap: var(--space-2); min-width: 0; }
+.sc-part { --v: var(--to); display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name val" "track track"; align-items: baseline; gap: var(--space-1) var(--space-2); }
+.sc-part-name { grid-area: name; font-size: var(--fs-small); }
+.sc-part-val { grid-area: val; font-size: var(--fs-small); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }
+.sc-part-val .sc-count { font-style: normal; }
+.sc-bar-track { grid-area: track; position: relative; display: block; height: .5rem; background: var(--line); overflow: clip; border-radius: var(--radius-sm); }
+.sc-bar-fill, .sc-bar-gain { position: absolute; inset-block: 0; }
+.sc-bar-fill { inset-inline-start: 0; inline-size: calc(min(var(--v), var(--from)) * 1%); background: var(--text); }
+.sc-bar-gain { inset-inline-start: calc(var(--from) * 1%); inline-size: calc(max(var(--v) - var(--from), 0) * 1%); background: var(--volt); }
+.sc-part:not(.is-up) .sc-bar-fill { inline-size: calc(var(--v) * 1%); }
+
+/* the recommendation: the card before, the card after, one cell */
+.sc-find { display: grid; padding: var(--space-3); background: var(--surface-subtle); border-radius: var(--radius-md); box-shadow: 0 0 0 1px var(--hair); }
+.sc-find-a, .sc-find-b { grid-area: 1 / 1; display: grid; gap: var(--space-1); align-content: start; min-width: 0; }
+.sc-find-a { visibility: hidden; opacity: 0; }
+.sc-find-b { grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; align-self: center; gap: var(--space-3); }
+.sc-find h4 { font-size: var(--fs-base); font-weight: var(--weight-semibold); line-height: 1.3; }
+.sc-kicker { font-size: var(--fs-caption); font-weight: var(--weight-semibold); color: var(--text-muted); }
+.sc-why { font-size: var(--fs-note); line-height: 1.45; color: var(--text-muted); text-wrap: pretty; }
+.sc-acts { position: relative; container-type: inline-size; display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); margin-top: var(--space-2); }
+.sc-btn { display: grid; place-items: center; min-height: 2.25rem; padding-inline: var(--space-3); font-size: var(--fs-note); font-weight: var(--weight-medium); border-radius: var(--radius-control); position: relative; overflow: clip; }
+.sc-btn.is-did { background: var(--surface); color: var(--text); box-shadow: 0 0 0 1px var(--line-strong); }
+.sc-btn.is-run { background: var(--text); color: var(--text-inverse); }
+.sc-btn.is-run::after { content: ""; position: absolute; inset-inline: 0; inset-block-end: 0; height: 3px; background: var(--volt); transform: scaleX(0); transform-origin: left; }
+[dir="rtl"] .sc-btn.is-run::after { transform-origin: right; }
+.sc-cursor { position: absolute; inset-block-start: 55%; inset-inline-start: 0; width: 1.25rem; height: 1.5rem; fill: var(--text); stroke: var(--surface); stroke-width: 1.4; stroke-linejoin: round; opacity: 0; pointer-events: none; filter: drop-shadow(0 2px 3px rgb(21 23 26 / .25)); }
+[dir="rtl"] .sc-cursor { transform: scaleX(-1); }
+.sc-tick { display: inline-grid; place-items: center; width: 1.75rem; height: 1.75rem; background: var(--volt); color: var(--on-volt); border-radius: var(--radius-sm); }
+.sc-tick svg { width: 1.125rem; height: 1.125rem; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: square; }
+.sc-delta { padding: var(--space-1) var(--space-2); background: var(--volt-wash); font-size: var(--fs-caption); font-weight: var(--weight-semibold); white-space: nowrap; border-radius: var(--radius-sm); }
+@media (max-width: 36rem) {
+  .sc-top { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+  .sc-parts { width: 100%; }
+  .sc-find-b { grid-template-columns: auto minmax(0, 1fr); }
+  .sc-delta { grid-column: 1 / -1; justify-self: start; }
+}
+
+/* ============================================================== Convert: many places, one inbox */
+.sc-chat-grid { display: grid; grid-template-columns: 12.5rem 5rem minmax(0, 26rem); align-items: stretch; justify-content: center; margin-inline: auto; }
+.sc-srcs { display: grid; grid-template-rows: repeat(5, minmax(0, 1fr)); gap: var(--space-2); }
+.sc-src { align-self: center; display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); background: var(--surface); border-radius: var(--radius-md); box-shadow: var(--shadow-lift); min-width: 0; }
+.sc-src-ico { display: inline-grid; place-items: center; flex: none; width: 2rem; height: 2rem; background: var(--surface-subtle); border-radius: var(--radius-sm); }
+.sc-src-txt { display: grid; min-width: 0; line-height: 1.25; }
+.sc-src-txt b { font-size: var(--fs-note); font-weight: var(--weight-semibold); }
+.sc-src-txt small { font-size: var(--fs-caption); color: var(--text-muted); }
+.sc-wires { width: 100%; height: 100%; overflow: visible; }
+[dir="rtl"] .sc-wires { transform: scaleX(-1); }
+.sc-wire { fill: none; stroke: var(--line-strong); stroke-width: 1.25; stroke-dasharray: 1; stroke-dashoffset: 0; }
+.sc-pack { fill: none; stroke: var(--text); stroke-width: 7; stroke-linecap: round; stroke-dasharray: .001 1; opacity: 0; }
+.sc-inbox { align-content: start; }
+.sc-inbox-head { display: flex; align-items: center; justify-content: space-between; font-size: var(--fs-small); color: var(--text-muted); }
+.sc-badge { --c: var(--n); display: inline-grid; place-items: center; min-width: 1.5rem; height: 1.5rem; padding-inline: var(--space-1); background: var(--text); color: var(--text-inverse); font-size: var(--fs-caption); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; border-radius: var(--radius-pill); }
+.sc-badge .sc-count { font-style: normal; }
+.sc-badge .sc-count::before { counter-reset: c var(--c); }
+.sc-rows { display: grid; }
+.sc-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); padding-block: var(--space-2); border-top: 1px solid var(--line); }
+.sc-av { display: inline-grid; place-items: center; width: 2rem; height: 2rem; background: var(--surface-subtle); box-shadow: 0 0 0 1px var(--hair); font-size: var(--fs-small); font-weight: var(--weight-semibold); border-radius: var(--radius-round); }
+.sc-row-txt { display: grid; min-width: 0; font-size: var(--fs-note); line-height: 1.35; }
+.sc-row-txt b { font-weight: var(--weight-semibold); }
+.sc-row-txt span { color: var(--text-muted); text-wrap: pretty; }
+.sc-row-at { display: grid; justify-items: end; gap: var(--space-1); color: var(--text-faint); }
+.sc-row-at small { font-size: var(--fs-caption); font-variant-numeric: tabular-nums; }
+.sc-unread { width: .5rem; height: .5rem; background: var(--volt); box-shadow: 0 0 0 1px var(--text); border-radius: var(--radius-round); }
+@media (max-width: 47.99rem) {
+  .sc-chat-grid { grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
+  .sc-srcs { display: flex; flex-wrap: wrap; }
+  .sc-src { padding: var(--space-1) var(--space-2); }
+  .sc-src-txt small { display: none; }
+  .sc-wires { display: none; }
+}
+
+/* ============================================================================ the motion */
+@keyframes sc-in { from { opacity: 0; translate: calc(var(--dir) * var(--travel) * -1) var(--travel); } }
+@keyframes sc-pop { from { opacity: 0; scale: .85; } }
+@keyframes sc-draw { from { stroke-dashoffset: 1; } }
+@keyframes sc-ride { 0% { stroke-dashoffset: 0; opacity: 1; } 99% { stroke-dashoffset: -1; opacity: 1; } 100% { stroke-dashoffset: -1; opacity: 0; } }
+@keyframes sc-flash { from { background: var(--volt-wash); } }
+
+/* the score: 20 units end to end. 0-10% the numbers rise to the first score and wait; 22-44% the
+   cursor presses "I did this"; 46-60% it presses "Run check-up"; 66-84% the score moves; the
+   card turns to "Done" and the change appears. */
+@keyframes sc-val { 0% { --v: 0; } 10%, 66% { --v: var(--from); } 84%, 100% { --v: var(--to); } }
+@keyframes sc-cur {
+  0%, 20% { opacity: 0; translate: calc(var(--dir) * 85cqw) 1.5rem; scale: 1; }
+  24% { opacity: 1; translate: calc(var(--dir) * 85cqw) 1.5rem; scale: 1; }
+  38% { opacity: 1; translate: calc(var(--dir) * 21cqw) .25rem; scale: 1; }
+  40% { opacity: 1; translate: calc(var(--dir) * 21cqw) .25rem; scale: .8; }
+  43% { opacity: 1; translate: calc(var(--dir) * 21cqw) .25rem; scale: 1; }
+  54% { opacity: 1; translate: calc(var(--dir) * 71cqw) .25rem; scale: 1; }
+  57% { opacity: 1; translate: calc(var(--dir) * 71cqw) .25rem; scale: .8; }
+  60%, 66% { opacity: 1; translate: calc(var(--dir) * 71cqw) .25rem; scale: 1; }
+  74%, 100% { opacity: 0; translate: calc(var(--dir) * 71cqw) .25rem; scale: 1; }
+}
+@keyframes sc-did { 0%, 39% { background: var(--surface); scale: 1; } 40.5% { scale: .94; } 42%, 100% { background: var(--volt); color: var(--on-volt); scale: 1; } }
+@keyframes sc-runbtn { 0%, 56% { scale: 1; } 57.5% { scale: .94; } 59%, 100% { scale: 1; } }
+@keyframes sc-sweep { 0%, 59% { transform: scaleX(0); } 68%, 100% { transform: scaleX(1); } }
+@keyframes sc-a { 0%, 78% { visibility: visible; opacity: 1; translate: 0 0; } 82% { opacity: 0; translate: 0 calc(var(--travel) * -1); } 100% { visibility: hidden; opacity: 0; } }
+@keyframes sc-b { 0%, 82% { visibility: hidden; opacity: 0; translate: 0 var(--travel); } 83% { visibility: visible; } 90%, 100% { visibility: visible; opacity: 1; translate: 0 0; } }
+@keyframes sc-delta { 0%, 88% { opacity: 0; scale: .8; } 94%, 100% { opacity: 1; scale: 1; } }
+
+@keyframes sc-badge { 0%, 43.9% { --c: 0; } 44%, 55.9% { --c: 1; } 56%, 67.9% { --c: 2; } 68%, 79.9% { --c: 3; } 80%, 91.9% { --c: 4; } 92%, 100% { --c: 5; } }
+
+@media (prefers-reduced-motion: no-preference) {
+  .motion .stt-box:not([data-seen]) .sc { opacity: 0; }
+
+  .motion .stt-box[data-seen] .stt-panel.is-on .sc-dial,
+  .motion .stt-box[data-seen] .stt-panel.is-on .sc-part { animation: sc-val calc(var(--u) * 20) linear calc(var(--i, 0) * var(--play-stagger)) both; }
+  .motion .stt-box[data-seen] .stt-panel.is-on .sc-win { animation: sc-in var(--play-3) var(--ease) both; }
+  .motion .stt-box[data-seen] .stt-panel.is-on .sc-cursor { animation: sc-cur calc(var(--u) * 20) linear both; }
+  .motion .stt-box[data-seen] .stt-panel.is-on .sc-btn.is-did { animation: sc-did calc(var(--u) * 20) linear both; }
+  .motion .stt-box[data-seen] .stt-panel.is-on .sc-btn.is-run { animation: sc-runbtn calc(var(--u) * 20) linear both; }
+  .motion .stt-box[data-seen] .stt-panel.is-on .sc-btn.is-run::after { animation: sc-sweep calc(var(--u) * 20) linear both; }
+  .motion .stt-box[data-seen] .stt-panel.is-on .sc-find-a { animation: sc-a calc(var(--u) * 20) var(--ease) both; }
+  .motion .stt-box[data-seen] .stt-panel.is-on .sc-find-b { animation: sc-b calc(var(--u) * 20) var(--ease) both; }
+  .motion .stt-box[data-seen] .stt-panel.is-on .sc-find-b .sc-delta { animation: sc-delta calc(var(--u) * 20) var(--ease) both; }
+  /* the ring and the number follow --v, so the ring has no animation of its own */
+
+  /* the inbox: 14 units; chip i at 1.5i, its line draws, a packet rides it, then its chat lands */
+  .motion .stt-box[data-seen] .stt-panel.is-on .sc-src { animation: sc-pop var(--play-3) var(--spring) calc(var(--u) * var(--i) * 1.5) both; }
+  .motion .stt-box[data-seen] .stt-panel.is-on .sc-wire { animation: sc-draw calc(var(--u) * 1.5) var(--ease) calc(var(--u) * (1 + var(--i) * 1.5)) both; }
+  .motion .stt-box[data-seen] .stt-panel.is-on .sc-pack { animation: sc-ride calc(var(--u) * 3) var(--ease-fold) calc(var(--u) * (2.5 + var(--i) * 1.5)) both; }
+  .motion .stt-box[data-seen] .stt-panel.is-on .sc-inbox { animation: sc-in var(--play-3) var(--ease) calc(var(--u) * 2) both; }
+  .motion .stt-box[data-seen] .stt-panel.is-on .sc-row { animation: sc-in var(--play-3) var(--ease) calc(var(--u) * (5.5 + var(--i) * 1.5)) both, sc-flash calc(var(--u) * 4) var(--ease) calc(var(--u) * (5.5 + var(--i) * 1.5)) both; }
+  .motion .stt-box[data-seen] .stt-panel.is-on .sc-badge { animation: sc-badge calc(var(--u) * 12.5) linear calc(var(--u) * 0) both; }
+}

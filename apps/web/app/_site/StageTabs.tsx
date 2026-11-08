@@ -3,7 +3,7 @@ import { AgentFigure } from "./AgentFigure";
 import { Icon } from "./brand";
 import { copy, type Locale } from "./copy";
 import type { StageTabsCopy } from "./copyStageTabs";
-import { FlowDiagram } from "./FlowDiagram";
+import { ChannelScene, ScoreScene } from "./StageScenes";
 import { SampleMark, TickPath } from "./Frames";
 import { SAMPLE_ORDER, SAMPLES } from "./samples";
 import { StageTabsClient } from "./StageTabsClient";
@@ -62,15 +62,9 @@ export function StageTabs({ locale, words }: { locale: Locale; words: StageTabsC
   const t = copy[locale];
   const s = t.home.stages;
   const visual = (key: string) => {
-    if (key === "discover") return <Plate title={s.discover.title} shop={t.home.funnel.shop} rows={s.discover.rows} sample={t.fig.sample} />;
+    if (key === "discover") return <ScoreScene words={words.scenes.score} sample={t.fig.sample} />;
     if (key === "scale") return <Plate title={s.scale.title} shop={t.home.funnel.shop} kicker={s.scale.kicker} rows={s.scale.rows} foot={s.scale.foot} sample={t.fig.sample} />;
-    if (key === "convert") {
-      return (
-        <div className="how-panel see-panel stt-flow">
-          <FlowDiagram flow={t.home.see} sample={t.fig.sample} note={t.agent.samples.bakery.fictional} />
-        </div>
-      );
-    }
+    if (key === "convert") return <ChannelScene words={words.scenes.chat} sample={t.fig.sample} shop={t.home.funnel.shop} />;
     return (
       <AgentFigure
         variant="spot"
