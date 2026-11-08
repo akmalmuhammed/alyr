@@ -1,0 +1,121 @@
+/* The four stages as a segmented switch (StageTabs.tsx, StageTabsClient.tsx, ALY-330 section 3).
+   A soft grey track with one raised white pill that slides between four equal tabs, and one large
+   soft panel under it. Without scripts (no `al-js`) there is no switch and the four panels stand
+   one under the other; with scripts they share one cell, so the page below never moves. Tokens
+   only; logical properties, with `[dir="rtl"]` for the pill's transform alone. */
+
+.hs.stt { padding-block: clamp(3rem, 6vw, 4.5rem); }
+.stt-head { display: grid; justify-items: center; gap: var(--space-2); text-align: center; }
+.stt-head .lead { max-width: 34rem; }
+.stt-box { margin-top: var(--space-5); }
+
+/* ----------------------------------------------------------------- the switch */
+.stt-tabs { display: none; }
+.al-js .stt-tabs {
+  position: relative; display: grid; grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr));
+  width: min(100%, 38rem); margin-inline: auto; padding: var(--space-1);
+  background: var(--surface-subtle); border: 1px solid var(--hair); border-radius: var(--radius-pill);
+  scroll-margin-top: calc(var(--header) + var(--space-3));
+}
+/* the pill is one element, one tab wide, moved by --idx (set by the client); no per-tab colour */
+.stt-pill {
+  position: absolute; inset-block: var(--space-1); inset-inline-start: var(--space-1);
+  width: calc((100% - 2 * var(--space-1)) / var(--n, 4));
+  background: var(--surface); border-radius: var(--radius-pill); box-shadow: var(--shadow-lift);
+  transform: translateX(calc(var(--idx, 0) * 100%));
+}
+[dir="rtl"] .stt-pill { transform: translateX(calc(var(--idx, 0) * -100%)); }
+.stt-tab {
+  position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; gap: var(--space-2);
+  min-height: 2.75rem; padding: var(--space-2) var(--space-3); border: 0; border-radius: var(--radius-pill);
+  background: none; color: var(--text-muted); font: inherit; font-size: var(--fs-small); font-weight: var(--weight-medium);
+  line-height: 1.2; white-space: nowrap; cursor: pointer;
+}
+.stt-tab:hover, .stt-tab[aria-selected="true"] { color: var(--text); }
+.stt-tab-n { font-variant-numeric: tabular-nums; color: var(--text-faint); }
+.stt-tab:focus-visible { border-radius: var(--radius-pill); outline-offset: calc(-1 * var(--focus-width)); }
+@media (max-width: 30rem) {
+  .stt-tab { padding-inline: var(--space-1); }
+  .stt-tab-n { display: none; }
+}
+
+/* ------------------------------------------------------------------ the panels */
+.stt-panels { margin-top: var(--space-4); }
+.al-js .stt-panels { display: grid; grid-template-columns: minmax(0, 1fr); }
+.al-js .stt-panels > .stt-panel { grid-area: 1 / 1; }
+.al-js .stt-panel:not(.is-on) { visibility: hidden; }
+:root:not(.al-js) .stt-panel + .stt-panel { margin-top: var(--space-4); }
+.al-js .stt-chip { display: none; }
+
+.stt-panel {
+  display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--col-gap); row-gap: var(--space-5); align-items: center;
+  padding: clamp(1.5rem, 4vw, 3rem); background: var(--surface-subtle); border: 1px solid var(--hair); border-radius: var(--radius-panel);
+}
+.stt-text { grid-column: 1 / span 4; display: grid; gap: var(--space-3); justify-items: start; align-content: center; min-width: 0; }
+.stt-vis { grid-column: 5 / -1; min-width: 0; }
+@media (max-width: 61.99rem) {
+  .stt-panel { align-items: start; }
+  .stt-text, .stt-vis { grid-column: 1 / -1; }
+}
+
+.stt-chip { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--fs-small); font-weight: var(--weight-semibold); }
+.stt-chip-n { display: inline-grid; place-items: center; min-width: 1.75rem; height: 1.75rem; padding-inline: var(--space-1); background: var(--text); color: var(--text-inverse); font-variant-numeric: tabular-nums; }
+/* the headline at panel scale; its second line is the one phrase, on a Volt-wash block */
+.stt-title { font-size: calc(var(--h2) * .8); font-weight: var(--weight-display); line-height: 1.05; letter-spacing: -.04em; text-wrap: balance; }
+[lang="ar"] .stt-title { letter-spacing: 0; line-height: 1.35; font-weight: var(--weight-heading); }
+.stt-title .line { display: block; }
+.stt-hl { display: inline-block; margin-block-start: .06em; padding-inline: .2em; background: var(--volt-wash); box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.stt-body { max-width: 28rem; font-size: var(--fs-body); line-height: 1.5; text-wrap: pretty; }
+.stt-list { display: grid; gap: var(--space-1); max-width: 28rem; padding-inline-start: var(--space-3); }
+.stt-k { font-size: var(--fs-small); font-weight: var(--weight-semibold); }
+.stt-list ul { display: grid; gap: var(--space-1); }
+.stt-list li { font-size: var(--fs-small); line-height: 1.5; color: var(--text-muted); text-wrap: pretty; }
+/* solid rule: it runs today, with the product's own name; dashed rule: our team does it by hand */
+.stt-list.is-runs { border-inline-start: 2px solid var(--text); }
+.stt-list.is-team { border-inline-start: 2px dashed var(--line-strong); }
+.stt-next { margin-top: var(--space-1); }
+
+
+/* ----------------------------------------------------- the drawn visuals */
+/* a drawn window on a Carbon plate, cut at 45 degrees and mirrored in Arabic */
+.stt-plate { --fold: 40px; padding: clamp(1.25rem, 3vw, 2.5rem); background: var(--band); color: var(--on-band); clip-path: polygon(0 0, calc(100% - var(--fold)) 0, 100% var(--fold), 100% 100%, 0 100%); box-shadow: inset 0 0 0 1px var(--band-edge); }
+[dir="rtl"] .stt-plate { clip-path: polygon(var(--fold) 0, 100% 0, 100% 100%, 0 100%, 0 var(--fold)); }
+.stt-win { --n: var(--cut-notch); display: grid; gap: var(--space-3); max-width: 36rem; margin-inline: auto; padding: var(--space-4); background: var(--window); color: var(--text); box-shadow: inset 0 0 0 1px var(--window-line); clip-path: polygon(0 0, calc(100% - var(--n)) 0, 100% var(--n), 100% 100%, 0 100%); }
+[dir="rtl"] .stt-win { clip-path: polygon(var(--n) 0, 100% 0, 100% 100%, 0 100%, 0 var(--n)); }
+.stt-bar { display: flex; align-items: center; gap: var(--space-2); padding-bottom: var(--space-3); padding-inline-end: var(--space-3); border-bottom: 1px solid var(--line); font-size: var(--fs-small); }
+.stt-bar b { font-weight: var(--weight-semibold); }
+.stt-bar .mark-sample { margin-inline-start: auto; }
+.stt-win-title { font-size: var(--h3); font-weight: var(--weight-semibold); line-height: 1.25; letter-spacing: -.015em; }
+[lang="ar"] .stt-win-title { letter-spacing: 0; line-height: 1.5; }
+.stt-kicker { margin-top: calc(-1 * var(--space-2)); font-size: var(--fs-small); color: var(--text-muted); }
+.stt-rows { display: grid; }
+.stt-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); padding-block: var(--space-3); border-top: 1px solid var(--line); font-size: var(--fs-base); line-height: 1.4; }
+.stt-row:last-child { border-bottom: 1px solid var(--line); }
+.stt-row-label { min-width: 0; text-wrap: pretty; }
+.stt-row-state { color: var(--text-muted); white-space: nowrap; }
+.stt-box-done { display: inline-grid; place-items: center; width: 1.25rem; height: 1.25rem; background: var(--volt); color: var(--on-volt); }
+.stt-box-done svg { width: .8125rem; height: .8125rem; stroke-width: 3; }
+.stt-row .dot-pending { margin-inline: .3125rem; }
+.stt-foot { font-size: var(--fs-small); color: var(--text-muted); }
+
+/* the order's flow and the Agent's screen keep their own drawings, as on the pages they came from */
+.stt-flow { padding: clamp(1rem, 2.4vw, 1.75rem); }
+.stt-vis .afig { margin-top: 0; }
+
+/* ---------------------------------------------------------------------- motion */
+/* A panel arrives when it is opened (and when the section is first read): its words rise in
+   along the 45-degree diagonal in order, then the visual settles and the drawn rows tick in.
+   Nothing advances by itself. Start states exist only under `.motion`; reduced motion shows the
+   end state. */
+@keyframes stt-in { from { opacity: 0; translate: calc(var(--dir) * var(--travel) * -1) var(--travel); } }
+@keyframes stt-row { from { opacity: 0; translate: 0 var(--space-2); } }
+@keyframes stt-pop { from { scale: 0; } }
+@media (prefers-reduced-motion: no-preference) {
+  .motion .stt-box:not([data-seen]) .stt-r, .motion .stt-box:not([data-seen]) .stt-row { opacity: 0; }
+  .motion .stt-box:not([data-seen]) .stt-box-done { scale: 0; }
+  .motion .stt-box[data-seen] .stt-panel.is-on .stt-r { animation: stt-in var(--play-3) var(--ease) calc(var(--i, 0) * var(--play-stagger)) both; }
+  .motion .stt-box[data-seen] .stt-panel.is-on .stt-row { animation: stt-row var(--play-3) var(--ease) calc((var(--i, 0) + 4) * var(--play-stagger)) both; }
+  .motion .stt-box[data-seen] .stt-panel.is-on .stt-box-done { animation: stt-pop var(--play-3) var(--spring) calc((var(--i, 0) + 4) * var(--play-stagger) + var(--play-2)) both; }
+  .stt-pill { transition: transform var(--play-3) var(--ease); }
+  .stt-tab { transition: color var(--dur-2) var(--ease); }
+}
