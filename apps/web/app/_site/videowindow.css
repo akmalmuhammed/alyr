@@ -1,21 +1,21 @@
-/* The homepage's window (VideoWindow.tsx, D-157): a soft rounded window under the centred
-   headline, like a product window in a hero. The film, or the drawn figure, fills its stage.
-   Tokens only; the window's radius is the homepage panel's. */
+/* The homepage's window (VideoWindow.tsx, D-157, D-158): the size and shape of the product window
+   under Notion's headline, measured on notion.com at 1440 x 900 on 8 Nov 2026: 960 px wide, 16:10
+   (960 x 600), centred, an 8 px radius, a hairline and six soft shadow layers, no title bar, 80 px
+   under the buttons. The film, or the drawn figure until there is one, fills it edge to edge.
+   Tokens only; the 60rem is Notion's 960 px. */
 .vw {
-  position: relative; margin: clamp(2.5rem, 5vw, 4rem) auto 0; width: 100%; max-width: 70rem;
-  border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--surface-subtle);
-  padding: clamp(.375rem, 1vw, .75rem); overflow: clip;
+  position: relative; margin: var(--space-6) auto 0; width: 100%; max-width: 60rem; aspect-ratio: 16 / 10;
+  border-radius: var(--radius-md); background: var(--band); box-shadow: var(--shadow-stage); overflow: clip;
 }
-.vw-bar { display: flex; align-items: center; gap: var(--space-3); min-height: 2.5rem; padding-inline: var(--space-3); color: var(--text-muted); font-size: var(--fs-small); }
-.vw-bar b { font-weight: var(--weight-medium); }
-.vw-dots { display: inline-flex; gap: .375rem; }
-.vw-dots i { width: .625rem; height: .625rem; border-radius: var(--radius-round); background: var(--line-strong); opacity: .6; }
-.vw-stage { overflow: clip; border-radius: calc(var(--radius-panel) - .5rem); background: var(--band); }
-.vw-stage .fn { margin: 0; }
-.vw-stage .fn-plate { clip-path: none; }
+.vw-stage { position: absolute; inset: 0; display: grid; }
+.vw-stage .fn { margin: 0; align-self: stretch; }
+.vw-stage .fn-plate { height: 100%; display: grid; align-content: center; clip-path: none; box-shadow: none; }
 [dir="rtl"] .vw-stage .fn-plate { clip-path: none; }
 .vw-stage .fn-plate::after { display: none; }
-.vw-video { display: block; width: 100%; aspect-ratio: 16 / 9; background: var(--band); }
+.vw-video { display: block; width: 100%; height: 100%; object-fit: cover; background: var(--band); }
+@media (max-width: 47.99rem) {
+  .vw { margin-top: var(--space-5); }
+}
 @media (prefers-reduced-motion: no-preference) {
   .motion .vw { transition: translate var(--play-4) var(--ease), opacity var(--play-4) var(--ease); }
   .motion .vw:not(.is-in) { translate: 0 1.5rem; opacity: 0; }

@@ -6,6 +6,9 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 
 ## Unreleased
 
+## v0.3.12 (8 Nov 2026)
+- The homepage window and three animated scenes (D-158, ALY-330; no migration, no new dependency): the window under the headline is Notion's size, 960 x 600 at 1440 wide (16:10, an 8 px radius, six soft shadows, no title bar), with the film still off until `NEXT_PUBLIC_ALYR_HOME_VIDEO=on`; Discover shows a fictional bakery's check-up score moving from 58 to 71 after one fix, and Convert shows five places customers come from drawn into one ALYR Chat inbox, and Scale shows a week of orders against the same days last week and the three monthly actions agreed one by one; the small numbers on the stage tabs are darker so they pass the contrast check; new token `shadow.stage`. English and Arabic; the Arabic is a draft until ALY-66.
+
 ## v0.3.11 (8 Nov 2026)
 - The homepage, version 3 (D-156 and D-157, ALY-330; no migration, no new dependency; replaces the page built around the four stages that was never published): a centred hero with a window for the home film, the four stages as a switch, how we work as stacked panels, one workspace as a mosaic of every product; the numbers band, business tabs, price and questions leave the page; new tokens `radius.panel`, `radius.pill`, `weight.hero`; the film is off until `NEXT_PUBLIC_ALYR_HOME_VIDEO=on`.
 - Discovery, Phase 1 backend (D-160, ALY-318 to ALY-321, spec 065, migration 0120; no new dependency): `/api/discovery/*` checks how customers find a business with twelve readable rules over a fictional sample source, keeps findings and a log of every check-up, and scores only what it measured. Off for every shop (the back office switches it on for one); nothing is sent and nothing leaves ALYR.

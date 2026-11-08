@@ -4,6 +4,8 @@
 // Arabic is a draft in Modern Standard Arabic with Western digits; a native reviewer signs it
 // off (ALY-66).
 
+import { stageScenesAr, stageScenesEn, type StageScenesCopy } from "./copyScenes";
+
 export type StageTabsCopy = {
   /** The section's heading; a line feed names where it breaks. */
   title: string;
@@ -15,6 +17,8 @@ export type StageTabsCopy = {
   next: string;
   /** The same link on the last stage, which goes back to the first. */
   back: string;
+  /** The animated scenes in the Discover and Convert panels (copyScenes.ts). */
+  scenes: StageScenesCopy;
 };
 
 export const stageTabsEn: StageTabsCopy = {
@@ -23,6 +27,7 @@ export const stageTabsEn: StageTabsCopy = {
   tabsLabel: "The four stages",
   next: "Next: {stage}",
   back: "Back to {stage}",
+  scenes: stageScenesEn,
 };
 
 export const stageTabsAr: StageTabsCopy = {
@@ -31,4 +36,5 @@ export const stageTabsAr: StageTabsCopy = {
   tabsLabel: "المراحل الأربع",
   next: "التالي: {stage}",
   back: "العودة إلى {stage}",
+  scenes: stageScenesAr,
 };
