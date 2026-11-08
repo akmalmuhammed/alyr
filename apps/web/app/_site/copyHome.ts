@@ -103,21 +103,19 @@ export const homeStagesEn: HomeStages = {
       {
         key: "discover", n: "01", name: "Discover",
         title: ["Be found.", "Be the one they pick."],
-        body: "We check how customers reach you today: Google, Instagram, listings, reviews. Then we fix what costs you orders.",
+        body: "We check how customers reach you today, then fix what costs you orders.",
         runs: [],
         team: [
-          "The check-up: a map of every way customers reach you.",
-          "Your Google profile, link in bio and counter QR card, set up.",
+          "The check-up, then your Google profile, link in bio and counter QR card, set up.",
           "The five numbers, recorded as your starting point.",
         ],
       },
       {
         key: "convert", n: "02", name: "Convert",
         title: ["Every enquiry,", "one inbox, paid."],
-        body: "Chats, orders and bookings arrive in one place. Your team answers, confirms and hands over, and each order has an owner.",
+        body: "Chats, orders and bookings in one place. Your team answers, and every order has an owner.",
         runs: [
-          "ALYR Chat: one inbox for your team.",
-          "ALYR Shelf: your menu and stock, and an order page customers open.",
+          "ALYR Chat: one inbox. ALYR Shelf: your menu and an order page.",
           "ALYR Bookings: slots, reminders and a booking page.",
         ],
         team: ["We load your menu and train your counter staff."],
@@ -125,7 +123,7 @@ export const homeStagesEn: HomeStages = {
       {
         key: "manage", n: "03", name: "Manage",
         title: ["Run the day", "from one screen."],
-        body: "Who owes you, what sold, what needs you now. Counted from your own records, with the reason beside each line.",
+        body: "Who owes you, what sold, what needs you now, with the reason beside each line.",
         runs: [
           "ALYR Accounts: credit, ageing and reminders.",
           "ALYR Agent: what needs you now, and the week in numbers.",
@@ -135,12 +133,9 @@ export const homeStagesEn: HomeStages = {
       {
         key: "scale", n: "04", name: "Scale",
         title: ["Grow with proof,", "every month."],
-        body: "Each month we count the five numbers again, compare them with your starting point, and agree three things to do next.",
+        body: "Each month we count the five numbers again and agree three things to do next.",
         runs: ["ALYR Agent: this week against the same days last week."],
-        team: [
-          "A monthly review: the five numbers and three actions.",
-          "A new check-up as your business changes.",
-        ],
+        team: ["A monthly review: the five numbers and three actions."],
       },
     ],
     discover: {
@@ -203,21 +198,19 @@ export const homeStagesAr: HomeStages = {
       {
         key: "discover", n: "01", name: "الاكتشاف",
         title: ["أن تُوجَد.", "وأن تكون خيارهم."],
-        body: "نفحص كيف يصل إليك العملاء اليوم: جوجل وإنستغرام والقوائم والتقييمات. ثم نصلح ما يكلّفك طلبات.",
+        body: "نفحص كيف يصل إليك العملاء اليوم، ثم نصلح ما يكلّفك طلبات.",
         runs: [],
         team: [
-          "الفحص: خريطة بكل الطرق التي يصل بها العملاء إليك.",
-          "ملفك في جوجل ورابط حسابك وبطاقة QR عند الكاونتر، جاهزة.",
+          "الفحص، ثم ملفك في جوجل ورابط حسابك وبطاقة QR عند الكاونتر، جاهزة.",
           "الأرقام الخمسة مسجّلة نقطة بداية لك.",
         ],
       },
       {
         key: "convert", n: "02", name: "التحويل",
         title: ["كل استفسار", "في صندوق واحد، ومدفوع."],
-        body: "تصل المحادثات والطلبات والحجوزات إلى مكان واحد. يرد فريقك ويؤكد ويسلّم، ولكل طلب مسؤول.",
+        body: "المحادثات والطلبات والحجوزات في مكان واحد. يرد فريقك، ولكل طلب مسؤول.",
         runs: [
-          "ALYR Chat: صندوق واحد لفريقك.",
-          "ALYR Shelf: قائمتك ومخزونك، وصفحة طلب يفتحها العملاء.",
+          "ALYR Chat: صندوق واحد. ALYR Shelf: قائمتك وصفحة طلب.",
           "ALYR Bookings: مواعيد وتذكيرات وصفحة حجز.",
         ],
         team: ["نُدخل قائمتك ونُدرّب موظفي الكاونتر."],
@@ -225,7 +218,7 @@ export const homeStagesAr: HomeStages = {
       {
         key: "manage", n: "03", name: "الإدارة",
         title: ["أدِر يومك", "من شاشة واحدة."],
-        body: "من عليه لك مال، وما الذي بِيع، وما الذي يحتاجك الآن. محسوب من سجلاتك، وبجانب كل سطر سببه.",
+        body: "من عليه لك مال، وما الذي بِيع، وما الذي يحتاجك الآن، وبجانب كل سطر سببه.",
         runs: [
           "ALYR Accounts: الآجل والأعمار والتذكيرات.",
           "ALYR Agent: ما يحتاجك الآن، وأرقام الأسبوع.",
@@ -235,12 +228,9 @@ export const homeStagesAr: HomeStages = {
       {
         key: "scale", n: "04", name: "التوسّع",
         title: ["انمُ بالدليل،", "كل شهر."],
-        body: "كل شهر نعدّ الأرقام الخمسة من جديد، ونقارنها بنقطة بدايتك، ونتفق على ثلاثة أمور تُنجز بعدها.",
+        body: "كل شهر نعدّ الأرقام الخمسة من جديد، ونتفق على ثلاثة أمور تُنجز بعدها.",
         runs: ["ALYR Agent: هذا الأسبوع مقابل الأيام نفسها من الأسبوع الماضي."],
-        team: [
-          "مراجعة شهرية: الأرقام الخمسة وثلاثة إجراءات.",
-          "فحص جديد كلما تغيّر نشاطك.",
-        ],
+        team: ["مراجعة شهرية: الأرقام الخمسة وثلاثة إجراءات."],
       },
     ],
     discover: {

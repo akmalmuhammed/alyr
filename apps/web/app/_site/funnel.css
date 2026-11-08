@@ -4,57 +4,58 @@
    motion (the stations rising along the line, the line drawing, the last station turning
    Volt) is under `.motion` and plays once. Part of home.css's bundle. */
 
-.fn { --fn-cut: var(--cut-plate-sm); margin: clamp(2.25rem, 4.5vw, 3.5rem) 0 0; width: 100%; }
+.fn { --fn-cut: var(--cut-plate); margin: clamp(2.5rem, 5vw, 4rem) 0 0; width: 100%; }
 .fn-plate {
-  position: relative; padding: var(--space-4) var(--space-4) var(--space-5);
+  position: relative; padding: clamp(1.25rem, 3vw, 2.5rem) clamp(1.25rem, 3vw, 2.5rem) clamp(1.75rem, 4vw, 3.5rem);
   background: var(--band); color: var(--on-band);
   clip-path: polygon(var(--fn-cut) 0, 100% 0, 100% 100%, 0 100%, 0 var(--fn-cut));
 }
 [dir="rtl"] .fn-plate { clip-path: polygon(0 0, calc(100% - var(--fn-cut)) 0, 100% var(--fn-cut), 100% 100%, 0 100%); }
 .fn-plate::after { content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 0 1px var(--band-edge); pointer-events: none; }
 
-.fn-bar { display: flex; align-items: center; gap: var(--space-2); padding-bottom: var(--space-4); font-size: var(--fs-small); }
+.fn-bar { display: flex; align-items: center; gap: var(--space-2); padding-bottom: clamp(1.5rem, 3vw, 2.5rem); padding-inline-start: var(--space-3); font-size: var(--fs-base); }
 .fn-bar b { font-weight: var(--weight-semibold); }
 .fn-sub { color: var(--on-band-quiet); }
 .fn-bar .mark-sample { margin-inline-start: auto; border-color: var(--band-rule); color: var(--on-band-quiet); }
 
 /* the track: a hairline across the tops of the four stations; a Volt line fills it to the end */
-.fn-track { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--col-gap); padding-top: var(--space-4); }
+.fn-track { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--col-gap); padding-top: var(--space-5); }
 .fn-track::before, .fn-track::after { content: ""; position: absolute; top: 0; inset-inline: 0; height: 1px; background: var(--band-rule); }
 .fn-track::after { height: 2px; background: var(--volt); transform-origin: left center; }
 [dir="rtl"] .fn-track::after { transform-origin: right center; }
 
 .fn-st { position: relative; display: grid; align-content: start; gap: var(--space-2); min-width: 0; }
 /* a node on the line above each station; the last is the Volt one */
-.fn-st::before { content: ""; position: absolute; top: calc(-1 * var(--space-4) - 4px); inset-inline-start: 0; width: 9px; height: 9px; background: var(--band); box-shadow: inset 0 0 0 2px var(--on-band-quiet); }
-.fn-st:last-child::before { background: var(--volt); box-shadow: none; }
+.fn-st::before { content: ""; position: absolute; top: calc(-1 * var(--space-5) - 4px); inset-inline-start: 0; width: 9px; height: 9px; background: var(--band); box-shadow: inset 0 0 0 2px var(--on-band-quiet); }
+.fn-st:last-child::before { top: calc(-1 * var(--space-5) - 8px); width: 17px; height: 17px; background: var(--volt); box-shadow: none; }
 .fn-head { display: flex; align-items: baseline; gap: var(--space-2); }
-.fn-n { color: var(--on-band-faint); font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
-.fn-name { font-size: var(--h3); font-weight: var(--weight-heading); letter-spacing: var(--tracking-heading); line-height: 1.15; }
+.fn-n { color: var(--on-band-faint); font-family: var(--mono); font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
+.fn-name { font-size: clamp(1.5rem, 1rem + 1.6vw, 2.25rem); font-weight: var(--weight-heading); letter-spacing: -.03em; line-height: 1.1; }
 [lang="ar"] .fn-name { letter-spacing: 0; line-height: 1.4; }
 
 /* the drawn card: the screen's own three lines, on the product's window colour */
 .fn-card {
   --n: var(--cut-notch-sm);
-  display: grid; gap: .125rem; align-content: center; min-height: 6.75rem; padding: var(--space-3);
+  display: grid; gap: .25rem; align-content: center; min-height: clamp(7.5rem, 11vw, 10rem); padding: var(--space-4);
   background: var(--window); color: var(--text); box-shadow: inset 0 0 0 1px var(--window-line);
   clip-path: polygon(0 0, calc(100% - var(--n)) 0, 100% var(--n), 100% 100%, 0 100%);
 }
 [dir="rtl"] .fn-card { clip-path: polygon(var(--n) 0, 100% 0, 100% 100%, 0 100%, 0 var(--n)); }
 .fn-card small { color: var(--text-muted); font-size: var(--fs-small); line-height: 1.35; overflow-wrap: anywhere; }
-.fn-card b { font-size: 1.125rem; font-weight: var(--weight-semibold); line-height: 1.25; letter-spacing: -.01em; overflow-wrap: anywhere; }
+.fn-card b { font-size: clamp(1.125rem, 1rem + .5vw, 1.5rem); font-weight: var(--weight-semibold); line-height: 1.25; letter-spacing: -.01em; overflow-wrap: anywhere; }
 [lang="ar"] .fn-card b { letter-spacing: 0; line-height: 1.5; }
 /* our team's step: no screen yet, so the same card drawn with a dashed edge on the plate */
 .fn-st.is-team .fn-card { background: transparent; color: var(--on-band); box-shadow: none; outline: 1px dashed var(--band-rule); outline-offset: -1px; clip-path: none; }
 .fn-st.is-team .fn-card small { color: var(--on-band-quiet); }
 
-.fn-line { color: var(--on-band-soft); font-size: var(--fs-small); line-height: 1.45; text-wrap: pretty; }
+.fn-line { color: var(--on-band-soft); font-size: var(--fs-base); line-height: 1.45; text-wrap: pretty; }
 .fn-tag { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--on-band-quiet); font-size: var(--fs-small); font-weight: var(--weight-medium); }
 .fn-dot { flex: none; width: .5rem; height: .5rem; border-radius: 50%; background: var(--on-band); }
 .fn-st.is-team .fn-dot { background: transparent; box-shadow: inset 0 0 0 1px var(--on-band-quiet); }
 
 /* phones: the line carries each station; the card's screen is for wider screens */
 @media (max-width: 47.99rem) {
+  .fn { --fn-cut: var(--cut-plate-sm); }
   .fn-plate { padding: var(--space-3) var(--space-3) var(--space-4); }
   .fn-bar { flex-wrap: wrap; row-gap: var(--space-1); padding-inline-start: var(--space-4); }
   .fn-bar b { white-space: nowrap; }
@@ -63,6 +64,7 @@
   .fn-track::before, .fn-track::after { top: 0; bottom: 0; inset-inline: auto; inset-inline-start: 4px; width: 1px; height: auto; }
   .fn-track::after { width: 2px; transform-origin: center top; }
   .fn-st::before { top: .55rem; inset-inline-start: calc(-1 * var(--space-4)); }
+  .fn-st:last-child::before { top: .35rem; inset-inline-start: calc(-1 * var(--space-4) - 4px); }
   .fn-card { display: none; }
   .fn-line { color: var(--on-band-soft); }
 }

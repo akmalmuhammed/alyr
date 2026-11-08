@@ -14,7 +14,6 @@ export function FiveNumbers({ locale }: { locale: Locale }) {
   return (
     <section className="hs nums" id="numbers" aria-labelledby="nums-title">
       <div className="wrap">
-        <div className="rule" aria-hidden="true" />
         <div className="head">
           <h2 className="h2" id="nums-title" data-split>{lines(w.title)}</h2>
           <p className="lead">{w.body}</p>

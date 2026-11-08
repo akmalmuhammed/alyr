@@ -35,3 +35,6 @@
 @media (prefers-reduced-motion: no-preference) {
   .al-js .bs .biz-panel.is-on .bs-stage { animation-delay: calc(var(--i) * 2 * var(--play-stagger)); }
 }
+
+/* the section sits tighter between the bands above and the price below */
+.hs.bs { padding-block: clamp(3rem, 6vw, 4.5rem); }
