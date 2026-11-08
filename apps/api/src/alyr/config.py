@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     # Run queued jobs inside the API process after each request. Convenient locally
     # and in tests. In production set this to false and run `python -m alyr.worker`.
     jobs_inline: bool = True
+    # Discovery (spec 065): a shop may start one manual check-up in this many seconds (ten minutes).
+    # Tests that run a check-up several times in a row set it to 0.
+    discovery_run_gap_seconds: int = 600
     # First retry delay; it doubles on each further attempt.
     jobs_backoff_seconds: float = 5.0
     # How many jobs one process runs at once (a customer's own jobs still one at a time, in

@@ -5,6 +5,7 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- Discovery, Phase 1 backend (D-160, ALY-318 to ALY-321, spec 065, migration 0120; no new dependency): `/api/discovery/*` checks how customers find a business with twelve readable rules over a fictional sample source, keeps findings and a log of every check-up, and scores only what it measured. Off for every shop (the back office switches it on for one); nothing is sent and nothing leaves ALYR.
 
 ## v0.3.10 (7 Nov 2026)
 - The homepage trimmed, the founder's word (D-154, under ALY-302; no migration, no new dependency): the film beside the headline is gone, and its code with it (D-062 ends); the line under the headline reads "One agentic platform to discover, manage and scale your business.", its word taking turns between those three with its own Pause and resting on "manage" when motion is reduced; How we work opens on its heading and the four cards, without its lead or "What we need from you"; the order flow ends on its steps, without the sentence of who did what. English and Arabic; the Arabic word «لاستكشاف» is a draft until ALY-66.

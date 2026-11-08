@@ -72,6 +72,13 @@ RULES: dict[str, Rule] = {
         "item_bulk_changes", "item_imports",
     ),
     **_delete(
+        "Discovery (spec 065): the places the business checks, each check-up and its log, what "
+        "the rules found and the public reviews copied for them (a reviewer's name and words: "
+        "third-party data that lives only in this business's rows)",
+        "discovery_connections", "discovery_locations", "discovery_runs", "discovery_run_steps",
+        "discovery_findings", "discovery_reviews",
+    ),
+    **_delete(
         "the records of the business's photos; the files in the photo store are emptied by the "
         "worker from `erasure_files`",
         "media_assets", "media_links", "media_ops", "media_usage",

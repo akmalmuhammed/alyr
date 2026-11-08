@@ -102,6 +102,7 @@ def allowed(key: str, role: str) -> bool:
 async def run(conn: asyncpg.Connection, caller: Caller, key: str, **args) -> dict:
     """Carry out an action for a caller on the shop the connection is scoped to."""
     from alyr.modules import owner  # noqa: F401  (declares the actions)
+    from alyr.modules.discovery import actions as discovery  # noqa: F401  (declares Discovery's)
 
     action = REGISTRY.get(key)
     if action is None:

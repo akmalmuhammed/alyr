@@ -272,6 +272,16 @@ MODULES: tuple[Module, ...] = (
             ),
         ),
     ),
+    # Discovery: how customers find the business, checked by rules (spec 065, D-160, ALY-316). Off
+    # for every shop and every template until the back office switches it on for one shop
+    # (`SWITCHABLE_MODULES`); it is in no product, so it has no price and no setup step. One
+    # section in the workspace; its four views (Home, To do, Reviews, Reports) are carried in the
+    # address, like Documents'. Its numbers are not on the home dashboard.
+    Module(
+        "discovery",
+        Text("Discovery", "الاكتشاف"),
+        screens=(Screen("discovery", Text("Discovery", "الاكتشاف"), "search"),),
+    ),
     Module(
         "payments",
         Text("Payment links", "روابط الدفع"),

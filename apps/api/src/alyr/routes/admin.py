@@ -143,9 +143,10 @@ class SwitchDemoData(BaseModel):
 # (ALYR Docs) are products since D-123, so an owner or admin switches them on the Products
 # screen too; this is how ALYR does it for one business: the Catalog is on for every business
 # (ALY-113) and this is how one has it turned off, or back on, and Documents is off for every
-# business until it is switched on. The other modules are a business's products and are
+# business until it is switched on, and so is Discovery (spec 065), which is in no product and is
+# switched on here for one business at a time. The other modules are a business's products and are
 # switched in its own workspace only.
-SWITCHABLE_MODULES = ("catalog", "documents")
+SWITCHABLE_MODULES = ("catalog", "documents", "discovery")
 
 
 class Snooze(BaseModel):
