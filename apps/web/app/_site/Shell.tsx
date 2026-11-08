@@ -71,9 +71,9 @@ export function Shell({
   // On the homepage the section links stay on the page; elsewhere they go back to it.
   const at = (hash: string) => (page === "home" ? hash : `${home}${hash}`);
   const sections = [
-    [at("#business"), t.nav.business],
-    [at("#stages"), t.nav.how],
-    [at("#questions"), t.nav.questions],
+    [at("#stages"), t.nav.business],
+    [at("#how"), t.nav.how],
+    [at("#workspace"), t.nav.workspace],
     // The pricing page is its own page and always built (ALY-301); the homepage's price section
     // is behind the offer switch and has no link of its own.
     [PATHS.pricing[locale], t.nav.pricing],
@@ -238,7 +238,6 @@ export function Shell({
             <a href={PATHS.terms[locale]} aria-current={page === "terms" ? "page" : undefined}>{t.nav.terms}</a>
             <a href={PATHS.refund[locale]} aria-current={page === "refund" ? "page" : undefined}>{t.nav.refund}</a>
             <a href={PATHS.privacy[locale]} aria-current={page === "privacy" ? "page" : undefined}>{t.nav.privacy}</a>
-            <a href={at("#questions")}>{t.nav.questions}</a>
             <a href={PATHS.guides[locale]} aria-current={page === "guides" ? "page" : undefined}>{t.guides.footer}</a>
             <a href={PATHS.company[locale]} aria-current={page === "company" ? "page" : undefined}>{t.nav.company}</a>
             <a href={other} lang={otherLocale} hrefLang={otherLocale} data-lang>{t.nav.other}</a>

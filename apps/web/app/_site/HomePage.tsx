@@ -5,9 +5,9 @@ import { copy, type FlipWords, type Locale, type Questions as QuestionSet } from
 import { FigCaption } from "./Drawings";
 import { TickPath } from "./Frames";
 import { FiveNumbers } from "./FiveNumbers";
-import { FunnelFigure } from "./FunnelFigure";
 import { HomeMotion } from "./HomeMotion";
 import { LoopToggle } from "./LoopToggle";
+import { VideoWindow } from "./VideoWindow";
 import { Stages } from "./Stages";
 import { Shell } from "./Shell";
 import { CONTACT_STATE, OFFER_LIVE, TRY_FREE_LIVE } from "./site";
@@ -111,7 +111,7 @@ function Hero({ locale }: { locale: Locale }) {
           </div>
           {TRY_FREE_LIVE ? <TryFreeNote locale={locale} className="hero-note" /> : <ContactNote locale={locale} className="hero-note" address={false} />}
         </div>
-        <FunnelFigure locale={locale} />
+        <VideoWindow locale={locale} />
       </div>
     </section>
   );

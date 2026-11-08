@@ -376,7 +376,8 @@ export const font = {
     "strong": 560,
     "semibold": 600,
     "heading": 620,
-    "display": 640
+    "display": 640,
+    "hero": 700
   },
   "size": {
     "site": {

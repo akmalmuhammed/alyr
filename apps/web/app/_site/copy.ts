@@ -526,7 +526,7 @@ export type Copy = {
   pricing: PricingPage;
   skip: string;
   nav: {
-    products: string; business: string; how: string; questions: string; pricing: string;
+    products: string; business: string; how: string; workspace: string; questions: string; pricing: string;
     other: string; home: string; menu: string; sections: string; productsMenu: string; company: string; privacy: string;
     terms: string; refund: string;
   };
@@ -689,6 +689,7 @@ const en: Copy = {
     terms: "Terms",
     refund: "Refund policy",
     business: "By business",
+    workspace: "Workspace",
     how: "How we work",
     questions: "Questions",
     pricing: "Pricing",
@@ -3035,6 +3036,7 @@ const ar: Copy = {
     terms: "الشروط",
     refund: "سياسة الاسترداد",
     business: "حسب نشاطك",
+    workspace: "مساحة العمل",
     how: "كيف نعمل",
     questions: "أسئلة",
     pricing: "الأسعار",

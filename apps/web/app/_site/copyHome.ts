@@ -45,6 +45,8 @@ export type HomeStages = {
     sub: string;
     stations: FunnelStation[];
   };
+  /** The window under the headline: the film when there is one, else the drawn figure. */
+  video: { title: string; label: string; captions: string };
   numbers: {
     title: string;
     body: string;
@@ -69,6 +71,7 @@ export type HomeStages = {
 };
 
 export const homeStagesEn: HomeStages = {
+  video: { title: "How ALYR works", label: "A film of how ALYR works for a business", captions: "English captions" },
   funnel: {
     label: "One enquiry, followed through four stages of Qirfa Bakery, a fictional sample business",
     shop: "Qirfa Bakery",
@@ -164,6 +167,7 @@ export const homeStagesEn: HomeStages = {
 };
 
 export const homeStagesAr: HomeStages = {
+  video: { title: "كيف تعمل ALYR", label: "فيلم عن كيف تعمل ALYR لنشاط تجاري", captions: "ترجمة عربية" },
   funnel: {
     label: "استفسار واحد يمرّ بأربع مراحل في مخبز قرفة، وهو نشاط توضيحي افتراضي",
     shop: "مخبز قرفة",
