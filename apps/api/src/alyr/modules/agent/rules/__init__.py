@@ -21,10 +21,34 @@ import asyncpg
 
 from alyr.modules.agent.facts import Facts
 from alyr.modules.agent.model import Insight, applies
-from alyr.modules.agent.rules import carts
+from alyr.modules.agent.rules import (
+    after_hours,
+    carts,
+    discounts,
+    fill_thin_day,
+    line_health,
+    margin,
+    reminder_effect,
+    second_order,
+    sold_out_demand,
+    stock_cover,
+    top_customers,
+)
 
-# One line per rule file, in the order the file was added.
-RULES: tuple[ModuleType, ...] = (carts,)
+# In the order of their numbers (26 and up); the order is not the dashboard's ranking.
+RULES: tuple[ModuleType, ...] = (
+    carts,
+    sold_out_demand,
+    stock_cover,
+    after_hours,
+    margin,
+    second_order,
+    top_customers,
+    fill_thin_day,
+    line_health,
+    discounts,
+    reminder_effect,
+)
 
 INSIGHTS: tuple[Insight, ...] = tuple(r.INSIGHT for r in RULES)
 

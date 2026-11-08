@@ -34,6 +34,7 @@ from alyr.modules.bookings.service import REMIND_BEFORE
 KEY = "reminder_effect"
 WINDOW_DAYS = 90
 MIN_EACH = 15  # bookings in each group
+MIN_NO_SHOWS = 3  # no-shows among the bookings without a reminder: one is not a rate
 MIN_GAP = 5  # points of no-show rate, without a reminder minus with one
 LEAD_HOURS = int(REMIND_BEFORE.total_seconds() // 3600)
 
@@ -78,6 +79,8 @@ def _pct(no_shows: int, of: int) -> int:
 def find(f: Facts) -> Finding | None:
     d = f.extra.get(KEY)
     if not d or d["with_n"] < MIN_EACH or d["without_n"] < MIN_EACH:
+        return None
+    if d["without_ns"] < MIN_NO_SHOWS:
         return None
     with_rate = _pct(d["with_ns"], d["with_n"])
     without_rate = _pct(d["without_ns"], d["without_n"])
@@ -132,10 +135,11 @@ INSIGHT = Insight(
     Text(
         f"last {WINDOW_DAYS} days of bookings that ended as came or no-show, made at least "
         f"{LEAD_HOURS} hours ahead; {MIN_EACH}+ with a reminder and {MIN_EACH}+ without, and "
-        f"the no-show share {MIN_GAP} points or more higher without one",
+        f"the no-show share {MIN_GAP} points or more higher without one, "
+        f"from {MIN_NO_SHOWS}+ no-shows",
         f"آخر {WINDOW_DAYS} يوماً من الحجوزات التي انتهت بحضور أو غياب وحُجزت قبل موعدها "
         f"بساعتين على الأقل؛ {MIN_EACH} حجزاً أو أكثر مع تذكير ومثلها بدونه، ونسبة الغياب "
-        f"أعلى بدون تذكير بـ {MIN_GAP} نقاط أو أكثر",
+        f"أعلى بدون تذكير بـ {MIN_GAP} نقاط أو أكثر، من {MIN_NO_SHOWS} غيابات أو أكثر",
     ),
     find, say,
     status=Text(

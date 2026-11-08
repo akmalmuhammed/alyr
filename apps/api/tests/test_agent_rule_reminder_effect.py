@@ -81,11 +81,17 @@ def test_quiet_just_below_fifteen_in_either_group():
 
 
 def test_quiet_when_the_gap_is_four_points_and_speaks_at_five():
-    # 1 of 25 is 4%, 2 of 25 is 8%: four points.
-    assert found(counts(with_n=25, with_ns=1, without_n=25, without_ns=2)) is None
-    # 1 of 20 is 5%, 2 of 20 is 10%: five points.
-    got = found(counts(with_n=20, with_ns=1, without_n=20, without_ns=2))
+    # 3 of 50 is 6%, 5 of 50 is 10%: four points.
+    assert found(counts(with_n=50, with_ns=3, without_n=50, without_ns=5)) is None
+    # 3 of 60 is 5%, 6 of 60 is 10%: five points.
+    got = found(counts(with_n=60, with_ns=3, without_n=60, without_ns=6))
     assert got is not None and got.numbers == {"with": 5, "without": 10}
+
+
+def test_quiet_below_three_no_shows_among_the_bookings_without_a_reminder():
+    # 0% against 13%: a wide gap, but two no-shows are not a rate.
+    assert found(counts(with_n=30, with_ns=0, without_n=15, without_ns=2)) is None
+    assert found(counts(with_n=30, with_ns=0, without_n=15, without_ns=3)) is not None
 
 
 def test_quiet_when_reminded_bookings_do_worse_or_the_same():
@@ -104,9 +110,9 @@ def test_quiet_when_nearly_everything_was_reminded():
 def test_the_percentages_are_rounded_once_half_up_and_the_card_says_what_the_rule_used():
     assert reminder_effect._pct(1, 8) == 13  # 12.5 goes up (round() would say 12)
     assert reminder_effect._pct(1, 15) == 7 and reminder_effect._pct(2, 15) == 13
-    # 1 of 15 shows 7%, 2 of 15 shows 13%: six points, and the card shows 7% and 13%.
-    got = found(counts(with_n=15, with_ns=1, without_n=15, without_ns=2))
-    assert got is not None and got.numbers == {"with": 7, "without": 13}
+    # 1 of 15 shows 7%, 3 of 15 shows 20%: the card shows 7% and 20%.
+    got = found(counts(with_n=15, with_ns=1, without_n=15, without_ns=3))
+    assert got is not None and got.numbers == {"with": 7, "without": 20}
     # 1 of 8... but with 15 minimum: 4 of 30 is 13%, 7 of 30 is 23%.
     assert found(counts(with_n=30, with_ns=4, without_n=30, without_ns=7)).numbers == {
         "with": 13, "without": 23}

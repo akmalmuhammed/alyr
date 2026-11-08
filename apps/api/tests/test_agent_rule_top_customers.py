@@ -205,6 +205,18 @@ def test_one_sent_message_to_a_top_ten_customer_in_30_days_silences_it():
     assert [INSIGHT.find(f) is None for f in results] == [True, True, True, False, True, False]
 
 
+def test_an_automatic_message_does_not_count_as_hearing_from_the_shop():
+    async def build(conn):
+        shop = await Shop.make(conn, name="Automatic only")
+        made = await crowd(shop, 30)
+        for who in made[-10:]:
+            await shop.message(who, NOW - timedelta(days=2), automatic=True)
+        return [shop.tenant]
+
+    (f,) = read(build)
+    assert f.extra[KEY]["heard"] == 0 and INSIGHT.find(f) is not None
+
+
 def test_it_needs_thirty_who_spent_and_reads_only_the_modules_the_shop_has_on():
     async def build(conn):
         twenty_nine = await Shop.make(conn, name="Twenty nine")

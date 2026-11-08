@@ -106,7 +106,10 @@ class Untouched:
         raise AssertionError("the rule queried the database when it should not have")
 
 
-def test_gather_all_does_not_run_it_without_money_or_without_the_orders_module():
+def test_gather_all_does_not_run_it_without_money_or_without_the_orders_module(monkeypatch):
+    # Only this rule: the others, registered beside it, rightly query for a reader with no money.
+    monkeypatch.setattr(rules, "RULES", tuple(r for r in rules.RULES if r.INSIGHT.key == KEY))
+
     async def go():
         no_money = Facts(now=NOW, modules=EVERYTHING, money=False)
         await rules.gather_all(Untouched(), no_money)

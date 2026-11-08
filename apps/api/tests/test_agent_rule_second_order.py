@@ -146,11 +146,20 @@ class Shop:
             "$5::timestamptz, $5::timestamptz + interval '30 minutes', $6, $7)",
             self.tenant, self.numbers, who, self.service, at, status, price)
 
-    async def message(self, who: UUID, at: datetime, direction="out", status="sent") -> None:
+    async def message(self, who: UUID, at: datetime, direction="out", status="sent",
+                      automatic=False) -> None:
+        """An outgoing message is by a person on the team unless `automatic` (a confirmation,
+        a reminder: `sent_by_user` empty)."""
+        person = None
+        if direction == "out" and not automatic:
+            person = await self.conn.fetchval(
+                "insert into users (email, name) values ($1, 'Staff') "
+                "on conflict (email) do update set name = excluded.name returning id",
+                f"staff-{self.tenant}@example.test")
         await self.conn.execute(
             "insert into messages (tenant_id, contact_id, direction, kind, body, status, "
-            "created_at) values ($1, $2, $3, 'text', 'hello', $4, $5)",
-            self.tenant, who, direction, status, at)
+            "created_at, sent_by_user) values ($1, $2, $3, 'text', 'hello', $4, $5, $6)",
+            self.tenant, who, direction, status, at, person)
 
 
 def read(build, role="owner"):

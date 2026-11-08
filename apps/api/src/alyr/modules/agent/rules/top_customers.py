@@ -61,7 +61,8 @@ async def gather(conn: asyncpg.Connection, f: Facts) -> None:
         "  (select count(*) from per)::int as customers, "
         "  (select coalesce(sum(v), 0) from per)::bigint as total, "
         "  exists (select 1 from messages m where m.contact_id = r.contact_id "
-        "    and m.direction = 'out' and m.status in ('sent', 'delivered', 'read') "
+        "    and m.direction = 'out' and m.sent_by_user is not null "
+        "    and m.status in ('sent', 'delivered', 'read') "
         "    and m.created_at >= $3 and m.created_at < $2) as heard "
         "from ranked r join contacts c on c.id = r.contact_id where r.rn <= $4 order by r.rn",
         f.now - timedelta(days=90), f.now, f.now - timedelta(days=30), TOP,
