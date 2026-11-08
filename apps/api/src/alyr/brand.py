@@ -6,6 +6,19 @@ and run `node scripts/tokens-build.mjs`. design/README.md says how to use these.
 
 # The primitives. Prefer the semantic names (LIGHT, DARK) or a component's own.
 COLOR = {
+    "channel": {
+        "ig-a": "#fcaf45",
+        "ig-b": "#e1306c",
+        "ig-c": "#833ab4",
+        "ig-d": "#5851db",
+        "tt-black": "#010101",
+        "tt-cyan": "#25f4ee",
+        "tt-red": "#fe2c55",
+        "g-red": "#ea4335",
+        "g-yellow": "#fbbc05",
+        "g-blue": "#4285f4",
+        "g-green": "#34a853",
+    },
     "brand": {
         "carbon": "#15171a",
         "film-ink": "#141819",

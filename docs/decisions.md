@@ -108,6 +108,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-131 | What the workspace and the order page ask for again and again is kept three seconds and shared between tabs, thrown away by the shop's own writes; who is signed in and a shop's modules the same | Accepted |
 | D-130 | The inbox and the Orders screen read the newest rows off an index (a customer carries the times of their latest messages, kept by the database; the inbox lists 300 conversations, Orders the last 30 days and everything open), so a refresh costs the same in a shop's first week and its second year | Accepted |
 | D-157 | The homepage, version 3: a centred hero, a window for the film, the four stages as a switch, how we work as stacked panels, one workspace as a mosaic; the numbers band, business tabs, price and questions leave the page; rounded panel and pill tokens | Proposed, 8 Nov 2026 |
+| D-161 | The Convert scene: WhatsApp, the real channel marks in colour (exception, this scene only), "every channel, every enquiry, one inbox"; "Runs today" removed | Proposed, 8 Nov 2026 |
 | D-159 | The home film plays in the window (web copy, 18.6 MB, on its own background); the homepage stops saying a person replies | Proposed, 8 Nov 2026 |
 | D-158 | The homepage window at Notion's size (960 x 600), and two animated scenes in the stage switch: a check-up score that moves after one fix (Discover) and five places drawn into one ALYR Chat inbox (Convert) | Proposed, 8 Nov 2026 |
 | D-156 | The homepage is rebuilt around the four stages (discover, convert, manage, scale), with one drawn funnel figure, the five numbers of a check-up and one panel per stage; where software is not built, our team does the step and the page says so | Proposed |
@@ -2606,13 +2607,21 @@ The founder, 8 Nov 2026: rebuild the homepage with a modern approach, in the sam
 
 ## D-159 · The home film plays in the window; the homepage stops saying a person replies
 
-**Date** 8 Nov 2026 · **Status** Proposed (the founder's brief; in a pull request, not published) · Linear ALY-330 · Follows D-158
+**Date** 8 Nov 2026 · **Status** Accepted, 8 Nov 2026 (the founder said to publish the film as it is) · Linear ALY-330 · Follows D-158
 
 - The window under the headline now plays the home film, `ALYR-your-business-1080.mp4` from the video studio (2:06, music and words on screen, no narration), as a web copy (1280 x 720, 30 fps, 18.6 MB, under Cloudflare's 25 MiB file limit; the studio's 1080p master is 48 MB) with a poster taken from its logo card. The film is on by default; `NEXT_PUBLIC_ALYR_HOME_VIDEO=off` brings the drawn figure back. It never starts by itself and has the browser's own controls. The film is 16:9 in a 16:10 window, so it is shown whole on its own background (new token `film`, #141819), never cropped.
 - Cloudflare's static files answer a byte-range request with the whole file, so a browser could not jump to another minute of the film (checked on the PR preview: seeking to 1:10 went back to the start). `site-worker.js` now answers `/media/` range requests with a 206 and `Accept-Ranges: bytes`.
 - The film has no captions file, because it has no speech. Add `home.vtt` and `captions` in `site.ts` if it ever does.
-- The film is the founder's and was not checked line by line against `honesty.md` before this record. Lines the founder should confirm before it is public are listed in the pull request.
+- The film is the founder's. It shows things that are not built today, all marked as sample figures: the "Agentic Workspace" title card; Instagram and Facebook rows and an "AI answers" row in the check-up score; an inbox with Instagram and Facebook chats; "Ask your workspace on WhatsApp"; the offers and reminders screens. The founder was told this and said on 8 Nov 2026 to publish the film as it is. The rest of it was not checked line by line against `honesty.md`.
 - The homepage no longer says "A person from ALYR replies": the note under the hero buttons is gone and the closing call reads "Send us a message, and we show you what we would change first." The line stays on the other pages, in the pricing list and in the questions.
+## D-161 · The Convert scene: WhatsApp, the real channel marks in colour, "every channel, every enquiry, one inbox"
+
+**Date** 8 Nov 2026 · **Status** Proposed (the founder's brief; in a pull request, not published) · Linear ALY-330 · Follows D-158
+
+- Convert now draws six places customers come from into one ALYR Chat inbox: Instagram, TikTok, WhatsApp, Google, the order page and the counter QR card. WhatsApp was missing; it is the channel Chat is built on. The headline reads "Every channel, every enquiry, one inbox." ("paid" is gone).
+- The founder asked for the real marks in their own colours instead of black line icons. This is a recorded exception to the design system's "no WhatsApp logo, no WhatsApp green on ALYR's own surfaces", "no logo walls" and "no second accent", limited to this scene: Instagram, TikTok, WhatsApp and Google's G are drawn on their own colours (Simple Icons, CC0 1.0, and Devicon, MIT; the marks stay their owners' trademarks), the order page and the counter card on a Volt tile. The colours are tokens (`--ch-*`), the same in both themes. The disclaimer that ALYR is not affiliated with WhatsApp or Meta stays on every page, and no message says a channel is "connected": each place is a link or a card that opens the same chat.
+- Instagram and TikTok direct messages are still not connected to Chat. The scene shows links in a bio, a profile link, a button and a QR card opening the chat, and each chat is the customer's own words.
+- "Runs today" is gone from the four stage panels (the founder: it does not sound professional). The solid and dashed rules still tell what runs from what our team does by hand; "Our team does" stays.
 - The Arabic is a draft until ALY-66.
 
 ## D-160 · Discovery: one module, one agent, two doors

@@ -5,7 +5,12 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
-- The home film in the homepage window, and no "a person replies" on the homepage (D-159, ALY-330; no migration, no new dependency; not published): the window plays `ALYR-your-business-1080.mp4` (2:06, as an 18.6 MB web copy with a poster; never starts by itself), shown whole on its own background; the note under the hero buttons and the closing call no longer say a person from ALYR replies. English and Arabic; the Arabic is a draft until ALY-66.
+
+## v0.3.14 (8 Nov 2026)
+- The home film in the homepage window, and no "a person replies" on the homepage (D-159, ALY-330; no migration, no new dependency): the window plays `ALYR-your-business-1080.mp4` (2:06, as an 18.6 MB web copy with a poster; never starts by itself), shown whole on its own background; the note under the hero buttons and the closing call no longer say a person from ALYR replies. English and Arabic; the Arabic is a draft until ALY-66.
+
+## v0.3.13 (8 Nov 2026)
+- The Convert scene shows WhatsApp and the real channel marks (D-161, ALY-330; no migration, no new dependency): six places (Instagram, TikTok, WhatsApp, Google, the order page, the counter card) drawn into one ALYR Chat inbox with the marks in their own colours, the headline "Every channel, every enquiry, one inbox.", and "Runs today" removed from the four stage panels. English and Arabic; the Arabic is a draft until ALY-66.
 
 ## v0.3.12 (8 Nov 2026)
 - The homepage window and three animated scenes (D-158, ALY-330; no migration, no new dependency): the window under the headline is Notion's size, 960 x 600 at 1440 wide (16:10, an 8 px radius, six soft shadows, no title bar), with the film still off until `NEXT_PUBLIC_ALYR_HOME_VIDEO=on`; Discover shows a fictional bakery's check-up score moving from 58 to 71 after one fix, and Convert shows five places customers come from drawn into one ALYR Chat inbox, and Scale shows a week of orders against the same days last week and the three monthly actions agreed one by one; the small numbers on the stage tabs are darker so they pass the contrast check; new token `shadow.stage`. English and Arabic; the Arabic is a draft until ALY-66.

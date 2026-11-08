@@ -3,6 +3,17 @@
 
 :root {
   color-scheme: light;
+  --ch-ig-a: #fcaf45;
+  --ch-ig-b: #e1306c;
+  --ch-ig-c: #833ab4;
+  --ch-ig-d: #5851db;
+  --ch-tt-black: #010101;
+  --ch-tt-cyan: #25f4ee;
+  --ch-tt-red: #fe2c55;
+  --ch-g-red: #ea4335;
+  --ch-g-yellow: #fbbc05;
+  --ch-g-blue: #4285f4;
+  --ch-g-green: #34a853;
   --carbon: #15171a;
   --film-ink: #141819;
   --volt: #b7f34a;

@@ -21,7 +21,6 @@
 .sc-bar .mark-sample { margin-inline-start: auto; }
 .sc-foot { font-size: var(--fs-note); color: var(--text-muted); text-wrap: pretty; }
 .sc-count::before { counter-reset: c var(--v); content: counter(c); }
-.sc-glyph { width: 1.25rem; height: 1.25rem; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: square; stroke-linejoin: miter; }
 
 /* ===================================================================== Discover: the score */
 .sc-score .sc-win { max-width: 40rem; margin-inline: auto; }
@@ -73,9 +72,10 @@
 
 /* ============================================================== Convert: many places, one inbox */
 .sc-chat-grid { display: grid; grid-template-columns: 12.5rem 5rem minmax(0, 26rem); align-items: stretch; justify-content: center; margin-inline: auto; }
-.sc-srcs { display: grid; grid-template-rows: repeat(5, minmax(0, 1fr)); gap: var(--space-2); }
+.sc-srcs { display: grid; grid-template-rows: repeat(var(--n, 6), minmax(0, 1fr)); gap: var(--space-2); }
 .sc-src { align-self: center; display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); background: var(--surface); border-radius: var(--radius-md); box-shadow: var(--shadow-lift); min-width: 0; }
-.sc-src-ico { display: inline-grid; place-items: center; flex: none; width: 2rem; height: 2rem; background: var(--surface-subtle); border-radius: var(--radius-sm); }
+.sc-src-ico { display: inline-grid; flex: none; width: 2.25rem; height: 2.25rem; }
+.sc-mark { display: block; width: 100%; height: 100%; box-shadow: 0 0 0 1px var(--hair); overflow: hidden; }
 .sc-src-txt { display: grid; min-width: 0; line-height: 1.25; }
 .sc-src-txt b { font-size: var(--fs-note); font-weight: var(--weight-semibold); }
 .sc-src-txt small { font-size: var(--fs-caption); color: var(--text-muted); }
@@ -171,7 +171,7 @@
 @keyframes sc-total { 0%, 6% { --v: 0; } 40%, 100% { --v: var(--to); } }
 @keyframes sc-late { 0%, 38% { opacity: 0; scale: .85; } 46%, 100% { opacity: 1; scale: 1; } }
 
-@keyframes sc-badge { 0%, 43.9% { --c: 0; } 44%, 55.9% { --c: 1; } 56%, 67.9% { --c: 2; } 68%, 79.9% { --c: 3; } 80%, 91.9% { --c: 4; } 92%, 100% { --c: 5; } }
+@keyframes sc-badge { 0%, 39.2% { --c: 0; } 39.3%, 49.9% { --c: 1; } 50%, 60.6% { --c: 2; } 60.7%, 71.3% { --c: 3; } 71.4%, 82% { --c: 4; } 82.1%, 92.8% { --c: 5; } 92.9%, 100% { --c: 6; } }
 
 @media (prefers-reduced-motion: no-preference) {
   .motion .stt-box:not([data-seen]) .sc { opacity: 0; }
@@ -200,5 +200,5 @@
   .motion .stt-box[data-seen] .stt-panel.is-on .sc-pack { animation: sc-ride calc(var(--u) * 3) var(--ease-fold) calc(var(--u) * (2.5 + var(--i) * 1.5)) both; }
   .motion .stt-box[data-seen] .stt-panel.is-on .sc-inbox { animation: sc-in var(--play-3) var(--ease) calc(var(--u) * 2) both; }
   .motion .stt-box[data-seen] .stt-panel.is-on .sc-row { animation: sc-in var(--play-3) var(--ease) calc(var(--u) * (5.5 + var(--i) * 1.5)) both, sc-flash calc(var(--u) * 4) var(--ease) calc(var(--u) * (5.5 + var(--i) * 1.5)) both; }
-  .motion .stt-box[data-seen] .stt-panel.is-on .sc-badge { animation: sc-badge calc(var(--u) * 12.5) linear calc(var(--u) * 0) both; }
+  .motion .stt-box[data-seen] .stt-panel.is-on .sc-badge { animation: sc-badge calc(var(--u) * 14) linear calc(var(--u) * 0) both; }
 }
