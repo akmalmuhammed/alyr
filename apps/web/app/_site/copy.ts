@@ -12,6 +12,10 @@
 // The Arabic is written natively, not translated line by line, and still needs a
 // native speaker's review before launch (ALY-66).
 
+import { homeStagesAr, homeStagesEn, type HomeStages } from "./copyHome";
+import { howStackAr, howStackEn, type HowStackCopy } from "./copyHowStack";
+import { stageTabsAr, stageTabsEn, type StageTabsCopy } from "./copyStageTabs";
+import { workspaceGridAr, workspaceGridEn, type WorkspaceGridCopy } from "./copyWorkspaceGrid";
 import type { ContactState, PageKey, ProductKey } from "./site";
 import { docsAr, docsEn, type DocLinkPage, type DocsPage } from "./copyDocs";
 import { shelfAr, shelfEn, type ShelfPage } from "./copyShelf";
@@ -295,7 +299,11 @@ export type ChatScene = {
   side?: { main: string; sub?: string; trail?: string; tone?: "ok" | "off" | "wait" }[];
 };
 
-type Home = {
+type Home = HomeStages & {
+  /** The homepage v3 sections (D-157). */
+  stageTabs: StageTabsCopy;
+  howStack: HowStackCopy;
+  workspaceGrid: WorkspaceGridCopy;
   hero: {
     /** The social card's eyebrow only: the page shows none, its headline says who it is for (site audit R1). */
     eyebrow: string;
@@ -316,20 +324,6 @@ type Home = {
   see: FlowSet & {
     link: string;
   };
-  spotlight: {
-    eyebrow: string;
-    title: string;
-    body: string;
-    label: string;
-    callouts: string[];
-    calloutsLabel: string;
-    link: string;
-    /** The rest of the screen, under a native `<details>`: the section opens on Needs you now
-     * and the suggestions, which the hero's crop does not reach (framer-review P2). */
-    more: string;
-  };
-  /** The statement before the products (ALY-314). `lead` is its whole line, as in the hero. */
-  office: { title: string; lead: string; flip: FlipWords };
   suite: {
     eyebrow?: string;
     title: string;
@@ -539,7 +533,7 @@ export type Copy = {
   pricing: PricingPage;
   skip: string;
   nav: {
-    products: string; business: string; how: string; questions: string; pricing: string;
+    products: string; business: string; how: string; workspace: string; questions: string; pricing: string;
     other: string; home: string; menu: string; sections: string; productsMenu: string; company: string; privacy: string;
     terms: string; refund: string;
   };
@@ -702,6 +696,7 @@ const en: Copy = {
     terms: "Terms",
     refund: "Refund policy",
     business: "By business",
+    workspace: "Workspace",
     how: "How we work",
     questions: "Questions",
     pricing: "Pricing",
@@ -773,7 +768,7 @@ const en: Copy = {
     bar: "Try ALYR free",
     final: {
       title: "Try it free, or book a check-up.",
-      body: "Set up your business and try it as your own customer. Or send us a message, and a person from ALYR replies and visits your shop.",
+      body: "Set up your business and try it as your own customer. Or send us a message, and a person from ALYR replies.",
     },
   },
   footer: {
@@ -892,6 +887,10 @@ const en: Copy = {
     },
   },
   home: {
+    ...homeStagesEn,
+    stageTabs: stageTabsEn,
+    howStack: howStackEn,
+    workspaceGrid: workspaceGridEn,
     hero: {
       eyebrow: "Technology for owner-run businesses in Qatar",
       title: ["The AI solution provider", "for your business."],
@@ -1042,27 +1041,6 @@ const en: Copy = {
         },
       ],
       link: "See everything in ALYR Chat",
-    },
-    spotlight: {
-      eyebrow: "ALYR Agent · With every product",
-      title: "Every day, see what changed\nand what to do next.",
-      body:
-        "ALYR Agent counts what is already in your workspace and puts waiting work first. It compares your week with the same days last week. It suggests up to three things, each with its reason, for you to act on or set aside.",
-      label: "The ALYR Agent home screen of the sample business you choose",
-      calloutsLabel: "How to read it",
-      callouts: [
-        "Needs you now: work that is waiting, and for how long. It clears when the work is done.",
-        "Shows why: each suggestion says what it counted, and opens those rows.",
-        "Like with like: your week against the same days last week, with percentages only when both weeks have 20 or more.",
-        "Done for you: what ALYR sent this week.",
-      ],
-      link: "See ALYR Agent",
-      more: "See the whole screen",
-    },
-    office: {
-      title: "Every business has an office,\nand yours is your phone.",
-      lead: "One platform for your orders, bookings, stock, accounts and team.",
-      flip: { before: "One platform for your", words: ["orders", "bookings", "stock", "accounts", "team"], after: ".", rest: 0 },
     },
     suite: {
       title: "Six products in one workspace",
@@ -1620,7 +1598,7 @@ const en: Copy = {
     },
     final: {
       title: "Book a check-up of your business.",
-      body: "Send us a message. A person from ALYR replies, then comes to your shop to show you what we would change first.",
+      body: "Send us a message. A person from ALYR replies, then shows you what we would change first.",
       action: "Book a check-up",
       short: "Check-up",
     },
@@ -3068,6 +3046,7 @@ const ar: Copy = {
     terms: "الشروط",
     refund: "سياسة الاسترداد",
     business: "حسب نشاطك",
+    workspace: "مساحة العمل",
     how: "كيف نعمل",
     questions: "أسئلة",
     pricing: "الأسعار",
@@ -3139,7 +3118,7 @@ const ar: Copy = {
     bar: "جرّب ALYR مجاناً",
     final: {
       title: "جرّب مجاناً، أو احجز فحصاً.",
-      body: "جهّز نشاطك وجرّبه كأنك عميل عندك. أو أرسل لنا رسالة، فيردّ عليك شخص من ALYR ويزور محلك.",
+      body: "جهّز نشاطك وجرّبه كأنك عميل عندك. أو أرسل لنا رسالة، فيردّ عليك شخص من ALYR.",
     },
   },
   footer: {
@@ -3258,6 +3237,10 @@ const ar: Copy = {
     },
   },
   home: {
+    ...homeStagesAr,
+    stageTabs: stageTabsAr,
+    howStack: howStackAr,
+    workspaceGrid: workspaceGridAr,
     hero: {
       eyebrow: "التقنية للأنشطة التي يديرها أصحابها في قطر",
       title: ["مزوّد حلول الذكاء الاصطناعي", "لمشروعك."],
@@ -3408,27 +3391,6 @@ const ar: Copy = {
         },
       ],
       link: "تعرّف على كل ما في ALYR Chat",
-    },
-    spotlight: {
-      eyebrow: "ALYR Agent · مع كل منتج",
-      title: "كل يوم، اعرف ما تغيّر\nوما الخطوة التالية.",
-      body:
-        "يحسب ALYR Agent ما هو موجود في مساحة عملك، ويضع العمل المنتظر أولاً. ويقارن أسبوعك بالأيام نفسها من الأسبوع الماضي. ويقترح حتى ثلاثة أمور، لكل منها سببه، لتأخذ بها أو تؤجلها.",
-      label: "الشاشة الرئيسية لـ ALYR Agent للنشاط التوضيحي الذي تختاره",
-      calloutsLabel: "كيف تقرؤها",
-      callouts: [
-        "يحتاجك الآن: العمل المنتظر، ومنذ متى. ويختفي حين يُنجز.",
-        "يبيّن السبب: كل اقتراح يذكر ما عدّه، ويفتح تلك السجلات.",
-        "المثل بالمثل: أسبوعك مقارنةً بالأيام نفسها من الأسبوع الماضي، ولا نسب إلا حين يكون في كل أسبوع 20 أو أكثر.",
-        "أنجزته ALYR لك: ما أرسلته هذا الأسبوع.",
-      ],
-      link: "تعرّف على ALYR Agent",
-      more: "اعرض الشاشة كاملة",
-    },
-    office: {
-      title: "لكل نشاط مكتب،\nومكتبك هاتفك.",
-      lead: "منصة واحدة لطلباتك وحجوزاتك ومخزونك وحساباتك وفريقك.",
-      flip: { before: "منصة واحدة", words: ["لطلباتك", "لحجوزاتك", "لمخزونك", "لحساباتك", "لفريقك"], after: ".", rest: 0 },
     },
     suite: {
       title: "ستة منتجات في مساحة عمل واحدة",
@@ -3986,7 +3948,7 @@ const ar: Copy = {
     },
     final: {
       title: "احجز فحصاً لمشروعك.",
-      body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يأتي إلى محلك ليريك ما سنغيّره أولاً.",
+      body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يريك ما سنغيّره أولاً.",
       action: "احجز فحصاً لمشروعك",
       short: "احجز فحصاً",
     },

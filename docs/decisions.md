@@ -107,6 +107,8 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-132 | A process holds few database connections (4 for an API instance, 8 for the worker), gives up after 3 seconds and answers 503 with Retry-After; only so many documents are drawn at once; the worker keeps places for customers; the Sunday report can be spread but stays at nine | Accepted |
 | D-131 | What the workspace and the order page ask for again and again is kept three seconds and shared between tabs, thrown away by the shop's own writes; who is signed in and a shop's modules the same | Accepted |
 | D-130 | The inbox and the Orders screen read the newest rows off an index (a customer carries the times of their latest messages, kept by the database; the inbox lists 300 conversations, Orders the last 30 days and everything open), so a refresh costs the same in a shop's first week and its second year | Accepted |
+| D-157 | The homepage, version 3: a centred hero, a window for the film, the four stages as a switch, how we work as stacked panels, one workspace as a mosaic; the numbers band, business tabs, price and questions leave the page; rounded panel and pill tokens | Proposed, 8 Nov 2026 |
+| D-156 | The homepage is rebuilt around the four stages (discover, convert, manage, scale), with one drawn funnel figure, the five numbers of a check-up and one panel per stage; where software is not built, our team does the step and the page says so | Proposed |
 | D-160 | Discovery is one module with one agent and two doors: ALYR Agent in the workspace and WhatsApp, the owner's own AI through the MCP connector, both calling the same actions; Phase 1 is read-only and rule-based, no model | Accepted |
 | D-155 | The light page is pure white, with cool Carbon-family greys for wells and lines, instead of the yellow-green off-white Paper | Accepted |
 | D-153 | The homepage's headline and sub line use the founder's AI wording, with one word taking turns on a pale Volt block, and a statement before the products keeps the plain line | Accepted |
@@ -2558,6 +2560,35 @@ The page's light colour was Paper, #F6F7F3: a yellow-green tint (hue 118°) agai
 
 **Checked.** axe finds nothing on /, /ar and /chat in either theme at 1440 and 390; the drift check and the tokens' generated files agree.
 
+## D-156 · The homepage rebuilt around the four stages
+
+**Date** 8 Nov 2026 · **Status** Proposed (the founder asked for the rebuild on 8 Nov; the page is in a pull request and not published) · Linear ALY-330, under ALY-302 · Follows the plan of 8 Nov (ALY-302) · Replaces the section order of D-048 and removes the sections D-150 and D-153 added
+
+The founder, 8 Nov 2026: rebuild the homepage with a modern approach, in the same design system, with new sections, content, animations and components, studying clay.com; focused explanations, more visual treats, very minimalist, easy to understand and optimised, and show the new product.
+
+**Decision.**
+- The spine is Discover, Convert, Manage, Scale. One panel for each, with a chapter index beside them on wide screens.
+- The hero keeps the headline and sub line (D-153, D-154) and adds one drawn figure: an enquiry through four stations for the fictional Qirfa Bakery. A dashed card is a step our team does by hand; a solid card is a screen that runs today.
+- The proof is what we measure, not what we claim: the five numbers a check-up records, as counts, drawn once as a captioned sample. No customer quotes, logos or results, because there are none.
+- Each panel says what runs today (the product's name, a solid rule) and what our team does (a dashed rule). Discover has no software yet, so it is all "our team".
+- Cut as sections: the Agent spotlight (its screen is Manage's visual), the Office statement, and "One order" (its flow is Convert's visual). Kept: By business, the products, How we work, the price, the questions, the closing call.
+
+**What was taken from Clay, and what was not.** Taken: one positioning idea proved in order, one full panel per idea with a label, a headline, one sentence and one visual, proof straight under the first screen, and few repeated calls. Not taken: its illustration, customer logos, quotes and numbers (we have none), and any gradient, glow, bento icon grid or counter (the design system).
+
+**Scope.** No new dependency, no new font, no change to the tokens. The Arabic is a draft until the native review (ALY-66). D-153's exception is unchanged: no other public line says "agentic" or AI.
+
+**Revisit when.** The founder has seen the preview, the Discover tools exist (then Discover gets a "Runs today" list), or the plan's rules change (ALY-302, questions A to E).
+
+## D-157 · The homepage, version 3: centred, a window for the film, a switch, a stack, a mosaic
+
+**Date** 8 Nov 2026 · **Status** Proposed (the founder's brief; in PR #270, not published) · Linear ALY-330 · Follows D-156 and replaces its section order
+
+- The page is, in order: a centred hero with a thick headline and the sub line's changing word in a chip; a window under it for the home film; the four stages as a segmented switch (Discover, Convert, Manage, Scale); how we work with you as four panels that stack as you scroll; one workspace for every kind of business as a mosaic of every product and what our team does; the footer and closing call.
+- Off the page: the five numbers band, the business tabs with the day split, the price and the questions. The price stays on /pricing. The header's "Questions" link goes; it gains "Workspace".
+- The window shows the drawn funnel figure until the film is switched on (`NEXT_PUBLIC_ALYR_HOME_VIDEO=on`, with `home.mp4`, `home-poster.jpg` and `home.vtt` in `apps/web/site-media/`). The film never starts by itself.
+- New tokens: `radius.panel`, `radius.pill`, `weight.hero`. This is the first rounded panel and pill on the site; the founder asked for it with Apple, Notion and Clay as the references. The cut corner stays on buttons and drawn windows.
+- The closing call no longer says someone comes to the shop (the check-up is remote, 5 Nov).
+- The Arabic is a draft until ALY-66.
 
 ## D-160 · Discovery: one module, one agent, two doors
 

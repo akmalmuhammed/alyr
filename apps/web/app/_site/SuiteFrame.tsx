@@ -26,7 +26,7 @@ import "./suite.css";
 const at = (index: number) => ({ "--i": index }) as CSSProperties;
 
 /** A drawn window of the workspace, cut at its top inline-start corner. */
-function Win({ title, aside, className, children }: { title: string; aside?: ReactNode; className?: string; children: ReactNode }) {
+export function Win({ title, aside, className, children }: { title: string; aside?: ReactNode; className?: string; children: ReactNode }) {
   return (
     <div className={`sf-win${className ? ` ${className}` : ""}`}>
       <div className="sf-win-head">
@@ -43,7 +43,7 @@ function ranges(text: string) {
   return text.split(/(\d+–\d+)/).map((piece, i) => (i % 2 === 1 ? <bdi key={i} dir="ltr">{piece}</bdi> : piece));
 }
 
-function Chat({ locale }: { locale: Locale }) {
+export function Chat({ locale }: { locale: Locale }) {
   const c = copy[locale].home.suite.frame.chat;
   const [sara, ...rest] = c.rows;
   return (
@@ -85,7 +85,7 @@ function Chat({ locale }: { locale: Locale }) {
   );
 }
 
-function Bookings({ locale }: { locale: Locale }) {
+export function Bookings({ locale }: { locale: Locale }) {
   const b = copy[locale].home.suite.frame.bookings;
   return (
     <Win title={b.title} aside={b.day}>
@@ -115,7 +115,7 @@ function Bookings({ locale }: { locale: Locale }) {
   );
 }
 
-function Agent({ locale }: { locale: Locale }) {
+export function Agent({ locale }: { locale: Locale }) {
   const view = SAMPLES[locale].bakery;
   const labels = AGENT_LABELS[view.lang];
   const card = view.suggestions.find((s) => s.key === "ready") ?? view.suggestions[0];
@@ -143,7 +143,7 @@ function Agent({ locale }: { locale: Locale }) {
   );
 }
 
-function Accounts({ locale }: { locale: Locale }) {
+export function Accounts({ locale }: { locale: Locale }) {
   const a = copy[locale].home.suite.frame.accounts;
   const owed = SAMPLES[locale].bakery.owed;
   if (!owed) return null;
@@ -172,7 +172,7 @@ function Accounts({ locale }: { locale: Locale }) {
   );
 }
 
-function Shelf({ locale }: { locale: Locale }) {
+export function Shelf({ locale }: { locale: Locale }) {
   const m = copy[locale].pages.shelf.moment;
   return (
     <Win title={m.stock.path} className="sf-shelf-win">
@@ -196,7 +196,7 @@ function Shelf({ locale }: { locale: Locale }) {
   );
 }
 
-function Docs() {
+export function Docs() {
   return (
     <div className="sf-paper">
       <PaperTop doc={RC0042} />

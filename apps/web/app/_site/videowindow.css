@@ -1,0 +1,22 @@
+/* The homepage's window (VideoWindow.tsx, D-157): a soft rounded window under the centred
+   headline, like a product window in a hero. The film, or the drawn figure, fills its stage.
+   Tokens only; the window's radius is the homepage panel's. */
+.vw {
+  position: relative; margin: clamp(2.5rem, 5vw, 4rem) auto 0; width: 100%; max-width: 70rem;
+  border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--surface-subtle);
+  padding: clamp(.375rem, 1vw, .75rem); overflow: clip;
+}
+.vw-bar { display: flex; align-items: center; gap: var(--space-3); min-height: 2.5rem; padding-inline: var(--space-3); color: var(--text-muted); font-size: var(--fs-small); }
+.vw-bar b { font-weight: var(--weight-medium); }
+.vw-dots { display: inline-flex; gap: .375rem; }
+.vw-dots i { width: .625rem; height: .625rem; border-radius: var(--radius-round); background: var(--line-strong); opacity: .6; }
+.vw-stage { overflow: clip; border-radius: calc(var(--radius-panel) - .5rem); background: var(--band); }
+.vw-stage .fn { margin: 0; }
+.vw-stage .fn-plate { clip-path: none; }
+[dir="rtl"] .vw-stage .fn-plate { clip-path: none; }
+.vw-stage .fn-plate::after { display: none; }
+.vw-video { display: block; width: 100%; aspect-ratio: 16 / 9; background: var(--band); }
+@media (prefers-reduced-motion: no-preference) {
+  .motion .vw { transition: translate var(--play-4) var(--ease), opacity var(--play-4) var(--ease); }
+  .motion .vw:not(.is-in) { translate: 0 1.5rem; opacity: 0; }
+}

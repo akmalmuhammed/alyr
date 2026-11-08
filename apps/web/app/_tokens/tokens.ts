@@ -376,7 +376,8 @@ export const font = {
     "strong": 560,
     "semibold": 600,
     "heading": 620,
-    "display": 640
+    "display": 640,
+    "hero": 700
   },
   "size": {
     "site": {
@@ -456,6 +457,8 @@ export const radius = {
   "md": ".5rem",
   "lg": ".75rem",
   "phone": "1.75rem",
+  "panel": "1.75rem",
+  "pill": "999px",
   "round": "50%"
 } as const;
 
