@@ -332,7 +332,7 @@ def test_no_stock_tool_sends_a_customer_anything(world):
     world.change("set_stock", {"item": "Zaatar roll", "count": 2})
     assert sql("select count(*) as n from messages where tenant_id = $1", world.tenant_id)[0][
         "n"] == 0
-    assert sql("select count(*) as n from jobs where tenant_id = $1 and kind like 'message%'",
+    assert sql("select count(*) as n from jobs where tenant_id = $1 and kind = 'send_message'",
                world.tenant_id)[0]["n"] == 0
 
 
