@@ -164,7 +164,7 @@ export function See({ locale }: SceneProps) {
     <Win className="hw-agent">
       <div className="hw-bar">
         <bdi>{copy[locale].products.items.agent.name}</bdi>
-        <span>{view.header.updated}</span>
+        <span>{view.header.updated.replace("16:20", "15:40")}</span>
       </div>
       <div className="hw-pad">
         <span className="hw-kpi">
