@@ -39,7 +39,7 @@ export type WorkspaceGridCopy = {
 
 export const workspaceGridEn: WorkspaceGridCopy = {
   title: "One workspace for\nevery kind of business.",
-  lead: "Six products on one record, and the work our team does with you.",
+  lead: "Six products in one workspace, and the work we do with you.",
   sample: "Sample",
   shop: "Qirfa Bakery",
   team: "Done by our team",
@@ -100,25 +100,25 @@ export const workspaceGridEn: WorkspaceGridCopy = {
   },
   monthly: {
     actions: [
-      "Reply to enquiries within 30 minutes.",
-      "Add your hours and photos to your Google profile.",
-      "Write to customers who have not been back in 60 days.",
+      "Reply to enquiries the same day.",
+      "Add photos to your Google profile.",
+      "Phone customers who have not been back in 60 days.",
     ],
   },
 };
 
 export const workspaceGridAr: WorkspaceGridCopy = {
   title: "مساحة عمل واحدة\nلكل نوع من الأنشطة.",
-  lead: "ستة منتجات على سجل واحد، والعمل الذي يقوم به فريقنا معك.",
+  lead: "ستة منتجات في مساحة عمل واحدة، والعمل الذي نقوم به معك.",
   sample: "مثال",
   shop: "مخبز قرفة",
   team: "يجريه فريقنا",
   label: "كل ما تقدّمه ALYR في شبكة واحدة",
   cards: {
     chat: {
-      chip: "الوارد",
-      title: "طلبات واتساب وأسئلته في صندوق واحد للفريق.",
-      line: "يُتابَع كل طلب من التأكيد إلى الاكتمال.",
+      chip: "صندوق الفريق",
+      title: "الطلبات والأسئلة الواردة من واتساب في صندوق واحد للفريق.",
+      line: "يمكن تتبّع كل طلب من التأكيد إلى الاكتمال.",
     },
     bookings: {
       chip: "المواعيد",
@@ -131,7 +131,7 @@ export const workspaceGridAr: WorkspaceGridCopy = {
       line: "كل سطر يذكر ما جرى عدّه.",
     },
     accounts: {
-      chip: "الآجل",
+      chip: "الحسابات الآجلة",
       title: "من عليه مستحقات لك، ومنذ متى.",
       line: "تُرسل التذكيرات حين تضغط إرسال.",
     },
@@ -148,7 +148,7 @@ export const workspaceGridAr: WorkspaceGridCopy = {
     checkup: {
       chip: "الفحص",
       title: "كيف يجدك العملاء ولماذا يختارونك، بالأرقام.",
-      line: "خمسة أرقام تُسجَّل نقطةَ بداية لك.",
+      line: "خمسة أرقام تُسجَّل نقطة بداية لك.",
     },
     pages: {
       chip: "صفحاتك",
@@ -157,8 +157,8 @@ export const workspaceGridAr: WorkspaceGridCopy = {
     },
     monthly: {
       chip: "المراجعة الشهرية",
-      title: "كل شهر، الأرقام الخمسة من جديد وثلاثة أمور نعمل عليها.",
-      line: "نعدّها معك.",
+      title: "كل شهر، الأرقام الخمسة من جديد وثلاث خطوات تالية.",
+      line: "نحسبها معك.",
     },
   },
   pages: {
@@ -170,9 +170,9 @@ export const workspaceGridAr: WorkspaceGridCopy = {
   },
   monthly: {
     actions: [
-      "الردّ على الاستفسارات خلال 30 دقيقة.",
-      "إضافة ساعات عملك وصورك إلى ملفك في جوجل.",
-      "مراسلة العملاء الذين لم يعودوا منذ 60 يوماً.",
+      "الرد على الاستفسارات في اليوم نفسه.",
+      "إضافة صور إلى ملف نشاطك في جوجل.",
+      "الاتصال بالعملاء الذين لم يعودوا منذ 60 يوماً.",
     ],
   },
 };

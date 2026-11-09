@@ -78,7 +78,7 @@
     },
     {
       "term": "ذكاء",
-      "context": "بوكلاء الذكاء الاصطناعي",
+      "context": "تعمل بالذكاء الاصطناعي",
       "reason": "The founder's decision, 3 Nov 2026 (ALY-314, D-153), made knowing no AI model is in the product. An exception to honesty.md section 1 for the homepage's headline, sub line, title and description only."
     }
   ],
@@ -123,7 +123,7 @@
     },
     {
       "path": "ar.home.hero.title",
-      "text": "مزوّد حلول الذكاء الاصطناعي لمشروعك.",
+      "text": "مزوّد حلول الذكاء الاصطناعي لنشاطك.",
       "reason": "The Arabic of the hero slogan (row 35)"
     },
     {
@@ -133,7 +133,7 @@
     },
     {
       "path": "ar.footer.line",
-      "text": "علينا التقنية، وعليك شغلك.",
+      "text": "التقنية علينا، وإدارة نشاطك عليك.",
       "reason": "Kept by the founder (row 5), Gulf «شغلك» and all, until the Arabic review (ALY-66)"
     }
   ]

@@ -61,7 +61,7 @@ description use the founder's AI wording. Nothing else takes it from them.
 | Payment reminders that go by themselves | They go when someone presses Send reminders | "One press sends reminders…" |
 | "Free messages", "free replies for 24 hours", "ALYR adds nothing" without the condition | Meta bills some messages at its own rates | "Meta charges for some WhatsApp messages at its own rates, and bills you directly." |
 | The Sunday report as running ("every Sunday on your phone", "weekly on WhatsApp") | Built, never sent to an owner; templates need Meta's approval | Frame it: "The first reports go out once WhatsApp approves the report's wording." |
-| "Live in 48 hours", a go-live date, "free pilot", "free trial", a free plan | Not offered (D-025, D-034). Nothing is paid before go-live (D-053) and there is no setup fee (D-092), but there is no trial period and no free plan | "We agree your go-live date at the visit." The one allowed use of "free" is the self-serve button's own pair, "Try it free" with "Free to try. You pay only when you go live." (`copy.ts` `tryFree`, D-119), and only while `NEXT_PUBLIC_ALYR_TRY_FREE=on`; `banned-words.mjs` refuses the three phrases |
+| "Live in 48 hours", a go-live date, "free pilot", "free trial", a free plan | Not offered (D-025, D-034). Nothing is paid before go-live (D-053) and there is no setup fee (D-092), but there is no trial period and no free plan | "We agree your go-live date with you." The one allowed use of "free" is the self-serve button's own pair, "Try it free" with "Free to try. You pay only when you go live." (`copy.ts` `tryFree`, D-119), and only while `NEXT_PUBLIC_ALYR_TRY_FREE=on`; `banned-words.mjs` refuses the three phrases |
 | Any price, the money-back first month, "no commission" as a price point, outside the offer switch | The homepage's prepared offer copy still names a setup fee (D-092) | Behind `NEXT_PUBLIC_ALYR_OFFER=on` only. **The one exception is `/pricing`** (ALY-301, D-124): its prices, from the back office's price list, sit in `copyPricing.ts` and are allowed there by `allow/banned.json` "pricePages", and nowhere else. The CR was issued on 26 Oct 2026 |
 | "Your money back" without its limit | The refund is the first month's subscription, not the setup fee | "…you get that month's subscription back." |
 | "Sign up", "get started in minutes", "log in", self-serve setup | Sign-up is closed outside a local machine until the founder opens it (`ALYR_SIGNUP_OPEN`, D-031); ALYR sets up each shop until then | "Talk to us and we set it up for you." The self-serve button "Try it free" (D-119) is the exception, built and off, and shown only after sign-up is open (go-live checklist, "Opening self-serve sign-up"); it says nothing about minutes or speed |
@@ -154,7 +154,7 @@ Al-Naimi as sample family names.
   the hero price, the money-back lines, the price question, the Price link, prices in meta
   descriptions, social cards and alt text. Use `factsNoOffer` and `descriptionNoOffer`.
 - Behind the switch: from QAR 449 a month for the first product, QAR 150 for each added
-  product, ALYR Agent included (D-035); setup from QAR 1,500, quoted at the visit; month to
+  product, ALYR Agent included (D-035); setup from QAR 1,500, quoted after we first talk; month to
   month, stop at the end of any month with 7 days' notice; the first month's subscription
   back if the agreed result is missed. Open: setup QAR 1,500 on the site against 2,500 in the
   back office (D-032).
