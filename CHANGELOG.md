@@ -6,6 +6,9 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 
 ## Unreleased
 
+## v0.3.16 (9 Nov 2026)
+- The footer no longer says "ALYR uses the WhatsApp Business Platform. ALYR is not affiliated with, or endorsed by, WhatsApp or Meta." (D-164, ALY-330; no migration, no new dependency): removed from every public page in English and Arabic and from the `llms.txt` files; the site still never says or implies a partnership.
+
 ## v0.3.15 (9 Nov 2026)
 - The Doha Corniche in line under the footer of every public page (D-162, ALY-330; no migration, no new dependency): a line drawing, moss on light and Volt on dark, edge to edge and ending the page, cropped to the towers on a phone, not mirrored in Arabic; the footer's words and links are unchanged; new token `footer-art`. Two image files of 112 KB and 304 KB, the larger only for screens of 1.5x and up.
 

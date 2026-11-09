@@ -109,6 +109,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-130 | The inbox and the Orders screen read the newest rows off an index (a customer carries the times of their latest messages, kept by the database; the inbox lists 300 conversations, Orders the last 30 days and everything open), so a refresh costs the same in a shop's first week and its second year | Accepted |
 | D-157 | The homepage, version 3: a centred hero, a window for the film, the four stages as a switch, how we work as stacked panels, one workspace as a mosaic; the numbers band, business tabs, price and questions leave the page; rounded panel and pill tokens | Proposed, 8 Nov 2026 |
 | D-162 | The Doha Corniche in line under every page's footer, edge to edge (an exception to "no skylines, no dhows") | Proposed, 9 Nov 2026 |
+| D-164 | The footer no longer carries the WhatsApp and Meta disclaimer (founder's instruction) | Accepted, 9 Nov 2026 |
 | D-161 | The Convert scene: WhatsApp, the real channel marks in colour (exception, this scene only), "every channel, every enquiry, one inbox"; "Runs today" removed | Proposed, 8 Nov 2026 |
 | D-159 | The home film plays in the window (web copy, 18.6 MB, on its own background); the homepage stops saying a person replies | Proposed, 8 Nov 2026 |
 | D-158 | The homepage window at Notion's size (960 x 600), and two animated scenes in the stage switch: a check-up score that moves after one fix (Discover) and five places drawn into one ALYR Chat inbox (Convert) | Proposed, 8 Nov 2026 |
@@ -2620,7 +2621,7 @@ The founder, 8 Nov 2026: rebuild the homepage with a modern approach, in the sam
 **Date** 8 Nov 2026 · **Status** Proposed (the founder's brief; in a pull request, not published) · Linear ALY-330 · Follows D-158
 
 - Convert now draws six places customers come from into one ALYR Chat inbox: Instagram, TikTok, WhatsApp, Google, the order page and the counter QR card. WhatsApp was missing; it is the channel Chat is built on. The headline reads "Every channel, every enquiry, one inbox." ("paid" is gone).
-- The founder asked for the real marks in their own colours instead of black line icons. This is a recorded exception to the design system's "no WhatsApp logo, no WhatsApp green on ALYR's own surfaces", "no logo walls" and "no second accent", limited to this scene: Instagram, TikTok, WhatsApp and Google's G are drawn on their own colours (Simple Icons, CC0 1.0, and Devicon, MIT; the marks stay their owners' trademarks), the order page and the counter card on a Volt tile. The colours are tokens (`--ch-*`), the same in both themes. The disclaimer that ALYR is not affiliated with WhatsApp or Meta stays on every page, and no message says a channel is "connected": each place is a link or a card that opens the same chat.
+- The founder asked for the real marks in their own colours instead of black line icons. This is a recorded exception to the design system's "no WhatsApp logo, no WhatsApp green on ALYR's own surfaces", "no logo walls" and "no second accent", limited to this scene: Instagram, TikTok, WhatsApp and Google's G are drawn on their own colours (Simple Icons, CC0 1.0, and Devicon, MIT; the marks stay their owners' trademarks), the order page and the counter card on a Volt tile. The colours are tokens (`--ch-*`), the same in both themes. The footer disclaimer that ALYR is not affiliated with WhatsApp or Meta, which this exception relied on, was removed by the founder later the same day (D-164), and no message says a channel is "connected": each place is a link or a card that opens the same chat.
 - Instagram and TikTok direct messages are still not connected to Chat. The scene shows links in a bio, a profile link, a button and a QR card opening the chat, and each chat is the customer's own words.
 - "Runs today" is gone from the four stage panels (the founder: it does not sound professional). The solid and dashed rules still tell what runs from what our team does by hand; "Our team does" stays.
 - The Arabic is a draft until ALY-66.
@@ -2634,6 +2635,14 @@ The founder, 8 Nov 2026: rebuild the homepage with a modern approach, in the sam
 - The drawing is ALYR's own render (Qwen-Image-Edit of an engraving made with Qwen-Image on the laptop, Apache 2.0; no third-party photo). It is a transparent alpha mask (white lines), so one file serves both themes and the colour is the token `--footer-art` (moss, the focus colour, on light; Volt on dark). Two sizes: 1440 x 664 (112 KB) and 2880 x 1328 (304 KB) for screens of 1.5x and up.
 - Decoration only: hidden from screen readers, no alt text, no link. It is a real place, so it is not mirrored in Arabic. On a phone it is cropped to the towers. No motion.
 - The existing footer words and links are unchanged. The line "Built in Doha, for the businesses along this coast" from the concept is not used: the founder has not approved it.
+
+## D-164 · The footer no longer carries the WhatsApp and Meta disclaimer
+
+**Date** 9 Nov 2026 · **Status** Accepted (the founder's instruction) · Linear ALY-330
+
+- The footer's line "ALYR uses the WhatsApp Business Platform. ALYR is not affiliated with, or endorsed by, WhatsApp or Meta." (and its Arabic) is removed from every public page, and from the `llms.txt` files that repeated it.
+- The design system had made that line the answer to "never imply WhatsApp or Meta affiliation" (`honesty.md`). The rule stands: the site still never says "partner", "official" or "Tech Provider", and nothing implies a partnership. The line was also what D-161 relied on for showing the WhatsApp mark in the Convert scene; D-161 now says so.
+- The founder was told that Meta's brand rules ask a business that shows the WhatsApp mark not to suggest endorsement, and that the line was the plainest way to do that.
 
 ## D-160 · Discovery: one module, one agent, two doors
 
