@@ -108,6 +108,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-131 | What the workspace and the order page ask for again and again is kept three seconds and shared between tabs, thrown away by the shop's own writes; who is signed in and a shop's modules the same | Accepted |
 | D-130 | The inbox and the Orders screen read the newest rows off an index (a customer carries the times of their latest messages, kept by the database; the inbox lists 300 conversations, Orders the last 30 days and everything open), so a refresh costs the same in a shop's first week and its second year | Accepted |
 | D-157 | The homepage, version 3: a centred hero, a window for the film, the four stages as a switch, how we work as stacked panels, one workspace as a mosaic; the numbers band, business tabs, price and questions leave the page; rounded panel and pill tokens | Proposed, 8 Nov 2026 |
+| D-162 | The Doha Corniche in line under every page's footer, edge to edge (an exception to "no skylines, no dhows") | Proposed, 9 Nov 2026 |
 | D-161 | The Convert scene: WhatsApp, the real channel marks in colour (exception, this scene only), "every channel, every enquiry, one inbox"; "Runs today" removed | Proposed, 8 Nov 2026 |
 | D-159 | The home film plays in the window (web copy, 18.6 MB, on its own background); the homepage stops saying a person replies | Proposed, 8 Nov 2026 |
 | D-158 | The homepage window at Notion's size (960 x 600), and two animated scenes in the stage switch: a check-up score that moves after one fix (Discover) and five places drawn into one ALYR Chat inbox (Convert) | Proposed, 8 Nov 2026 |
@@ -2623,6 +2624,16 @@ The founder, 8 Nov 2026: rebuild the homepage with a modern approach, in the sam
 - Instagram and TikTok direct messages are still not connected to Chat. The scene shows links in a bio, a profile link, a button and a QR card opening the chat, and each chat is the customer's own words.
 - "Runs today" is gone from the four stage panels (the founder: it does not sound professional). The solid and dashed rules still tell what runs from what our team does by hand; "Our team does" stays.
 - The Arabic is a draft until ALY-66.
+
+## D-162 · The Doha Corniche in line under every page's footer
+
+**Date** 9 Nov 2026 · **Status** Proposed (the founder's choice in the design session; in a pull request, not published) · Follows D-157
+
+- Every public page ends with a line drawing of the Doha Corniche (skyline, a dhow, the seawall) under the footer's last row, edge to edge, with nothing fading and no text on it. The founder chose the line style (moss on light, Volt on dark) from the Image Studio's concepts and said to remove the transition and update the footer with it.
+- It is the design system's "no skylines, no dhows" rule (principle 6) set aside by the founder, for this one drawing. Everything else in that rule stands, and there is no gradient.
+- The drawing is ALYR's own render (Qwen-Image-Edit of an engraving made with Qwen-Image on the laptop, Apache 2.0; no third-party photo). It is a transparent alpha mask (white lines), so one file serves both themes and the colour is the token `--footer-art` (moss, the focus colour, on light; Volt on dark). Two sizes: 1440 x 664 (112 KB) and 2880 x 1328 (304 KB) for screens of 1.5x and up.
+- Decoration only: hidden from screen readers, no alt text, no link. It is a real place, so it is not mirrored in Arabic. On a phone it is cropped to the towers. No motion.
+- The existing footer words and links are unchanged. The line "Built in Doha, for the businesses along this coast" from the concept is not used: the founder has not approved it.
 
 ## D-160 · Discovery: one module, one agent, two doors
 

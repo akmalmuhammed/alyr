@@ -33,6 +33,7 @@
   --hair: rgb(21 23 26 / .08);
   --hair-strong: rgb(21 23 26 / .14);
   --focus: #6a9320;
+  --footer-art: #6a9320;
   --on-volt: #151a0f;
   --volt-ink: #3f6a0b;
   --volt-wash: rgb(183 243 74 / .18);
@@ -270,6 +271,7 @@
     --hair: rgb(255 255 255 / .07);
     --hair-strong: rgb(255 255 255 / .13);
     --focus: #b7f34a;
+    --footer-art: #b7f34a;
     --volt-ink: #b7f34a;
     --volt-wash: rgb(183 243 74 / .12);
     --ok: #7fd09a;
@@ -353,6 +355,7 @@
   --hair: rgb(255 255 255 / .07);
   --hair-strong: rgb(255 255 255 / .13);
   --focus: #b7f34a;
+  --footer-art: #b7f34a;
   --volt-ink: #b7f34a;
   --volt-wash: rgb(183 243 74 / .12);
   --ok: #7fd09a;
