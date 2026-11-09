@@ -98,6 +98,19 @@ def test_today_counts_what_the_business_did_today_and_leaves_out_cancelled_and_t
     assert today["sections"]["ledger"]["collected"]["text"] == "QAR 0"
 
 
+def test_today_names_the_next_booking_by_first_name_and_three_digits_only(world):
+    soon = datetime.now(QATAR) + timedelta(minutes=10)
+    if soon.date() != datetime.now(QATAR).date():
+        pytest.skip("too close to midnight for a booking later today")
+    layla = customer(world.shop, ("Layla Al-Sulaiti", "+97455500111"))
+    booking(world.shop, layla, 2, soon, service="Facial")
+    following = world.ask("today")["sections"]["bookings"]["next"]
+    assert following["service"] == "Facial"
+    assert following["customer"]["first_name"]["text"] == "Layla"
+    assert following["customer"]["phone_last3"] == "111"
+    assert "Sulaiti" not in deep_text(following) and "5550011" not in deep_text(following)
+
+
 # ── orders ─────────────────────────────────────────────────────────────────────────────────────
 
 
