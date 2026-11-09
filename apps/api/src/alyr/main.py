@@ -44,6 +44,7 @@ from alyr.modules.items.import_alert import ImportAlert
 from alyr.modules.items.import_photos import JOB as IMPORT_PHOTOS
 from alyr.modules.items.import_photos import ImportPhotos
 from alyr.modules.items.service import count_active
+from alyr.modules.mcp.server import McpServer
 from alyr.modules.orders import holds as order_holds
 from alyr.modules.orders import staff_alert
 from alyr.modules.orders.service import EXPIRE_JOB
@@ -80,6 +81,9 @@ from alyr.routes import documents as documents_routes
 from alyr.routes import features as feature_routes
 from alyr.routes import items_import as items_import_routes
 from alyr.routes import jobs as jobs_routes
+from alyr.routes import mcp as mcp_routes
+from alyr.routes import mcp_manage as mcp_manage_routes
+from alyr.routes import mcp_oauth as mcp_oauth_routes
 from alyr.routes import media as media_routes
 from alyr.routes import onboarding as onboarding_routes
 from alyr.routes import owner as owner_routes
@@ -182,6 +186,9 @@ def create_app() -> FastAPI:
     )
     # What Meta says about a WhatsApp account, not a message: templates, limits, restrictions.
     app.state.account_events = AccountEvents(app.state.db)
+
+    # The owner's own app calls the same actions through this (spec 067); off unless switched on.
+    app.state.mcp = McpServer(app.state.db, settings)
 
     app.state.jobs = JobRunner(
         app.state.db, settings.jobs_backoff_seconds, settings.jobs_concurrency
@@ -407,6 +414,11 @@ def create_app() -> FastAPI:
     app.include_router(media_routes.router)
     app.include_router(media_routes.public)
     app.include_router(onboarding_routes.router)
+    # The connector (spec 067, D-170): the endpoint and its metadata, the sign-in, and the
+    # workspace's side. Every path answers 404 until ALYR_MCP_ENABLED says otherwise.
+    app.include_router(mcp_routes.router)
+    app.include_router(mcp_oauth_routes.router)
+    app.include_router(mcp_manage_routes.router)
     if local:
         app.include_router(simulator.router)
     return app
