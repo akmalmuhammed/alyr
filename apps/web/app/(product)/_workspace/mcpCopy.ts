@@ -73,7 +73,7 @@ const en = {
   shared: [
     "A customer appears as a first name and the last three digits of their phone number.",
     "Message text, ID numbers and salaries are never given to an app.",
-    "An app can do only what was allowed when it was connected. Each connection below lists it.",
+    "An app can do only what was allowed when it was connected. Each connection lists it.",
     "What an app receives is handled by its provider, under your own account there. ALYR does not run your app. The app asks, and ALYR answers.",
   ],
 
@@ -128,7 +128,7 @@ const en = {
   logTitle: "What the apps did",
   logIntro: "Every request an app makes, newest first, as the activity record keeps it. It shows what the app asked for, never what ALYR answered.",
   tabCalls: (n: number) => `Requests (${n})`,
-  tabEvents: (n: number) => `Switches and connections (${n})`,
+  tabEvents: (n: number) => `Connection changes (${n})`,
   logCap: (n: number) => `Showing the newest ${n} records.`,
   logEmpty: "No app has asked anything yet. Each request shows here as soon as it is made.",
   eventsEmpty: "Nothing has changed yet.",
@@ -194,7 +194,7 @@ const ar: typeof en = {
   shared: [
     "يظهر العميل باسمه الأول وآخر ثلاثة أرقام من رقم هاتفه.",
     "لا يحصل أي تطبيق على نص الرسائل ولا على أرقام الهوية ولا على الرواتب.",
-    "لا يستطيع التطبيق إلا ما سُمح له به عند ربطه، ويُدرج كل اتصال أدناه ما سُمح له.",
+    "لا يستطيع التطبيق إلا ما سُمح له به عند ربطه، ويُدرج كل اتصال ما سُمح له.",
     "يعالج مزوّد التطبيق ما يستلمه التطبيق، بحسابك أنت هناك. لا تشغّل ALYR تطبيقك. التطبيق يسأل، وتجيب ALYR.",
   ],
 
@@ -247,7 +247,7 @@ const ar: typeof en = {
   logTitle: "ما فعلته التطبيقات",
   logIntro: "كل طلب يقدمه تطبيق، الأحدث أولاً، كما يحفظه سجل النشاط. يعرض ما طلبه التطبيق، ولا يعرض ما أجابت به ALYR.",
   tabCalls: (n) => `الطلبات (${n})`,
-  tabEvents: (n) => `التفعيل والاتصالات (${n})`,
+  tabEvents: (n) => `تغييرات الاتصالات (${n})`,
   logCap: (n) => `عدد السجلات المعروضة: ${n}، وهي الأحدث.`,
   logEmpty: "لم يسأل أي تطبيق عن شيء بعد. يظهر كل طلب هنا فور تقديمه.",
   eventsEmpty: "لم يتغير شيء بعد.",

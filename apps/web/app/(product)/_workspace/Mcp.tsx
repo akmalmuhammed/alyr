@@ -65,21 +65,25 @@ export function Mcp({ lang, role }: { lang: Lang; role: string }) {
     return () => clearTimeout(first);
   }, [load, manager]);
 
-  const header = (
-    <header className="sh-head mc-head">
-      <span className="sh-eyebrow">{c.eyebrow}</span>
-      <h1>{c.title}</h1>
-      <p>{c.sub}</p>
-    </header>
+  // The line under the heading describes what an owner can do here, so it is left out where they cannot:
+  // a server that has it switched off, and a person it is not for.
+  const frame = (body: React.ReactNode, describe = true) => (
+    <div className="ct mc" lang={lang}>
+      <header className="sh-head mc-head">
+        <span className="sh-eyebrow">{c.eyebrow}</span>
+        <h1>{c.title}</h1>
+        {describe && <p>{c.sub}</p>}
+      </header>
+      {body}
+    </div>
   );
-  const frame = (body: React.ReactNode) => <div className="ct mc" lang={lang}>{header}{body}</div>;
 
   if (screen === "loading") return frame(<p className="mc-quiet" role="status">{c.loading}</p>);
   if (screen === "forbidden") {
-    return frame(<section className="mc-card mc-plain" aria-labelledby="mc-forbidden"><h2 id="mc-forbidden">{c.forbiddenTitle}</h2><p>{c.forbidden}</p></section>);
+    return frame(<section className="mc-card mc-plain" aria-labelledby="mc-forbidden"><h2 id="mc-forbidden">{c.forbiddenTitle}</h2><p>{c.forbidden}</p></section>, false);
   }
   if (screen === "unavailable") {
-    return frame(<section className="mc-card mc-plain" aria-labelledby="mc-unavailable"><h2 id="mc-unavailable">{c.unavailableTitle}</h2><p>{c.unavailable}</p></section>);
+    return frame(<section className="mc-card mc-plain" aria-labelledby="mc-unavailable"><h2 id="mc-unavailable">{c.unavailableTitle}</h2><p>{c.unavailable}</p></section>, false);
   }
   if (screen === "error" || !view) {
     return frame(
@@ -116,6 +120,12 @@ export function Mcp({ lang, role }: { lang: Lang; role: string }) {
     }
   }
 
+  const given = (
+    <section className="mc-card" aria-labelledby="mc-shared-h">
+      <h2 id="mc-shared-h">{c.sharedTitle}</h2>
+      <ul className="mc-points">{c.shared.map((line) => <li key={line}>{line}</li>)}</ul>
+    </section>
+  );
   const stateWord = mode === "on" ? c.stateOn : mode === "paused" ? c.statePaused : c.stateOff;
   const text = mode === "off" ? (owner ? c.offOwner : c.offOther) : mode === "on" ? c.on : c.paused(who, when(settings.pausedAt, lang));
 
@@ -148,16 +158,16 @@ export function Mcp({ lang, role }: { lang: Lang; role: string }) {
         </div>
       </section>
 
-      <section className="mc-card" aria-labelledby="mc-shared-h">
-        <h2 id="mc-shared-h">{c.sharedTitle}</h2>
-        <ul className="mc-points">{c.shared.map((line) => <li key={line}>{line}</li>)}</ul>
-      </section>
+      {/* Off, what an app is given is what an owner reads before turning it on; on, the connections come first. */}
+      {!settings.enabled && given}
 
       {showConnections && (
         <McpConnections lang={lang} grants={view.grants} address={settings.enabled ? address : ""} busy={busy}
           onEnd={(g) => setSheet({ is: "end", id: g.id, app: g.client || c.anApp })}
           onEndAll={() => setSheet({ is: "all", n: live.length })} />
       )}
+
+      {settings.enabled && given}
 
       {showLog && <McpLog lang={lang} rows={rows} failed={rowsFailed} grants={view.grants} onRefresh={() => void load()} />}
 
