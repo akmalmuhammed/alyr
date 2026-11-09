@@ -2627,7 +2627,7 @@ The founder, 8 Nov 2026: rebuild the homepage with a modern approach, in the sam
 
 ## D-162 · The Doha Corniche in line under every page's footer
 
-**Date** 9 Nov 2026 · **Status** Proposed (the founder's choice in the design session; in a pull request, not published) · Follows D-157
+**Date** 9 Nov 2026 · **Status** Accepted, 9 Nov 2026 (the founder chose it over the dusk footer after seeing both previews) · Follows D-157
 
 - Every public page ends with a line drawing of the Doha Corniche (skyline, a dhow, the seawall) under the footer's last row, edge to edge, with nothing fading and no text on it. The founder chose the line style (moss on light, Volt on dark) from the Image Studio's concepts and said to remove the transition and update the footer with it.
 - It is the design system's "no skylines, no dhows" rule (principle 6) set aside by the founder, for this one drawing. Everything else in that rule stands, and there is no gradient.
