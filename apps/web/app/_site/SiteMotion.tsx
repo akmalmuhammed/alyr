@@ -147,9 +147,47 @@ export function SiteMotion() {
     if (still) words.forEach((word) => word.setAttribute("data-on", ""));
     update();
     window.addEventListener("scroll", onScroll, { passive: true });
+    // The footer picture (D-163): its files are fetched when the visitor is within about a screen
+    // and a half of it, so it never competes with the opening for the connection (without scripts
+    // it loads as the page does, site.css). It moves only while it is on screen, and its button
+    // (WCAG 2.2.2) pauses it; with reduced motion it stays still and there is no button.
+    const art = document.querySelector<HTMLElement>(".foot-art");
+    const artToggle = document.querySelector<HTMLButtonElement>("[data-art-toggle]");
+    const artStill = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let nearArt: IntersectionObserver | null = null;
+    let onArt: IntersectionObserver | null = null;
+    const toggleArt = () => {
+      if (!art || !artToggle) return;
+      const paused = art.toggleAttribute("data-paused");
+      const d = artToggle.dataset;
+      artToggle.textContent = paused ? d.play ?? "" : d.pause ?? "";
+      artToggle.setAttribute("aria-label", (paused ? d.playName : d.pauseName) ?? "");
+    };
+    if (art) {
+      nearArt = new IntersectionObserver((entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          art.setAttribute("data-near", "");
+          nearArt?.disconnect();
+        }
+      }, { rootMargin: "1200px 0px" });
+      nearArt.observe(art);
+      if (!artStill.matches) {
+        onArt = new IntersectionObserver((entries) => {
+          const on = entries.some((entry) => entry.isIntersecting);
+          art.toggleAttribute("data-on", on);
+          if (on && artToggle) artToggle.hidden = false;
+        });
+        onArt.observe(art);
+        artToggle?.addEventListener("click", toggleArt);
+      }
+    }
+
     window.addEventListener("resize", onScroll);
     window.addEventListener("resize", watchDark);
     return () => {
+      nearArt?.disconnect();
+      onArt?.disconnect();
+      artToggle?.removeEventListener("click", toggleArt);
       document.removeEventListener("click", onLanguage, true);
       window.removeEventListener("hashchange", openQuestion);
       seen.disconnect();

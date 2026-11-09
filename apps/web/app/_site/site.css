@@ -473,7 +473,13 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 .cta :focus-visible, .product :focus-visible { outline-color: var(--volt); }
 
 /* footer: a sign-off, three rows */
-.foot { padding-block: clamp(3rem, 6vw, 4.5rem) calc(2.5rem + env(safe-area-inset-bottom, 0px)); }
+/* The footer is a Carbon band that ends in the Doha Corniche at dusk (D-163). Inside it the text
+   tokens are the on-band ones, in both themes, so the existing rules below recolour themselves. */
+.foot {
+  --text: var(--on-band); --text-muted: var(--on-band-quiet); --line: var(--band-rule);
+  position: relative; background: var(--footer-band); color: var(--on-band);
+  padding-block: clamp(3rem, 6vw, 4.5rem) 0;
+}
 .foot-in { display: grid; gap: 1.75rem; }
 .foot-sign { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 2rem; }
 .foot-line { color: var(--text-muted); font-size: .9375rem; }
@@ -485,6 +491,44 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 .foot-legal { display: grid; gap: .375rem; font-family: var(--mono); font-size: .75rem; line-height: 1.6; color: var(--text-muted); }
 [lang="ar"] .foot-legal { font-family: var(--arabic); font-size: .8125rem; }
 .foot-legal p:first-child { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: .25rem 1.5rem; }
+
+/* The picture: a painted scene (its sky is a short ramp from Carbon, so it grows out of the band),
+   the windows of the towers in three layers, and the water in seven bands. It is decoration, one
+   real place, so it is not mirrored in Arabic (a background does not flip). Its files load when the
+   visitor is near (SiteMotion sets data-near), or at once without scripts. */
+.foot-art { --x: 50%; --w: 100%; position: relative; width: 100%; aspect-ratio: 1440 / 968; margin-top: clamp(1.5rem, 3vw, 2.5rem); overflow: clip; }
+.foot-scene, .foot-lights, .foot-water, .foot-water i { position: absolute; }
+.foot-scene, .foot-lights, .foot-water { inset: 0; }
+.foot-scene, .foot-lights, .foot-water i { background-repeat: no-repeat; background-size: var(--w) 100%; background-position: var(--x) 0; }
+.foot-water i { inset-inline: 0; top: var(--top); height: 4.5%; background-size: var(--w) 2222.2%; background-position: var(--x) var(--p); }
+:root:not(.al-js) .foot-scene, .foot-art[data-near] .foot-scene,
+:root:not(.al-js) .foot-water i, .foot-art[data-near] .foot-water i { background-image: url("./art/dusk-scene.webp"); }
+:root:not(.al-js) .foot-lights.is-a, .foot-art[data-near] .foot-lights.is-a { background-image: url("./art/dusk-lights-a.webp"); }
+:root:not(.al-js) .foot-lights.is-b, .foot-art[data-near] .foot-lights.is-b { background-image: url("./art/dusk-lights-b.webp"); }
+:root:not(.al-js) .foot-lights.is-c, .foot-art[data-near] .foot-lights.is-c { background-image: url("./art/dusk-lights-c.webp"); }
+@media (max-width: 47.99rem) {
+  .foot-art { --x: 55%; --w: auto; aspect-ratio: 1 / .9; }
+}
+/* the pause control: there only while the picture moves (SiteMotion shows it) */
+.foot-motion {
+  position: absolute; inset-block-end: .5rem; inset-inline-end: var(--gutter); z-index: 1; min-height: 2.75rem; padding-inline: var(--space-3);
+  background: transparent; border: 1px solid var(--band-rule); color: var(--on-band-quiet); font: inherit; font-size: var(--fs-note); font-weight: 500; cursor: pointer;
+}
+.foot-motion:hover { color: var(--on-band); border-color: var(--on-band-quiet); }
+.foot-motion[hidden] { display: none; }
+/* The lights twinkle and the water drifts, a little, on the pace's beat. Only while the picture is
+   on screen and not paused; with reduced motion nothing moves and the lights are on. */
+@keyframes foot-twinkle { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@keyframes foot-drift { from { transform: translateX(-.3%); } to { transform: translateX(.3%); } }
+@media (prefers-reduced-motion: no-preference) {
+  .foot-lights { animation: foot-twinkle calc(var(--live-beat) * var(--k)) ease-in-out infinite; animation-delay: calc(var(--live-beat) * var(--d)); }
+  .foot-lights.is-a { --k: .8; --d: -.2; }
+  .foot-lights.is-b { --k: 1.25; --d: -.7; }
+  .foot-lights.is-c { --k: 1.9; --d: -1.3; }
+  .foot-water i { animation: foot-drift calc(var(--live-beat) * (.55 + var(--i) * .09)) ease-in-out infinite alternate; animation-delay: calc(var(--live-beat) * var(--i) * -.37); }
+  .foot-art:not([data-on]) .foot-lights, .foot-art:not([data-on]) .foot-water i,
+  .foot-art[data-paused] .foot-lights, .foot-art[data-paused] .foot-water i { animation-play-state: paused; }
+}
 
 /* ----------------------------------------------- shared by every public page */
 /* The fold: three Carbon planes with the symbol's gaps (10 of its 160 units): a 6 px Paper

@@ -108,6 +108,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-131 | What the workspace and the order page ask for again and again is kept three seconds and shared between tabs, thrown away by the shop's own writes; who is signed in and a shop's modules the same | Accepted |
 | D-130 | The inbox and the Orders screen read the newest rows off an index (a customer carries the times of their latest messages, kept by the database; the inbox lists 300 conversations, Orders the last 30 days and everything open), so a refresh costs the same in a shop's first week and its second year | Accepted |
 | D-157 | The homepage, version 3: a centred hero, a window for the film, the four stages as a switch, how we work as stacked panels, one workspace as a mosaic; the numbers band, business tabs, price and questions leave the page; rounded panel and pill tokens | Proposed, 8 Nov 2026 |
+| D-163 | The footer ends in the Doha Corniche at dusk (Carbon footer in both themes), the towers' lights twinkle and the water drifts, with a Pause button; an alternative to D-162 | Proposed, 9 Nov 2026 |
 | D-161 | The Convert scene: WhatsApp, the real channel marks in colour (exception, this scene only), "every channel, every enquiry, one inbox"; "Runs today" removed | Proposed, 8 Nov 2026 |
 | D-159 | The home film plays in the window (web copy, 18.6 MB, on its own background); the homepage stops saying a person replies | Proposed, 8 Nov 2026 |
 | D-158 | The homepage window at Notion's size (960 x 600), and two animated scenes in the stage switch: a check-up score that moves after one fix (Discover) and five places drawn into one ALYR Chat inbox (Convert) | Proposed, 8 Nov 2026 |
@@ -2623,6 +2624,17 @@ The founder, 8 Nov 2026: rebuild the homepage with a modern approach, in the sam
 - Instagram and TikTok direct messages are still not connected to Chat. The scene shows links in a bio, a profile link, a button and a QR card opening the chat, and each chat is the customer's own words.
 - "Runs today" is gone from the four stage panels (the founder: it does not sound professional). The solid and dashed rules still tell what runs from what our team does by hand; "Our team does" stays.
 - The Arabic is a draft until ALY-66.
+
+## D-163 · The footer ends in the Doha Corniche at dusk, with lights that twinkle and water that drifts
+
+**Date** 9 Nov 2026 · **Status** Proposed (the founder's brief; in a pull request, not published) · Linear ALY-330 · An alternative to D-162, not an addition
+
+- The founder chose the Image Studio's "dusk e-green" mock (`out/footer/mocks/dusk-e-green.png`) for the footer and asked for the towers' lights and the water to move subtly. Every public page ends with the scene, edge to edge, under the footer's last row.
+- The footer is Carbon in both themes (new token `footer-band`, the Carbon primitive, not lifted a step in dark like the other bands) so the painting's sky grows out of it with no seam, and its text uses the on-band tokens. In the light theme this makes the footer dark; it was white.
+- The picture is ALYR's own render: Qwen-Image's engraving of the dhow scene, repainted with Qwen-Image-Edit and graded onto the ALYR dusk ramp (Carbon, moss, Volt, pale lime) by `grade.py`; no third-party photo is in that chain (the founder's reference screenshots only chose the angles). It uses the design system's green ramp and a fine grain; the sky is a short ramp from Carbon, so no gradient is drawn in CSS. It sets aside "no skylines, no dhows" (principle 6) for this one scene, as D-162 does.
+- Layers: the scene without window lights (175 KB), the lights in three transparent layers (about 11 KB each), and the water as seven bands cut from the same scene. The lights fade between full and a third on their own beats; the water bands drift 0.3% sideways on theirs. All durations are multiples of `--live-beat`, so the founder's `pace` tunes them. It is the design system's allowed kind of motion only because it is ambient, on the beat, and pausable.
+- Movement runs only while the picture is on screen, never with reduced motion (the lights are then on and nothing moves), and a Pause button (WCAG 2.2.2; "Pause the moving lights" in English and Arabic) stops it. The files are fetched when the visitor is about a screen and a half away, or at once without scripts.
+- Decoration only: hidden from screen readers, not mirrored in Arabic, cropped to the towers on a phone. The concept's line "Built in Doha, for the businesses along this coast" is not used: not approved.
 
 ## D-160 · Discovery: one module, one agent, two doors
 
