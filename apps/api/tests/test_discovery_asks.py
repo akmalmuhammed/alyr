@@ -285,7 +285,10 @@ def test_an_unlinked_staff_number_is_never_asked(shop):
 def test_a_number_whose_service_consent_was_withdrawn_is_never_asked(shop):
     owner_sql("update contacts set consent_service = 'revoked' where tenant_id = $1 "
               "and phone = $2", shop.tenant_id, OWNER_PHONE)
+    before = len(messages_to(shop, OWNER_PHONE))
     assert send_asks(shop) == 0
+    # not even tried: the outbound layer would refuse it, and no ask or blocked message is made
+    assert asks(shop) == [] and len(messages_to(shop, OWNER_PHONE)) == before
 
 
 def test_a_customer_is_never_asked_whatever_is_written_in_the_database(shop):
