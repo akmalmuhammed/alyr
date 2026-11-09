@@ -1,9 +1,10 @@
 "use client";
 
-// Discovery in the workspace (ALY-322, spec 065 "Screens"): the section at `/app/discovery` and
-// its four views, carried in the address like Documents does (`?view=home|todo|reviews|reports`,
-// Home by default). The menu lists the four views beneath the section (`DiscoveryMenu.tsx`); on a
-// phone, where the menu is the tab bar and its More sheet, the same four are a row at the top of
+// Discovery in the workspace (ALY-322, spec 065 "Screens"; ALY-324, spec 066): the section at
+// `/app/discovery` and its views, carried in the address like Documents does
+// (`?view=home|todo|proposals|reviews|reports|settings`, Home by default; Settings is for the owner
+// and an admin only). The menu lists the views beneath the section (`DiscoveryMenu.tsx`); on a
+// phone, where the menu is the tab bar and its More sheet, the same views are a row at the top of
 // the screen. This file is the frame: the heading, the view row, the note that says when the data
 // is a sample business, and whichever view the address names. It reads the address with
 // `useSearchParams`, so the shell draws it inside a `Suspense`.
@@ -12,20 +13,24 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { ToastLayer, useToasts } from "./CatalogUi";
+import { useWaiting } from "./DiscoveryMenu";
 import { DiscoveryHome } from "./DiscoveryHome";
+import { DiscoveryProposals } from "./DiscoveryProposals";
 import { DiscoveryReports } from "./DiscoveryReports";
 import { DiscoveryReviews } from "./DiscoveryReviews";
+import { DiscoverySettings } from "./DiscoverySettings";
 import { DiscoveryTodo } from "./DiscoveryTodo";
 import { discovery, type Connection } from "./discoveryApi";
 import { T, type Lang } from "./discoveryCopy";
-import { VIEWS, isSample, readView, viewHref } from "./discoveryLogic";
+import { isSample, readView, viewHref, viewsFor } from "./discoveryLogic";
 import { useLoad } from "./discoveryUi";
 import "./discovery.css";
 
 export function Discovery({ lang, canManage }: { lang: Lang; canManage: boolean }) {
   const t = T[lang];
   const params = useSearchParams();
-  const view = readView(params.get("view"));
+  const view = readView(params.get("view"), canManage);
+  const waiting = useWaiting(lang);
   const { toasts, push, dismiss, clear } = useToasts();
   // Whether what the screens show is the sample business. A shop that may not read the connection
   // sees no note; the answer never blocks the screen.
@@ -55,8 +60,11 @@ export function Discovery({ lang, canManage }: { lang: Lang; canManage: boolean 
       </header>
 
       <nav className="dv-views" aria-label={t.viewsLabel}>
-        {VIEWS.map((v) => (
-          <Link key={v} href={viewHref(v)} className={v === view ? "on" : ""} aria-current={v === view ? "page" : undefined}>{t.views[v]}</Link>
+        {viewsFor(canManage).map((v) => (
+          <Link key={v} href={viewHref(v)} className={v === view ? "on" : ""} aria-current={v === view ? "page" : undefined}>
+            {t.views[v]}
+            {v === "proposals" && waiting !== null && waiting > 0 && <small className="dv-subn">{t.waitingN(waiting)}</small>}
+          </Link>
         ))}
       </nav>
 
@@ -69,8 +77,10 @@ export function Discovery({ lang, canManage }: { lang: Lang; canManage: boolean 
 
       {view === "home" && <DiscoveryHome lang={lang} canManage={canManage} push={push} onConnection={() => void reloadConnection(true)} />}
       {view === "todo" && <DiscoveryTodo lang={lang} canManage={canManage} push={push} />}
+      {view === "proposals" && <DiscoveryProposals lang={lang} canManage={canManage} />}
       {view === "reviews" && <DiscoveryReviews lang={lang} />}
       {view === "reports" && <DiscoveryReports lang={lang} />}
+      {view === "settings" && <DiscoverySettings lang={lang} push={push} />}
 
       <ToastLayer toasts={toasts} dismiss={dismiss} lang={lang} undoWord={t.undo} dismissWord={t.dismiss} />
     </div>

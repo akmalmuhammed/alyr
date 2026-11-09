@@ -5,6 +5,10 @@
    so light, dark and right to left come for free; every position is logical (inline, block, start,
    end). Volt appears four times and means one thing each: the page's one button (Run check-up), the
    fold on the one card, the tick of a step that has finished, and the mark on the current view.
+   Phase 2 (ALY-324, spec 066) adds the change drawn as its exact before and after, the approval
+   sheet's states, the Proposals rows, the confirmed-details form and the Settings view, on the same
+   tokens; while a change waits, the page's one Volt button is Review N changes, and inside the
+   approval sheet it is Approve.
    Built at 375 px first: targets are 44 px or more and nothing scrolls sideways. */
 
 .dv { gap: var(--space-4); }
@@ -16,10 +20,14 @@
 .dv-none { color: var(--text-muted); font-size: var(--ui-body-sm); font-weight: var(--weight-regular); letter-spacing: 0; }
 .dv-pill { block-size: 24px; }
 .dv-pill.quiet { color: var(--text-muted); }
+.dv-pill.bad { color: var(--bad); background: var(--bad-soft); box-shadow: none; }
 
 /* ── the views, as a row: on a phone the menu is the tab bar, so the four are here ── */
-.dv-views { display: flex; gap: var(--space-1); padding: 3px; border-radius: var(--radius-lg); background: var(--surface-subtle); box-shadow: 0 0 0 1px var(--hair) inset; }
-.dv-views a { flex: 1 1 0; min-inline-size: 0; min-block-size: 44px; display: grid; place-items: center; padding-inline: var(--space-2); border-radius: var(--radius-md); color: var(--text-muted); text-decoration: none; text-align: center; font-size: var(--ui-body-sm); font-weight: var(--weight-medium); overflow-wrap: anywhere; }
+.dv-views { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-1); padding: 3px; border-radius: var(--radius-lg); background: var(--surface-subtle); box-shadow: 0 0 0 1px var(--hair) inset; }
+@media (min-width: 40rem) { .dv-views { display: flex; } }
+.dv-views a { flex: 1 1 0; min-inline-size: 0; min-block-size: 44px; display: grid; place-items: center; align-content: center; gap: 1px; padding: var(--space-1) var(--space-2); border-radius: var(--radius-md); color: var(--text-muted); text-decoration: none; text-align: center; font-size: var(--ui-body-sm); font-weight: var(--weight-medium); overflow-wrap: anywhere; }
+.dv-subn { font-size: var(--ui-caption); font-weight: var(--weight-regular); color: var(--text-muted); overflow-wrap: normal; }
+.sh-sublink .dv-subn { margin-inline-start: auto; padding-inline-start: var(--space-2); }
 .dv-views a:hover { color: var(--text); }
 .dv-views a.on { background: var(--surface); color: var(--text); box-shadow: var(--shadow-lift); font-weight: var(--weight-semibold); }
 @media (min-width: 56.0625rem) { .dv-views { display: none; } }
@@ -44,10 +52,11 @@
 .dv-rule-tag { font-weight: var(--weight-medium); color: var(--text-muted); }
 .dv-sheet:focus-visible { outline-offset: 4px; }
 .dv-meta { font-size: var(--ui-small); }
-.dv-score-act { align-self: start; min-inline-size: 0; }
+.dv-score-act { align-self: start; min-inline-size: 0; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); }
 .dv-toosoon { margin: 0; max-inline-size: 20rem; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--surface-subtle); box-shadow: 0 0 0 1px var(--hair) inset; font-size: var(--ui-body-sm); }
 @media (max-width: 40rem) {
   .dv-score { grid-template-columns: minmax(0, 1fr); }
+  .dv-score-act { flex-direction: column; justify-content: stretch; }
   .dv-score-act .btn { inline-size: 100%; }
   .dv-toosoon { max-inline-size: none; }
 }
@@ -139,7 +148,8 @@
 /* ── To do ── */
 .dv-todo { display: flex; flex-direction: column; gap: var(--space-3); min-inline-size: 0; }
 .dv-toolbar { display: grid; gap: var(--space-2); }
-@media (min-width: 40rem) { .dv-toolbar { grid-template-columns: auto minmax(0, 16rem); justify-content: space-between; align-items: end; } }
+@media (min-width: 40rem) { .dv-toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-2) var(--space-3); } .dv-toolbar .dv-place { margin-inline-start: auto; inline-size: min(100%, 16rem); } }
+.dv-readychip { align-items: center; }
 .dv-place .ct-select { inline-size: 100%; }
 .dv-panel { display: flex; flex-direction: column; gap: var(--space-4); min-inline-size: 0; }
 .dv-count { margin: 0; font-size: var(--ui-body-sm); color: var(--text-muted); }
@@ -217,3 +227,94 @@
   .dv-report { box-shadow: none; padding: 0; break-inside: auto; }
   .dv-report-sec { break-inside: avoid; }
 }
+
+/* ── Phase 2: a change, the guarantee and the rows that carry them (ALY-324, spec 066) ── */
+.dv-tag { justify-self: start; display: inline-flex; align-items: center; min-block-size: 22px; padding-inline: var(--space-2); border-radius: var(--radius-sm); box-shadow: 0 0 0 1px var(--line-strong) inset; font-size: var(--ui-caption); font-weight: var(--weight-semibold); color: var(--text); }
+.dv-applied-note { font-size: var(--ui-small); color: var(--text-muted); }
+.dv-guarantee { margin: 0; padding-inline-start: var(--space-3); border-inline-start: 2px solid var(--text); font-size: var(--ui-body-sm); font-weight: var(--weight-semibold); }
+.dv-guarantee-top { margin-block-end: var(--space-1); }
+.dv-expiry { margin: 0; font-size: var(--ui-body-sm); color: var(--text-muted); }
+.dv-warnline { padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--warn-soft); }
+
+/* one change in a line: now, an arrow, proposed */
+.dv-change-line { display: inline; font-size: var(--ui-body-sm); line-height: 1.5; overflow-wrap: anywhere; }
+.dv-was { color: var(--text-muted); }
+.dv-will { font-weight: var(--weight-semibold); }
+.dv-to { display: inline-block; inline-size: 14px; block-size: 14px; margin-inline: var(--space-1); vertical-align: -2px; color: var(--text-muted); }
+.dv-when { font-size: var(--ui-small); }
+.dv-prow .dv-row-main { gap: var(--space-1); }
+.dv-prow .dv-meta-line { align-items: center; }
+.dv-cardchange { display: grid; gap: var(--space-1); padding: var(--space-3); border-radius: var(--radius-md); background: var(--surface-subtle); box-shadow: 0 0 0 1px var(--hair) inset; }
+.dv-cardchange-label { margin: 0; font-size: var(--ui-small); font-weight: var(--weight-medium); color: var(--text-muted); }
+
+/* the exact before and after */
+.dv-ba { display: grid; gap: var(--space-2); margin: 0; }
+@media (min-width: 34rem) { .dv-ba { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.dv-ba > div { display: grid; gap: var(--space-1); align-content: start; padding: var(--space-3); border-radius: var(--radius-md); min-inline-size: 0; }
+.dv-ba-now { background: var(--surface-subtle); box-shadow: 0 0 0 1px var(--hair) inset; }
+.dv-ba-new { background: var(--surface); box-shadow: 0 0 0 1px var(--line-strong) inset; border-inline-start: 2px solid var(--text); }
+.dv-ba dt { font-family: var(--font-ui-mono); font-size: var(--ui-micro); font-weight: var(--weight-medium); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--text-muted); }
+.sh[dir="rtl"] .dv-ba dt { font-family: var(--face); letter-spacing: 0; font-size: var(--ui-caption); text-transform: none; }
+.dv-ba dd { margin: 0; font-size: var(--ui-body-sm); line-height: 1.5; overflow-wrap: anywhere; }
+.dv-ba-new dd { font-weight: var(--weight-semibold); }
+.dv-hours { inline-size: 100%; border-collapse: collapse; table-layout: fixed; font-size: var(--ui-small); border-radius: var(--radius-md); background: var(--surface); box-shadow: 0 0 0 1px var(--hair) inset; }
+.dv-hours th, .dv-hours td { padding: var(--space-2); border-block-start: 1px solid var(--hair); text-align: start; vertical-align: top; overflow-wrap: anywhere; font-weight: var(--weight-regular); }
+.dv-hours thead th { border-block-start: 0; font-family: var(--font-ui-mono); font-size: var(--ui-micro); font-weight: var(--weight-medium); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--text-muted); }
+.sh[dir="rtl"] .dv-hours thead th { font-family: var(--face); letter-spacing: 0; font-size: var(--ui-caption); text-transform: none; }
+.dv-hours thead th:first-child { inline-size: 28%; }
+.dv-hours tbody th { font-weight: var(--weight-medium); }
+.dv-hours-none { color: var(--text-muted); }
+.dv-hours-new { font-weight: var(--weight-semibold); border-inline-start: 2px solid var(--text); }
+.dv-change { gap: var(--space-3); }
+.dv-pc { display: grid; gap: var(--space-2); justify-items: start; }
+.dv-pc > * { inline-size: 100%; }
+.dv-pc > .btn { inline-size: auto; }
+.dv-pc-head { margin: 0; font-size: var(--ui-body-sm); font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
+.dv-foot-note { flex: 1 1 100%; margin: 0; font-size: var(--ui-small); }
+
+/* the approval sheet's state: the first thing in it */
+.dv-approval { gap: var(--space-4); }
+.dv-state { display: grid; gap: var(--space-2); padding-block-end: var(--space-3); border-block-end: 1px solid var(--hair); }
+.dv-state p { margin: 0; font-size: var(--ui-body-sm); line-height: 1.5; overflow-wrap: anywhere; }
+.dv-state.bad { padding: var(--space-3); border-radius: var(--radius-md); border-block-end: 0; background: var(--bad-soft); }
+.dv-state.fresh { animation: dv-arrive var(--dur-3) var(--ease) both; }
+.dv-state-h { display: flex; align-items: center; gap: var(--space-2); margin: 0; font-size: var(--ui-body); font-weight: var(--weight-semibold); }
+.dv-state-h:focus { outline: none; }
+.dv-state-h.ok::before { content: ""; flex: none; inline-size: 8px; block-size: 8px; border-radius: var(--radius-round); background: var(--volt); }
+.dv-state-h.bad { color: var(--bad); }
+.dv-approval .dv-review-top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); font-size: var(--ui-small); }
+.dv-approval .dv-rule { margin: 0; }
+
+/* confirming a fact */
+.dv-factform { display: grid; gap: var(--space-3); min-inline-size: 0; }
+.dv-factform-h { margin: 0; font-size: var(--ui-title-sm); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-heading); }
+.sh[dir="rtl"] .dv-factform-h { letter-spacing: 0; }
+.dv-factform-intro { margin: 0; font-size: var(--ui-body-sm); }
+.dv-hint { margin: 0; }
+.dv-hrows { display: grid; gap: var(--space-2); }
+.dv-hrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-2) var(--space-3); margin: 0; padding: var(--space-2) var(--space-3); border: 0; border-radius: var(--radius-md); background: var(--surface); box-shadow: 0 0 0 1px var(--hair) inset; min-inline-size: 0; }
+.dv-hday { padding: 0; font-size: var(--ui-body-sm); font-weight: var(--weight-semibold); grid-column: 1; grid-row: 1; }
+.dv-hrow-times { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2) var(--space-3); }
+.dv-closed { display: inline-flex; align-items: center; gap: var(--space-2); min-block-size: 44px; font-size: var(--ui-body-sm); cursor: pointer; }
+.dv-closed input { flex: none; inline-size: 20px; block-size: 20px; margin: 0; accent-color: var(--text); }
+.dv-hrow > .dv-closed { grid-column: 2; grid-row: 1; justify-self: end; }
+
+/* Settings */
+.dv-settings { display: grid; gap: var(--space-5); min-inline-size: 0; }
+.dv-setsec { gap: var(--space-3); }
+.dv-setintro { margin: 0; font-size: var(--ui-body-sm); color: var(--text-muted); line-height: 1.5; }
+.dv-recv { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); padding: var(--space-3); min-block-size: 64px; }
+.dv-recv-who { display: grid; gap: 2px; min-inline-size: 0; font-size: var(--ui-body-sm); }
+.dv-recv .ct-switchrow { font-size: var(--ui-body-sm); }
+.dv-recv .dv-link { min-block-size: 44px; display: inline-flex; align-items: center; }
+.dv-cap { max-inline-size: 22rem; }
+.dv-mgr { display: grid; gap: var(--space-1); margin: 0; padding: var(--space-3); border: 0; border-radius: var(--radius-lg); background: var(--surface); box-shadow: 0 0 0 1px var(--hair) inset; min-inline-size: 0; }
+.dv-mgr legend { padding: 0; margin-block-end: var(--space-1); font-size: var(--ui-body-sm); font-weight: var(--weight-semibold); }
+.dv-pfacts { display: grid; gap: var(--space-2); }
+.dv-pfacts h3 { margin: 0; font-size: var(--ui-body); font-weight: var(--weight-semibold); }
+.dv-fact { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); padding: var(--space-3); }
+.dv-fact-main { display: grid; gap: 2px; min-inline-size: 0; flex: 1 1 14rem; }
+.dv-fact-label { font-size: var(--ui-small); color: var(--text-muted); }
+.dv-fact-value { font-size: var(--ui-body-sm); font-weight: var(--weight-medium); overflow-wrap: anywhere; }
+.dv-fact-none { font-size: var(--ui-body-sm); color: var(--text-muted); }
+.dv-weekly { font-size: var(--ui-body-sm); }

@@ -387,7 +387,7 @@ export default function WorkspaceShell() {
         id: `go-${item.key}`, group: t.go, label: pick(item.label), icon: item.icon,
         run: () => router.push(item.key === "home" ? "/app" : `/app/${item.key}`),
       },
-      ...subItems(item.key).map((v) => ({
+      ...subItems(item.key, state?.can_manage ?? false).map((v) => ({
         id: `go-${item.key}-${v}`, group: t.go, label: `${pick(item.label)} · ${DISCOVERY[lang].views[v]}`, icon: item.icon,
         run: () => router.push(viewHref(v)), current: section === item.key && discoveryView === v,
       })),
@@ -402,7 +402,7 @@ export default function WorkspaceShell() {
     return list;
     // signOut only uses router, which is stable
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allNav, discoveryView, lang, pick, router, section, state?.me.signed_in, t]);
+  }, [allNav, discoveryView, lang, pick, router, section, state?.can_manage, state?.me.signed_in, t]);
 
   const matches = commands.filter((c) => c.label.toLowerCase().includes(query.trim().toLowerCase()));
 
@@ -431,7 +431,7 @@ export default function WorkspaceShell() {
     const count = item.key === "inbox" ? cards.find((c) => c.key === "unanswered")?.value ?? 0 : 0;
     // An item with views beneath it (Discovery) opens them while its section is open; the current
     // view carries the mark and the item itself only says it is open.
-    const withViews = subItems(item.key).length > 0 && section === item.key;
+    const withViews = subItems(item.key, state.can_manage).length > 0 && section === item.key;
     const link = (
       <Link key={item.key} href={item.key === "home" ? "/app" : `/app/${item.key}`}
         className={`sh-link ${section === item.key && !withViews ? "on" : ""} ${withViews ? "open" : ""}`}
@@ -440,7 +440,7 @@ export default function WorkspaceShell() {
         {count > 0 && <span className="sh-count num">{count}</span>}
       </Link>
     );
-    return withViews ? [link, <SubNav key={`${item.key}-views`} itemKey={item.key} lang={lang} view={discoveryView} />] : link;
+    return withViews ? [link, <SubNav key={`${item.key}-views`} itemKey={item.key} lang={lang} view={discoveryView} canManage={state.can_manage} />] : link;
   };
 
   const stepAction = (product: Product, step: Step) => {
@@ -738,7 +738,7 @@ export default function WorkspaceShell() {
             {offline && <div className="error" role="status">{t.offline}</div>}
             <TermsBanner lang={lang} canAccept={state.me.signed_in && (state.me.role === "owner" || state.me.role === "admin")} />
             <BillingBanner lang={lang} canSee={state.me.signed_in && (state.me.role === "owner" || state.me.role === "admin")} />
-            {section === "discovery" && <Suspense fallback={null}><ViewReporter onView={setDiscoveryView} /></Suspense>}
+            {section === "discovery" && <Suspense fallback={null}><ViewReporter onView={setDiscoveryView} canManage={state.can_manage} /></Suspense>}
             {body}
           </main>
         </div>
