@@ -175,7 +175,7 @@ export const homeStagesAr: HomeStages = {
     stations: [
       { key: "discover", name: "الاكتشاف", line: "عميلة تجد المخبز.", card: ["مخبز قرفة", "مخبز · الدوحة", "مفتوح حتى 10 مساءً"], tag: "فريقنا", team: true },
       { key: "convert", name: "الطلبات", line: "تسأل، فيصل الطلب إلى صندوق واحد.", card: ["هل طلبي جاهز؟", "طلب #1442", "تم التأكيد"], tag: "ALYR Chat", team: false },
-      { key: "manage", name: "الإدارة", line: "المكتب يدفع بالآجل، وكل شيء في دفتر الحسابات.", card: ["Marina Desk Co-working", "أقدم دين منذ 35 يوماً", "وعد بالدفع قبل 22 أكتوبر"], tag: "ALYR Accounts", team: false },
+      { key: "manage", name: "الإدارة", line: "المكتب يدفع بالآجل، وكل شيء في دفتر الحسابات.", card: ["Marina Desk Co-working", "أقدم مستحق منذ 35 يوماً", "وعد بالدفع قبل 22 أكتوبر"], tag: "ALYR Accounts", team: false },
       { key: "scale", name: "التوسّع", line: "يُحسب هذا الأسبوع مقابل الذي قبله.", card: ["طلبات هذا الأسبوع", "50", "الأيام نفسها الأسبوع الماضي 45"], tag: "ALYR Agent", team: false },
     ],
   },

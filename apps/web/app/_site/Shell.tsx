@@ -218,34 +218,42 @@ export function Shell({
             <Logo label="ALYR" className="logo" />
             <p className="foot-line">{t.footer.line}</p>
           </div>
-          <nav className="foot-nav foot-products" aria-label={t.footer.products}>
-            {PRODUCTS.map((key) => (
-              <a key={key} href={productPath(key, locale)} aria-current={page === key ? "page" : undefined}><bdi>{name(key)}</bdi></a>
-            ))}
-          </nav>
-          {/* the kinds of business with a page of their own, and the owner guides (ALY-232, ALY-233) */}
-          <nav className="foot-nav foot-sectors" aria-labelledby="foot-sectors-k">
-            <span className="foot-k mono-k" id="foot-sectors-k">{t.sectors.footer}</span>
-            {SECTORS.map((key) => (
-              <a key={key} href={PATHS[sectorPage(key)][locale]} aria-current={page === sectorPage(key) ? "page" : undefined}>{t.sectors.items[key].short}</a>
-            ))}
-          </nav>
-          <nav className="foot-nav foot-site" aria-label={t.footer.links}>
-            {/* what a card provider and a buyer look for first: pricing, terms, refunds, privacy (ALY-301) */}
-            <a href={PATHS.pricing[locale]} aria-current={page === "pricing" ? "page" : undefined}>{t.nav.pricing}</a>
-            <a href={PATHS.terms[locale]} aria-current={page === "terms" ? "page" : undefined}>{t.nav.terms}</a>
-            <a href={PATHS.refund[locale]} aria-current={page === "refund" ? "page" : undefined}>{t.nav.refund}</a>
-            <a href={PATHS.privacy[locale]} aria-current={page === "privacy" ? "page" : undefined}>{t.nav.privacy}</a>
-            <a href={PATHS.guides[locale]} aria-current={page === "guides" ? "page" : undefined}>{t.guides.footer}</a>
-            <a href={PATHS.company[locale]} aria-current={page === "company" ? "page" : undefined}>{t.nav.company}</a>
-            <a href={other} lang={otherLocale} hrefLang={otherLocale} data-lang>{t.nav.other}</a>
-            {WORKSPACE_URL && <a href={WORKSPACE_URL}>{t.footer.workspace}</a>}
-          </nav>
+          {/* Columns, each with its own heading, the way a company's site is laid out: the products,
+              the kinds of business with a page of their own and the owner guides (ALY-232, ALY-233),
+              the company, and the legal pages a card provider and a buyer look for first (ALY-301). */}
+          <div className="foot-cols">
+            <nav className="foot-nav foot-products" aria-labelledby="foot-products-k">
+              <span className="foot-k mono-k" id="foot-products-k">{t.footer.products}</span>
+              {PRODUCTS.map((key) => (
+                <a key={key} href={productPath(key, locale)} aria-current={page === key ? "page" : undefined}><bdi>{name(key)}</bdi></a>
+              ))}
+            </nav>
+            <nav className="foot-nav foot-sectors" aria-labelledby="foot-sectors-k">
+              <span className="foot-k mono-k" id="foot-sectors-k">{t.sectors.footer}</span>
+              {SECTORS.map((key) => (
+                <a key={key} href={PATHS[sectorPage(key)][locale]} aria-current={page === sectorPage(key) ? "page" : undefined}>{t.sectors.items[key].short}</a>
+              ))}
+            </nav>
+            <nav className="foot-nav foot-site" aria-labelledby="foot-company-k">
+              <span className="foot-k mono-k" id="foot-company-k">{t.footer.company}</span>
+              <a href={PATHS.pricing[locale]} aria-current={page === "pricing" ? "page" : undefined}>{t.nav.pricing}</a>
+              <a href={PATHS.guides[locale]} aria-current={page === "guides" ? "page" : undefined}>{t.guides.footer}</a>
+              <a href={PATHS.company[locale]} aria-current={page === "company" ? "page" : undefined}>{t.nav.company}</a>
+              {WORKSPACE_URL && <a href={WORKSPACE_URL}>{t.footer.workspace}</a>}
+            </nav>
+            <nav className="foot-nav foot-site" aria-labelledby="foot-legal-k">
+              <span className="foot-k mono-k" id="foot-legal-k">{t.footer.legalTitle}</span>
+              <a href={PATHS.terms[locale]} aria-current={page === "terms" ? "page" : undefined}>{t.nav.terms}</a>
+              <a href={PATHS.refund[locale]} aria-current={page === "refund" ? "page" : undefined}>{t.nav.refund}</a>
+              <a href={PATHS.privacy[locale]} aria-current={page === "privacy" ? "page" : undefined}>{t.nav.privacy}</a>
+            </nav>
+          </div>
           <div className="foot-legal">
-            <p>
-              <span><span dir="ltr">© 2026</span> {rich(t.footer.rights)}</span>
-            </p>
-            <p>{t.footer.legal}</p>
+            <div className="foot-legal-text">
+              <p><span dir="ltr">© 2026</span> {rich(t.footer.rights)}</p>
+              <p>{t.footer.legal}</p>
+            </div>
+            <a className="foot-lang" href={other} lang={otherLocale} hrefLang={otherLocale} data-lang>{t.nav.other}</a>
           </div>
         </div>
         {/* The Doha Corniche in line, edge to edge, ending the page (D-162). Decoration only; the

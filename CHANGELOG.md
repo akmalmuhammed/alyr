@@ -6,6 +6,9 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 
 ## Unreleased
 
+## v0.3.18 (9 Nov 2026)
+- The footer is four columns, and the ALYR Agent's Arabic is corrected (D-167, ALY-330; no migration, no new dependency): Products, For your business, Company and Legal each under their own heading (two across on a phone), the language link in the bottom bar; the Agent's Arabic comparisons, amounts owed, longest wait, day names, rank heading and chart sentence are corrected in the engine, and the six sample files are regenerated from it. The Sunday report card's wording is unchanged.
+
 ## v0.3.17 (9 Nov 2026)
 - Onboarding starts with a call or a meeting, and nothing says we come to the shop (D-165, ALY-330; no migration, no new dependency): the homepage meta and share-card facts, every product, sector, guide, Docs and Shelf closing call ("Send us a message, and we set up a call or a meeting…"), the questions, price lines, the mailto template ("Best time for a call") and the `llms` files; the labels "Done by our team", "Our team does", the product state tags, "Set up for you" and "With every product" are gone; the scenes, agent actions and times agree with each other; the homepage has no FAQPage block; the site's own Arabic is corrected after an independent review (the Agent screens' generated Arabic is unchanged).
 
