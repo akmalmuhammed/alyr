@@ -113,7 +113,7 @@ def redirect_matches(registered: list[str] | tuple[str, ...], presented: str) ->
 
 def _row(record) -> Client:
     return Client(
-        record["client_id"], record["kind"], record["name"], tuple(record["redirect_uris"]),
+        record["app_id"], record["kind"], record["name"], tuple(record["redirect_uris"]),
         record["client_uri"],
     )
 
@@ -156,7 +156,7 @@ async def register(db: Database, body: dict) -> dict:
             await conn.execute(
                 "delete from mcp_clients c where c.kind = 'dcr' "
                 "and c.created_at < now() - make_interval(days => $1) "
-                "and not exists (select 1 from mcp_grants g where g.client_id = c.client_id)",
+                "and not exists (select 1 from mcp_grants g where g.app_id = c.app_id)",
                 UNUSED_DAYS,
             )
             total = await conn.fetchval("select count(*) from mcp_clients")
@@ -166,7 +166,7 @@ async def register(db: Database, body: dict) -> dict:
                 )
         client_id = tokens.new(tokens.CLIENT)
         await conn.execute(
-            "insert into mcp_clients (client_id, kind, name, redirect_uris, client_uri, "
+            "insert into mcp_clients (app_id, kind, name, redirect_uris, client_uri, "
             "expires_at) values ($1, 'dcr', $2, $3, $4, now() + interval '3650 days')",
             client_id, name, unique, site,
         )
@@ -246,7 +246,7 @@ async def lookup(db: Database, client_id: str) -> Client:
         raise ClientError("invalid_client", "unknown app")
     async with db.unscoped() as conn:
         found = await conn.fetchrow(
-            "select * from mcp_clients where client_id = $1 and expires_at > now()", client_id
+            "select * from mcp_clients where app_id = $1 and expires_at > now()", client_id
         )
     if found is not None:
         return _row(found)
@@ -257,9 +257,9 @@ async def lookup(db: Database, client_id: str) -> Client:
     client, keep = await _fetch_document(client_id)
     async with db.unscoped() as conn:
         await conn.execute(
-            "insert into mcp_clients (client_id, kind, name, redirect_uris, client_uri, "
+            "insert into mcp_clients (app_id, kind, name, redirect_uris, client_uri, "
             "fetched_at, expires_at) values ($1, 'cimd', $2, $3, $4, now(), now() + $5) "
-            "on conflict (client_id) do update set name = excluded.name, "
+            "on conflict (app_id) do update set name = excluded.name, "
             "redirect_uris = excluded.redirect_uris, client_uri = excluded.client_uri, "
             "fetched_at = now(), expires_at = excluded.expires_at",
             client.client_id, client.name, list(client.redirect_uris), client.client_uri, keep,

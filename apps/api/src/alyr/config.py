@@ -347,6 +347,9 @@ def poll_cache_seconds(settings: Settings) -> float:
 def mcp_on(settings: Settings) -> bool:
     """Whether the connector answers at all: on a developer's machine unless switched off, and
     everywhere else only when the founder has switched it on (`ALYR_MCP_ENABLED`)."""
-    if settings.mcp_enabled is not None:
-        return settings.mcp_enabled
-    return settings.env == "local"
+    on = settings.mcp_enabled if settings.mcp_enabled is not None else settings.env == "local"
+    # Fails safe: outside a developer's machine the issuer must be https (the authorization
+    # specification's rule), and a missing or misspelt address closes the connector.
+    if on and settings.env != "local" and not settings.mcp_public_url.startswith("https://"):
+        return False
+    return on

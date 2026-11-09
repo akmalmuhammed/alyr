@@ -180,7 +180,8 @@ def test_a_modern_request_names_what_is_wrong_in_the_specifications_words(world)
 def test_a_token_for_one_business_reads_that_business_and_never_another(world):
     shop, app = world
     other = new_shop()
-    sql("insert into contacts (tenant_id, phone, name) values ($1, '+97455500111', 'Aisha Al-Mohannadi')",
+    sql("insert into contacts (tenant_id, phone, name) "
+        "values ($1, '+97455500111', 'Aisha Al-Mohannadi')",
         shop.tenant_id)
     sql("insert into contacts (tenant_id, phone, name) values ($1, '+97455500999', 'Bilal Rahman')",
         other.tenant_id)
@@ -297,7 +298,8 @@ def test_the_arguments_are_checked_before_anything_runs(world):
 
 def test_a_customer_is_shown_by_first_name_and_three_digits_and_nothing_else(world):
     shop, app = world
-    sql("insert into contacts (tenant_id, phone, name) values ($1, '+97455512345', 'Fatima Al-Kuwari')",
+    sql("insert into contacts (tenant_id, phone, name) "
+        "values ($1, '+97455512345', 'Fatima Al-Kuwari')",
         shop.tenant_id)
     token = connect_all(shop, app).access
     result = app.result(token, "test_customer_name")

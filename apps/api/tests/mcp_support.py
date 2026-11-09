@@ -1,4 +1,4 @@
-"""Helpers for the connector's tests (spec 067): a client that completes the whole sign-in the way an
+"""Helpers for the connector's tests (spec 067): a client that completes the whole sign-in as an
 app does, speaks MCP in both eras, and a shop with its people.
 
 Everything goes through the real path: PostgreSQL, the HTTP API, the email code (read from the

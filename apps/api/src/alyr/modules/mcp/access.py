@@ -82,7 +82,7 @@ async def authenticate(db: Database, header: str | None, settings: Settings) -> 
     async with db.tenant(row["tenant_id"]) as conn:
         grant = await conn.fetchrow(
             "select g.*, c.name as client_name from mcp_grants g join mcp_clients c "
-            "on c.client_id = g.client_id where g.id = $1", row["grant_id"],
+            "on c.app_id = g.app_id where g.id = $1", row["grant_id"],
         )
         if (
             grant is None or grant["revoked_at"] is not None
@@ -109,7 +109,7 @@ async def authenticate(db: Database, header: str | None, settings: Settings) -> 
         )
     return Principal(
         grant["id"], row["tenant_id"], grant["user_id"], member["name"], member["role"],
-        grant["client_id"], grant["client_name"], frozenset(grant["scopes"]),
+        grant["app_id"], grant["client_name"], frozenset(grant["scopes"]),
     )
 
 

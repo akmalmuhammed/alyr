@@ -357,6 +357,7 @@ class McpServer:
         reply = await self._execute(conn, caller, found, plain, outcome)
         if outcome["result"] == "ok":
             await conn.execute("insert into mcp_signals (kind, shop) values ('write', $1)", tenant)
+            await conn.execute("delete from mcp_signals where at < now() - interval '2 days'")
         return reply
 
     async def _preview(self, conn, caller: Caller, p: Principal, found, plain: dict,

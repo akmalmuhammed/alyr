@@ -103,7 +103,8 @@ def test_registration_makes_a_public_client_and_never_a_secret(world):
     {"client_name": "x", "redirect_uris": ["https://user:pw@ok.example/cb"]},
     {"client_name": "x", "redirect_uris": ["javascript:alert(1)"]},
     {"client_name": "x", "redirect_uris": []},
-    {"client_name": "x", "redirect_uris": [CLAUDE], "token_endpoint_auth_method": "client_secret_post"},
+    {"client_name": "x", "redirect_uris": [CLAUDE],
+     "token_endpoint_auth_method": "client_secret_post"},
     {"client_name": "x", "redirect_uris": [CLAUDE], "grant_types": ["client_credentials"]},
 ])
 def test_registration_refuses_what_it_should(world, body):
@@ -171,7 +172,7 @@ def test_a_client_id_that_is_an_address_is_read_and_shown(world, monkeypatch):
     done = app.consent(after)
     code = parse_qs(urlsplit(done.headers["location"]).query)["code"][0]
     assert app.exchange(code, verifier).access
-    assert sql("select kind from mcp_clients where client_id = $1", DOC_URL)[0]["kind"] == "cimd"
+    assert sql("select kind from mcp_clients where app_id = $1", DOC_URL)[0]["kind"] == "cimd"
 
 
 @pytest.mark.parametrize("document", [
@@ -532,11 +533,11 @@ def test_at_most_ten_permissions_per_person_stay_alive(world):
 def test_a_sign_in_request_is_spent_when_used_and_dead_when_it_runs_out(world):
     shop, app = world
     app.connect(person(shop))
-    used = sql("select used_at from mcp_auth_requests where client_id = $1", app.client_id)
+    used = sql("select used_at from mcp_auth_requests where app_id = $1", app.client_id)
     assert used and all(r["used_at"] for r in used)
     page = app.start(pkce()[1])
     sql("update mcp_auth_requests set expires_at = now() - interval '1 second' "
-        "where client_id = $1", app.client_id)
+        "where app_id = $1", app.client_id)
     sent = app.http.post("/oauth/authorize/email",
                          data={"req": hidden(page.text, "req"), "email": person(shop)})
     assert sent.status_code == 400

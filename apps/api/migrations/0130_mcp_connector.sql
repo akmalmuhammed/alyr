@@ -46,7 +46,7 @@ end $$;
 -- read from the metadata document at its own HTTPS address (a client ID that is a URL). What it
 -- says about itself (name, addresses) is shown to the person and never used to decide anything.
 create table mcp_clients (
-    client_id text primary key check (length(client_id) between 8 and 500),
+    app_id text primary key check (length(app_id) between 8 and 500),
     kind text not null check (kind in ('dcr', 'cimd')),
     name text not null check (length(name) between 1 and 80),
     redirect_uris text[] not null check (cardinality(redirect_uris) between 1 and 10),
@@ -66,7 +66,7 @@ create table mcp_auth_requests (
     id uuid primary key default gen_random_uuid(),
     secret_hash text not null unique check (secret_hash ~ '^[0-9a-f]{64}$'),
     binder_hash text not null check (binder_hash ~ '^[0-9a-f]{64}$'),
-    client_id text not null references mcp_clients (client_id) on delete cascade,
+    app_id text not null references mcp_clients (app_id) on delete cascade,
     redirect_uri text not null,
     code_challenge text not null check (length(code_challenge) between 43 and 128),
     state text check (state is null or length(state) <= 1000),
@@ -109,7 +109,7 @@ create table mcp_grants (
     tenant_id uuid not null
         default nullif(current_setting('app.tenant_id', true), '')::uuid references tenants (id),
     user_id uuid not null references users (id) on delete cascade,
-    client_id text not null references mcp_clients (client_id) on delete cascade,
+    app_id text not null references mcp_clients (app_id) on delete cascade,
     scopes text[] not null check (cardinality(scopes) >= 1),
     resource text not null,
     place_hash text not null default '',
@@ -121,7 +121,7 @@ create table mcp_grants (
     revoked_why text check (revoked_why is null or length(revoked_why) <= 80)
 );
 create index mcp_grants_tenant on mcp_grants (tenant_id, created_at desc);
-create index mcp_grants_person on mcp_grants (tenant_id, user_id, client_id);
+create index mcp_grants_person on mcp_grants (tenant_id, user_id, app_id);
 
 -- ── Codes, access tokens and refresh tokens ───────────────────────────────────────────────────
 create table mcp_tokens (

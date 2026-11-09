@@ -5,6 +5,7 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- The MCP connector, foundation (D-170, ALY-286, ALY-288, ALY-289, ALY-293, spec 067, migration 0130; no new dependency; **off**: nothing answers until `ALYR_MCP_ENABLED` is set, and a business must opt in): an owner's own Claude or ChatGPT can sign in with the email code (OAuth 2.1 with PKCE, registration by client-ID document or Dynamic Client Registration), choose a business, and call tools over MCP (the specification 2026-07-28 and the 2025 revisions the apps still speak) on the same actions the workspace uses. One read tool (`hello`); changing tools need a preview and a confirm token; customer text is marked as data; daily caps; every call on the activity record (channel `mcp`); a pause, an opt-in and revoke in the workspace's API; two alert rules. No screen, no real tools and no message to a customer yet.
 
 ## v0.3.16 (9 Nov 2026)
 - The footer no longer says "ALYR uses the WhatsApp Business Platform. ALYR is not affiliated with, or endorsed by, WhatsApp or Meta." (D-164, ALY-330; no migration, no new dependency): removed from every public page in English and Arabic and from the `llms.txt` files; the site still never says or implies a partnership.

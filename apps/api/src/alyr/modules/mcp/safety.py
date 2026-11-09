@@ -58,7 +58,7 @@ def untrusted(text, source: str, limit: int = UNTRUSTED_MAX) -> dict:
 
 
 def first_name(name) -> str:
-    return clean(name).split(" ")[0][:NAME_MAX] if clean(name) else ""
+    return clean(name).split(" ")[0] if clean(name) else ""
 
 
 def person(name, phone) -> dict:

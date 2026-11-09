@@ -127,7 +127,7 @@ async def begin(
     async with db.unscoped() as conn, conn.transaction():
         await conn.execute("delete from mcp_auth_requests where expires_at < now()")
         await conn.execute(
-            "insert into mcp_auth_requests (secret_hash, binder_hash, client_id, redirect_uri, "
+            "insert into mcp_auth_requests (secret_hash, binder_hash, app_id, redirect_uri, "
             "code_challenge, state, scopes, resource, lang, address_hash, expires_at) "
             "values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, "
             "now() + make_interval(mins => $11))",
@@ -151,7 +151,7 @@ async def load(db: Database, secret: str, binder: str) -> AuthRequest | None:
     if row is None or not tokens.same(row["binder_hash"], tokens.digest(binder)):
         return None
     return AuthRequest(
-        row["id"], row["client_id"], row["redirect_uri"], row["code_challenge"], row["state"],
+        row["id"], row["app_id"], row["redirect_uri"], row["code_challenge"], row["state"],
         list(row["scopes"]), row["resource"], row["lang"], row["email"], row["user_id"],
         row["verified_at"] is not None, row["address_hash"],
     )
@@ -241,7 +241,7 @@ async def approve(
         for old in live[MAX_LIVE_GRANTS - 1:]:
             await _revoke(conn, old["id"], "replaced", actor, "mcp")
         grant_id = await conn.fetchval(
-            "insert into mcp_grants (user_id, client_id, scopes, resource, place_hash, expires_at)"
+            "insert into mcp_grants (user_id, app_id, scopes, resource, place_hash, expires_at)"
             " values ($1, $2, $3, $4, $5, now() + make_interval(days => $6)) returning id",
             req.user_id, req.client_id, req.scopes, req.resource, req.address_hash, GRANT_DAYS,
         )
@@ -366,7 +366,7 @@ async def exchange_code(
         )
         grant = await conn.fetchrow(
             "select g.*, c.name as client_name from mcp_grants g join mcp_clients c "
-            "on c.client_id = g.client_id where g.id = $1 for update", row["grant_id"],
+            "on c.app_id = g.app_id where g.id = $1 for update", row["grant_id"],
         )
         member = await conn.fetchrow(
             "select u.name from memberships m join users u on u.id = m.user_id "
@@ -384,7 +384,7 @@ async def exchange_code(
             if (
                 record["expires_at"] <= datetime.now(UTC) or grant["revoked_at"] is not None
                 or grant["expires_at"] <= datetime.now(UTC) or member is None
-                or grant["client_id"] != client_id or record["redirect_uri"] != redirect_uri
+                or grant["app_id"] != client_id or record["redirect_uri"] != redirect_uri
                 or not _pkce(verifier, record["code_challenge"])
             ):
                 outcome = bad
@@ -418,7 +418,7 @@ async def refresh(
         )
         grant = await conn.fetchrow(
             "select g.*, c.name as client_name from mcp_grants g join mcp_clients c "
-            "on c.client_id = g.client_id where g.id = $1 for update", row["grant_id"],
+            "on c.app_id = g.app_id where g.id = $1 for update", row["grant_id"],
         )
         member = await conn.fetchrow(
             "select u.name from memberships m join users u on u.id = m.user_id "
@@ -437,7 +437,7 @@ async def refresh(
             outcome = bad
         elif (
             record["expires_at"] <= datetime.now(UTC) or grant["expires_at"] <= datetime.now(UTC)
-            or grant["client_id"] != client_id
+            or grant["app_id"] != client_id
         ):
             outcome = bad
         elif asked_scope and not set(asked_scope.split()) <= set(grant["scopes"]):
@@ -465,7 +465,7 @@ async def revoke_token(db: Database, value: str) -> None:
     async with db.tenant(row["tenant_id"]) as conn:
         grant = await conn.fetchrow(
             "select g.*, c.name as client_name, u.name as user_name from mcp_grants g "
-            "join mcp_clients c on c.client_id = g.client_id join users u on u.id = g.user_id "
+            "join mcp_clients c on c.app_id = g.app_id join users u on u.id = g.user_id "
             "where g.id = $1", row["grant_id"],
         )
         if grant is not None:
@@ -483,8 +483,8 @@ def _when(value) -> str | None:
 async def grants(conn: asyncpg.Connection) -> list[dict]:
     rows = await conn.fetch(
         "select g.id, g.scopes, g.created_at, g.expires_at, g.last_used_at, g.revoked_at, "
-        "g.revoked_by, g.revoked_why, c.name as client, c.client_id, c.kind, u.name as person, "
-        "u.id as person_id from mcp_grants g join mcp_clients c on c.client_id = g.client_id "
+        "g.revoked_by, g.revoked_why, c.name as client, c.app_id, c.kind, u.name as person, "
+        "u.id as person_id from mcp_grants g join mcp_clients c on c.app_id = g.app_id "
         "join users u on u.id = g.user_id order by g.created_at desc limit 200"
     )
     now = datetime.now(UTC)
