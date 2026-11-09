@@ -17,6 +17,8 @@ import { BillingBanner } from "../../_workspace/BillingBanner";
 import { TermsBanner } from "../../_workspace/TermsBanner";
 import { keepLang, savedLang, type Lang } from "../../_workspace/lang";
 import { ConnectLink, ConnectSettings } from "../../_workspace/ConnectSettings";
+import { Mcp } from "../../_workspace/Mcp";
+import { McpLink } from "../../_workspace/McpLink";
 import { usePolling } from "../../_workspace/poll";
 import { STEPS_LEFT, checksLeft, withoutSetupRow } from "../../_workspace/goLive";
 import { AgentDashboard } from "../../../_agent/AgentDashboard";
@@ -420,9 +422,9 @@ export default function WorkspaceShell() {
   const shopName = lang === "ar" && state.business.name_ar ? state.business.name_ar : state.business.name;
   const pending = state.products.filter((p) => p.status === "active" && p.steps.some((s) => !s.done));
   const whatsapp = state.connections.find((c) => c.key === "whatsapp");
-  // The connection screen (ALY-142) lives under Connections in the breadcrumb.
+  // The two connection screens (ALY-142, ALY-292) live under Connections in the breadcrumb.
   const current = allNav.find((n) => n.key === section)
-    ?? (section === "connect" ? allNav.find((n) => n.key === "connections") : undefined);
+    ?? (section === "connect" || section === "connect-ai" ? allNav.find((n) => n.key === "connections") : undefined);
   const documentsOn = state.modules.includes("documents");
   const activeProducts = state.products.filter((p) => p.status === "active");
   const roleLabel = state.me.signed_in ? t.roles[state.me.role] ?? state.me.role.charAt(0).toUpperCase() + state.me.role.slice(1) : t.demo;
@@ -638,12 +640,16 @@ export default function WorkspaceShell() {
         {documentsOn && state.can_manage && (
           <ConnectLink lang={lang} href="/app/connect" icon={<Icon name="plug" />} arrow={<Icon name="arrow" className="sh-ico" />} />
         )}
+        {/* The connected-apps screen (ALY-292): drawn only where the API says the connector is on. */}
+        <McpLink lang={lang} canManage={state.can_manage} icon={<Icon name="plug" />} arrow={<Icon name="arrow" className="sh-ico" />} />
       </>
     );
   } else if (section === "unsent") {
     body = <NotSent lang={lang} />;
   } else if (section === "connect" && documentsOn) {
     body = <ConnectSettings lang={lang} canManage={state.can_manage} />;
+  } else if (section === "connect-ai") {
+    body = <Mcp lang={lang} role={state.me.role} />;
   } else if (section === "catalog" && enabledScreens.has("catalog")) {
     // Named by the shop's type of business: Menu, Products, Price list (D-039, ALY-107).
     body = <Catalog lang={lang} title={current ? pick(current.label) : t.productsTitle} show={show} onRenamed={() => void load()} />;
