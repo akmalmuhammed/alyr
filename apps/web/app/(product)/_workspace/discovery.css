@@ -262,7 +262,7 @@
 .dv-hours thead th { border-block-start: 0; font-family: var(--font-ui-mono); font-size: var(--ui-micro); font-weight: var(--weight-medium); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--text-muted); }
 .sh[dir="rtl"] .dv-hours thead th { font-family: var(--face); letter-spacing: 0; font-size: var(--ui-caption); text-transform: none; }
 .dv-hours thead th:first-child { inline-size: 28%; }
-.dv-hours tbody th { font-family: inherit; font-size: inherit; font-weight: var(--weight-medium); letter-spacing: 0; text-transform: none; background: transparent; color: var(--text); }
+.dv-hours tbody th { font-family: var(--face); font-size: inherit; font-weight: var(--weight-medium); letter-spacing: 0; text-transform: none; background: transparent; color: var(--text); }
 .dv-hours-none { color: var(--text-muted); }
 .dv-hours-new { font-weight: var(--weight-semibold); border-inline-start: 1px solid var(--line-strong); }
 .dv-change { gap: var(--space-3); }

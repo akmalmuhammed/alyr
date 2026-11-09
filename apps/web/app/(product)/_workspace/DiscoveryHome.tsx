@@ -182,7 +182,8 @@ export function DiscoveryHome({ lang, canManage, push, onConnection }: {
   const failed = !running && o.last_run?.status === "failed" ? o.last_run : null;
   const open = (f: Finding) => setSheet(f);
   // While a change waits for this person, the one Volt button is the one that reviews it.
-  const waitingN = o.proposals?.waiting ?? 0;
+  // (Before a first check-up there is nothing to review, and the one Volt button is the check-up.)
+  const waitingN = state === "noRun" ? 0 : (o.proposals?.waiting ?? 0);
   const runMain = waitingN === 0;
   const runButton = tooSoon !== null
     ? <p className="dv-toosoon" role="status">{t.tooSoon(tooSoon)}</p>

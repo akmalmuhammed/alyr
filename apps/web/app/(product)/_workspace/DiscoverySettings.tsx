@@ -79,15 +79,17 @@ export function DiscoverySettings({ lang, push }: { lang: Lang; push: Push }) {
         {!s.template_ready && <p className="dv-statusline" role="note">{t.templateNote}</p>}
       </section>
 
-      <section className="dv-block dv-setsec" aria-labelledby="dv-set-mgr">
-        <h2 id="dv-set-mgr">{t.managersTitle}</h2>
-        <p className="dv-setintro">{t.managersIntro}</p>
-        {staff.length === 0 ? (
-          <p className="dv-slot"><span className="dv-pending" aria-hidden="true" />{t.noStaff} <Link className="dv-link" href="/app/team">{t.openTeam}</Link></p>
-        ) : (
-          everyPlace.map((place) => <Managers key={place.id} lang={lang} place={place} staff={staff} push={push} />)
-        )}
-      </section>
+      {everyPlace.some((place) => place.managers !== null) && (
+        <section className="dv-block dv-setsec" aria-labelledby="dv-set-mgr">
+          <h2 id="dv-set-mgr">{t.managersTitle}</h2>
+          <p className="dv-setintro">{t.managersIntro}</p>
+          {staff.length === 0 ? (
+            <p className="dv-slot"><span className="dv-pending" aria-hidden="true" />{t.noStaff} <Link className="dv-link" href="/app/team">{t.openTeam}</Link></p>
+          ) : (
+            everyPlace.map((place) => place.managers !== null && <Managers key={place.id} lang={lang} place={place} staff={staff} push={push} />)
+          )}
+        </section>
+      )}
 
       <section className="dv-block dv-setsec" aria-labelledby="dv-set-facts">
         <h2 id="dv-set-facts">{t.detailsTitle}</h2>
@@ -111,7 +113,7 @@ export function DiscoverySettings({ lang, push }: { lang: Lang; push: Push }) {
 
 function Managers({ lang, place, staff, push }: { lang: Lang; place: Place; staff: TeamMember[]; push: Push }) {
   const t = T[lang];
-  const [chosen, setChosen] = useState<string[]>(() => place.managers.map((m: Manager) => m.user_id));
+  const [chosen, setChosen] = useState<string[]>(() => (place.managers ?? []).map((m: Manager) => m.user_id));
   const [busy, setBusy] = useState(false);
 
   async function toggle(id: string, on: boolean) {

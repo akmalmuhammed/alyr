@@ -122,8 +122,9 @@ const ready = (selector, what) => until(`!!document.querySelector(${norm(selecto
 const h1 = () => js("document.querySelector('.dv h1')?.textContent ?? ''");
 const signIn = async () => {
   if (!args.signin) return;
-  const status = await js("fetch('/api/workspace').then(r => r.status)");
-  if (status !== 401) return;
+  // A workspace that answers 200 with `signed_in: false` is the public demo: it is not a person.
+  const signed = await js("fetch('/api/workspace').then(r => (r.ok ? r.json() : null)).then(w => !!(w && w.me && w.me.signed_in))");
+  if (signed) return;
   sql(`delete from login_codes where email = '${args.signin}'`);
   await js(`fetch('/api/auth/code', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({email: ${norm(args.signin)}})}).then(r => r.json()).then(d => fetch('/api/auth/verify', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({email: ${norm(args.signin)}, code: d.dev_code})})).then(r => r.status)`);
 };
@@ -221,7 +222,7 @@ async function home() {
   await ready(".dv-score", "the score line");
   check((await has(T0.doNext)) || (await has(T0.caughtUpTitle)), "Home shows the one card (or says nothing is left)");
   check((await count(".dv-card")) <= 1, "there is one card, never two");
-  const waitingN = CONTROL ? await js("fetch('/api/discovery/proposals').then(r => r.json()).then(d => d.waiting)") : 0;
+  const waitingN = await js("fetch('/api/discovery/proposals').then(r => r.ok ? r.json() : { waiting: 0 }).then(d => d.waiting)");
   const mainWord = waitingN > 0 ? T0.reviewChanges(waitingN) : T0.runCheckup;
   check((await count(".btn.volt")) === 1 && (await js(`document.querySelector('.btn.volt').textContent.trim()`)) === mainWord, `the page's one Volt button is "${mainWord}"`);
   if (waitingN > 0) check((await js("[...document.querySelectorAll('.dv-score-act .btn')].map(b => b.textContent.trim()).join('|')")) === `${mainWord}|${T0.runCheckup}`, `while a change waits, "${T0.runCheckup}" is its outlined twin`);
@@ -299,7 +300,7 @@ async function realStates() {
   await click(btn(T0.runCheckup));
   await until("!!document.querySelector('.dv-toosoon') || !!document.querySelector('.dv-running')", "the answer to a second check-up", 15000);
   if (await exists(".dv-toosoon")) {
-    check((await js("document.querySelector('.dv-toosoon').textContent")).includes(String(T0.tooSoon(10)).replace(/\d+/, "").trim().slice(0, 6)) && (await count(".btn.volt")) === 0, "too soon: it says how long to wait, in place of a button that cannot work");
+    check((await js("document.querySelector('.dv-toosoon').textContent")).includes(String(T0.tooSoon(10)).replace(/\d+/, "").trim().slice(0, 6)) && (await count(".btn.volt")) === ((await waitingNow()) > 0 ? 1 : 0), "too soon: it says how long to wait, in place of a button that cannot work (the one Volt button left is the review of a waiting change)");
     await shot("24-too-soon");
     await targets("too soon"); await axe("too-soon", null, [".sh-side", ".sh-top"]);
   } else {
@@ -352,8 +353,10 @@ async function liveRun() {
 // ── 3. Home in each state (the fixture puts the shop in them) ─────────────────────────────────────
 async function states() {
   if (!CONTROL) return realStates();
+  // Phase 1's states are checked with no change waiting, so the one Volt button is the check-up; Phase 2's are in their own checks.
+  const fresh = async (state = {}) => { await reset(); await control({ noProposals: true, ...state }); };
   // no connection
-  await reset(); await control({ connection: null });
+  await fresh({ connection: null });
   await open("home");
   await ready(".dv-empty", "the empty screen");
   check((await has(T0.noConnectionTitle)) && (await count(".dv-slots .dv-slot")) === 3, "no connection: a real screen with its three dashed slots");
@@ -366,10 +369,10 @@ async function states() {
   check(true, "turning it on leaves the empty screen");
 
   // an agent sees the work and cannot mark it
-  await reset(); await control({ role: "agent", connection: null });
+  await fresh({ role: "agent", connection: null });
   await open("home"); await ready(".dv-empty", "the empty screen for an agent");
   check((await has(T0.noConnectionAgent)) && (await count(".btn.volt")) === 0, "an agent is told to ask the owner, and has no button that cannot work");
-  await reset(); await control({ role: "agent" });
+  await fresh({ role: "agent" });
   await open("home"); await ready(".dv-card", "the card for an agent");
   check((await js("[...document.querySelectorAll('.dv-card .btn')].map(b => b.textContent.trim()).join('|')")).split('|').every((x) => x === "" || x === T0.reviewChange) && (await has(T0.ownerMarks)), "an agent sees the card and not its two actions");
   check((await count(".btn.volt")) === 1 && (await js("document.querySelector('.btn.volt').textContent.trim()")) === T0.runCheckup, "an agent may still run a check-up, and it is the one Volt button (they have no change to review)");
@@ -378,7 +381,7 @@ async function states() {
   await b.key("Escape");
 
   // no check-up yet, then the first one, live
-  await reset(); await control({ noRun: true });
+  await fresh({ noRun: true });
   await open("home"); await ready(".dv-empty", "the no-run screen");
   check((await has(T0.noRunTitle)) && (await count(".dv-slots .dv-slot")) === 3, "no check-up yet: a real screen with its slots");
   check((await js("document.querySelector('.btn.volt').textContent.trim()")) === T0.runCheckup, "no check-up yet: the Volt button is Run check-up");
@@ -387,7 +390,7 @@ async function states() {
   await liveRun();
 
   // too soon
-  await reset(); await control({ tooSoon: true });
+  await fresh({ tooSoon: true });
   await open("home"); await ready(".dv-score", "the score line");
   await click(btn(T0.runCheckup));
   await ready(".dv-toosoon", "the too-soon line");
@@ -396,7 +399,7 @@ async function states() {
   await targets("too soon"); await axe("too-soon", null, [".sh-side", ".sh-top"]);
 
   // failed
-  await reset(); await control({ fail: true });
+  await fresh({ fail: true });
   await open("home"); await ready(".dv-score", "the score line");
   await click(btn(T0.runCheckup));
   await ready(".dv-failed", "the failure");
@@ -410,7 +413,7 @@ async function states() {
   await noSideScroll("the failure"); await targets("the failure"); await axe("failed", null, [".sh-side", ".sh-top"]); await latinInArabic("the failure");
 
   // module off
-  await reset(); await control({ moduleOff: true });
+  await fresh({ moduleOff: true });
   await open("home"); await ready(".dv-problem", "the refusal");
   check((await has(T0.moduleOff)), "module off: Home says so in words");
   await open("todo"); await ready(".dv-problem", "the refusal on To do");
@@ -421,7 +424,7 @@ async function states() {
   await reset();
 
   // everything done
-  await reset();
+  await fresh();
   await js("Promise.all(['f01','f02','f03','f04','f05','f06','f07','f08','f09','f10'].map(id => fetch('/api/discovery/findings/' + id + '/status', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ status: 'owner_done' }) })))");
   await open("home"); await ready(".dv-caught", "the all-done screen");
   check((await has(T0.caughtUpTitle)) && (await count(".dv-card")) === 0 && (await count(".btn.volt")) === 1, "all done: it says nothing is left and keeps the one button");
@@ -932,7 +935,7 @@ async function findingSheet() {
   await click("document.querySelector('.dv-factform .btn.volt')");
   await until("!document.querySelector('.ct-sheet .dv-factform') && !!document.querySelector('.ct-sheet .dv-change')", "the change to appear in the same sheet", 8000);
   check((await count(".ct-sheet .dv-pc")) === 1 && (await js("document.querySelector('.ct-sheet-foot .btn.volt')?.textContent.trim()")) === T0.reviewAndApprove, "saving the fact makes the change appear in the same sheet, ready to review");
-  const sentFact = await js("fetch('/api/discovery/proposals?status=all').then(r => r.json()).then(d => d.items.find(p => p.id === 'pr01'))");
+  const sentFact = await js(`fetch('/api/discovery/proposals?status=all&lang=${LANG}').then(r => r.json()).then(d => d.items.find(p => p.id === 'pr01'))`);
   check(sentFact.after.lines.length === 7 && sentFact.after.lines[6].text === (LANG === "ar" ? "مغلق" : "closed"), "the change is made from what was typed: Friday closed");
   await shot("76-fact-saved");
   await b.key("Escape");
@@ -1048,6 +1051,178 @@ async function roles2() {
   await reset();
 }
 
+
+// ── Phase 2 against the real API (no fixture): the same screens, the states a real check-up reaches ──
+async function runCheckupNow() {
+  for (let i = 0; i < 20; i++) {
+    const status = await js("fetch('/api/discovery/runs', { method: 'POST' }).then(r => r.status)");
+    if (status !== 429) break;
+    await sleep(2500);
+  }
+  await until("fetch('/api/discovery/runs/latest').then(r => r.json()).then(r => r.status === 'done' || r.status === 'failed')", "the check-up to finish", 60000);
+}
+
+async function realOwner() {
+  await runCheckupNow();
+  let all = await listAll();
+  let live = all.filter((p) => ["proposed", "approved"].includes(p.status));
+  check(live.length > 0, `a check-up makes changes to approve (${live.length}: ${[...new Set(live.map((p) => p.type))].join(", ")})`);
+  check(live.every((p) => /^[0-9a-f]{64}$/.test(p.change_hash) && p.can.approve === true), `each carries its 64-character hash and the owner may approve it${live.some((p) => p.can.approve !== true) ? ` (${JSON.stringify(live.find((p) => p.can.approve !== true).can)} for ${live.find((p) => p.can.approve !== true).status})` : ""}`);
+  check(live.every((p) => p.before.text !== undefined && p.after.text !== undefined && p.where && p.field_label), "each has its before, after, place and words");
+
+  // Home: the one Volt button
+  await open("home"); await ready(".dv-score", "Home");
+  const waiting = await waitingNow();
+  check((await js("document.querySelector('.btn.volt').textContent.trim()")) === T0.reviewChanges(waiting) && (await count(".btn.volt")) === 1, `Home's one Volt button is "${T0.reviewChanges(waiting)}"`);
+  await shot("90-real-home");
+  await noSideScroll("Home (real)"); await targets("Home (real)"); await axe("home-real", null, [".sh-side", ".sh-top"]); await latinInArabic("Home (real)");
+  if (await exists(".dv-card .dv-cardchange")) {
+    await click(btn(T0.reviewChange, "document.querySelector('.dv-card')"));
+    await ready(".ct-sheet .dv-approval", "the sheet from the card");
+    await sheetChecks("the sheet from the card (real)");
+    await b.key("Escape");
+  }
+
+  // Proposals
+  await open("proposals"); await ready(".dv-prow", "the rows");
+  check((await count(".dv-prow")) === live.length && (await js("document.querySelector('.dv-count').textContent")) === T0.proposalCount("live", live.length), "Proposals lists what the API lists, counted in words");
+  await shot("91-real-proposals");
+  await noSideScroll("Proposals (real)"); await targets("Proposals (real)"); await named("Proposals (real)"); await latinInArabic("Proposals (real)");
+  await axe("proposals-real", null, [".sh-side", ".sh-top"]);
+
+  // every waiting change opens a sheet that shows exactly what the API sent
+  for (const p of live.slice(0, 8)) {
+    await sheetOpen(p.id);
+    await exactChange(p.id);
+    if (p.context) check((await count(".ct-sheet .dv-quote")) === 1, `${p.type}: the review is quoted`);
+    await sheetChecks(`the sheet of ${p.type} (real)`);
+    await b.key("Escape");
+  }
+
+  // approve Al Sadd's hours: the whole loop
+  const hours = live.find((p) => p.type === "set_hours") ?? live[0];
+  await sheetOpen(hours.id); await watchPosts(); await sleep(2500);
+  check((await posts()).length === 0, "opening a change sends nothing");
+  await shot("92-real-approval-waiting");
+  await click(btn(T0.approve, "document.querySelector('.ct-sheet-foot')"));
+  await until("document.querySelector('.ct-sheet .dv-state-h')?.textContent.trim() !== " + norm(T0.proposalStatus.proposed), "the state to move on", 15000);
+  const sent = (await posts()).filter((x) => /approve/.test(x.url));
+  check(sent.length === 1 && JSON.parse(sent[0].body).change_hash === hours.change_hash, "Approve sends one request with the hash of the change shown");
+  await until("document.querySelector('.ct-sheet .dv-state-h')?.textContent.trim() === " + norm(T0.proposalStatus.applied), "the change to be applied", 20000);
+  check(true, "the real apply finishes and the sheet says applied");
+  const applied = (await listAll()).find((p) => p.id === hours.id);
+  check(applied.status === "applied" && applied.verification === "pending" && applied.can.undo === true, "the API says applied, verification pending, undo possible");
+  check(JSON.stringify(await sheetFoot()) === JSON.stringify([T0.undo]), "Undo is offered");
+  check((await sheetText()).includes(T0.verifyPending), "the sheet says the next check-up confirms it");
+  await shot("93-real-approval-applied");
+  await sheetChecks("the sheet (applied, real)");
+  await b.key("Escape");
+  const applyGaps = await js("performance.getEntriesByType('resource').filter(e => /\\/api\\/discovery\\/proposals\\//.test(e.name)).length");
+  await sleep(4000);
+  check((await js("performance.getEntriesByType('resource').filter(e => /\\/api\\/discovery\\/proposals\\//.test(e.name)).length")) === applyGaps, "nothing is asked about it after it is applied");
+
+  // a later check-up measures it
+  await runCheckupNow();
+  await sheetOpen(hours.id);
+  const verified = (await listAll()).find((p) => p.id === hours.id);
+  check(verified.verification === "confirmed", `the next check-up confirms it (verification: ${verified.verification})`);
+  const d = await js(`fetch('/api/discovery/proposals/${hours.id}?lang=${LANG}').then(r => r.json())`);
+  const vat = d.history.find((h) => /verif/i.test(h.event))?.at;
+  check(vat ? (await sheetText()).includes(T0.verifyConfirmedOn(day(vat)).replace(/[⁨⁩]/g, "")) : (await sheetText()).includes(T0.verifyConfirmed), "the sheet says it was confirmed by a check-up, with its date where the history has it");
+  check(d.history.some((h) => h.text && h.text.length > 0) && (await count(".ct-sheet details")) === 1, "its history is there to open");
+  await shot("94-real-approval-confirmed");
+  const before = await js("fetch('/api/discovery/overview').then(r => r.json()).then(o => o.score)");
+  check(typeof before === "number", `the score after approval is a number (${before})`);
+  await sheetChecks("the sheet (confirmed, real)");
+  // undo
+  if (verified.can.undo) {
+    await click(btn(T0.undo, "document.querySelector('.ct-sheet-foot')"));
+    await until("document.querySelector('.ct-sheet .dv-state-h')?.textContent.trim() === " + norm(T0.proposalStatus.undone), "the undone state", 15000);
+    check(true, "Undo puts it back and the sheet says undone");
+    await shot("95-real-approval-undone");
+  }
+  await b.key("Escape");
+
+  // decline another
+  all = await listAll();
+  const other = all.find((p) => p.status === "proposed" && p.id !== hours.id);
+  if (other) {
+    await sheetOpen(other.id);
+    await click(btn(T0.decline, "document.querySelector('.ct-sheet-foot')"));
+    await until("document.querySelector('.ct-sheet .dv-state-h')?.textContent.trim() === " + norm(T0.proposalStatus.declined), "the declined state", 15000);
+    check((await sheetText()).includes(T0.coolOff), "Decline closes it, and says it is not proposed again for 14 days");
+    await b.key("Escape");
+  }
+
+  // the To do list and a finding's sheet
+  await open("todo"); await ready(".dv-list", "To do");
+  check((await count(".dv-row .dv-tag")) >= 1, "rows with a change waiting are tagged in words");
+  await shot("96-real-todo");
+  await noSideScroll("To do (real)"); await axe("todo-real", null, [".sh-side", ".sh-top"]);
+  const ready1 = (await listAll()).find((p) => p.status === "proposed");
+  if (ready1) {
+    await open("todo", `finding=${ready1.finding_id}`); await ready(".ct-sheet .dv-sheet", "the finding's sheet"); await sleep(500);
+    check((await count(".ct-sheet .dv-change")) === 1 && (await js("document.querySelector('.ct-sheet-foot .btn.volt')?.textContent.trim()")) === T0.reviewAndApprove, "its sheet shows the change and Review and approve");
+    await shot("97-real-finding");
+    await sheetChecks("the finding sheet (real)");
+    await b.key("Escape");
+  }
+
+  // Settings
+  await open("settings"); await ready(".dv-settings .dv-setsec", "Settings");
+  await ready(".dv-pfacts .dv-fact", "the confirmed details");
+  check((await js("[...document.querySelectorAll('.dv-setsec > h2')].map(h => h.textContent.trim()).includes(" + norm(T0.messagesTitle) + ")")), "Settings loads from the real API");
+  check((await count(".dv-pfacts")) === 5 && (await count(".dv-pfacts .dv-fact")) === 25, "five places, five details each");
+  const factsLooked = await js("[...document.querySelectorAll('.dv-pfacts')][4].innerText");
+  check(factsLooked.length > 0, "the confirmed details are drawn");
+  const mgr = await count(".dv-mgr");
+  log(`the branch-manager picker is ${mgr > 0 ? "drawn" : "not drawn (the API's places carry no managers)"}`);
+  await clearToasts();
+  await click("document.querySelector('.dv-weekly [role=switch]')");
+  await until("fetch('/api/discovery/settings').then(r => r.json()).then(d => d.weekly_run === true)", "the weekly switch");
+  check(true, "the weekly switch saves");
+  await clearToasts();
+  await click("document.querySelector('.dv-weekly [role=switch]')");
+  await until("fetch('/api/discovery/settings').then(r => r.json()).then(d => d.weekly_run === false)", "the weekly switch back");
+  await setSelect(".dv-cap select", "4");
+  await until("fetch('/api/discovery/settings').then(r => r.json()).then(d => d.ask_cap_per_day === 4)", "the limit to save");
+  check(true, "the daily limit saves");
+  await setSelect(".dv-cap select", "3");
+  await shot("98-real-settings");
+  await noSideScroll("Settings (real)"); await targets("Settings (real)"); await named("Settings (real)"); await latinInArabic("Settings (real)"); await axe("settings-real", null, [".sh-side", ".sh-top"]);
+  // edit a fact
+  await clearToasts();
+  await click("document.querySelector('.dv-pfacts .dv-fact .btn')");
+  await ready(".ct-sheet .dv-factform", "the edit form");
+  await sheetChecks("the edit form (real)");
+  await b.key("Escape");
+}
+
+async function realAgent() {
+  await runCheckupNow();
+  await open("home"); await ready(".dv-score, .dv-empty", "Home for staff");
+  const hrefs = await js("[...document.querySelectorAll('.dv-views a')].map(a => a.getAttribute('href'))");
+  check(!hrefs.includes("/app/discovery?view=settings") && hrefs.length === 5, "staff are not given Settings");
+  check(!(await has(T0.reviewChanges(1))) && (await count(".dv-block:has(#dv-prop-h)")) === 0, "no proposals on Home for staff");
+  await open("settings"); await ready(".dv h1", "Home instead");
+  check((await h1()) === T0.title, "the address that names Settings is Home for staff");
+  await open("proposals"); await ready(".dv-count", "Proposals");
+  check((await count(".dv-prow")) === 0 && (await has(T0.approversNote)), "Proposals is empty for staff with no branch, and says who approves");
+  await shot("99-real-agent-proposals");
+  await axe("proposals-agent-real", null, [".sh-side", ".sh-top"]);
+  const owner = await js("fetch('/api/discovery/findings?status=open').then(r => r.json())");
+  const withChange = owner.items.find((f) => f.proposals_waiting > 0);
+  if (withChange) {
+    await open("todo", `finding=${withChange.id}`); await ready(".ct-sheet .dv-sheet", "the finding's sheet for staff"); await sleep(500);
+    check((await count(".ct-sheet .btn.volt")) === 0 && (await sheetText()).includes(T0.ownerApproves), "staff see the change in a finding and no Approve, and are told the owner approves");
+    await shot("100-real-agent-finding");
+    await sheetChecks("the finding sheet for staff (real)");
+    await b.key("Escape");
+  } else log("no finding with a waiting change is visible to staff here");
+  const props = await js("fetch('/api/discovery/proposals?status=all').then(r => r.status)");
+  check(props === 200, "staff may ask for the list and get an empty one");
+}
+
 // ── the run ─────────────────────────────────────────────────────────────────────────────
 const combos = [];
 for (const w of WIDTHS) for (const s of SCHEMES) for (const l of LANGS) combos.push([l, s, w]);
@@ -1070,6 +1245,8 @@ try {
     await one("todo", todo);
     await one("reviews", reviews);
     await one("reports", reports);
+    // Against a real API: the whole loop on the sample business, as the owner or (`--role agent`) as staff.
+    if (!CONTROL) await one(args.role === "agent" ? "reala" : "realp", args.role === "agent" ? realAgent : realOwner);
     // Phase 2 needs the fixture: its states are the ones a real run cannot be put in on demand.
     if (CONTROL) {
       await one("proposals", proposals);

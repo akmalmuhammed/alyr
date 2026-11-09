@@ -589,7 +589,7 @@ test("facts, settings, managers and the team are read, and what is missing is ne
   assert.equal(parseSettings({}).weekly_run, false);
   assert.deepEqual(parseManagers({ items: [{ user_id: "u1", name: "Yusuf" }, { name: "x" }] }), [{ user_id: "u1", name: "Yusuf" }]);
   assert.deepEqual(parsePlaces([{ id: "p1", name: "A", managers: [{ user_id: "u1", name: "Yusuf" }] }])[0].managers, [{ user_id: "u1", name: "Yusuf" }]);
-  assert.deepEqual(parsePlaces([{ id: "p1", name: "A" }])[0].managers, []);
+  assert.equal(parsePlaces([{ id: "p1", name: "A" }])[0].managers, null, "a place that does not say who manages it is not drawn with a picker");
   assert.deepEqual(parseTeam({ members: [{ id: "u1", name: "Yusuf", role: "agent" }, { id: "u2", name: "Hana", role: "owner" }, { name: "x" }] }).map((m) => m.role), ["agent", "owner"]);
 });
 

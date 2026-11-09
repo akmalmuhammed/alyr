@@ -141,8 +141,12 @@ export type Report = {
 
 export type Place = {
   id: string; name: string; name_ar: string; area: string; whatsapp_e164: string;
-  /** Phase 2. The spec has no route that says who a place's managers are; read from the place if it carries them. */
-  managers: Manager[];
+  /**
+   * Phase 2. The spec has no route that says who a place's managers are. Read from the place if it carries
+   * them; null where it does not, and the screen then does not draw the picker (a picker that does not know
+   * who the managers are would, on one tap, remove the others).
+   */
+  managers: Manager[] | null;
 };
 export type Connection = { kind: string; on: boolean };
 
@@ -490,7 +494,7 @@ export function parsePlaces(raw: unknown): Place[] {
   return list.flatMap((item) => {
     const p = rec(item);
     const id = str(p.id);
-    return id ? [{ id, name: str(p.name), name_ar: str(p.name_ar), area: str(p.area), whatsapp_e164: str(p.whatsapp_e164), managers: parseManagers(p.managers) }] : [];
+    return id ? [{ id, name: str(p.name), name_ar: str(p.name_ar), area: str(p.area), whatsapp_e164: str(p.whatsapp_e164), managers: Array.isArray(p.managers) ? parseManagers(p.managers) : null }] : [];
   });
 }
 
