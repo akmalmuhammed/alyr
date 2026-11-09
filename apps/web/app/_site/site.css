@@ -473,7 +473,7 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 .cta :focus-visible, .product :focus-visible { outline-color: var(--volt); }
 
 /* footer: a sign-off, three rows */
-.foot { padding-block: clamp(3rem, 6vw, 4.5rem) calc(2.5rem + env(safe-area-inset-bottom, 0px)); }
+.foot { padding-block: clamp(3rem, 6vw, 4.5rem) 0; }
 .foot-in { display: grid; gap: 1.75rem; }
 .foot-sign { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 2rem; }
 .foot-line { color: var(--text-muted); font-size: .9375rem; }
@@ -485,6 +485,26 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 .foot-legal { display: grid; gap: .375rem; font-family: var(--mono); font-size: .75rem; line-height: 1.6; color: var(--text-muted); }
 [lang="ar"] .foot-legal { font-family: var(--arabic); font-size: .8125rem; }
 .foot-legal p:first-child { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: .25rem 1.5rem; }
+/* The Doha Corniche in line, under the footer's last row, edge to edge, ending the page (D-162).
+   The drawing is an alpha mask (white lines on nothing), so one file serves both themes: the
+   colour is --footer-art (moss on light, Volt on dark). Nothing fades and no text sits on it. It
+   is a real place, so it is not mirrored in Arabic (a mask does not flip with the direction).
+   The 2x file is for screens that can show it. On a phone it is cropped to the towers. */
+.foot-art {
+  width: 100%; aspect-ratio: 1440 / 664; margin-top: clamp(2.5rem, 5vw, 3.5rem); margin-bottom: env(safe-area-inset-bottom, 0px);
+  background: var(--footer-art);
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  -webkit-mask-position: center; mask-position: center;
+  -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
+}
+/* the files load when the visitor is near (SiteMotion sets data-near), or at once without scripts */
+:root:not(.al-js) .foot-art, .foot-art[data-near] { -webkit-mask-image: url("./art/corniche-line.webp"); mask-image: url("./art/corniche-line.webp"); }
+@media (min-resolution: 1.5dppx), (-webkit-min-device-pixel-ratio: 1.5) {
+  :root:not(.al-js) .foot-art, .foot-art[data-near] { -webkit-mask-image: url("./art/corniche-line-2x.webp"); mask-image: url("./art/corniche-line-2x.webp"); }
+}
+@media (max-width: 47.99rem) {
+  .foot-art { aspect-ratio: 1 / .8; -webkit-mask-size: auto 100%; mask-size: auto 100%; -webkit-mask-position: 52% 0; mask-position: 52% 0; }
+}
 
 /* ----------------------------------------------- shared by every public page */
 /* The fold: three Carbon planes with the symbol's gaps (10 of its 160 units): a 6 px Paper

@@ -251,6 +251,9 @@ export function Shell({
             <p>{rich(t.footer.disclaimer)}</p>
           </div>
         </div>
+        {/* The Doha Corniche in line, edge to edge, ending the page (D-162). Decoration only; the
+            drawing is a real place, so it is not mirrored in Arabic. */}
+        <div className="foot-art" aria-hidden="true" />
       </footer>
 
       {CONTACT_STATE !== "pending" && (
