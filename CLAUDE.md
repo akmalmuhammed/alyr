@@ -104,7 +104,11 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               items/codes.py reads a customer's message for item codes, links and
                               SKUs and items/wa_order.py orders by them in the chat (specs/010);
                               owner/ is what an owner or staff member can ask from WhatsApp, and
-                              LINK proves a staff phone (specs/029-owner-actions, D-065)
+                              LINK proves a staff phone (specs/029-owner-actions, D-065);
+                              mcp/ is the owner's own app calling the same actions: the sign-in
+                              (oauth.py, clients.py), the endpoint's server and tool registry
+                              (server.py, registry.py, tools/), the safety layer (safety.py) and
+                              the page (page.py); it calls no model (specs/067-mcp-connector, D-170)
   src/alyr/routes/            HTTP routes. deps.py: who is calling, which shop, which modules are on
                               account.py: your account (switch business, change the sign-in email, all of a
                               business's data as one ZIP; core/account.py, core/export.py, specs/040, D-081)
@@ -134,6 +138,7 @@ scripts/                      check.sh (everything CI runs), demo.sh (start and 
                               documents-screens-browser-check.mjs (the workspace's Documents screens),
                               discovery-browser-check.mjs (the workspace's Discovery screens and the menu that opens to them: a real API or a fixture, both languages, light and dark, phone and laptop),
                               connect-browser-check.mjs (the connection screen, phone width, both languages),
+                              mcp-browser-check.mjs (the connected-apps screen for the MCP connector: every state, both languages, light and dark, phone and laptop, against a fixture API),
                               golive-truth-check.mjs (every onboarding sentence of every business type proved on the
                               finished order page and workspace, English and Arabic),
                               check-edge.sh (the edge and DNS of alyr.qa from outside, docs/runbooks/cloudflare-edge.md),

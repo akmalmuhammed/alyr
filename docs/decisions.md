@@ -2672,6 +2672,33 @@ Customers lose a business when its listing, hours, number, website and reviews d
 
 **Reserved.** Migrations 0120 to 0129 and decisions D-160 to D-169 belong to Discovery.
 
+## D-170 · The MCP connector: an owner's own Claude or ChatGPT calls ALYR, off by default, minimum data, in every plan
+
+**Date** 9 Nov 2026 · **Status** Accepted (the founder said "build" on 9 Nov 2026, taken as accepting the recommended defaults of ALY-287) · ALY-286 (epic), ALY-287, ALY-288, ALY-289, ALY-293, spec 067 · Builds on D-160 (one agent, two doors), D-065 (the action layer), D-012 (no model in ALYR), D-001 (one deployable), D-073 (alert rules), D-083 (per-address limits) · The legal question is `docs/company/legal-opinion/mcp-connector-questions.md` (ALY-51)
+
+An owner adds ALYR as a connector in their own Claude or ChatGPT account, signs in with the email code they already use, chooses the business, and their own app can then call a short list of ALYR actions for that one business. The workspace, WhatsApp and this connector are three doors onto one set of actions; there is no second copy of the logic.
+
+**Decisions (the five answers of ALY-287).**
+1. **Off by default; the owner opts in, per business.** Only an owner can switch it on, and only after confirming, in words, that what ALYR sends to their app leaves ALYR and is handled by the provider they use there, under their own account. The wording's version, who and when are kept and on the activity record. An owner or an admin can pause it at once (the kill switch) or end any connection; a setting (`ALYR_MCP_ENABLED`) switches it off for the whole installation and is **off in production until the founder switches it on**.
+2. **What the app may see about a customer: a first name and the last three digits of the phone. Never a message body, an ID, a salary or an identity document.** The first name is itself written by the customer, so it is marked as untrusted data. An agent sees no amounts of money (D-035), here as everywhere. Fuller detail would be a setting of the business, later, and its own decision.
+3. **Included in every plan for Phase 1.** It is not a product and has no price. Revisit for the later modules.
+4. **Claude and ChatGPT both, one standard.** Both speak MCP. They differ in how they register (Claude by Dynamic Client Registration, ChatGPT by a client-ID metadata document) and in the revision they follow (the 2025 revisions; the current specification is 2026-07-28), so the server supports both registrations and both eras of the protocol on one endpoint (spec 067, "What the standards say today").
+5. **It lives in the API, as a module, one deployable (D-001), served as `mcp.alyr.qa` through the edge Worker to the same Cloud Run service in Doha.** The specification does not force a separate service: it is HTTP and JSON, the load is a person asking questions, and it needs the same database login, limits and action layer. Revisit if its load ever needs its own scaling.
+
+**How it is kept safe (ALY-293).** A changing tool does nothing on its first call; it returns a preview and a short-lived, single-use confirm token bound to the person's permission, the tool and the exact arguments, and changes only when called again with it. Text a customer wrote reaches the app only as cleaned, cut, marked data and no tool turns it into an action. Changes and customer sends have a daily cap per business, counted in the change's own transaction. Every call is on the activity record (channel `mcp`: person, app, tool, arguments, result; never the answer). Tokens are random and kept only as hashes; access tokens last 30 minutes, refresh tokens are rotated on every use and a reused one ends the permission; the person's membership, role and the business's switches are read again on every call. An unusual burst of changes, or an app connected from a new place, reaches the founder's phone with counts only.
+
+**Why.** An owner who already lives in an assistant app should be able to ask it about their shop. The hard part (who may do what, the record, tenant isolation) already exists in the action layer. The cost is the sign-in, the transport and the safety rules, and those are the same for every tool that follows.
+
+**What it does not do.** ALYR calls no model and holds no model key. The foundation has no tool that sends a message to a customer. A real person-in-the-loop prompt (elicitation) is not used: the preview, and the client's own confirmation for tools marked as changing, are the owner's yes.
+
+**Rejected.** *Default on* (the data leaves Doha on the owner's ask, so the owner opts in). *Full customer detail by default* (not needed for the owner's questions). *A separate service now* (the same login, limits and actions would be copied). *A machine key instead of a person's sign-in* (it would not know the role or the person; a machine-key variant for a POS is separate). *Using an MCP SDK* (the server is small, the specification changed shape in July, and the dependency would carry a framework for a handful of methods).
+
+**Not decided.** Whose responsibility the owner's own transfer is, and what the terms must say (ALY-51). Until the answer is in, production stays off.
+
+**Revisit when** the lawyer answers; the first real tools land (ALY-290, ALY-291, ALY-327); a client needs a person-in-the-loop prompt; the connector's load matters.
+
+**Reserved.** Migrations 0130 to 0139 and decisions D-170 to D-179 belong to the connector.
+
 ## D-166 · Discovery Phase 2: proposals, approvals and owner asks
 
 **Date** 9 Nov 2026 · **Status** Proposed (the spec is written, nothing is built; the founder's yes starts the build) · ALY-324, ALY-325, spec 066 · Builds on D-160 (one agent, two doors; "every public change is a proposal the owner approves"), D-065 (the action layer), D-004 and D-020 (one outbound layer, consent and the 24-hour window), D-012 (no model required)

@@ -1,0 +1,156 @@
+# 067 · The MCP connector: an owner's own Claude or ChatGPT, through the same actions
+
+Linear ALY-286 (epic), ALY-288 (sign-in), ALY-289 (server), ALY-293 (safety) · Decision D-170 (the owner's five answers) · Builds on D-160 (one agent, two doors), D-065 and `core/actions.py` (the action layer), `modules/connect/keys.py` (hashed secrets, per-key limits), `core/auth.py` (the email code), D-073 (alert rules), D-083 (per-address limits), D-001 (one deployable)
+
+Reserved for this work: migrations **0130 to 0139**, decisions **D-170 to D-179**.
+
+## What it is, and what it is not
+
+An owner adds "ALYR" as a connector in their own Claude or ChatGPT, signs in with the email code they already use, picks the business, and their own assistant app can then call a short list of ALYR actions for **that business and nothing else**. The workspace, WhatsApp and this connector are three doors onto one set of actions (D-160); nothing about the logic is copied.
+
+**ALYR calls no model.** The owner's app calls ALYR, never the other way round. There is no model key, no prompt and no model output anywhere in this code, and a test fails if a module under `modules/mcp/` imports an HTTP client or names a model provider. **The foundation sends no customer message**: it has no tool that reaches a channel. Sends come later (ALY-291 and after) and go through `core/outbound.py` like every other send.
+
+This spec covers the foundation: sign-in (ALY-288), the server and its tool registry (ALY-289), and the safety layer (ALY-293). The real tools are separate: read tools (ALY-290), stock writes (ALY-291), Discovery tools (ALY-327). The workspace screen is ALY-292; this spec builds the API under it (settings, grants, revoke, the call log) and no screen.
+
+Words that reach an owner say "app" and "connection", never AI, assistant or smart (D-012, honesty). The sign-in page names the app by the name it gives itself ("Claude"), because that is its own name.
+
+## What the standards say today (built against)
+
+Read on 9 Nov 2026; CLAUDE.md rule 2.
+
+* **MCP specification 2026-07-28** (the current revision) is **stateless**: no `initialize`, no session; every request carries `_meta["io.modelcontextprotocol/protocolVersion"]` and `.../clientCapabilities`; Streamable HTTP is a single endpoint that takes POST only (GET and protocol sessions were removed); headers `MCP-Protocol-Version`, `Mcp-Method` and `Mcp-Name` mirror the body and a mismatch is `400` with error `-32020`; an unsupported version is `400` with `-32022` and `data.supported`; servers must implement `server/discover`; every result carries `resultType`; a missing method is `404` with `-32601`; the `Origin` header must be validated (`403`).
+* **The clients still speak the older revisions.** Claude's documentation (claude.com/docs/connectors/building) says it follows the authorization specs of 2025-03-26, 2025-06-18 and 2025-11-25, supports Streamable HTTP and the legacy HTTP+SSE transport, uses the callback `https://claude.ai/api/mcp/auth_callback` (and a loopback redirect on any port for Claude Code), registers by **Dynamic Client Registration** (or CIMD when the server advertises it and `none` as a token auth method), sends a PKCE S256 challenge always, refreshes reactively on 401 and five minutes before expiry, wants `invalid_grant` for a dead refresh token, form-encoded token requests, answers within 10 s (30 s for a refresh), and ignores a `WWW-Authenticate` header on a 200. ChatGPT's (developers.openai.com/apps-sdk/build/auth) is based on 2025-11-25, prefers **Client ID Metadata Documents** (`https://chatgpt.com/oauth/client.json`), falls back to DCR, uses the redirect `https://chatgpt.com/connector_platform_oauth_redirect` when the server returns `iss` in every authorization response (and says so in its metadata), and sends `resource` in both the authorization and token requests.
+* So the server is **dual-era**: it serves a request that carries the modern `_meta` statelessly (2026-07-28), and an `initialize` request as the legacy revisions (2025-11-25, 2025-06-18, 2025-03-26), **without minting a session id** (a session id is optional in those revisions) and answering `GET` and `DELETE` with `405`. Both eras use one handler for `tools/list` and `tools/call`.
+* **Authorization**: the MCP server is an OAuth 2.1 resource server; Protected Resource Metadata (RFC 9728) is required, with `authorization_servers`; the authorization server serves RFC 8414 metadata and **must advertise `code_challenge_methods_supported`**; PKCE S256; the `resource` parameter (RFC 8707) in both requests, and the server **must reject a token not issued for it** (audience); the `iss` parameter in authorization responses (RFC 9207, advertised by `authorization_response_iss_parameter_supported`); exact redirect-URI matching; short-lived access tokens; refresh tokens rotated for public clients; HTTPS everywhere except loopback; a token never in a query string; a `401` carries `WWW-Authenticate: Bearer resource_metadata="..."` and a `403` for too little scope carries `error="insufficient_scope"` and the scope needed. The consent page must show the redirect host and warn about loopback-only redirects. A client-ID metadata document is fetched with the same care as any address a stranger gives us (SSRF).
+
+**Checked on 9 Nov 2026 against real client code** (not the apps themselves): the official Python SDK, version 2.3.0 (the modern era: `server/discover`, then `tools/list` and `tools/call` with the per-request metadata, protocol 2026-07-28; and its `initialize` path, protocol 2025-11-25) and an SDK of the 1.x line (`initialize`, protocol 2025-11-25), each through the whole sign-in: the 401 challenge, both metadata documents, Dynamic Client Registration, the page, the code, the token, and a call to `hello`. The 2.3.0 client found one thing the specification asks and the first build left out: `tools/list` and `server/discover` carry `ttlMs` and `cacheScope` (here `private` and `0` for the list, since it depends on the person; `public` and five minutes for discover). What was **not** checked against Claude or ChatGPT themselves is in the pull request.
+
+## Where it lives (the choice)
+
+**A module of the API** (`alyr/modules/mcp/`, routes in `alyr/routes/mcp.py` and `routes/mcp_oauth.py`), one deployable (D-001). The spec does not force a separate service: the protocol is plain HTTP and JSON, the load is a person asking questions, and it needs the same database login, the same rate limits and the same action layer. A second Cloud Run service would only copy those.
+
+* The public address is `mcp.alyr.qa`, a hostname the edge Worker sends to the same Cloud Run API (the founder's and go-live's steps are listed in the pull request). `ALYR_MCP_PUBLIC_URL` is that address and is the OAuth **issuer**; the **resource** (the audience of every token) is `<public url>/mcp`. A token is refused anywhere its audience is not that exact value, so a token made for another address, or for the API's own host, opens nothing.
+* **Off unless switched on**: `ALYR_MCP_ENABLED` (unset: on in a developer's machine, off everywhere else). Off answers `404` on every path here. Then a **business opts in** (below). Then the owner may pause it (the kill switch).
+* **Not a new service means a shared fate**: a busy API slows the connector. Its calls count against the same admission limits (D-132). Revisit if the connector's load ever needs its own scaling.
+
+## Endpoints
+
+All on the API; the paths below are under `ALYR_MCP_PUBLIC_URL`.
+
+| Path | What |
+|---|---|
+| `POST /mcp` | The MCP endpoint (Streamable HTTP, JSON responses only; `text/event-stream` is never used). `GET` and `DELETE` answer 405. |
+| `GET /.well-known/oauth-protected-resource` and `.../oauth-protected-resource/mcp` | RFC 9728 document: `resource`, `authorization_servers`, `scopes_supported` (only `read`: the minimum, the rest by step-up), `bearer_methods_supported: ["header"]`, `resource_name`. |
+| `GET /.well-known/oauth-authorization-server` | RFC 8414 document: `issuer`, the three endpoints below, `response_types_supported: ["code"]`, `grant_types_supported: ["authorization_code", "refresh_token"]`, `code_challenge_methods_supported: ["S256"]`, `token_endpoint_auth_methods_supported: ["none"]` (public clients only, no client secret is ever issued), `scopes_supported`, `client_id_metadata_document_supported: true`, `authorization_response_iss_parameter_supported: true`, `revocation_endpoint`. |
+| `POST /oauth/register` | RFC 7591 registration (Claude needs it). JSON in, JSON out. Public client only; redirect URIs `https` or loopback; a name of 1 to 80 characters; 60 an hour per address; the table is capped at 5,000 and unused clients are deleted after 7 days when it is full. |
+| `GET /oauth/authorize` | Starts a request: checks `response_type=code`, `client_id`, `redirect_uri` (exact match against the client's registered list; for a loopback address any port), `code_challenge` with `S256`, `resource`, `scope`, `state`. **A bad client or redirect is shown as a page, never redirected to.** Then the sign-in page. |
+| `POST /oauth/authorize/email`, `/code`, `/consent` | The page's three steps (below). Same-origin form posts. |
+| `POST /oauth/token` | `application/x-www-form-urlencoded`. `authorization_code` and `refresh_token`. RFC 6749 error codes (`invalid_grant`, `invalid_client`, `invalid_request`, `invalid_target`, `unsupported_grant_type`). `Cache-Control: no-store`. |
+| `POST /oauth/revoke` | RFC 7009. Always `200`; revoking a refresh or access token ends its whole grant. |
+| `/api/mcp/*` | The workspace's side, for an owner or admin (a cookie session, not a token): status, opt in, pause and resume, the grants, revoke one or all, the call log. The screen is ALY-292. |
+
+### Sign-in and consent (the page ALYR serves)
+
+Server-rendered HTML from the API, in English and Arabic, light and dark, using the generated tokens (`brand.py`); no script. It is plain on purpose: the workspace's own connection screen (ALY-292) comes later with the founder's review of the words.
+
+1. **The request is stored** (`mcp_auth_requests`, 15 minutes) and a cookie (`alyr_mcp_req`, path `/oauth`, `HttpOnly`, `SameSite=Lax`, `Secure` outside local) binds it to the browser that began it; every later step needs the cookie as well as the request id, so a link to someone else's request cannot be completed by a visitor.
+2. **Email, then the code** by `core/auth.request_code` and `check_code`: the same five codes an hour per email, five guesses per code, per-address limits, same words for a wrong or expired code, same answer for an unknown email. No session cookie is made.
+3. **Pick the business** when the person works for more than one (a person who works for one skips this). A person who works for none is told so. The grant is for that business.
+4. **Consent** names the app, the business, the **hostname the app will return to**, and the choices in words: *see the day's numbers*, *change stock*, *change bookings*, *change orders*, *send messages to customers*. Only `read` is asked in this foundation's tools; the page shows the scopes that were asked for and an owner's "Allow" grants those. Loopback-only redirects get an extra line.
+5. **The opt-in.** If the business has not switched the connector on, an **owner** (only an owner) sees one more thing on the same page, a tick box with the confirmation: what ALYR sends to this app leaves ALYR and is handled by the app's provider under the owner's own account there. The tick writes `mcp_settings` (who, when, which wording version) and is on the activity record. An admin or an agent is told an owner must switch it on. Nothing is sent to the app before the tick.
+6. **The code is made** (random, hashed, 120 seconds, one use, bound to the client, the redirect, the PKCE challenge, the business and the person) and the browser is redirected with `code`, `state` and `iss`.
+
+## Tokens
+
+All random (256 bits from `secrets`), shown once, **stored as SHA-256 hashes** (a random 256-bit value needs no slow hash; the same as sign-in codes, sessions and API keys), compared in constant time, found by their hash (the row-level policy lets one row be read by the hash of the token presented, the way `api_keys` lets one be read by its prefix; writing stays inside the business).
+
+| | Lifetime | Notes |
+|---|---|---|
+| Authorization code | 120 s, once | Reuse revokes the grant it made. |
+| Access token | 30 minutes | Opaque, `alyr_mcp_at_...`. Audience = the resource. |
+| Refresh token | 30 days, **rotated on every use** | The old one dies in the same transaction the new one is made. **Using a rotated one again revokes the whole grant** (theft). `invalid_grant` for anything dead. |
+| Grant | 90 days from consent at most | Then the owner signs in again. At most 10 live grants per person per business. |
+
+Nothing a token says is trusted: the token only **names a grant**. **On every call** the server reads the grant, the person's membership of that business **now**, the business's switches **now** and the role **now**, so removing a person, changing their role, switching the connector off, pausing it or revoking the grant takes effect on the next call. A refresh also re-checks all of it.
+
+### Scopes
+
+`read` (the day's numbers, lists), `stock` (change what is in stock), `bookings` (change bookings), `orders` (change orders), `send` (message customers, always after a confirm). A scope is the **ceiling the owner gave this app**; the action layer's role table (`core/actions.py`) is the ceiling for the person; the business's modules are the third. A tool is **offered** only when all three allow it, and **checked again on every call**. A call that needs a scope the token lacks answers `403` with `WWW-Authenticate: Bearer error="insufficient_scope", scope="..."`.
+
+## The server (`modules/mcp/server.py`)
+
+One function takes a JSON-RPC request and the proven caller and returns a response, with no I/O of its own beyond the database. **Methods**: `initialize` (legacy), `notifications/*` (202), `ping`, `server/discover`, `tools/list`, `tools/call`. Anything else is `-32601`. `resources`, `prompts`, `sampling`, `subscriptions` and `tasks` are not offered: the capabilities say only `tools`. A request over 64 KB is `413`; arguments over 16 KB are refused; **an answer over 60,000 characters is replaced by a plain error that says to ask for less** (Claude's limit is about 150,000; a half answer is worse than none). `Origin`, when present, must be one of ours or the known clients' (`claude.ai`, `claude.com`, `chatgpt.com`) or `403`.
+
+Every tool result has the shape the specification gives: `content` (a text block), `structuredContent` (the same data) and `isError`; `resultType: "complete"` on the modern era. A tool that cannot be done for a reason the model can act on is an `isError` result with a sentence; a malformed call is a protocol error.
+
+### The tool registry (`modules/mcp/registry.py`): how ALY-290, 291 and 327 plug in
+
+A tool is **an action plus words, a schema and flags**. The action (in `core/actions.py`, with its roles and module) stays the single source of who may do what; the tool adds how a model finds and calls it.
+
+```python
+@tool(
+    name="today",                     # snake_case, ALYR terms only
+    action="today",                   # the key registered in core/actions.py
+    scope="read",                     # read | stock | bookings | orders | send
+    title="Today in the business",
+    description="How the day is going: orders, bookings ... Use it for 'how is today'.",
+    input_schema={"type": "object", "properties": {...}, "additionalProperties": False},
+    present=present_today,            # optional: reshapes the action's data (data minimum, text wrapper)
+)
+```
+
+A **changing** tool adds `changing=True` and a `preview` function `async (conn, caller, args) -> Preview` (`what`, `who_is_told`, `cannot_undo`, `affects`: a number of records) that **reads and changes nothing**. The registry then gives it the two-step shape itself (below); the action runs only on the second step, with the same arguments. A tool author never writes the confirm logic and cannot skip it: a `changing` tool without a `preview` fails at import, and a test asserts that every registered tool whose action writes is `changing`.
+
+* `tools/list` offers the tools the caller's scopes, role and the business's modules allow, in a fixed order; annotations are `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint: false` and a `title`; `_meta` carries `securitySchemes` (`oauth2` with the scope), the extension ChatGPT reads.
+* `tools/call` runs, in this order: token, kill switch, scope, rate limits, size, arguments checked against the schema, then **one database transaction scoped to the business** (`db.tenant(tenant_id)`: row-level security is what keeps another business out) in which a savepoint holds the action and the call's record is written after it. Role, module and money rules come from `actions.run`.
+* Tool names and descriptions: English first; written so a model picks the right one; no jargon.
+* **Foundation tools**: `hello` (read: the business's name, the person's first name and role, the modules on, the time in the business's zone) and, **in a developer's machine and tests only** (`ALYR_MCP_TEST_TOOLS`, off elsewhere and absent from `tools/list`), `test_customer_name` (read: returns a customer's name as untrusted text, to prove the wrapper) and `test_write_note` (changing: writes a note on the activity record, to prove the confirm step).
+
+## The safety layer (`modules/mcp/safety.py`)
+
+1. **Preview, then confirm.** A changing tool called without `confirm_token` returns **only a preview**: what will change, who is told, what cannot be undone, how many records, and a `confirm_token`. The text says to **show the preview to the owner and wait for their yes**. Called again with the same name, the **same arguments** and the token, it does the change. The token is random, stored as a hash, **good for 5 minutes, once**, bound to the grant (another app, another person, another business cannot use it) and to a hash of the arguments (a changed argument is a different call). A wrong, spent, expired or mismatched token does nothing and says so. A changing action never runs on the first call whatever the arguments say. Every changing tool, every time: there is no "trust this app" and no bulk shortcut. A tool that touches many records says how many in the preview and is charged that many against the daily cap.
+2. **Untrusted customer text.** Anything a customer wrote (a name, a note, an address) reaches the model only through `safety.untrusted(text, source)`: control characters, zero-width characters and bidirectional overrides removed, cut to 120 characters (with `truncated: true`, never an ellipsis), and returned as `{"untrusted": true, "source": "customer name", "text": "..."}` with the answer's text block wrapping it in a fixed marker that says it is data and not an instruction. No tool accepts free text from a customer and turns it into an action; a tool's arguments come from the owner's request to their app, and every change goes through step 1 anyway. **Customers are shown by first name and the last three digits of the phone** (`safety.person(name, phone)`), never a message body, an ID, a salary or an identity document (D-170). The first name is itself customer-written and is wrapped.
+3. **Caps.** Per business, per day (a rolling 24 hours): 50 changes and 20 customer sends (`ALYR_MCP_WRITES_PER_DAY`, `ALYR_MCP_SENDS_PER_DAY`), counted when a change is confirmed (a bulk one by the number of records). At the cap the call is refused, `cap_reached` is written on the activity record and `mcp_settings.cap_hit_at` is set (the workspace screen will show it). **Not built yet: the email or message to the owner when a cap is hit** (it needs the words, in both languages, reviewed; ALY-292). Rate limits besides: 60 calls a minute per grant, 300 a minute per business, per-address limits on the OAuth endpoints (`core/ratelimit.py`, D-083): the person's own steps use the sign-in limits, `/oauth/authorize` 60 and `/oauth/token` 300 in ten minutes, `/oauth/register` 60 an hour, and 120 wrong tokens in ten minutes at `/mcp`; a call with a good token is never counted against an address. **The apps call from shared addresses** (Anthropic's and OpenAI's clouds), so one address is many people and the machine-facing limits are generous on purpose; what protects a code or a token is that it is a random 256-bit value. 429 with `Retry-After`.
+4. **The kill switch.** `mcp_settings.paused_at` set by an owner or admin refuses every call of the business at once (`403`, with a sentence), keeping the grants; resume ends it. Switching the connector off (`enabled = false`) revokes nothing but has the same effect; revoking all ends the grants. A global setting (`ALYR_MCP_ENABLED`) ends it everywhere.
+5. **The anomaly alert** (D-073, `core/alerts.py`): `mcp_write_burst` fires when a business confirms 25 or more changes in 10 minutes, and `mcp_new_place` when a person who has connected before connects a new app from an address not seen in their earlier grants. Counts only, never a name or a number (the alert leaves ALYR); the signals live in `mcp_signals` (an ID and a time).
+
+## What is logged
+
+**Every call**, reads included, is one row on the activity record (`activity`: subject `mcp`, the grant's id as subject id, **channel `mcp`**): the person (id and name), the app (`client`, its name and ID), the tool, the **arguments** (cut to 1,000 characters; `confirm_token` removed; never the answer), the phase (`read`, `preview`, `confirm`), the **result** (`ok`, `refused`, `error`, `capped`, `bad_confirm`, `over_size`) and the milliseconds. The **action's own** change record (a stock change, say) is written by the action with `channel = "mcp"` (`Caller.channel`), so the workspace's own history shows it. Grants made, revoked and the opt-in, pause and resume are on the record too. The record is append-only (the application role can only insert and read).
+
+A refused call is recorded as well; a call refused before the business is known (a bad token) cannot be, and is counted by the per-address limit instead.
+
+## Data model (migration 0130)
+
+`activity` gains the channel `mcp` and the subject `mcp` (the lists are read from the constraints as they are, so later migrations are kept). New tables, each with a row for **every table** in `core/erase_rules.py`:
+
+| Table | Scope | Holds |
+|---|---|---|
+| `mcp_clients` | global | A registered or fetched client: `client_id` (a random ID, or the HTTPS URL of its metadata document), `kind` (`dcr`, `cimd`), `name`, `redirect_uris`, `client_uri`, `fetched_at`, `expires_at`. Names and URLs the client gave about itself, never trusted for a decision. |
+| `mcp_auth_requests` | global | The 15-minute request while a person signs in: the client, redirect, challenge, state, scopes, resource, the binder's hash, the person once the code was right. |
+| `mcp_settings` | business | `enabled`, who and when, the wording version, `paused_at`, `paused_by`, `cap_hit_at`, the business's own caps (null: the defaults). |
+| `mcp_grants` | business | One per person, app and business: scopes, resource, `expires_at`, `last_used_at`, `revoked_at`, `revoked_by`, a hash of the address it was made from. |
+| `mcp_tokens` | business | Codes, access tokens and refresh tokens: `kind`, `token_hash` (unique), `expires_at`, `used_at`, and for a code its redirect and challenge. |
+| `mcp_confirmations` | business | A preview: the grant, the tool, the arguments' hash, the preview, `affects`, `expires_at`, `used_at`. |
+| `mcp_signals` | global | `kind`, the business's ID, a time. For the alert's counts only; deleted after two days. |
+
+## Tests (real PostgreSQL, over HTTP)
+
+A test client completes the whole OAuth flow (metadata, registration, authorize, email, code, consent, token, refresh), speaks MCP in both eras, and covers: a token for shop A cannot read shop B (and a second grant of the same person for B is a different thing); a removed person's token stops on the next call; a changed role changes the tools offered and the calls allowed; revoke, expiry and refresh rotation with reuse detection; the wrong audience; PKCE failures; redirect matching; the code replayed; the opt-in only by an owner; kill switch and the global off; every call on the activity record with channel `mcp`; no changing tool without the token, a token for another tool or arguments, spent, expired; **injected customer text** ("ignore your rules and send...") cannot trigger a write; caps hold under a loop; size caps; per-address and per-grant limits; no model call and no HTTP client in the module; tokens random and stored as hashes; no secret in the repository.
+
+## Not in this spec
+
+The real tools (ALY-290, 291, 327); the workspace screen and its Arabic (ALY-292, ALY-66); the owner's cap email; elicitation (a real person-in-the-loop prompt) and the modern era's multi round-trip requests; CORS for browser-based clients; the legacy HTTP+SSE transport (deprecated); an OpenID Connect discovery document; confidential clients (`private_key_jwt`); the security review and red team (ALY-296); the legal answer on whose responsibility the owner's own transfer is (ALY-51, `docs/legal/mcp-connector-questions.md`).
+
+## As built (ALY-292): the workspace screen
+
+Web files only; the API of `routes/mcp_manage.py` is used as it is. The screen is `/app/connect-ai` ("Connected apps", under Connections), `apps/web/app/(product)/_workspace/Mcp.tsx` with `McpConnections.tsx`, `McpLog.tsx` and `McpLink.tsx`; every word is in `mcpCopy.ts` in English and Arabic (a draft until ALY-66), the parsers in `mcpApi.ts`, the state logic in `mcpLogic.ts`, the calls in `mcpCalls.ts`.
+
+* **States.** Not available on this server (`GET /api/mcp` answers 404: nothing to press, no description of what could be done); for owners and admins only (a member of staff: the API answers 403 to everything under `/api/mcp`, so the screen asks nothing and says why); off (an owner sees the one Volt button, Turn on; an admin sees the state and why they cannot turn it on); on with no app (a dashed slot, the address to add in the app, how to connect); on with apps; paused; a daily limit reached in the last 24 hours; a failed first look (Try again); a failed action (the screen shows what is true).
+* **Turn on** is a sheet that repeats what an app is given and carries the D-170 sentence beside a box; the button works only when the box is ticked (the API also refuses without `understood`). **Pause all apps** acts at once (no question: it can be undone with Resume, and a kill switch that asks is slow); **Resume** is the Volt button while it is paused. **End** and **End all connections** ask first and name the app or the number.
+* **What an app is given** is said in four lines on the screen: a first name and the last three digits of a phone; never message text, ID numbers or salaries; only what was allowed when it was connected; handled by the app's provider under the owner's own account; ALYR does not run the app.
+* **The log** is the activity record with channel `mcp`, newest 100, in two lists: requests (tool, kind, result, app, person, time, milliseconds, records touched, and what it asked for in a closed fold, never the answer) and connection changes as the API returns them (a connection made or ended by the app or for safety, a limit reached; the screen also words turned on, paused and resumed if the endpoint ever returns them). Nothing polls; Refresh reads again.
+* **Text from outside is text.** App names, people's names and what an app asked for are cleaned of control, zero-width and reordering characters, cut, and drawn as text (never as markup); an unknown scope or result is shown as its own text.
+* **Entry.** The Connections screen draws its link only where `GET /api/mcp` answers, so a server with the connector off shows owners nothing (D-039).
+* **Gaps in the API, for whoever changes it next** (the screen degrades honestly, nothing was changed): **the workspace's own opt-in, pause, resume and end are written with channel `portal`, and `GET /api/mcp/activity` returns channel `mcp` only, so they are not in the screen's list of connection changes** (found against the real API; the status card says who paused and when, and an ended connection says who ended it and why; the list shows the app-side rows: a connection made, one ended by the app or for safety, a limit reached); staff cannot read the state; no count of how much of the day's cap is used; the log has no paging, total or filter; `POST /api/mcp/switch-off` exists and the screen does not draw it (Pause and End all do the same for the owner's purposes; an owner who wants consent withdrawn has no button); the address in `GET /api/mcp` is shown only when it is https (or a local one).
+* **Checked:** `mcp.test.mjs` (words, parsers, states, styles) and `scripts/mcp-browser-check.mjs` (a fixture API outside the repository; every state, English and Arabic, light and dark, 375, 320 and 1280 px, axe, 44 px targets, no console errors), then once against the real API of this branch with its own Postgres and a stand-in app: the opt-in from the screen, a connection, its calls in the log matching the activity record, Pause making the app's next call fail, Resume, End making the next call fail.

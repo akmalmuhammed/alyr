@@ -56,7 +56,11 @@ class OwnPagesOnly:
         self.settings = settings
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] == "http" and scope["method"] in UNSAFE:
+        # The connector's own paths (spec 067) never use the session cookie: an app's server calls
+        # them, or a form on the connector's own page, whose address is not the web app's.
+        path = scope.get("path", "")
+        own = path == "/mcp" or path.startswith("/oauth/")
+        if scope["type"] == "http" and scope["method"] in UNSAFE and not own:
             headers = {
                 k.decode("latin-1").lower(): v.decode("latin-1") for k, v in scope["headers"]
             }

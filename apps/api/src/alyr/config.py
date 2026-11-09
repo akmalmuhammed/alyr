@@ -316,6 +316,27 @@ class Settings(BaseSettings):
     media_free_bytes: int = 10_000_000_000
     media_alert_percent: int = 80
 
+    # The MCP connector (specs/067, D-170): an owner's own Claude or ChatGPT calls the same actions
+    # the workspace uses. `mcp_enabled` unset: on in a developer's machine, OFF everywhere else
+    # until the founder switches it on (every path of it then answers 404). A business also has to
+    # opt in, and may pause it. `mcp_public_url` is where clients reach it (mcp.alyr.qa behind the
+    # edge Worker): the OAuth issuer, and with "/mcp" added the audience of every token; https
+    # outside a developer's machine. `mcp_allowed_origins` are more web origins that may call it
+    # from a browser (claude.ai, claude.com and chatgpt.com are always allowed).
+    mcp_enabled: bool | None = None
+    mcp_public_url: str = "http://localhost:8000"
+    mcp_allowed_origins: str = ""
+    # Test-only tools (a read that returns customer text, a change behind the confirm step) exist
+    # to prove the safety layer. Read only on a developer's machine, whatever this says elsewhere.
+    mcp_test_tools: bool = False
+    # Per business, per rolling day, counted when a change is confirmed (a bulk one by how many
+    # records it touches), and per minute per permission and per business. A business's own caps
+    # in `mcp_settings` win.
+    mcp_writes_per_day: int = 50
+    mcp_sends_per_day: int = 20
+    mcp_calls_per_minute: int = 60
+    mcp_calls_per_minute_shop: int = 300
+
 
 @lru_cache
 def get_settings() -> Settings:
@@ -326,3 +347,14 @@ def poll_cache_seconds(settings: Settings) -> float:
     if settings.poll_cache_seconds is not None:
         return settings.poll_cache_seconds
     return 0.0 if settings.env == "local" else 3.0
+
+
+def mcp_on(settings: Settings) -> bool:
+    """Whether the connector answers at all: on a developer's machine unless switched off, and
+    everywhere else only when the founder has switched it on (`ALYR_MCP_ENABLED`)."""
+    on = settings.mcp_enabled if settings.mcp_enabled is not None else settings.env == "local"
+    # Fails safe: outside a developer's machine the issuer must be https (the authorization
+    # specification's rule), and a missing or misspelt address closes the connector.
+    if on and settings.env != "local" and not settings.mcp_public_url.startswith("https://"):
+        return False
+    return on
