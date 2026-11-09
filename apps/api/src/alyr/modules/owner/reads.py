@@ -8,11 +8,12 @@ suggestions as `view.build` draws them; the stock lists are the Catalog list's o
 (`modules/items/listing.py`). A number here is the number on the screen it came from.
 """
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from uuid import UUID
 
 import asyncpg
 
+from alyr.config import get_settings
 from alyr.core.actions import (
     ALL_ROLES,
     MONEY_ROLES,
@@ -30,6 +31,15 @@ from alyr.modules.items import listing
 
 _TENANT = "nullif(current_setting('app.tenant_id', true), '')::uuid"
 PERIODS = ("today", "yesterday", "this_week", "last_week")
+
+
+def _clock() -> datetime | None:
+    """The moment the dashboard is read at, on a developer's machine that fixed it (the sample
+    shops are drawn at a set time): the connector reads the same moment, as the route does."""
+    settings = get_settings()
+    if settings.env == "local" and settings.agent_clock:
+        return datetime.fromisoformat(settings.agent_clock)
+    return None
 
 
 async def staff_of(conn: asyncpg.Connection, caller: Caller) -> Staff:
@@ -140,11 +150,11 @@ async def sales_summary(conn: asyncpg.Connection, caller: Caller, args: dict) ->
     if period not in PERIODS:
         raise ActionError("Choose today, yesterday, this_week or last_week.")
     staff = await staff_of(conn, caller)
-    f = await facts_.gather(conn, staff)
+    f = await facts_.gather(conn, staff, _clock())
 
     if period == "last_week":
         sunday = report.last_full_week(f.now, f.tz)
-        w = await week.read(conn, sunday)
+        w = await week.read(conn, sunday, f.now)
         closed = w.f
         return {
             "period": period, "from": sunday.isoformat(),
@@ -200,7 +210,7 @@ async def insights(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict
     `view.build`, for this person: an agent gets it without money, as the screen does."""
     lang = "ar" if args.get("lang") == "ar" else "en"
     staff = await staff_of(conn, caller)
-    built = await view.build(conn, staff, lang)
+    built = await view.build(conn, staff, lang, now=_clock())
     return {
         "lang": lang,
         "needs": [

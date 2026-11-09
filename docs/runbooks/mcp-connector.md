@@ -17,7 +17,7 @@ For the connector in `specs/067-mcp-connector/spec.md` (D-170, ALY-286): an owne
 Not done yet, and not for the first pull request to do. In order:
 
 1. The go-live lane makes `mcp.alyr.qa` reach the API: a DNS record on the alyr.qa zone and a route for that hostname in the edge Worker (`infra/cloudflare/edge`, the same way `api.alyr.qa` is routed). Check from outside: `curl https://mcp.alyr.qa/.well-known/oauth-authorization-server` answers 404 while it is off.
-2. The migration `0130_mcp_connector.sql` is applied by the release as always. It changes nothing for a business: every table is empty and the connector is off.
+2. The migrations `0130_mcp_connector.sql` and `0131_mcp_stock_changes.sql` are applied by the release as always. They change nothing for a business: every table is empty and the connector is off.
 3. Set on the API service: `ALYR_MCP_PUBLIC_URL=https://mcp.alyr.qa` and then `ALYR_MCP_ENABLED=true`. (`ALYR_MCP_TEST_TOOLS` stays unset: the two test tools exist only for tests.) The worker needs neither; the alert rules it already runs read the connector's counts.
 4. Check: the two metadata documents answer 200 with `issuer` and `resource` equal to `https://mcp.alyr.qa` and `https://mcp.alyr.qa/mcp`; `POST https://mcp.alyr.qa/mcp` without a token answers 401 with a `WWW-Authenticate` header naming `resource_metadata`.
 5. Add the connector in a Claude or ChatGPT account of your own on the fictional demo business, owner role, and ask for `hello`. The first real client run has not been done (see the pull request's "not checked").
@@ -42,6 +42,14 @@ update mcp_grants set revoked_at = now(), revoked_by = 'ALYR', revoked_why = 'en
 
 Remove them from the team: their tokens stop at the next call and a refresh ends the permission. Or end their permissions: `DELETE /api/mcp/grants/<id>` (an owner or admin), or the app's own revoke.
 
+## What the tools are, and what each can do
+
+Nineteen tools (the table is in the spec, "The tools"): nine that read (`hello`, `today`, `bookings`, `orders`, `owed`, `low_stock`, `sales_summary`, `insights`, `shop_info`), four that change stock (`mark_sold_out`, `mark_back_in_stock`, `set_stock`, `undo_stock_change`) and six for Discovery (four that read, `discovery_mark_done` and `discovery_skip`). A tool shows only to an app whose permission has its scope (`read`, `stock`, `discovery`), to a person whose role the action allows, in a business that has the part of ALYR switched on. Every change is a preview first and needs the owner's yes in their app; every call is on the activity record with channel `mcp`.
+
+- **A stock change an owner did not mean.** Every change is remembered in `mcp_stock_changes`; the app's `undo_stock_change` puts it back, or the owner switches the item back in the workspace. The stock log and the item's history say `mcp` and the person. To list a business's changes (as the database owner): `select created_at, user_name, action, item_id, before, after, undone_at from mcp_stock_changes where tenant_id = '<business id>' order by created_at desc;`.
+- **Customers who asked to be told.** Bringing an item back lets the Catalog's usual back-in-stock message go to customers who asked and agreed (through the outbound layer). The preview told the owner how many. If a business does not want that to happen from the connector, pause it (below); there is no setting for it yet (D-171, "Not decided").
+- **A tool that is missing from an app's list.** In order: the permission was given without that scope (the person connects again and ticks it); the person's role does not allow it (an agent is not offered `owed`, `sales_summary` or the Discovery changes); the part of ALYR is off for that business (`discovery` and `catalog` are switched on by the product lead or the back office).
+
 ## What an alert means
 
 Both reach the founder's phone with counts only (D-073); look in the business's activity record, channel `mcp`.
@@ -51,4 +59,4 @@ Both reach the founder's phone with counts only (D-073); look in the business's 
 
 ## What is not built yet
 
-The workspace screen (ALY-292), the real tools (ALY-290, ALY-291, ALY-327), an email or message to the owner when a daily cap is reached, the security review and red team (ALY-296, the gate before any real business turns it on), and the lawyer's answer (ALY-51).
+The workspace screen (ALY-292), the tools that change bookings and orders (ALY-294) and send to customers (ALY-295), an email or message to the owner when a daily cap is reached, the security review and red team (ALY-296, the gate before any real business turns it on), and the lawyer's answer (ALY-51).

@@ -152,7 +152,7 @@ async def _lines(conn: asyncpg.Connection, order_ids: list) -> dict:
     lines: dict = {}
     for r in await conn.fetch(
         "select order_id, name, quantity from order_items where order_id = any($1) "
-        "order by created_at, id", order_ids,
+        "order by name, id", order_ids,
     ):
         lines.setdefault(r["order_id"], []).append(f"{r['quantity']} x {r['name']}")
     return lines
