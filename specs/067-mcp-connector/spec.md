@@ -172,9 +172,28 @@ Nineteen tools in `modules/mcp/tools/` (`reads.py`, `stock.py`, `discovery.py`, 
 
 **Tests** (`tests/test_mcp_tools_read.py`, `_stock.py`, `_discovery.py`, `_matrix.py`; helpers `mcp_tools_support.py`): a business with the parts of ALYR on, each role connected as an app. The matrix test holds the permission table of the tools and fails when a tool is added without a row: offered to exactly the roles the table gives, refused with the part named when its module is off, hidden from a token without its scope, a preview and nothing else until the owner says yes (a bogus, spent or other-arguments token does nothing), every change on the record as `mcp`, the cap counted across tools. Reads are checked against the SQL they should come from, against the dashboard on the Qirfa sample shop at a fixed moment, and against the workspace's own routes for Discovery. Cross-business tests read and change two businesses with one app each. Injection tests give a customer a hostile name, booking text, a review, a listing and evidence, and check the marking, the cut, that no change or message follows, and that a model that obeys the text only gets previews.
 
-**Mutation checks** (a guard broken on purpose, the test that failed, the guard put back):
+**Mutation checks** (9 Nov 2026; one guard at a time broken in a scratch copy, the named test run on its own and seen to fail, the guard put back; the foundation's own guards have their own table in its tests):
 
-MUTATIONS_TABLE
+| Guard broken on purpose (18, each put back afterwards) | The test that failed |
+|---|---|
+| A customer's full name given instead of a first name (`orders`) | `test_no_tool_gives_a_full_name_a_full_number_or_an_id_of_a_customer` |
+| The next booking names the customer in full (`today`) | `test_today_names_the_next_booking_by_first_name_and_three_digits_only` |
+| The tips give a customer's whole name (`insights`) | `test_insights_say_the_rule_and_never_a_customers_full_name` |
+| An agent is given the value of a day's orders | `test_an_agent_is_given_no_money_by_any_tool` |
+| `sales_summary` offered to every role | `test_an_agent_is_not_offered_the_tools_about_money_and_cannot_call_them` |
+| The scope is no longer checked on a call (foundation's `server.py`) | `test_a_token_without_stock_cannot_see_or_call_a_stock_tool_and_nothing_changes` |
+| Two items that fit: the first is taken instead of asking | `test_two_items_that_fit_give_a_did_you_mean_list_and_nothing_is_changed` |
+| A size is no longer asked for when an item has several | `test_set_stock_asks_which_size_when_there_are_several_and_names_the_one_asked_for` |
+| An undo no longer checks that the item was changed again | `test_back_in_stock_switches_it_on_and_an_undo_puts_each_change_back` |
+| An undo no longer checks that enough is left | `test_an_undo_that_would_take_more_than_is_there_is_refused` |
+| Anyone may undo anyone's change | `test_everyone_on_the_team_may_change_stock_and_only_the_maker_or_a_manager_may_undo` |
+| The item's history is written as the workspace, not the connector | `test_sold_out_shows_on_the_order_page_at_once_and_is_on_the_record_as_the_connector` |
+| The stock tools no longer need the catalog to be on | `test_the_stock_tools_are_not_offered_and_are_refused_when_the_catalog_is_off` |
+| "I did this" no longer fixes the status in the door | `test_i_did_this_previews_then_marks_the_finding_and_records_the_connector` |
+| A closed finding can still be marked | `test_a_finding_that_is_closed_or_not_found_is_refused_and_nothing_is_changed` |
+| The Discovery doors give every role the change | `test_the_role_decides_which_discovery_tools_an_app_is_offered_and_may_call` |
+| Evidence is given to the app unmarked | `test_the_findings_carry_their_rule_their_evidence_and_the_place` |
+| A stranger's review is given to the app unmarked | `test_what_strangers_wrote_reaches_an_app_cut_cleaned_and_marked_as_data` |
 
 ## Tests (real PostgreSQL, over HTTP)
 
