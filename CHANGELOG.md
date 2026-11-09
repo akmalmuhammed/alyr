@@ -5,6 +5,7 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- Discovery, Phase 2 backend (ALY-324, D-166, spec 066; migrations 0121 to 0123, no new dependency): a check-up now prepares proposals (one exact change to a place's hours, phone, category, name, WhatsApp link or a reply to a review, each from a rule and a fact the owner confirmed) that an owner, an admin or a branch manager approves with one tap in the workspace or on WhatsApp; an approved change is applied through a connector write (only the fictional sample business has one: nothing outside ALYR changes), can be undone for a week and is confirmed by the next check-up; owners are asked on WhatsApp inside their 24-hour window, to linked staff numbers only, three a day at most, never at night, never a customer; `PROPOSALS`, `PROPOSALS OFF` and `PROPOSALS ON` on WhatsApp; the Agent's Needs you now counts what waits. Off for every shop. The `discovery_ask` template is written and held: nothing was submitted to Meta, so nothing is sent outside the 24-hour window. English and Arabic; the Arabic is a draft until ALY-66.
 
 ## v0.3.16 (9 Nov 2026)
 - The footer no longer says "ALYR uses the WhatsApp Business Platform. ALYR is not affiliated with, or endorsed by, WhatsApp or Meta." (D-164, ALY-330; no migration, no new dependency): removed from every public page in English and Arabic and from the `llms.txt` files; the site still never says or implies a partnership.

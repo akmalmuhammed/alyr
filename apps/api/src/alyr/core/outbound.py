@@ -83,7 +83,8 @@ class Outbound:
                 # With an image, the ordinary message is that image with the text under it;
                 # with a document (a receipt), that file with the text as its caption.
                 kind = "document" if document else "image" if image else "text"
-                if kind == "text" and message.choices:
+                if kind == "text" and message.choices and templates.has_buttons(
+                        message.template_name):
                     # A notice that carries choices (spec 066) is the same words with buttons.
                     kind = "buttons"
                 payload["sent_as"] = kind

@@ -93,7 +93,8 @@ def test_facts_are_read_for_the_places_a_caller_manages(shop):
     assert len(owner_places) == 5
     mine = {f["location_id"] for f in shop.manager.get(f"{BASE}/facts").json()["items"]}
     assert mine == {place_id(shop.owner, "Al Sadd")}
-    other = shop.manager.get(f"{BASE}/facts", params={"location_id": place_id(shop.owner, "Lusail")})
+    lusail = place_id(shop.owner, "Lusail")
+    other = shop.manager.get(f"{BASE}/facts", params={"location_id": lusail})
     assert other.status_code == 404
 
 

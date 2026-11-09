@@ -1,4 +1,5 @@
-"""Discovery Phase 2, proposals (spec 066, D-166): what a check-up prepares and from what, the states
+"""Discovery Phase 2, proposals (spec 066, D-166): what a check-up prepares and from what, the
+states
 and the hash, idempotency (a double tap, two taps at once, a second check-up), expiry, the cool-off,
 the caps, and a review's words staying data. Real PostgreSQL, HTTP in and out, the sample business.
 
@@ -23,7 +24,6 @@ from discovery_proposals_support import (
     activity,
     approve,
     find,
-    finding_of,
     get,
     place_id,
     prepared_shop,
@@ -129,9 +129,11 @@ def test_review_replies_are_a_fixed_text_chosen_by_stars_with_no_word_of_the_rev
         else:
             assert text.startswith(
                 "Thank you for telling us." if low else "Thank you for your feedback.")
-            assert text.endswith("so the team can put it right." if low else "and tell the team how.")
+            assert text.endswith(
+                "so the team can put it right." if low else "and tell the team how.")
             assert "us on WhatsApp at +974 5555 0150" in text
-        assert p["before"]["text"] == "no reply" and p["title"].startswith("Reply to a review rated")
+        assert p["before"]["text"] == "no reply"
+        assert p["title"].startswith("Reply to a review rated")
     oldest = min(replies, key=lambda p: p["context"]["review"]["posted_at"])
     assert oldest["context"]["review"]["rating"] == 3  # the 41-day-old one comes first
 
@@ -376,8 +378,9 @@ def test_status_changes_only_through_the_two_modules_that_may_change_it():
 
 
 def sweep_now(shop, client=None):
+    """The sweep of this shop only: other shops the suite left behind have expired changes too."""
     client = client or shop.owner
-    return client.portal.call(lambda: sweep.sweep_all(client.app.state.db))
+    return client.portal.call(lambda: sweep.sweep_shop(client.app.state.db, shop.tenant_id))
 
 
 def test_the_sweep_expires_a_proposal_after_14_days_and_it_can_not_be_approved(shop):

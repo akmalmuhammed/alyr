@@ -85,11 +85,11 @@ async def sweep_all(
     return total
 
 
-def after_run(db: Database, send_asks: SendAsks):
+def after_run(db: Database, send_asks: SendAsks, clock: Callable[[], datetime] | None = None):
     """What runs once a check-up has finished: ask whoever should be asked about what it made."""
 
     async def run(tenant_id: UUID) -> None:
         async with db.tenant(tenant_id) as conn:
-            await send_asks(conn, datetime.now(UTC))
+            await send_asks(conn, clock() if clock else datetime.now(UTC))
 
     return run

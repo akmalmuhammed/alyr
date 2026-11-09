@@ -231,7 +231,8 @@ def test_a_change_that_is_already_true_is_recorded_and_written_by_nothing(shop):
               UUID(place_id(shop.owner, "Al Sadd")), '{"url": "https://wa.me/97455550150"}')
     approve(shop.owner, p)
     done = get(shop.owner, p["id"])
-    assert done["status"] == "applied" and done["can"]["undo"] is False and done["undo_until"] is None
+    assert done["status"] == "applied" and done["can"]["undo"] is False
+    assert done["undo_until"] is None
     receipt = owner_sql("select receipt from discovery_proposals where id = $1", UUID(p["id"]))
     assert json.loads(receipt[0]["receipt"])["ref"] == "already_true"
     [row] = state(shop)

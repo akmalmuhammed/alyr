@@ -5,6 +5,8 @@ place, a WhatsApp line for the asks, and the staff members a branch manager test
 Every business, person, number and review here is made up.
 """
 
+import json
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from discovery_support import discovery_shop, run_check_up, turn_on_sample
@@ -129,13 +131,88 @@ def contact_of(shop, phone: str) -> dict:
 
 
 def messages_to(shop, phone: str) -> list[dict]:
-    return [dict(r) for r in owner_sql(
-        "select m.direction, m.kind, m.body, m.payload, m.status, m.error from messages m "
-        "join contacts c on c.id = m.contact_id where c.tenant_id = $1 and c.phone = $2 "
-        "order by m.created_at, m.id", shop.tenant_id, phone)]
+    out = []
+    for r in owner_sql(
+            "select m.direction, m.kind, m.body, m.payload, m.status, m.error from messages m "
+            "join contacts c on c.id = m.contact_id where c.tenant_id = $1 and c.phone = $2 "
+            "order by m.created_at, m.id", shop.tenant_id, phone):
+        row = dict(r)
+        row["payload"] = json.loads(row["payload"]) if isinstance(row["payload"], str) else row[
+            "payload"]
+        out.append(row)
+    return out
 
 
 def asks(shop) -> list[dict]:
     return [dict(r) for r in owner_sql(
         "select * from discovery_asks where tenant_id = $1 order by created_at, id",
         shop.tenant_id)]
+
+
+# ── the asks: a linked phone, and sending them now ──────────────────────────────────────
+
+OWNER_PHONE = "97455500101"
+
+
+def midday() -> datetime:
+    """Noon in Doha, today: never inside quiet hours, whatever time the suite runs at."""
+    return datetime.now(UTC).replace(hour=9, minute=0, second=0, microsecond=0)
+
+
+def asks_shop(client_factory, monkeypatch, *, lang: str = "en", phone: str = OWNER_PHONE,
+              roles=("owner", "admin", "agent"), receives: bool = True):
+    """A prepared shop (ten changes wait) whose owner has linked a phone (the real LINK flow),
+    marked to receive asks: the line, the contact and the shop."""
+    shop = prepared_shop(client_factory, monkeypatch, roles=roles)
+    shop.slug = whatsapp_line(shop)
+    link_phone(shop.owner, shop.slug, phone)
+    if lang == "ar":
+        owner_sql("update contacts set lang = 'ar' where tenant_id = $1 and phone = $2",
+                  shop.tenant_id, phone)
+    if receives:
+        receive(shop, phone)
+    return shop
+
+
+def receive(shop, phone: str, on: bool = True) -> None:
+    contact = contact_of(shop, phone)
+    ids = [r["contact_id"] for r in shop.owner.get(f"{BASE}/settings").json()["receivers"]
+           if r["receives"] and r["contact_id"] != str(contact["id"])]
+    answer = shop.owner.put(f"{BASE}/settings",
+                            json={"receivers": ids + ([str(contact["id"])] if on else [])})
+    assert answer.status_code == 200, answer.text
+
+
+def send_asks(shop, now=None) -> int:
+    """Ask whoever should be asked, now (the sweep's job), and let the messages go."""
+    from alyr.modules.discovery import asks as asks_module
+
+    client = shop.owner
+
+    async def go():
+        async with client.app.state.db.tenant(shop.tenant_id) as conn:
+            return await asks_module.send_due(conn, client.app.state.outbound, now or midday())
+
+    sent = client.portal.call(go)
+    client.portal.call(client.app.state.jobs.drain)
+    return sent
+
+
+def only_one_waits(shop, rule_id: str, area: str) -> dict:
+    """Close every other live proposal, so the ask that goes out is about this one (the first of
+    them, when a rule made several)."""
+    keep = [p for p in proposals(shop.owner, "live") if p["rule_id"] == rule_id
+            and p["location"]["name"].endswith(area)][0]
+    owner_sql("update discovery_proposals set status = 'declined', decided_at = now() "
+              "where tenant_id = $1 and status = 'proposed' and id <> $2", shop.tenant_id,
+              UUID(keep["id"]))
+    return keep
+
+
+def open_ask(shop) -> dict:
+    """The ask that was sent last and not answered (asks sent in one moment have no order)."""
+    return [a for a in asks(shop) if a["status"] == "queued"][-1]
+
+
+def tap(shop, phone: str, ask_id, which: str) -> list[dict]:
+    return phone_says(shop.owner, shop.slug, phone, reply_id=f"dc:{ask_id}:{which}")

@@ -15,6 +15,7 @@ from urllib.parse import urlsplit
 import httpx
 
 from alyr.channels.base import Address, InboundMessage, OutboundMessage
+from alyr.core.templates import has_buttons
 
 
 def verify_signature(app_secret: str, raw_body: bytes, header: str | None) -> bool:
@@ -255,7 +256,7 @@ def to_graph_payload(message: OutboundMessage, address: Address) -> dict:
         components.append({"type": "body", "parameters": values})
     # Quick-reply buttons (spec 066): one component per button, `index` its position in the
     # template, the choice's id as the payload that comes back when it is tapped.
-    for index, choice in enumerate(message.choices):
+    for index, choice in enumerate(message.choices if has_buttons(message.template_name) else ()):
         components.append({
             "type": "button", "sub_type": "quick_reply", "index": str(index),
             "parameters": [{"type": "payload", "payload": choice.id}],

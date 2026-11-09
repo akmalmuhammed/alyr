@@ -444,7 +444,7 @@ def all_texts() -> list[str]:
     out: list[str] = []
     tables = (
         FIELD_LABELS, WHERE, NONE_TEXT, TITLES, RULE_LINES, BUTTONS, REPLY, COMMAND_HELP,
-        HISTORY, VIA, BRIEF, WHERE_FAILURE, CONTACTS_FLAT,
+        HISTORY, VIA, BRIEF, WHERE_FAILURE,
     )
     for table in tables:
         for pair in table.values():
@@ -463,5 +463,7 @@ def all_texts() -> list[str]:
     return out
 
 
-# A flat view of CONTACTS for `all_texts`: (English, Arabic) pairs.
-CONTACTS_FLAT = {k: (v["en"], v["ar"]) for k, v in CONTACTS.items()}
+def reply_texts() -> list[str]:
+    """The review replies and the phrases that fill them: the shop's own voice (spec 066), so the
+    tests of ALYR's own words (no first person) leave them out and test them for length."""
+    return [*REPLIES.values(), *(t for v in CONTACTS.values() for t in v.values())]

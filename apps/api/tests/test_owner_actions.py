@@ -46,9 +46,11 @@ def contact_row(phone):
 
 
 def activity(action):
+    # This shop's only: the suite's other shops link phones too (Discovery's asks, spec 066).
     return owner_sql(
-        "select channel, actor_name from activity where action = $1 order by created_at",
-        action,
+        "select channel, actor_name from activity where action = $1 and tenant_id = $2 "
+        "order by created_at",
+        action, DEMO_TENANT_ID,
     )
 
 

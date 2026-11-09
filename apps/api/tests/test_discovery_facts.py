@@ -30,6 +30,11 @@ def shop(client_factory, monkeypatch):
     return prepared_shop(client_factory, monkeypatch)
 
 
+def by_key(client) -> dict:
+    items = client.get(f"{BASE}/facts").json()["items"]
+    return {(f["location_id"], f["key"]): f for f in items}
+
+
 def put(client, area: str, key: str, value):
     return client.put(f"{BASE}/facts", json={
         "location_id": place_id(client, area), "key": key, "value": value})
@@ -109,7 +114,7 @@ def test_the_sample_writes_the_fictional_owners_truth_for_each_branch(shop):
     assert all(r["confirmed_by"] is None and r["confirmed_name"] == "" for r in rows)
     sadd = {r["key"] for r in rows if r["place_ref"] == "sample:sadd"}
     assert sadd == {"hours", "phone", "category", "name", "whatsapp"}
-    items = {(f["location_id"], f["key"]): f for f in shop.owner.get(f"{BASE}/facts").json()["items"]}
+    items = by_key(shop.owner)
     wakra = place_id(shop.owner, "Al Wakra")
     assert items[(wakra, "phone")]["value"] == {"phone": PHONES["wakra"]}
     assert items[(wakra, "name")]["value"] == {"name": "Nuqta Car Care - Wakra"}
@@ -138,7 +143,7 @@ def test_the_name_and_the_whatsapp_number_default_to_what_the_place_was_typed_wi
     assert name["confirmed_by_name"] is None and name["confirmed_at"] is None
     # the row, once there is one, wins
     put(shop.owner, "Al Sadd", "name", {"name": "Nuqta Car Care Sadd"})
-    fresh = {(f["location_id"], f["key"]): f for f in shop.owner.get(f"{BASE}/facts").json()["items"]}
+    fresh = by_key(shop.owner)
     assert fresh[(sadd, "name")]["default"] is False
     assert fresh[(sadd, "name")]["value"] == {"name": "Nuqta Car Care Sadd"}
 
@@ -146,8 +151,9 @@ def test_the_name_and_the_whatsapp_number_default_to_what_the_place_was_typed_wi
 def test_turning_the_sample_on_again_never_writes_over_a_fact_someone_typed(shop):
     put(shop.owner, "Al Sadd", "phone", {"phone": "+97455550177"})
     shop.owner.put(f"{BASE}/connection", json={"kind": "sample", "on": False})
-    assert shop.owner.put(f"{BASE}/connection", json={"kind": "sample", "on": True}).status_code == 200
-    facts = {(f["location_id"], f["key"]): f for f in shop.owner.get(f"{BASE}/facts").json()["items"]}
+    back = shop.owner.put(f"{BASE}/connection", json={"kind": "sample", "on": True})
+    assert back.status_code == 200
+    facts = by_key(shop.owner)
     sadd = facts[(place_id(shop.owner, "Al Sadd"), "phone")]
     assert sadd["source"] == "owner" and sadd["value"] == {"phone": "+97455550177"}
 

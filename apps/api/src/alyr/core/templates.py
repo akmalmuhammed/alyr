@@ -459,6 +459,14 @@ CATALOGUE: dict[str, Template] = {
 }
 
 
+def has_buttons(name: str) -> bool:
+    """Whether a template declares quick-reply buttons (spec 066). Only then are the choices a
+    message carries sent as buttons, in the window and outside it; for every other template they
+    are recorded and not sent, as they always were."""
+    template = CATALOGUE.get(name)
+    return template is not None and bool(template.buttons)
+
+
 def clean(value: object) -> str:
     """Make a value safe for a template blank: one line, no runs of spaces."""
     return " ".join(str(value).split())

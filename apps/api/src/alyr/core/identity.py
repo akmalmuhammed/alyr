@@ -54,7 +54,10 @@ COPY = (
 #   stock_watches   one waiting watch per customer and item, and rows cannot be deleted: a watch
 #                   the survivor already has is closed, the rest move
 #   staff_pending   a staff member's open question; meaningless once the record is gone
-SPECIAL = ("ledger_accounts", "chat_carts", "stock_watches", "staff_pending")
+#   discovery_asks  an owner asked about a Discovery change (spec 066): one ask per change per
+#                   person, so an ask the survivor already has for the same change is the same ask
+#                   and the duplicate's goes with it; the rest move
+SPECIAL = ("ledger_accounts", "chat_carts", "stock_watches", "staff_pending", "discovery_asks")
 # Tables that keep a contact's ID with no foreign key, because their records are locked by
 # triggers once issued (an invoice is never rewritten). The merge says where the ID went in
 # `contact_merges`, so anything that lists a customer's documents or payments can follow it.
@@ -156,6 +159,14 @@ async def _fold(conn: asyncpg.Connection, keep_id: UUID, drop_id: UUID) -> dict[
         keep_id, drop_id,
     )
     await _merge_stock_watches(conn, keep_id, drop_id)
+    await conn.execute(
+        "delete from discovery_asks where contact_id = $2 and exists (select 1 from "
+        "discovery_asks x where x.contact_id = $1 and x.proposal_id = discovery_asks.proposal_id)",
+        keep_id, drop_id,
+    )
+    await conn.execute(
+        "update discovery_asks set contact_id = $1 where contact_id = $2", keep_id, drop_id
+    )
     await _merge_consent(conn, keep_id, drop_id)
     await _merge_ledger_account(conn, keep_id, drop_id)
     await _merge_contact_fields(conn, keep_id, drop_id)
@@ -284,6 +295,7 @@ async def _merge_contact_fields(conn: asyncpg.Connection, keep_id: UUID, drop_id
         "                      else d.credit_limit end, "
         "  role = case when 'staff' in (k.role, d.role) then 'staff' else 'customer' end, "
         "  weekly_report = k.weekly_report or d.weekly_report, "
+        "  discovery_asks = k.discovery_asks or d.discovery_asks, "
         "  catalog_manager = k.catalog_manager or d.catalog_manager "
         "from contacts d where k.id = $1 and d.id = $2",
         keep_id, drop_id,
