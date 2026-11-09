@@ -126,6 +126,7 @@ const signIn = async () => {
   const signed = await js("fetch('/api/workspace').then(r => (r.ok ? r.json() : null)).then(w => !!(w && w.me && w.me.signed_in))");
   if (signed) return;
   sql(`delete from login_codes where email = '${args.signin}'`);
+  sql("delete from rate_hits"); // a developer's database counts five codes an hour for an address; every run asks for one
   await js(`fetch('/api/auth/code', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({email: ${norm(args.signin)}})}).then(r => r.json()).then(d => fetch('/api/auth/verify', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({email: ${norm(args.signin)}, code: d.dev_code})})).then(r => r.status)`);
 };
 
@@ -222,7 +223,9 @@ async function home() {
   await ready(".dv-score", "the score line");
   check((await has(T0.doNext)) || (await has(T0.caughtUpTitle)), "Home shows the one card (or says nothing is left)");
   check((await count(".dv-card")) <= 1, "there is one card, never two");
-  const waitingN = await js("fetch('/api/discovery/proposals').then(r => r.ok ? r.json() : { waiting: 0 }).then(d => d.waiting)");
+  const waitingProbe = await js("fetch('/api/discovery/proposals').then(async r => ({ status: r.status, body: await r.text() }))");
+  const waitingN = (() => { try { return JSON.parse(waitingProbe.body).waiting ?? 0; } catch { return 0; } })();
+  if (waitingProbe.status !== 200) log('proposals answered', waitingProbe.status, waitingProbe.body.slice(0, 120));
   const mainWord = waitingN > 0 ? T0.reviewChanges(waitingN) : T0.runCheckup;
   check((await count(".btn.volt")) === 1 && (await js(`document.querySelector('.btn.volt').textContent.trim()`)) === mainWord, `the page's one Volt button is "${mainWord}"`);
   if (waitingN > 0) check((await js("[...document.querySelectorAll('.dv-score-act .btn')].map(b => b.textContent.trim()).join('|')")) === `${mainWord}|${T0.runCheckup}`, `while a change waits, "${T0.runCheckup}" is its outlined twin`);
@@ -638,7 +641,8 @@ async function proposals() {
   const all = await listAll();
   const live = all.filter((p) => ["proposed", "approved"].includes(p.status));
   check((await count(".dv-prow")) === live.length, `a row for each change that waits or is being applied (${live.length})`);
-  check((await js("document.querySelector('.dv-count').textContent")) === T0.proposalCount("live", live.length), "the count is in words, for the tab");
+  const nProposed = live.filter((p) => p.status === "proposed").length, nApplying = live.length - nProposed;
+  check((await js("document.querySelector('.dv-count').textContent")) === T0.proposalCount("live", nProposed) + (nApplying > 0 ? ` · ${T0.applyingN(nApplying)}` : ""), "the count is in words, and says how many are being applied");
   const pills = await js("[...document.querySelectorAll('.dv-prow .dv-pill')].map(p => p.textContent.trim())");
   check(pills.length === live.length && pills.every((p) => Object.values(T0.proposalStatus).includes(p)) && pills.includes(T0.proposalStatus.approved), "every row says its status in words");
   check((await count(".dv-prow .dv-change-line bdi")) === live.length * 2, "every row shows now and proposed, each isolated");
@@ -1054,6 +1058,8 @@ async function roles2() {
 
 // ── Phase 2 against the real API (no fixture): the same screens, the states a real check-up reaches ──
 async function runCheckupNow() {
+  // The API keeps a gap between two check-ups started by hand (spec 065); a developer's database is aged instead of waited for.
+  if (args.pg) sql("update discovery_runs set created_at = created_at - interval '1 hour'");
   for (let i = 0; i < 20; i++) {
     const status = await js("fetch('/api/discovery/runs', { method: 'POST' }).then(r => r.status)");
     if (status !== 429) break;
@@ -1085,7 +1091,7 @@ async function realOwner() {
 
   // Proposals
   await open("proposals"); await ready(".dv-prow", "the rows");
-  check((await count(".dv-prow")) === live.length && (await js("document.querySelector('.dv-count').textContent")) === T0.proposalCount("live", live.length), "Proposals lists what the API lists, counted in words");
+  check((await count(".dv-prow")) === live.length && (await js("document.querySelector('.dv-count').textContent")).startsWith(T0.proposalCount("live", live.filter((p) => p.status === "proposed").length)), "Proposals lists what the API lists, counted in words");
   await shot("91-real-proposals");
   await noSideScroll("Proposals (real)"); await targets("Proposals (real)"); await named("Proposals (real)"); await latinInArabic("Proposals (real)");
   await axe("proposals-real", null, [".sh-side", ".sh-top"]);

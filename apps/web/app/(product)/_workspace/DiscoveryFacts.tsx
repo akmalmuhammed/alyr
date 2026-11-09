@@ -8,7 +8,7 @@
 // digits) and again by the API, whose own words are shown if it refuses. Used in the finding's
 // sheet, where saving makes the change appear at once, and in Settings, where a fact is edited.
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Field, Icon } from "./CatalogUi";
 import { DAYS, discovery, type Fact, type FactKey } from "./discoveryApi";
 import { T, type Lang } from "./discoveryCopy";
@@ -29,6 +29,7 @@ export function FactForm({ lang, factKey, locationId, initial, title, intro = tr
   const [textError, setTextError] = useState<TextError | null>(null);
   const [serverError, setServerError] = useState("");
   const [busy, setBusy] = useState(false);
+  const uid = useId();
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -72,8 +73,8 @@ export function FactForm({ lang, factKey, locationId, initial, title, intro = tr
               const err = hourErrors[d];
               const set = (patch: Partial<typeof row>) => setHours((all) => ({ ...all, [d]: { ...all[d], ...patch } }));
               return (
-                <fieldset key={d} className="dv-hrow">
-                  <legend className="dv-hday">{t.daysLong[d]}</legend>
+                <div key={d} className="dv-hrow" role="group" aria-labelledby={`${uid}-${d}`}>
+                  <span className="dv-hday" id={`${uid}-${d}`}>{t.daysLong[d]}</span>
                   <label className="dv-closed">
                     <input type="checkbox" checked={row.closed} onChange={(e) => set({ closed: e.target.checked })} />
                     <span>{t.closedDay}</span>
@@ -88,7 +89,7 @@ export function FactForm({ lang, factKey, locationId, initial, title, intro = tr
                       </Field>
                     </div>
                   )}
-                </fieldset>
+                </div>
               );
             })}
           </div>

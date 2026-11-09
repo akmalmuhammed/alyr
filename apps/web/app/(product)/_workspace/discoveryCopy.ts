@@ -219,6 +219,7 @@ const en = {
   proposalTabsLabel: "Show",
   proposalTabs: { live: "Waiting", done: "Done", closed: "Closed" } as Record<"live" | "done" | "closed", string>,
   proposalCount: (tab: "live" | "done" | "closed", n: number) => (tab === "live" ? `${n} waiting` : tab === "done" ? `${n} done` : `${n} closed`),
+  applyingN: (n: number) => `${n} being applied`,
   proposalsEmpty: {
     live: "Nothing is waiting. The next check-up may find something.",
     done: "Nothing applied yet. A change you approve shows here once it is applied.",
@@ -540,6 +541,7 @@ const ar: typeof en = {
     tab === "live" ? an(n, "تعديل واحد بالانتظار", "تعديلان بالانتظار", "تعديلات بالانتظار", "تعديلاً بالانتظار")
       : tab === "done" ? an(n, "تعديل واحد منجز", "تعديلان منجزان", "تعديلات منجزة", "تعديلاً منجزاً")
         : an(n, "تعديل واحد مغلق", "تعديلان مغلقان", "تعديلات مغلقة", "تعديلاً مغلقاً"),
+  applyingN: (n) => (n === 1 ? "واحد قيد التطبيق" : n === 2 ? "اثنان قيد التطبيق" : `${n} قيد التطبيق`),
   proposalsEmpty: {
     live: "لا شيء بالانتظار. قد يجد الفحص التالي شيئاً.",
     done: "لم يُطبَّق شيء بعد. يظهر هنا التعديل الذي توافق عليه بعد تطبيقه.",

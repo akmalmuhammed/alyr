@@ -59,7 +59,10 @@ export function DiscoveryProposals({ lang, canManage }: { lang: Lang; canManage:
 
         {data && (
           <>
-            <p className="dv-count" role="status">{t.proposalCount(tab, tabCount(data.counts, tab))}</p>
+            <p className="dv-count" role="status">
+              {tab === "live" ? t.proposalCount("live", data.counts.proposed) : t.proposalCount(tab, tabCount(data.counts, tab))}
+              {tab === "live" && data.counts.approved > 0 && <> · {t.applyingN(data.counts.approved)}</>}
+            </p>
             {items.length === 0 ? (
               <p className="dv-slot dv-slot-wide"><span className="dv-pending" aria-hidden="true" />{t.proposalsEmpty[tab]}</p>
             ) : (
