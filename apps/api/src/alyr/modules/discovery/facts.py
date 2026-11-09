@@ -37,8 +37,12 @@ class Fact:
 
 
 def _text(value: object, longest: int) -> str:
-    text = " ".join(str(value or "").split())
-    if not text or len(text) > longest or _ONE_LINE.search(text):
+    """One line: a line break or another control character is refused (a value goes into a
+    template's blank and a message, and is never cut), runs of spaces become one."""
+    if not isinstance(value, str) or _ONE_LINE.search(value):
+        raise DiscoveryError("bad_fact")
+    text = " ".join(value.split())
+    if not text or len(text) > longest:
         raise DiscoveryError("bad_fact")
     return text
 

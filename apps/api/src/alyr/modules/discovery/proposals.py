@@ -335,7 +335,8 @@ async def _cool_hashes(conn: asyncpg.Connection, now: datetime) -> set:
         "(status = 'declined' and decided_at > $1) "
         "or (status = 'expired' and expire_reason = 'time' and updated_at > $1) "
         "or (status = 'undone' and undone_at > $1) "
-        "or (status = 'applied' and verification = 'not_confirmed' and updated_at > $1)",
+        "or (status = 'applied' and verification in ('pending', 'not_confirmed') "
+        "and updated_at > $1)",
         since,
     )
     return {r["change_hash"] for r in rows}
