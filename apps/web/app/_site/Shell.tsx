@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { Icon, Logo, Symbol } from "./brand";
 import { ContactAddress, ContactButton, contactLink, ContactPending, TryFreeButton, TryFreeNote } from "./Contact";
 import { copy, fill, type Locale } from "./copy";
@@ -49,6 +50,14 @@ function ProductsMenu({ locale, page }: { locale: Locale; page: PageKey }) {
     </details>
   );
 }
+
+/** The footer picture's water, in seven bands that each drift a little on their own beat (site.css).
+ * `top` is where a band starts as a share of the picture's height; `p` is the background position
+ * that shows the same slice of the picture. The picture's water runs from 61.5% to 93%. */
+const WATER_BANDS = Array.from({ length: 7 }, (_, index) => {
+  const top = 61.5 + index * 4.5;
+  return { top, p: Number(((top / (100 - 4.5)) * 100).toFixed(2)) };
+});
 
 /** The header, the closing call to action, the footer and the phone's sticky contact bar
  * that every public page shares. The bar comes up once the opening's own "Book a check-up"
@@ -251,6 +260,34 @@ export function Shell({
             <p>{rich(t.footer.disclaimer)}</p>
           </div>
         </div>
+        {/* The Doha Corniche at dusk, edge to edge, ending the page (D-163): a painted scene, the
+            lights of the towers in three layers that twinkle, and the water in bands that drift.
+            Decoration only, so it is hidden from screen readers; it is a real place, so it is not
+            mirrored in Arabic. The movement is paused with the button. */}
+        <div className="foot-art" aria-hidden="true">
+          <div className="foot-scene" />
+          <div className="foot-water">
+            {WATER_BANDS.map((band, index) => (
+              <i key={index} style={{ "--top": `${band.top}%`, "--p": `${band.p}%`, "--i": index } as CSSProperties} />
+            ))}
+          </div>
+          <div className="foot-lights is-a" />
+          <div className="foot-lights is-b" />
+          <div className="foot-lights is-c" />
+        </div>
+        <button
+          type="button"
+          className="foot-motion"
+          data-art-toggle
+          data-pause={t.loop.pause}
+          data-play={t.loop.play}
+          data-pause-name={t.loop.names.footer.pause}
+          data-play-name={t.loop.names.footer.play}
+          aria-label={t.loop.names.footer.pause}
+          hidden
+        >
+          {t.loop.pause}
+        </button>
       </footer>
 
       {CONTACT_STATE !== "pending" && (

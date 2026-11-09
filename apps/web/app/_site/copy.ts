@@ -576,7 +576,7 @@ export type Copy = {
   loop: {
     pause: string;
     play: string;
-    names: Record<"how" | "frame" | "figure" | "line", { pause: string; play: string }>;
+    names: Record<"how" | "frame" | "figure" | "line" | "footer", { pause: string; play: string }>;
   };
   report: ReportCopy;
   agent: AgentFigure;
@@ -793,6 +793,7 @@ const en: Copy = {
       frame: { pause: "Pause the six products", play: "Play the six products" },
       figure: { pause: "Pause the drawing", play: "Play the drawing" },
       line: { pause: "Pause the changing word", play: "Play the changing word" },
+      footer: { pause: "Pause the moving lights", play: "Play the moving lights" },
     },
   },
   report: {
@@ -3143,6 +3144,7 @@ const ar: Copy = {
       frame: { pause: "إيقاف حركة المنتجات الستة", play: "تشغيل حركة المنتجات الستة" },
       figure: { pause: "إيقاف حركة الرسم", play: "تشغيل حركة الرسم" },
       line: { pause: "إيقاف الكلمة المتغيرة", play: "تشغيل الكلمة المتغيرة" },
+      footer: { pause: "إيقاف حركة الأضواء", play: "تشغيل حركة الأضواء" },
     },
   },
   report: {

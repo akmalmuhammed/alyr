@@ -5,6 +5,7 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- The footer ends in the Doha Corniche at dusk (D-163, ALY-330; no migration, no new dependency; not published): a painted scene edge to edge under the footer of every public page, which is now Carbon in both themes (new token `footer-band`); the towers' lights twinkle and the water drifts a little while the picture is on screen, never with reduced motion, with a Pause button; the files load when the visitor is near. English and Arabic; the scene is not mirrored. Four image files of about 175 KB and three of 11 KB.
 
 ## v0.3.14 (8 Nov 2026)
 - The home film in the homepage window, and no "a person replies" on the homepage (D-159, ALY-330; no migration, no new dependency): the window plays `ALYR-your-business-1080.mp4` (2:06, as an 18.6 MB web copy with a poster; never starts by itself), shown whole on its own background; the note under the hero buttons and the closing call no longer say a person from ALYR replies. English and Arabic; the Arabic is a draft until ALY-66.
