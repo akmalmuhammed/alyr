@@ -115,6 +115,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-158 | The homepage window at Notion's size (960 x 600), and two animated scenes in the stage switch: a check-up score that moves after one fix (Discover) and five places drawn into one ALYR Chat inbox (Convert) | Proposed, 8 Nov 2026 |
 | D-156 | The homepage is rebuilt around the four stages (discover, convert, manage, scale), with one drawn funnel figure, the five numbers of a check-up and one panel per stage; where software is not built, our team does the step and the page says so | Proposed |
 | D-160 | Discovery is one module with one agent and two doors: ALYR Agent in the workspace and WhatsApp, the owner's own AI through the MCP connector, both calling the same actions; Phase 1 is read-only and rule-based, no model | Accepted |
+| D-166 | Discovery Phase 2: every public change is a proposal made by rule from a confirmed fact, applied only after a person's tap on that exact change (workspace or WhatsApp), through a connector write interface; asks go to linked staff numbers through the outbound layer; Google Business Profile writes are an interface only | Proposed, 9 Nov 2026 |
 | D-155 | The light page is pure white, with cool Carbon-family greys for wells and lines, instead of the yellow-green off-white Paper | Accepted |
 | D-153 | The homepage's headline and sub line use the founder's AI wording, with one word taking turns on a pale Volt block, and a statement before the products keeps the plain line | Accepted |
 | D-154 | The homepage is trimmed: no film beside the headline (ends D-062), the sub line's word takes turns between discover, manage and scale with its own Pause, and How we work's lead, "What we need from you" and the order flow's tally go | Accepted |
@@ -2659,3 +2660,24 @@ Customers lose a business when its listing, hours, number, website and reviews d
 **Why.** The founder's rule of 7 Nov (show the best product, build after signing) was overtaken by a go to build it now. The module reuses what exists (module switches, the Agent's registry, the action layer, the jobs worker), so Phase 1 is a module and four screens, not a platform. A model is the one part that needs a legal decision (ALY-329, ALY-51), so it is kept out of Phase 1 and the product does not wait for it.
 
 **Reserved.** Migrations 0120 to 0129 and decisions D-160 to D-169 belong to Discovery.
+
+## D-166 · Discovery Phase 2: proposals, approvals and owner asks
+
+**Date** 9 Nov 2026 · **Status** Proposed (the spec is written, nothing is built; the founder's yes starts the build) · ALY-324, ALY-325, spec 066 · Builds on D-160 (one agent, two doors; "every public change is a proposal the owner approves"), D-065 (the action layer), D-004 and D-020 (one outbound layer, consent and the 24-hour window), D-012 (no model required)
+
+D-160 said Phase 2 would turn findings into proposals the owner approves. This fixes how, so backend and screens can be built in parallel.
+
+**Decision.**
+- **A proposal is one exact change to one place**, made by a rule from a finding, with its before and after stored and immutable. Its "after" comes only from a **fact** a person confirmed (the real hours, phone, category, name, WhatsApp number), the place's own WhatsApp number, or a fixed reply template. No model, no free text, no value copied from Google, a website or a review.
+- **Approval is a person's tap on that exact change**, by an owner, an admin, or a branch manager for their own place; never by the engine, by ALYR Agent, by the owner's own AI through the MCP door, or by staff. The state lives in one row; WhatsApp and the workspace read and write it through the same action. A proposal expires after 14 days; a refused one is not asked again for 14 days.
+- **Apply goes through a connector write interface** that checks the live value first, writes, and keeps a receipt. The `sample` connector changes the fictional business so a re-run shows the score going up; undo works for 7 days while the live value is still what ALYR wrote. A `google_business_profile` connector is specified as an interface and **not built**: it needs Google's API access (an application, a verified profile of 60 days or more, an OAuth consent screen), which is the founder's.
+- **Asks on WhatsApp** go only to staff numbers linked to a login and marked by the owner, through the outbound layer (consent, the 24-hour window), outside quiet hours, at most 3 a day (adjustable 1 to 5), one at a time, one per proposal per person, never repeated. Inside the window they are buttons (Approve, Not now, See details); outside it a template that is written and **held until the founder submits it to Meta**. "Not now" leaves the proposal waiting. Nothing is ever sent to a customer.
+- **The morning brief gets one line,** "N changes waiting for your approval", from `brief_line`, which the Agent's "Needs you now" uses now. The brief itself (ALY-134) is not built and is not part of this.
+
+**Why.** An owner will not log in to fix a phone number, but will tap a button on a message that shows the exact before and after. Deriving every change from something the owner confirmed keeps the product rule-based and honest (D-012, D-035), and the guarantee "nothing is applied without your tap" is what makes it safe to let ALYR touch a public listing.
+
+**Rejected.** Letting the owner approve by typing a word (it does not say which change). Letting a model draft review replies or hours (hard rule 2 and ALY-329 are unresolved). Inferring hours from Bookings (a good next step, but a person must still confirm). Building the Google connector now (no API access).
+
+**Revisit when** Meta approves or refuses the ask template, Google grants API access, ALY-134 is built, or the Arabic review (ALY-66) changes the words.
+
+**Taken from the reserved range:** D-166 (D-165 is taken by the homepage work, PR #281) and migrations 0121 to 0123.
