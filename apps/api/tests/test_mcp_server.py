@@ -129,7 +129,11 @@ def test_a_modern_client_is_served_statelessly(world):
     assert result["resultType"] == "complete" and MODERN in result["supportedVersions"]
     assert result["capabilities"] == {"tools": {"listChanged": False}}
     assert result["_meta"]["io.modelcontextprotocol/serverInfo"]["name"] == "ALYR"
-    assert "hello" in names(app.rpc(token, "tools/list", modern=True))
+    assert result["cacheScope"] == "public" and result["ttlMs"] > 0
+    listed = app.rpc(token, "tools/list", modern=True).json()["result"]
+    assert "hello" in [t["name"] for t in listed["tools"]]
+    # What is offered depends on the person: private to this authorization, never fresh.
+    assert listed["cacheScope"] == "private" and listed["ttlMs"] == 0
     called = app.call(token, "hello", modern=True).json()["result"]
     assert called["resultType"] == "complete" and called["isError"] is False
 

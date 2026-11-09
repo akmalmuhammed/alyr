@@ -181,10 +181,13 @@ class McpServer:
         if method == "ping":
             return _result(id_, {}, modern)
         if method == "server/discover":
+            # The same for everyone, so it may be shared and kept five minutes (the specification
+            # asks for both caching fields on this result and on `tools/list`).
             return _result(id_, {
                 "supportedVersions": [MODERN, *LEGACY],
                 "capabilities": {"tools": {"listChanged": False}},
                 "instructions": INSTRUCTIONS,
+                "ttlMs": 300_000, "cacheScope": "public",
             }, modern)
         if method == "tools/list":
             return await self._list(id_, principal, modern)
@@ -217,7 +220,11 @@ class McpServer:
         if role is None:
             return _error(id_, INVALID_REQUEST, "this person is no longer on the team", 401)
         found = registry.offered(role, principal.scopes, modules, self._test_tools())
-        return _result(id_, {"tools": [t.listed() for t in found]}, modern)
+        # What is offered depends on the person, the permission and the business: private to this
+        # authorization, and always stale, so a changed role shows at the next ask.
+        return _result(id_, {
+            "tools": [t.listed() for t in found], "ttlMs": 0, "cacheScope": "private",
+        }, modern)
 
     def _test_tools(self) -> bool:
         return self.settings.env == "local" or self.settings.mcp_test_tools
