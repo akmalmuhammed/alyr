@@ -248,7 +248,6 @@ export function Shell({
               <span><span dir="ltr">© 2026</span> {rich(t.footer.rights)}</span>
             </p>
             <p>{t.footer.legal}</p>
-            <p>{rich(t.footer.disclaimer)}</p>
           </div>
         </div>
         {/* The Doha Corniche in line, edge to edge, ending the page (D-162). Decoration only; the
