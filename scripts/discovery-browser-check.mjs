@@ -328,7 +328,9 @@ async function liveRun() {
   const seen = []; const started = Date.now();
   // The real engine may be done before it answers, with nothing to watch; a fixture is slow on purpose.
   await until(CONTROL ? "!!document.querySelector('.dv-running')" : "!!document.querySelector('.dv-running') || !!document.querySelector('.dv-score')", "the running panel", 15000);
-  if (await exists(".dv-running")) check((await count(".btn.volt")) === 0, "while it runs there is no Volt button: the run is the page");
+  // One look, not two: a real engine can finish between them.
+  const midRun = await js("({ running: !!document.querySelector('.dv-running'), volt: document.querySelectorAll('.btn.volt').length })");
+  if (midRun.running) check(midRun.volt === 0, "while it runs there is no Volt button: the run is the page");
   else log("the check-up was over before there was anything to watch");
   let shotRunning = false;
   while (Date.now() - started < 25000) {
