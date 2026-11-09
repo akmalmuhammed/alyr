@@ -23,7 +23,7 @@ export type StageTabsCopy = {
 
 export const stageTabsEn: StageTabsCopy = {
   title: "One business, four stages.",
-  lead: "Choose a stage to see what runs today and what our team does with you.",
+  lead: "Choose a stage to see what ALYR does at each one.",
   tabsLabel: "The four stages",
   next: "Next: {stage}",
   back: "Back to {stage}",
@@ -32,7 +32,7 @@ export const stageTabsEn: StageTabsCopy = {
 
 export const stageTabsAr: StageTabsCopy = {
   title: "نشاط واحد، أربع مراحل.",
-  lead: "اختر مرحلة لترى ما يعمل اليوم وما يتولاه فريقنا معك.",
+  lead: "اختر مرحلة لترى ما تفعله ALYR في كل واحدة منها.",
   tabsLabel: "المراحل الأربع",
   next: "التالي: {stage}",
   back: "العودة إلى {stage}",

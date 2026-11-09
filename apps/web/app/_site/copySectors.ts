@@ -147,7 +147,7 @@ export const sectorsEn: SectorsCopy = {
       },
       cta: {
         title: "Tell us how orders reach your bakery today.",
-        body: "Send us a message. A person from ALYR replies, then comes to show you how it would work for your bakery, on your own phone.",
+        body: "Send us a message, and we set up a call or a meeting to show you how it would work for your bakery.",
       },
       prefill: "Hello ALYR, I run a bakery and I’d like to see how ALYR takes our orders.",
       subject: "How ALYR works for my bakery",
@@ -212,7 +212,7 @@ export const sectorsEn: SectorsCopy = {
       },
       cta: {
         title: "Tell us how bookings reach your salon today.",
-        body: "Send us a message. A person from ALYR replies, then comes to show you a booking made from a chat on your own phone.",
+        body: "Send us a message, and we set up a call or a meeting to show you a booking made from a chat.",
       },
       prefill: "Hello ALYR, I run a salon and I’d like to see how ALYR takes our bookings.",
       subject: "How ALYR works for my salon",
@@ -278,7 +278,7 @@ export const sectorsEn: SectorsCopy = {
       },
       cta: {
         title: "Tell us how your credit book works today.",
-        body: "Send us a message. A person from ALYR replies, then comes to your shop to go through your book with you.",
+        body: "Send us a message, and we set up a call or a meeting to go through your book with you.",
       },
       prefill: "Hello ALYR, I run a grocery and I’d like to see the credit accounts and orders.",
       subject: "How ALYR works for my grocery",
@@ -345,7 +345,7 @@ export const sectorsEn: SectorsCopy = {
       },
       cta: {
         title: "Tell us how orders reach your restaurant today.",
-        body: "Send us a message. A person from ALYR replies, then comes to show you how it would work for your restaurant, on your own phone.",
+        body: "Send us a message, and we set up a call or a meeting to show you how it would work for your restaurant.",
       },
       prefill: "Hello ALYR, I run a restaurant and I’d like to see how ALYR takes our orders.",
       subject: "How ALYR works for my restaurant",
@@ -413,7 +413,7 @@ export const sectorsEn: SectorsCopy = {
       },
       cta: {
         title: "Tell us how jobs reach you today.",
-        body: "Send us a message. A person from ALYR replies, then comes to show you a visit booked from a chat on your own phone.",
+        body: "Send us a message, and we set up a call or a meeting to show you a visit booked from a chat.",
       },
       prefill: "Hello ALYR, we do home services and I’d like to see how ALYR takes our bookings.",
       subject: "How ALYR works for my company",
@@ -478,7 +478,7 @@ export const sectorsEn: SectorsCopy = {
       },
       cta: {
         title: "Tell us how orders reach your shop today.",
-        body: "Send us a message. A person from ALYR replies, then comes to show you how it would work for your shop, on your own phone.",
+        body: "Send us a message, and we set up a call or a meeting to show you how it would work for your shop.",
       },
       prefill: "Hello ALYR, I sell fashion and gifts and I’d like to see how ALYR takes our orders.",
       subject: "How ALYR works for my shop",
@@ -564,7 +564,7 @@ export const sectorsAr: SectorsCopy = {
       },
       cta: {
         title: "أخبرنا كيف تصل الطلبات إلى مخبزك اليوم.",
-        body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يأتي ليريك كيف تعمل لمخبزك، على هاتفك.",
+        body: "أرسل لنا رسالة، ونرتّب معك اتصالاً أو لقاءً نُريك فيه كيف تعمل لمخبزك.",
       },
       prefill: "مرحبا ALYR، عندي مخبز وأبي أشوف كيف تستقبلون طلباتنا.",
       subject: "كيف تعمل ALYR في مخبزي",
@@ -628,7 +628,7 @@ export const sectorsAr: SectorsCopy = {
       },
       cta: {
         title: "أخبرنا كيف تصل الحجوزات إلى صالونك اليوم.",
-        body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يأتي ليريك حجزاً يتم من محادثة على هاتفك.",
+        body: "أرسل لنا رسالة، ونرتّب معك اتصالاً أو لقاءً نُريك فيه حجزاً يتم من محادثة.",
       },
       prefill: "مرحبا ALYR، عندي صالون وأبي أشوف كيف تستقبلون حجوزاتنا.",
       subject: "كيف تعمل ALYR في صالوني",
@@ -693,7 +693,7 @@ export const sectorsAr: SectorsCopy = {
       },
       cta: {
         title: "أخبرنا كيف يعمل دفتر الديون عندك اليوم.",
-        body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يأتي إلى محلك ليراجع دفترك معك.",
+        body: "أرسل لنا رسالة، ونرتّب معك اتصالاً أو لقاءً نراجع فيه دفترك معك.",
       },
       prefill: "مرحبا ALYR، عندي بقالة وأبي أشوف الحسابات الآجلة والطلبات.",
       subject: "كيف تعمل ALYR في بقالتي",
@@ -759,7 +759,7 @@ export const sectorsAr: SectorsCopy = {
       },
       cta: {
         title: "أخبرنا كيف تصل الطلبات إلى مطعمك اليوم.",
-        body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يأتي ليريك كيف تعمل لمطعمك، على هاتفك.",
+        body: "أرسل لنا رسالة، ونرتّب معك اتصالاً أو لقاءً نُريك فيه كيف تعمل لمطعمك.",
       },
       prefill: "مرحبا ALYR، عندي مطعم وأبي أشوف كيف تستقبلون طلباتنا.",
       subject: "كيف تعمل ALYR في مطعمي",
@@ -826,7 +826,7 @@ export const sectorsAr: SectorsCopy = {
       },
       cta: {
         title: "أخبرنا كيف تصلك طلبات العمل اليوم.",
-        body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يأتي ليريك زيارة تُحجز من محادثة على هاتفك.",
+        body: "أرسل لنا رسالة، ونرتّب معك اتصالاً أو لقاءً نُريك فيه زيارة تُحجز من محادثة.",
       },
       prefill: "مرحبا ALYR، عندنا شركة خدمات منزلية ونبي نشوف كيف تستقبلون حجوزاتنا.",
       subject: "كيف تعمل ALYR مع شركتي",
@@ -890,7 +890,7 @@ export const sectorsAr: SectorsCopy = {
       },
       cta: {
         title: "أخبرنا كيف تصل الطلبات إلى محلك اليوم.",
-        body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يأتي ليريك كيف تعمل لمحلك، على هاتفك.",
+        body: "أرسل لنا رسالة، ونرتّب معك اتصالاً أو لقاءً نُريك فيه كيف تعمل لمحلك.",
       },
       prefill: "مرحبا ALYR، أبيع أزياء وهدايا وأبي أشوف كيف تستقبلون طلباتنا.",
       subject: "كيف تعمل ALYR في محلي",

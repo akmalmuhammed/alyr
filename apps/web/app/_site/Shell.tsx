@@ -2,7 +2,7 @@ import { Icon, Logo, Symbol } from "./brand";
 import { ContactAddress, ContactButton, contactLink, ContactPending, TryFreeButton, TryFreeNote } from "./Contact";
 import { copy, fill, type Locale } from "./copy";
 import {
-  CONTACT_EMAIL, CONTACT_STATE, INCLUDED, pageKind, PATHS, PRODUCTS, productPath, SECTORS, sectorPage, TRY_FREE_LIVE, TRY_FREE_URL, WHATSAPP_NUMBER, WORKSPACE_URL,
+  CONTACT_EMAIL, CONTACT_STATE, pageKind, PATHS, PRODUCTS, productPath, SECTORS, sectorPage, TRY_FREE_LIVE, TRY_FREE_URL, WHATSAPP_NUMBER, WORKSPACE_URL,
   type PageKey, type ProductKey,
 } from "./site";
 import { SiteMotion } from "./SiteMotion";
@@ -37,7 +37,6 @@ function ProductsMenu({ locale, page }: { locale: Locale; page: PageKey }) {
                   <a className="pm-link" href={productPath(key, locale)} aria-current={page === key ? "page" : undefined}>
                     <span className="pm-name"><bdi>{p.name}</bdi></span>
                     <span className="pm-line">{p.line}</span>
-                    {INCLUDED.includes(key) && <span className="pm-state">{p.state}</span>}
                     <Icon name="arrow-right" className="ico ico-flip pm-arrow" />
                   </a>
                 </li>
@@ -147,7 +146,6 @@ export function Shell({
                       <li key={key}>
                         <a href={productPath(key, locale)} aria-current={page === key ? "page" : undefined}>
                           <bdi>{p.name}</bdi>
-                          {INCLUDED.includes(key) && <small>{p.state}</small>}
                         </a>
                       </li>
                     );
