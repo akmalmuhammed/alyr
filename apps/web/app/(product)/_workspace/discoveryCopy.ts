@@ -232,6 +232,7 @@ const en = {
     status === "proposed" ? `Waiting until ${date}` : status === "approved" ? `Approved ${date}` : status === "applied" ? `Applied ${date}`
       : status === "declined" ? `Declined ${date}` : status === "expired" ? `Expired on ${date}` : status === "undone" ? `Undone ${date}` : `Tried ${date}`,
   fieldAt: (label: string, where: string) => `${label} on ${where}`,
+  expiresOn: (date: string) => `Expires ${bidi(date)}`,
 
   // ── Phase 2: the approval sheet ──────────────────────
   approve: "Approve",
@@ -552,6 +553,7 @@ const ar: typeof en = {
     status === "proposed" ? `بانتظار الموافقة حتى ${date}` : status === "approved" ? `تمت الموافقة ${date}` : status === "applied" ? `طُبّق ${date}`
       : status === "declined" ? `رُفض ${date}` : status === "expired" ? `انتهت مدته في ${date}` : status === "undone" ? `تم التراجع ${date}` : `جرت المحاولة ${date}`,
   fieldAt: (label, where) => `${label} في ${where}`,
+  expiresOn: (date) => `تنتهي مدته ${bidi(date)}`,
 
   // ── Phase 2: the approval sheet ──────────────────────
   approve: "موافقة",

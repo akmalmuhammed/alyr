@@ -32,7 +32,7 @@ const read = (path) => readFileSync(path, "utf8");
 /** Every line of a copy object as text: functions are called with sample arguments. */
 const SAMPLES = {
   rowWhen: [["proposed", "Tue 24 Nov"], ["approved", "9 Nov"], ["applied", "9 Nov"], ["declined", "9 Nov"], ["expired", "23 Nov"], ["undone", "17 Nov"], ["failed", "9 Nov"]],
-  fieldAt: [["Opening hours", "the listing"]],
+  fieldAt: [["Opening hours", "the listing"]], expiresOn: [["Tue 24 Nov"]],
   stepApproved: [["Huda", "whatsapp"], ["Huda", "portal"], ["", ""]],
   appliedLine: [["9 Nov · 09:12", "Huda", "whatsapp"], ["9 Nov · 09:12", "Huda", "portal"], ["9 Nov · 09:12", "", ""]],
   declinedLine: [["9 Nov · 09:12", "Huda", "portal"], ["9 Nov · 09:12", "", ""]],

@@ -202,7 +202,7 @@ function State({ p, lang, history, arrived, slow, headRef, onCheck }: {
     return (
       <section className="dv-state">
         {heading()}
-        {p.expires_at && <p className="dv-expiry">{t.rowWhen("proposed", formatDayLong(p.expires_at, lang))}</p>}
+        {p.expires_at && <p className="dv-expiry">{t.expiresOn(formatDayLong(p.expires_at, lang))}</p>}
         {!p.can.approve && <p className="ct-quiet">{t.ownerApproves}</p>}
       </section>
     );
