@@ -21,6 +21,7 @@ from alyr.core.storage import check_store
 from alyr.main import close_channels, create_app
 from alyr.modules import report
 from alyr.modules.bookings import deposits as booking_deposits
+from alyr.modules.discovery import sweep as discovery_sweep
 from alyr.modules.orders import holds as order_holds
 
 log = logging.getLogger("alyr.worker")
@@ -77,6 +78,20 @@ async def keep_holds_swept(db, outbound) -> None:
         except Exception:  # never let a sweep stop the worker
             log.exception("could not sweep expired holds")
         await asyncio.sleep(300)
+
+
+async def keep_discovery_swept(db, send_asks) -> None:
+    """Once an hour for every shop with Discovery on (spec 066): expire proposals past their 14
+    days, put a lost apply back on the queue, start the weekly check-up where a shop switched it on
+    and it is due, and ask the people who should be asked. Each shop in its own transaction."""
+    while True:
+        try:
+            done = await discovery_sweep.sweep_all(db, send_asks)
+            if any(done.values()):
+                log.info("discovery sweep: %s", done)
+        except Exception:  # never let a sweep stop the worker
+            log.exception("could not sweep Discovery")
+        await asyncio.sleep(3600)
 
 
 async def keep_owners_reminded(db) -> None:
@@ -177,6 +192,9 @@ async def main() -> None:
     meters = asyncio.create_task(keep_meters_fresh(app.state.media))
     watching = asyncio.create_task(alerts.keep_watching(app.state.db))
     reminders = asyncio.create_task(keep_owners_reminded(app.state.db))
+    discovery = asyncio.create_task(
+        keep_discovery_swept(app.state.db, app.state.discovery_asks)
+    )
     billing = asyncio.create_task(keep_billing_checked(app.state.db))
     purger = asyncio.create_task(keep_old_copies_purged(app.state.db))
     erased = asyncio.create_task(keep_erased_files_removed(app.state.db, app.state.media.store))
@@ -192,6 +210,7 @@ async def main() -> None:
         meters.cancel()
         watching.cancel()
         reminders.cancel()
+        discovery.cancel()
         billing.cancel()
         purger.cancel()
         erased.cancel()

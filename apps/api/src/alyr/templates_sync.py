@@ -88,10 +88,14 @@ def components(template: Template, text: str, handle: str | None,
     samples = template.samples_ar if lang == "ar" and template.samples_ar else template.samples
     if samples:
         body["example"] = {"body_text": [list(samples)]}
+    buttons = template.buttons_ar if lang == "ar" and template.buttons_ar else template.buttons
+    footer = [{"type": "BUTTONS",
+               "buttons": [{"type": "QUICK_REPLY", "text": text} for text in buttons]}
+              ] if buttons else []
     if template.header in ("image", "document"):
         return [{"type": "HEADER", "format": template.header.upper(),
-                 "example": {"header_handle": [handle]}}, body]
-    return [body]
+                 "example": {"header_handle": [handle]}}, body, *footer]
+    return [body, *footer]
 
 
 async def main(create: bool) -> int:

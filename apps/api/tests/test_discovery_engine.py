@@ -73,10 +73,11 @@ def test_a_run_has_a_log_with_one_row_per_step_in_order(shop):
     run = run_check_up(shop.owner)
     assert [s["tool"] for s in run["steps"]] == [
         "connector.snapshot", "rules.presence", "rules.reviews", "rules.website",
-        "rules.whatsapp", "findings.save", "reviews.save", "score.compute"]
-    assert [s["seq"] for s in run["steps"]] == list(range(1, 9))
+        "rules.whatsapp", "findings.save", "reviews.save", "proposals.build", "proposals.verify",
+        "score.compute"]
+    assert [s["seq"] for s in run["steps"]] == list(range(1, 11))
     assert all(s["ok"] and s["summary"].endswith(".") for s in run["steps"])
-    assert run["steps_used"] == 8 and run["step_budget"] == 60
+    assert run["steps_used"] == 10 and run["step_budget"] == 60
     assert run["steps"][0]["summary"] == "Got 5 places from the sample business."
     assert run["steps"][5]["summary"] == "Saved the list: 13 new, 0 still there, 0 closed."
 
@@ -430,7 +431,7 @@ def test_a_run_already_finished_is_not_run_twice_when_its_job_is_delivered_again
 
     asyncio.run(again())
     after = shop.owner.get(f"/api/discovery/runs/{run['id']}").json()
-    assert after["steps_used"] == 8 and after["score"] == run["score"]
+    assert after["steps_used"] == 10 and after["score"] == run["score"]
 
 
 def test_the_run_records_who_started_it_and_the_activity_names_the_channel(shop):

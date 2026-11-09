@@ -423,6 +423,33 @@ RULES: tuple[Rule, ...] = (
     Rule("rating_low", "reviews", "process", "medium", 2, _per_place("rating_low", _rating_low)),
 )
 RULE_BY_ID = {r.id: r for r in RULES}
+
+# What a rule can propose (spec 066): (proposal type, field, target) for each. A rule not listed
+# here has no proposal (it needs the owner, Google or a change of process), and its finding stays
+# as in Phase 1, with "I did this". The "after" of each comes from a fact the owner confirmed
+# (`facts.py`) or, for a review reply, a fixed text chosen by rule (`proposal_words.py`).
+PROPOSES: dict[str, tuple[tuple[str, str, str], ...]] = {
+    "hours_missing": (("set_hours", "hours", "listing"),),
+    "hours_conflict": (("set_hours", "hours", "listing"), ("set_hours", "hours", "website")),
+    "phone_conflict": (("set_phone", "phone", "listing"), ("set_phone", "phone", "website")),
+    "category_missing": (("set_category", "category", "listing"),),
+    "name_conflict": (("set_name", "name", "listing"),),
+    "whatsapp_link_missing": (("add_whatsapp_link", "whatsapp_link", "website"),),
+    "review_unanswered": (("reply_to_review", "review_reply", "listing"),),
+}
+
+
+def writable(rule_id: str, writes) -> tuple[tuple[str, str, str], ...]:
+    """The proposals of a rule the connector can make: those whose (target, field) it writes."""
+    return tuple(p for p in PROPOSES.get(rule_id, ()) if (p[2], p[1]) in (writes or ()))
+
+
+def effective_kind(rule: Rule, writes) -> str:
+    """`agent` only while the connector can write something for the rule; otherwise the rule's own
+    Phase 1 kind (spec 066). The engine refreshes a finding's kind with this on every upsert."""
+    return "agent" if writable(rule.id, writes) else rule.kind
+
+
 SEVERITY_ORDER = {"high": 0, "medium": 1, "low": 2}
 KIND_ORDER = {"agent": 0, "owner": 1, "process": 2}
 

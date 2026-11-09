@@ -33,7 +33,10 @@ from alyr.modules import report
 from alyr.modules.bookings import deposits as booking_deposits
 from alyr.modules.bookings.service import REMINDER, Reminders
 from alyr.modules.connect import webhooks as connect_webhooks
+from alyr.modules.discovery import apply as discovery_apply
+from alyr.modules.discovery import asks as discovery_asks
 from alyr.modules.discovery import engine as discovery_engine
+from alyr.modules.discovery import sweep as discovery_sweep
 from alyr.modules.discovery.errors import DiscoveryError
 from alyr.modules.documents.delivery import JOB as DELIVERY_JOB
 from alyr.modules.documents.delivery import DocumentSender
@@ -211,9 +214,23 @@ def create_app() -> FastAPI:
         booking_deposits.DepositExpiry(app.state.db, app.state.outbound).run,
     )
     # A Discovery check-up (spec 065): background work, so a customer's job goes first (D-078).
+    # When one has finished, the owners it prepared changes for are asked (spec 066): through the
+    # outbound layer, to linked staff numbers only, and never to a customer.
+    app.state.discovery_asks = discovery_asks.Sender(app.state.outbound)
     app.state.jobs.register(
-        discovery_engine.JOB, discovery_engine.DiscoveryRuns(app.state.db).run, background=True
+        discovery_engine.JOB,
+        discovery_engine.DiscoveryRuns(
+            app.state.db,
+            after_done=discovery_sweep.after_run(app.state.db, app.state.discovery_asks),
+        ).run,
+        background=True,
     )
+    # An approved change is applied by a job of its own, not background work: the owner is waiting.
+    # It tells the person who approved on WhatsApp how it went, in their window only.
+    applier = discovery_apply.DiscoveryApply(
+        app.state.db, discovery_asks.Notifier(app.state.outbound)
+    )
+    app.state.jobs.register(discovery_apply.JOB, applier.run, applier.gave_up)
     # The staff numbers marked for new orders are told about each one (D-079).
     app.state.jobs.register(
         staff_alert.JOB,

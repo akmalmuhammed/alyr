@@ -79,6 +79,15 @@ RULES: dict[str, Rule] = {
         "discovery_findings", "discovery_reviews",
     ),
     **_delete(
+        "Discovery Phase 2 (spec 066): the changes proposed for the business's places, the facts "
+        "its owner confirmed, who manages which place, the asks sent to its own team on WhatsApp "
+        "(a staff number and what it tapped: no customer's data), its settings, and what the "
+        "fictional sample business's owner changed. Business facts and the team's own choices: "
+        "deleted with the business",
+        "discovery_facts", "discovery_proposals", "discovery_location_managers", "discovery_asks",
+        "discovery_settings", "discovery_sample_state",
+    ),
+    **_delete(
         "the records of the business's photos; the files in the photo store are emptied by the "
         "worker from `erasure_files`",
         "media_assets", "media_links", "media_ops", "media_usage",

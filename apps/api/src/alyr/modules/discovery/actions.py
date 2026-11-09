@@ -4,9 +4,13 @@ The one door: the workspace routes are a thin layer over these, and WhatsApp and
 connector call the same actions later, so who may do what is written once.
 
 Roles: `owner` and `admin` do everything. `agent` (staff) may read findings and reviews and start a
-check-up, and changes nothing else; Discovery holds no money, so there is nothing to hide from
-them. Reads are not put on the activity record; changes are, with the channel they came through:
-`start_run`, `set_finding_status`, `edit_locations`, `set_connection`.
+check-up, and changes nothing else, unless an owner or admin linked them to a place (a branch
+manager, spec 066): then they act on that place's proposals and facts and on nothing else.
+Discovery holds no money, so there is nothing to hide from them. The check-up itself (role
+`engine`) may prepare proposals and can never approve one. Reads are not put on the activity
+record; changes are, with the channel they came through: `start_run`, `set_finding_status`,
+`edit_locations`, `set_connection`, and in Phase 2 `proposal.*`, `fact.set`, `managers.set`,
+`settings.set`, `asks.opt`.
 
 Everything answers in the reader's language (`lang`), already worded.
 """
@@ -18,11 +22,14 @@ from zoneinfo import ZoneInfo
 
 import asyncpg
 
-from alyr.core import team
-from alyr.core.actions import ADMIN, ALL_ROLES, OWNER, Caller, register
-from alyr.modules.discovery import connectors, engine, rules
+from alyr.config import get_settings
+from alyr.core import consent, team
+from alyr.core.actions import ADMIN, ALL_ROLES, ENGINE, OWNER, Caller, register
+from alyr.modules.discovery import apply as applying
+from alyr.modules.discovery import connectors, engine, proposals, rules
+from alyr.modules.discovery import facts as facts_module
 from alyr.modules.discovery import words as w
-from alyr.modules.discovery.connectors import sample
+from alyr.modules.discovery.connectors import Location, sample
 from alyr.modules.discovery.errors import DiscoveryError
 
 MODULE = "discovery"
@@ -85,6 +92,17 @@ def finding_view(row: asyncpg.Record, lang: str) -> dict:
         "first_seen_at": _iso(row["created_at"]),
         "last_seen_at": _iso(row["last_seen_at"]),
     }
+
+
+async def finding_views(
+    conn: asyncpg.Connection, caller: Caller, lang: str, rows
+) -> list[dict]:
+    """Findings as the reader sees them, with what Phase 2 adds to each: its proposals (the
+    caller's places only), the fact it waits for, and whether a change can be prepared."""
+    rows = list(rows)
+    scope = await proposals.scope_of(conn, caller)
+    extras = await proposals.for_findings(conn, caller, scope, lang, rows)
+    return [finding_view(r, lang) | extras[r["id"]] for r in rows]
 
 
 def step_views(steps) -> list[dict]:
@@ -180,6 +198,9 @@ async def get_overview(conn: asyncpg.Connection, caller: Caller, args: dict) -> 
         f"{_FINDING} where f.status = any($1) order by f.updated_at desc, f.id limit 5",
         list(DONE_STATUSES),
     )
+    shown = ([next_row] if next_row else []) + rest[:4] + list(done)
+    by_id = {v["id"]: v for v in await finding_views(conn, caller, lang, shown)}
+    scope = await proposals.scope_of(conn, caller)
     delta = None
     if len(scored) == 2 and scored[0]["score"] is not None and scored[1]["score"] is not None:
         delta = {
@@ -196,10 +217,11 @@ async def get_overview(conn: asyncpg.Connection, caller: Caller, args: dict) -> 
         "headline": w.overview_headline(
             counts["open"], sum(1 for r in open_rows if r["severity"] == "high"), bool(scored), lang
         ),
-        "next": finding_view(next_row, lang) if next_row else None,
-        "up_next": [finding_view(r, lang) for r in rest[:4]],
-        "done": [finding_view(r, lang) for r in done],
+        "next": by_id[str(next_row["id"])] if next_row else None,
+        "up_next": [by_id[str(r["id"])] for r in rest[:4]],
+        "done": [by_id[str(r["id"])] for r in done],
         "delta": delta,
+        "proposals": await proposals.overview_block(conn, caller, scope, lang),
     }
 
 
@@ -222,8 +244,23 @@ async def list_findings(conn: asyncpg.Connection, caller: Caller, args: dict) ->
         wanted,
         location_id,
     )
+    scope = await proposals.scope_of(conn, caller)
+    waiting: dict = {}
+    if rows and not scope.nothing:
+        waiting = {
+            r["finding_id"]: r["n"]
+            for r in await conn.fetch(
+                "select finding_id, count(*) as n from discovery_proposals "
+                "where finding_id = any($1) and status = 'proposed' and expires_at > now() "
+                "and ($2::uuid[] is null or location_id = any($2)) group by finding_id",
+                [r["id"] for r in rows],
+                None if scope.everywhere else list(scope.places),
+            )
+        }
     return {
-        "items": [finding_view(r, lang) for r in rows],
+        "items": [
+            finding_view(r, lang) | {"proposals_waiting": waiting.get(r["id"], 0)} for r in rows
+        ],
         "counts": await _counts(conn, location_id),
     }
 
@@ -240,7 +277,8 @@ async def get_finding(conn: asyncpg.Connection, caller: Caller, args: dict) -> d
         row["last_run_id"],
         ["connector.snapshot", f"rules.{part}"],
     )
-    return finding_view(row, lang) | {
+    [view] = await finding_views(conn, caller, lang, [row])
+    return view | {
         "run_id": str(row["last_run_id"]),
         "steps": step_views(steps),
     }
@@ -348,9 +386,9 @@ async def get_report(conn: asyncpg.Connection, caller: Caller, args: dict) -> di
         "score_end": end,
         "change": change,
         "headline": w.report_headline(month, start, end, len(runs), len(fixed), len(still), lang),
-        "fixed": [finding_view(r, lang) for r in fixed],
-        "still_open": [finding_view(r, lang) for r in still],
-        "new": [finding_view(r, lang) for r in new],
+        "fixed": await finding_views(conn, caller, lang, fixed),
+        "still_open": await finding_views(conn, caller, lang, still),
+        "new": await finding_views(conn, caller, lang, new),
         "by_part": by_part,
         "runs": len(runs),
     }
@@ -442,8 +480,14 @@ async def set_finding_status(conn: asyncpg.Connection, caller: Caller, args: dic
             "finding.status",
             {"rule_id": row["rule_id"], "from": row["status"], "to": status},
         )
+        # A waiting change is closed with its finding (spec 066): "I did this" and "Skip" never
+        # leave a proposal for the owner to approve later.
+        if status in ("owner_done", "skipped"):
+            await proposals.expire_for_finding(
+                conn, row["id"], "finding_done" if status == "owner_done" else "finding_skipped"
+            )
     fresh = await conn.fetchrow(f"{_FINDING} where f.id = $1", row["id"])
-    return finding_view(fresh, lang)
+    return (await finding_views(conn, caller, lang, [fresh]))[0]
 
 
 def _clean_location(item: dict) -> dict:
@@ -487,6 +531,12 @@ async def edit_locations(conn: asyncpg.Connection, caller: Caller, args: dict) -
     given = [c["id"] for c in cleaned if c["id"] is not None]
     if any(g not in mine for g in given) or len(set(given)) != len(given):
         raise DiscoveryError("unknown_place")
+    if await conn.fetchval(
+        "select exists (select 1 from discovery_proposals where status = 'approved' "
+        "and not (location_id = any($1)))",
+        given,
+    ):
+        raise DiscoveryError("proposal_in_flight", 409)
     await conn.execute("delete from discovery_locations where not (id = any($1))", given)
     await conn.execute("update discovery_locations set is_primary = false")
     primary = next((i for i, c in enumerate(cleaned) if c["is_primary"]), 0)
@@ -525,6 +575,27 @@ async def edit_locations(conn: asyncpg.Connection, caller: Caller, args: dict) -
         {"count": len(cleaned)},
     )
     return await list_locations(conn, caller, {})
+
+
+async def write_sample_facts(conn: asyncpg.Connection) -> int:
+    """The fictional owner's own truth for each branch (spec 066), so a proposal has an "after":
+    written when the sample is turned on, in the same transaction as the places, and never over a
+    fact someone typed. Source `sample`, no `confirmed_by`."""
+    written = 0
+    rows = await conn.fetch("select * from discovery_locations order by position, created_at")
+    for ordinal, row in enumerate(rows):
+        place = Location(row["id"], row["name"], row["name_ar"], row["area"], row["place_ref"],
+                         row["website_url"], row["whatsapp_e164"], row["is_primary"],
+                         row["position"])
+        for key, value in (sample.facts_for(place, ordinal) or {}).items():
+            done = await conn.execute(
+                "insert into discovery_facts (location_id, key, value, source) "
+                "values ($1, $2, $3, 'sample') on conflict (tenant_id, location_id, key) "
+                "do nothing",
+                row["id"], key, value,
+            )
+            written += done == "INSERT 0 1"
+    return written
 
 
 async def _ensure_places(conn: asyncpg.Connection, kind: str) -> None:
@@ -584,6 +655,8 @@ async def set_connection(conn: asyncpg.Connection, caller: Caller, args: dict) -
                 row_id,
             )
         await _ensure_places(conn, kind)
+        if kind == sample.KIND:
+            await write_sample_facts(conn)
     else:
         row_id = await conn.fetchval(
             "update discovery_connections set status = 'off', updated_at = now() "
@@ -595,3 +668,242 @@ async def set_connection(conn: asyncpg.Connection, caller: Caller, args: dict) -
             conn, caller, row_id, "connection.on" if on else "connection.off", {"kind": kind}
         )
     return await get_connection(conn, caller, {})
+
+
+# ── Phase 2: proposals, facts, managers, settings (spec 066, D-166) ──────────────────────
+
+READERS = ALL_ROLES  # the engine is not in it: every action that lists ALL_ROLES refuses it
+PREPARERS = ALL_ROLES | {ENGINE}  # the check-up prepares proposals; it never approves one
+
+
+async def _proposal_answer(
+    conn: asyncpg.Connection, caller: Caller, lang: str, proposal_id: UUID, already: bool
+) -> dict:
+    scope = await proposals.scope_of(conn, caller)
+    row = await conn.fetchrow(f"{proposals._PROPOSAL} where p.id = $1", proposal_id)
+    reviews = await proposals._reviews_of(conn, [row])
+    return proposals.view(row, caller, scope, lang, datetime.now(UTC), reviews, already=already)
+
+
+@register("discovery.proposals", READERS, MODULE)
+async def list_proposals(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
+    lang = await _lang(conn, args.get("lang"))
+    scope = await proposals.scope_of(conn, caller)
+    return await proposals.list_for(
+        conn, caller, scope, lang, args.get("status"), args.get("location_id")
+    )
+
+
+@register("discovery.proposal", READERS, MODULE)
+async def get_proposal(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
+    lang = await _lang(conn, args.get("lang"))
+    scope = await proposals.scope_of(conn, caller)
+    return await proposals.get_one(conn, caller, scope, lang, args["id"])
+
+
+@register("discovery.prepare", PREPARERS, MODULE)
+async def prepare(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
+    """Make the proposals a finding calls for now, or say why there are none."""
+    lang = await _lang(conn, args.get("lang"))
+    scope = await proposals.scope_of(conn, caller)
+    return await proposals.prepare(conn, caller, scope, lang, args["id"])
+
+
+@register("discovery.approve_proposal", READERS, MODULE)
+async def approve_proposal(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
+    """A person's tap on this exact change (its `change_hash`). Refuses the engine, the agent
+    door (any channel but the workspace and WhatsApp) and a caller with no login, inside
+    `proposals.approve`, whatever the role table says."""
+    lang = await _lang(conn, args.get("lang"))
+    scope = await proposals.scope_of(conn, caller)
+    row, already = await proposals.approve(conn, caller, scope, args["id"], args.get("change_hash"))
+    return await _proposal_answer(conn, caller, lang, row["id"], already)
+
+
+@register("discovery.decline_proposal", READERS, MODULE)
+async def decline_proposal(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
+    lang = await _lang(conn, args.get("lang"))
+    scope = await proposals.scope_of(conn, caller)
+    row, already = await proposals.decline(conn, caller, scope, args["id"])
+    return await _proposal_answer(conn, caller, lang, row["id"], already)
+
+
+@register("discovery.undo_proposal", READERS, MODULE)
+async def undo_proposal(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
+    lang = await _lang(conn, args.get("lang"))
+    scope = await proposals.scope_of(conn, caller)
+    row, already = await applying.undo(conn, caller, scope, args["id"], args.get("get_connector"))
+    return await _proposal_answer(conn, caller, lang, row["id"], already)
+
+
+async def _place_in_scope(conn: asyncpg.Connection, scope, location_id: UUID) -> asyncpg.Record:
+    if scope.nothing:
+        raise DiscoveryError("forbidden", 403)
+    row = await conn.fetchrow("select * from discovery_locations where id = $1", location_id)
+    if row is None or not scope.covers(location_id):
+        raise DiscoveryError("not_found", 404)
+    return row
+
+
+@register("discovery.facts", READERS, MODULE)
+async def list_facts(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
+    """What has been confirmed about each place the caller manages, with the defaults (a place's
+    own name and WhatsApp number) marked as such."""
+    scope = await proposals.scope_of(conn, caller)
+    if scope.nothing:
+        return {"items": []}
+    wanted = args.get("location_id")
+    if wanted is not None and not scope.covers(wanted):
+        raise DiscoveryError("not_found", 404)
+    places = [wanted] if wanted else None if scope.everywhere else list(scope.places)
+    found = await facts_module.load(conn, places)
+    order = {r["id"]: r["position"] for r in await conn.fetch(
+        "select id, position from discovery_locations")}
+    keys = {k: i for i, k in enumerate(facts_module.KEYS)}
+    ordered = sorted(found.values(), key=lambda f: (order.get(f.location_id, 0), keys[f.key]))
+    return {"items": [facts_module.view(f) for f in ordered]}
+
+
+@register("discovery.set_fact", READERS, MODULE)
+async def set_fact(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
+    """Confirm something about a place. The first half of an approval: from now on a proposal's
+    "after" may be this. Then the builder runs for the place's open findings, so the proposal
+    appears at once."""
+    scope = await proposals.scope_of(conn, caller)
+    if not proposals.person_may_decide(caller):
+        raise DiscoveryError("forbidden", 403)
+    place = await _place_in_scope(conn, scope, args["location_id"])
+    key = args["fact_key"]
+    value = facts_module.validate(key, args.get("value"))
+    await facts_module.write(
+        conn, place["id"], key, value, source="owner", user_id=caller.user_id,
+        name=caller.name or "—",
+    )
+    await _record(conn, caller, place["id"], "fact.set", {"key": key})
+    kind, writes = await proposals._active_connector(conn)
+    if kind is not None:
+        findings = await conn.fetch(
+            "select * from discovery_findings where status = 'open' "
+            "and (location_id = $1 or rule_id = 'name_conflict')",
+            place["id"],
+        )
+        await proposals.build(
+            conn, findings, kind=kind, writes=writes, now=datetime.now(UTC),
+            who=proposals.Who.of(caller), run_cap=10**6, scope=scope,
+        )
+    fact = (await facts_module.load(conn, [place["id"]]))[(place["id"], key)]
+    return facts_module.view(fact)
+
+
+@register("discovery.set_managers", CHANGERS, MODULE)
+async def set_managers(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
+    """Link staff-role members to a place: a branch manager acts on that place's proposals and
+    facts and on nothing else. Owner and admin only."""
+    place = await conn.fetchrow(
+        "select id from discovery_locations where id = $1", args["location_id"]
+    )
+    if place is None:
+        raise DiscoveryError("not_found", 404)
+    wanted = list(dict.fromkeys(args["user_ids"]))
+    members = await conn.fetch(
+        "select u.id, u.name from memberships m join users u on u.id = m.user_id "
+        "where m.role = 'agent' and u.id = any($1) "
+        "and m.tenant_id = nullif(current_setting('app.tenant_id', true), '')::uuid",
+        wanted,
+    )
+    if {m["id"] for m in members} != set(wanted):
+        raise DiscoveryError("bad_manager")
+    await conn.execute(
+        "delete from discovery_location_managers where location_id = $1", place["id"]
+    )
+    for user_id in wanted:
+        await conn.execute(
+            "insert into discovery_location_managers (location_id, user_id) values ($1, $2)",
+            place["id"], user_id,
+        )
+    await _record(conn, caller, place["id"], "managers.set", {"count": len(wanted)})
+    return {"items": [{"user_id": str(m["id"]), "name": m["name"]} for m in members]}
+
+
+async def _settings_view(conn: asyncpg.Connection) -> dict:
+    row = await conn.fetchrow("select ask_cap_per_day, weekly_run from discovery_settings")
+    staff = await conn.fetch(
+        "select id, name, phone, user_id, discovery_asks from contacts where role = 'staff' "
+        "order by name, id"
+    )
+    return {
+        "ask_cap_per_day": row["ask_cap_per_day"] if row else 3,
+        "weekly_run": row["weekly_run"] if row else False,
+        # False while the message sent outside WhatsApp's 24-hour window is not approved by Meta.
+        "template_ready": get_settings().discovery_ask_template_approved,
+        "receivers": [
+            {
+                "contact_id": str(s["id"]), "name": s["name"], "last4": (s["phone"] or "")[-4:],
+                "linked": s["user_id"] is not None, "receives": s["discovery_asks"],
+            }
+            for s in staff
+        ],
+    }
+
+
+@register("discovery.settings", CHANGERS, MODULE)
+async def settings(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
+    """Read, or change (any of `ask_cap_per_day`, `weekly_run`, `receivers`), Discovery's
+    settings. Owner and admin only."""
+    changed = [k for k in ("ask_cap_per_day", "weekly_run", "receivers") if args.get(k) is not None]
+    if changed:
+        cap = args.get("ask_cap_per_day")
+        if cap is not None and (isinstance(cap, bool) or not isinstance(cap, int)
+                                or not 1 <= cap <= 5):
+            raise DiscoveryError("bad_setting")
+        receivers = args.get("receivers")
+        if receivers is not None:
+            known = {r["id"] for r in await conn.fetch(
+                "select id from contacts where role = 'staff' and id = any($1)", receivers)}
+            if known != set(receivers):
+                raise DiscoveryError("bad_setting")
+        current = await conn.fetchrow("select ask_cap_per_day, weekly_run from discovery_settings")
+        await conn.execute(
+            "insert into discovery_settings (ask_cap_per_day, weekly_run) values ($1, $2) "
+            "on conflict (tenant_id) do update set ask_cap_per_day = excluded.ask_cap_per_day, "
+            "weekly_run = excluded.weekly_run, updated_at = now()",
+            cap if cap is not None else (current["ask_cap_per_day"] if current else 3),
+            args["weekly_run"] if args.get("weekly_run") is not None
+            else (current["weekly_run"] if current else False),
+        )
+        if receivers is not None:
+            newly = await conn.fetch(
+                "select id from contacts where role = 'staff' and id = any($1) "
+                "and not discovery_asks",
+                receivers,
+            )
+            await conn.execute(
+                "update contacts set discovery_asks = (id = any($1)) where role = 'staff'",
+                receivers,
+            )
+            # The owner marking a number to be asked is the number's agreement to be asked.
+            for r in newly:
+                await consent.record(conn, r["id"], "service", "granted", "discovery_asks_setting")
+        await _record(
+            conn, caller, await conn.fetchval(f"select {_TENANT}"), "settings.set",
+            {"changed": ",".join(changed)},
+        )
+    return await _settings_view(conn)
+
+
+@register("discovery.set_my_asks", READERS, MODULE)
+async def set_my_asks(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
+    """This person's own number starts or stops receiving asks (PROPOSALS ON and PROPOSALS OFF)."""
+    on = bool(args["on"])
+    if caller.user_id is None:
+        raise DiscoveryError("forbidden", 403)
+    contact_id = await conn.fetchval(
+        "update contacts set discovery_asks = $2 where user_id = $1 and role = 'staff' "
+        "returning id",
+        caller.user_id, on,
+    )
+    if contact_id is not None:
+        if on:
+            await consent.record(conn, contact_id, "service", "granted", "discovery_asks_setting")
+        await _record(conn, caller, caller.user_id, "asks.opt", {"on": on})
+    return {"on": on, "linked": contact_id is not None}
