@@ -372,7 +372,7 @@ type Home = HomeStages & {
     firstMonth: string;
     includesLabel: string;
     includes: string[];
-    /** Under the list: the price is confirmed in writing at the visit. */
+    /** Under the list: the price is confirmed in writing after the first call. */
     confirm: string;
     combosLabel: string;
     combos: { label: string; value: string }[];
@@ -555,7 +555,7 @@ export type Copy = {
     commits: string;
     prefill: string;
     subject: string;
-    /** The email's first lines: what the visit needs to know. */
+    /** The email's first lines: what the first call needs to know. */
     body: string;
     draft: string;
     bar: string;
@@ -630,9 +630,9 @@ const en: Copy = {
     home: {
       title: "ALYR · The AI solution provider for your business",
       description:
-        "ALYR is the AI solution provider for owner-run businesses in Qatar. We set up your orders, bookings, credit accounts and stock on one screen, in your shop, and keep improving it with you. From QAR 449 a month.",
+        "ALYR is the AI solution provider for owner-run businesses in Qatar. We start with a call or a meeting, then set up your orders, bookings, credit accounts and stock with you. From QAR 449 a month.",
       descriptionNoOffer:
-        "ALYR is the AI solution provider for owner-run businesses in Qatar. We set up your orders, bookings, credit accounts and stock on one screen, in your shop, and keep improving it with you.",
+        "ALYR is the AI solution provider for owner-run businesses in Qatar. We start with a call or a meeting, then set up your orders, bookings, credit accounts and stock with you.",
     },
     chat: {
       title: "ALYR Chat · WhatsApp orders and team inbox",
@@ -757,7 +757,7 @@ const en: Copy = {
     commits: "A message commits you to nothing.",
     prefill: "Hello ALYR, I'd like to see how it works for my business.",
     subject: "How ALYR works for my business",
-    body: "Business name:\nArea:\nWhat you sell or book:\nHow customers reach you today:\nBest time to visit:\n",
+    body: "Business name:\nArea:\nWhat you sell or book:\nHow customers reach you today:\nBest time for a call:\n",
     draft: "The message we fill in for you",
     bar: "Contact ALYR",
   },
@@ -897,8 +897,8 @@ const en: Copy = {
       flip: { before: "One agentic platform to", words: ["discover", "manage", "scale"], after: " your business.", rest: 1 },
       action: "Book a check-up",
       more: "See how we work",
-      facts: ["We come to your shop, in Qatar", "From QAR 449 a month, no commission", "Arabic and English"],
-      factsNoOffer: ["We come to your shop, in Qatar", "Six products, one workspace", "Arabic and English"],
+      facts: ["A call or a meeting first, in Qatar", "From QAR 449 a month, no commission", "Arabic and English"],
+      factsNoOffer: ["A call or a meeting first, in Qatar", "Six products, one workspace", "Arabic and English"],
     },
     see: {
       title: "One order, from the first message to collection",
@@ -1361,7 +1361,7 @@ const en: Copy = {
       steps: [
         {
           title: "We check how your business runs.",
-          body: "We come to your shop and look at how orders, bookings and credit are kept. You get the list in plain words.",
+          body: "We start with a call or a meeting and look at how orders, bookings and credit are kept. You get the list in plain words.",
         },
         {
           title: "We set up what fixes it.",
@@ -1415,7 +1415,7 @@ const en: Copy = {
           now: "This week",
         },
       },
-      note: "We set ALYR up with each business ourselves, and agree your go-live date at the visit.",
+      note: "We set ALYR up with each business ourselves, and agree your go-live date with you.",
     },
     price: {
       eyebrow: "Price",
@@ -1426,7 +1426,7 @@ const en: Copy = {
       currencyFirst: true,
       period: "a month",
       first: "for your first product. Add ALYR Chat, ALYR Bookings or ALYR Accounts for QAR 50 a month each. ALYR Agent and ALYR Shelf come with every one.",
-      setup: "Setup from QAR 1,500, quoted at your visit.",
+      setup: "Setup from QAR 1,500, quoted after we first talk.",
       firstMonth: "Your first month is the subscription and the setup fee. After that, only the subscription.",
       includesLabel: "Every month includes",
       includes: [
@@ -1437,7 +1437,7 @@ const en: Copy = {
         "Every product update, with nothing to install",
         "The Sunday report, once WhatsApp approves its wording",
       ],
-      confirm: "Your monthly price is confirmed in writing at the visit.",
+      confirm: "Your monthly price is confirmed in writing after we first talk.",
       combosLabel: "For example",
       combos: [
         { label: "A salon: ALYR Bookings", value: "from QAR 449" },
@@ -1460,7 +1460,7 @@ const en: Copy = {
         body:
           "Before we start, we agree one result with you, for example a number of orders or bookings taken through the chat in the 30 days after you go live. If we don’t reach it, we refund your first month’s subscription.",
         fields: [
-          { label: "The result", value: "Agreed with you at the visit", blank: true },
+          { label: "The result", value: "Agreed with you when we first talk", blank: true },
           { label: "Counted", value: "In your workspace, where you see it too" },
           { label: "Period", value: "30 days from go-live" },
           { label: "Your part", value: "Put up your QR codes and share your chat link with customers in the first week." },
@@ -1482,7 +1482,7 @@ const en: Copy = {
         {
           id: "check-up",
           q: "What is the check-up?",
-          a: "We visit your shop for about an hour, look at how customers reach you and how orders, bookings, credit and prices are kept, and give you a short list of what costs you time or money, with what we would set up first.",
+          a: "We start with a call or a meeting, and look at how customers reach you and how orders, bookings, credit and prices are kept, and give you a short list of what costs you time or money, with what we would set up first.",
         },
         {
           id: "which-product",
@@ -1492,7 +1492,7 @@ const en: Copy = {
         {
           id: "whatsapp-business",
           q: "I already use WhatsApp Business. It’s free.",
-          a: "Your customers keep writing to you on WhatsApp. ALYR adds what the app doesn’t have: an order page, bookings, tracking and one inbox for your whole team, so orders stop ending up on paper. Which number they message, and what that means for the app on your phone, we go through with you at the visit.",
+          a: "Your customers keep writing to you on WhatsApp. ALYR adds what the app doesn’t have: an order page, bookings, tracking and one inbox for your whole team, so orders stop ending up on paper. Which number they message, and what that means for the app on your phone, we go through with you when we first talk.",
         },
         {
           id: "no-app",
@@ -1514,7 +1514,7 @@ const en: Copy = {
         {
           id: "staff",
           q: "Will my staff use it?",
-          a: "We train them at your counter. Each person gets their own sign-in, and the steps are ones they already know: an order goes new, confirmed, ready, done; a visit is marked came or no-show.",
+          a: "We show your team how it works. Each person gets their own sign-in, and the steps are ones they already know: an order goes new, confirmed, ready, done; a visit is marked came or no-show.",
         },
         {
           id: "delivery-apps",
@@ -1534,7 +1534,7 @@ const en: Copy = {
         {
           id: "setup-time",
           q: "How long does setup take?",
-          a: "We agree your go-live date with you at the visit. Most of the work is ours: loading your items and prices, and training your team.",
+          a: "We agree your go-live date with you. Most of the work is ours: loading your items and prices, and training your team.",
         },
         {
           id: "chairs",
@@ -1565,7 +1565,7 @@ const en: Copy = {
         {
           id: "other-systems",
           q: "Does it work with the system I already use?",
-          a: "Another system can send its sales into ALYR with an API key or a CSV file. Tell us what you use, and we’ll check it with you at the visit.",
+          a: "Another system can send its sales into ALYR with an API key or a CSV file. Tell us what you use, and we’ll check it with you when we first talk.",
         },
         {
           id: "data",
@@ -1575,7 +1575,7 @@ const en: Copy = {
         {
           id: "message-fees",
           q: "What do WhatsApp messages cost?",
-          a: "Meta charges for some WhatsApp messages, at its own rates, and decides which ones. Meta bills you directly, and ALYR adds nothing. We go through the current rates with you at the visit.",
+          a: "Meta charges for some WhatsApp messages, at its own rates, and decides which ones. Meta bills you directly, and ALYR adds nothing. We go through the current rates with you when we first talk.",
         },
         {
           id: "contract",
@@ -2053,7 +2053,7 @@ const en: Copy = {
     },
     cta: {
       title: "Tell us how orders reach you today.",
-      body: "Send us a message. A person from ALYR replies, then comes to show you ALYR Chat on your own phone.",
+      body: "Send us a message, and we set up a call or a meeting to show you ALYR Chat.",
     },
   },
   pages: {
@@ -2418,12 +2418,12 @@ const en: Copy = {
           {
             id: "setup",
             q: "How long does setup take?",
-            a: "We agree your go-live date at the visit. We load your services, prices and opening hours ourselves.",
+            a: "We agree your go-live date with you. We load your services, prices and opening hours ourselves.",
           },
           {
             id: "move",
             q: "How do I move from my book or my phone?",
-            a: "At the visit we agree the day you switch, and how the bookings you already have for the days after it come across.",
+            a: "We agree the day you switch, and how the bookings you already have for the days after it come across.",
           },
           {
             id: "chairs",
@@ -2439,7 +2439,7 @@ const en: Copy = {
       },
       cta: {
         title: "Tell us how bookings reach you today.",
-        body: "Send us a message. A person from ALYR replies, then comes to show you ALYR Bookings on your own phone.",
+        body: "Send us a message, and we set up a call or a meeting to show you ALYR Bookings.",
       },
     },
 
@@ -2553,7 +2553,7 @@ const en: Copy = {
       },
       cta: {
         title: "Tell us what you’d want to know each morning.",
-        body: "Send us a message. A person from ALYR replies, then comes to show you ALYR Agent on your own phone.",
+        body: "Send us a message, and we set up a call or a meeting to show you ALYR Agent.",
       },
     },
 
@@ -2940,7 +2940,7 @@ const en: Copy = {
       },
       cta: {
         title: "Tell us how you keep credit today.",
-        body: "Send us a message. A person from ALYR replies, then comes to show you ALYR Accounts on your own phone.",
+        body: "Send us a message, and we set up a call or a meeting to show you ALYR Accounts.",
       },
     },
 
@@ -2977,11 +2977,11 @@ const ar: Copy = {
       description: "ALYR اسم لمنتجات شركة alyr software ذ.م.م.، شركة ذات مسؤولية محدودة مسجّلة في قطر. السجل التجاري 255539 والتسجيل الضريبي 5009341769.",
     },
     home: {
-      title: "ALYR · مزوّد حلول الذكاء الاصطناعي لمشروعك",
+      title: "ALYR · مزوّد حلول الذكاء الاصطناعي لنشاطك",
       description:
-        "ALYR مزوّد حلول الذكاء الاصطناعي للأنشطة التي يديرها أصحابها في قطر. نجهّز طلباتك وحجوزاتك وحساباتك الآجلة ومخزونك في شاشة واحدة، في محلك، ونواصل تحسينها معك. من 449 ر.ق شهرياً.",
+        "ALYR مزوّدة حلول الذكاء الاصطناعي للمنشآت التي يديرها أصحابها في قطر. نبدأ باتصال أو لقاء، ثم نجهّز لنشاطك شاشة واحدة للطلبات والحجوزات والحسابات الآجلة والمخزون. من 449 ر.ق شهرياً.",
       descriptionNoOffer:
-        "ALYR مزوّد حلول الذكاء الاصطناعي للأنشطة التي يديرها أصحابها في قطر. نجهّز طلباتك وحجوزاتك وحساباتك الآجلة ومخزونك في شاشة واحدة، في محلك، ونواصل تحسينها معك.",
+        "ALYR مزوّدة حلول الذكاء الاصطناعي للمنشآت التي يديرها أصحابها في قطر. نبدأ باتصال أو لقاء، ثم نجهّز لنشاطك شاشة واحدة للطلبات والحجوزات والحسابات الآجلة والمخزون.",
     },
     chat: {
       title: "ALYR Chat · طلبات واتساب وصندوق الفريق",
@@ -3042,7 +3042,7 @@ const ar: Copy = {
     products: "المنتجات",
     company: "بيانات الشركة",
     privacy: "الخصوصية",
-    terms: "الشروط",
+    terms: "الشروط والأحكام",
     refund: "سياسة الاسترداد",
     business: "حسب نشاطك",
     workspace: "مساحة العمل",
@@ -3106,7 +3106,7 @@ const ar: Copy = {
     commits: "الرسالة لا تُلزمك بشيء.",
     prefill: "السلام عليكم، أبي أعرف كيف تشتغل ALYR مع محلي.",
     subject: "كيف تعمل ALYR مع محلي",
-    body: "اسم النشاط:\nالمنطقة:\nماذا تبيع أو ماذا يُحجز لديك:\nكيف يصل إليك عملاؤك اليوم:\nأنسب وقت للزيارة:\n",
+    body: "اسم النشاط:\nالمنطقة:\nماذا تبيع أو ماذا يُحجز لديك:\nكيف يصل إليك عملاؤك اليوم:\nأنسب وقت للاتصال:\n",
     draft: "الرسالة التي نكتبها لك مسبقاً",
     bar: "تواصل مع ALYR",
   },
@@ -3121,11 +3121,11 @@ const ar: Copy = {
     },
   },
   footer: {
-    line: "علينا التقنية، وعليك شغلك.",
-    rights: "ALYR. صُنع في قطر.",
+    line: "التقنية علينا، وإدارة نشاطك عليك.",
+    rights: "ALYR. من قطر.",
     legal: "alyr software ذ.م.م. (الير للبرمجيات) · سجل تجاري 255539 · قطر",
     workspace: "دخول الموظفين",
-    links: "الموقع",
+    links: "روابط الموقع",
     products: "المنتجات",
   },
   fig: {
@@ -3134,13 +3134,13 @@ const ar: Copy = {
     note: "مثال لشاشة نشاط غير حقيقي. الأسماء والأرقام للتوضيح، وليست نتائج حققتها ALYR.",
   },
   loop: {
-    pause: "إيقاف",
+    pause: "إيقاف مؤقت",
     play: "تشغيل",
     names: {
-      how: { pause: "إيقاف حركة المشاهد الأربعة", play: "تشغيل حركة المشاهد الأربعة" },
-      frame: { pause: "إيقاف حركة المنتجات الستة", play: "تشغيل حركة المنتجات الستة" },
-      figure: { pause: "إيقاف حركة الرسم", play: "تشغيل حركة الرسم" },
-      line: { pause: "إيقاف الكلمة المتغيرة", play: "تشغيل الكلمة المتغيرة" },
+      how: { pause: "إيقاف حركة المشاهد الأربعة مؤقتاً", play: "تشغيل حركة المشاهد الأربعة" },
+      frame: { pause: "إيقاف حركة المنتجات الستة مؤقتاً", play: "تشغيل حركة المنتجات الستة" },
+      figure: { pause: "إيقاف حركة الرسم مؤقتاً", play: "تشغيل حركة الرسم" },
+      line: { pause: "إيقاف تبديل الكلمة مؤقتاً", play: "تشغيل تبديل الكلمة" },
     },
   },
   report: {
@@ -3241,13 +3241,13 @@ const ar: Copy = {
     workspaceGrid: workspaceGridAr,
     hero: {
       eyebrow: "التقنية للأنشطة التي يديرها أصحابها في قطر",
-      title: ["مزوّد حلول الذكاء الاصطناعي", "لمشروعك."],
-      lead: "منصة واحدة بوكلاء الذكاء الاصطناعي لاستكشاف مشروعك وإدارته وتوسيعه.",
-      flip: { before: "منصة واحدة بوكلاء الذكاء الاصطناعي", words: ["لاستكشاف", "لإدارة", "لتوسيع"], after: " مشروعك.", rest: 1 },
-      action: "احجز فحصاً لمشروعك",
+      title: ["مزوّد حلول الذكاء الاصطناعي", "لنشاطك."],
+      lead: "منصة واحدة تعمل بالذكاء الاصطناعي لاستكشاف نشاطك وإدارته وتوسيعه.",
+      flip: { before: "منصة واحدة تعمل بالذكاء الاصطناعي", words: ["لاستكشاف", "لإدارة", "لتوسيع"], after: " نشاطك.", rest: 1 },
+      action: "احجز فحصاً لنشاطك",
       more: "شاهد طريقة عملنا",
-      facts: ["نأتي إلى محلك في قطر", "من 449 ر.ق شهرياً، بلا عمولة", "بالعربية والإنجليزية"],
-      factsNoOffer: ["نأتي إلى محلك في قطر", "ستة منتجات في مساحة عمل واحدة", "بالعربية والإنجليزية"],
+      facts: ["نبدأ باتصال أو لقاء، في قطر", "من 449 ر.ق شهرياً، بلا عمولة", "بالعربية والإنجليزية"],
+      factsNoOffer: ["نبدأ باتصال أو لقاء، في قطر", "ستة منتجات في مساحة عمل واحدة", "بالعربية والإنجليزية"],
     },
     see: {
       title: "طلب واحد، من الرسالة الأولى إلى الاستلام",
@@ -3710,7 +3710,7 @@ const ar: Copy = {
       steps: [
         {
           title: "نفحص كيف يسير عملك.",
-          body: "نأتي إلى محلك وننظر كيف تُحفظ الطلبات والحجوزات والآجل. وتحصل على القائمة بكلمات واضحة.",
+          body: "نبدأ باتصال أو لقاء وننظر في كيفية حفظ الطلبات والحجوزات والحسابات الآجلة. وتحصل على ورقة الفحص بكلمات واضحة.",
         },
         {
           title: "نجهّز ما يحلّها.",
@@ -3718,7 +3718,7 @@ const ar: Copy = {
         },
         {
           title: "ترى عملك في شاشة واحدة.",
-          body: "يعرض ALYR Agent ما يحتاجك الآن وما أنجزته ALYR لك. وتتحدّث الأرقام مع وصول الطلبات.",
+          body: "يعرض ALYR Agent ما يحتاجك الآن وما أنجزته ALYR لك. وتُحدَّث الأرقام مع وصول الطلبات.",
         },
         {
           title: "نواصل تحسينه معك.",
@@ -3733,7 +3733,7 @@ const ar: Copy = {
           rows: [
             { what: "كيف يصلك العملاء", found: "43 محادثة غير مقروءة على واتساب" },
             { what: "كيف تُحفظ الطلبات", found: "في محادثات طويلة، برسائل صوتية وصور" },
-            { what: "من عليه مستحقات لك", found: "عملاء المكاتب، دون أي تذكير" },
+            { what: "من عليه مستحقات لك", found: "زبائن دائمون من المكاتب، لم يصلهم تذكير قط" },
             { what: "أكثر ما يسأل عنه العملاء", found: "«طلبي جاهز؟»" },
           ],
         },
@@ -3753,7 +3753,7 @@ const ar: Copy = {
           tag: "جديد",
         },
         see: {
-          label: "شاشة توضيحية من ALYR Agent وهي تتحدّث. الطلبات هذا الأسبوع من 49 إلى 50، ويُؤكَّد طلب كان بحاجة إلى تأكيد فيخرج من «يحتاجك الآن»، والرسائل التي أرسلتها ALYR نيابة عنك من 181 إلى 183.",
+          label: "شاشة توضيحية من ALYR Agent وهي تُحدَّث. الطلبات هذا الأسبوع من 49 إلى 50، ويُؤكَّد طلب كان بحاجة إلى تأكيد فيخرج من «يحتاجك الآن»، والرسائل التي أرسلتها ALYR نيابة عنك من 181 إلى 183.",
           replay: "أعد تشغيل مشهد التحديث",
           confirm: { words: "طلب بحاجة إلى تأكيد", detail: "أقدمها منذ 16 د" },
         },
@@ -3764,7 +3764,7 @@ const ar: Copy = {
           now: "هذا الأسبوع",
         },
       },
-      note: "نجهّز ALYR مع كل منشأة بأنفسنا، ونتفق معك على موعد بدء التشغيل خلال الزيارة.",
+      note: "نجهّز ALYR مع كل منشأة بأنفسنا، ونتفق معك على موعد بدء التشغيل.",
     },
     price: {
       eyebrow: "السعر",
@@ -3786,7 +3786,7 @@ const ar: Copy = {
         "كل تحديثات المنتج، بلا تثبيت",
         "تقرير الأحد، بعد موافقة واتساب على صياغته",
       ],
-      confirm: "ونؤكد لك سعرك الشهري كتابةً خلال الزيارة.",
+      confirm: "ونؤكد لك سعرك الشهري كتابةً بعد أول اتصال بيننا.",
       combosLabel: "مثلاً",
       combos: [
         { label: "صالون: ALYR Bookings", value: "من 449 ر.ق" },
@@ -3809,7 +3809,7 @@ const ar: Copy = {
         body:
           "قبل أن نبدأ نتفق معك على نتيجة واحدة، مثل عدد الطلبات أو الحجوزات عبر المحادثة خلال 30 يوماً من بدء التشغيل. وإن لم نحققها نعيد لك اشتراك الشهر الأول.",
         fields: [
-          { label: "النتيجة", value: "نتفق عليها معك خلال الزيارة", blank: true },
+          { label: "النتيجة", value: "نتفق عليها معك عند أول اتصال", blank: true },
           { label: "أين تُحسب", value: "في مساحة عملك، وتراها أنت أيضاً" },
           { label: "المدة", value: "30 يوماً من بدء التشغيل" },
           { label: "دورك", value: "أن تضع رموز QR في محلك وتشارك رابط المحادثة مع عملائك في الأسبوع الأول." },
@@ -3831,7 +3831,7 @@ const ar: Copy = {
         {
           id: "check-up",
           q: "ما هو الفحص؟",
-          a: "نزور محلك نحو ساعة، وننظر كيف يصلك العملاء وكيف تُحفظ الطلبات والحجوزات والآجل والأسعار، ونعطيك قائمة قصيرة بما يكلّفك وقتاً أو مالاً، وما سنجهّزه أولاً.",
+          a: "نبدأ باتصال أو لقاء، وننظر كيف يصلك العملاء وكيف تُحفظ الطلبات والحجوزات والآجل والأسعار، ونعطيك قائمة قصيرة بما يكلّفك وقتاً أو مالاً، وما سنجهّزه أولاً.",
         },
         {
           id: "which-product",
@@ -3841,7 +3841,7 @@ const ar: Copy = {
         {
           id: "whatsapp-business",
           q: "أستخدم واتساب للأعمال، وهو مجاني.",
-          a: "عملاؤك يواصلون مراسلتك على واتساب. وتضيف ALYR ما لا يوفّره التطبيق: صفحة طلب، وحجوزات، وتتبّعاً للطلب، وصندوقاً واحداً لفريقك كله، فلا تنتهي الطلبات على الورق. أما الرقم الذي يراسلك عليه عملاؤك، وما يعنيه ذلك للتطبيق على هاتفك، فنراجعه معك خلال الزيارة.",
+          a: "عملاؤك يواصلون مراسلتك على واتساب. وتضيف ALYR ما لا يوفّره التطبيق: صفحة طلب، وحجوزات، وتتبّعاً للطلب، وصندوقاً واحداً لفريقك كله، فلا تنتهي الطلبات على الورق. أما الرقم الذي يراسلك عليه عملاؤك، وما يعنيه ذلك للتطبيق على هاتفك، فنراجعه معك عند أول اتصال بيننا.",
         },
         {
           id: "no-app",
@@ -3883,7 +3883,7 @@ const ar: Copy = {
         {
           id: "setup-time",
           q: "كم يستغرق التجهيز؟",
-          a: "نتفق معك على موعد بدء التشغيل خلال الزيارة. ومعظم العمل علينا: إدخال أصنافك وأسعارك، وتدريب فريقك.",
+          a: "نتفق معك على موعد بدء التشغيل. ومعظم العمل علينا: إدخال أصنافك وأسعارك، وتدريب فريقك.",
         },
         {
           id: "chairs",
@@ -3914,7 +3914,7 @@ const ar: Copy = {
         {
           id: "other-systems",
           q: "هل تعمل مع النظام الذي أستخدمه؟",
-          a: "يستطيع نظام آخر إرسال مبيعاته إلى ALYR بمفتاح API أو بملف CSV. أخبرنا ماذا تستخدم، ونتحقق من ذلك معك خلال الزيارة.",
+          a: "يستطيع نظام آخر إرسال مبيعاته إلى ALYR بمفتاح API أو بملف CSV. أخبرنا ماذا تستخدم، ونتحقق من ذلك معك عند أول اتصال.",
         },
         {
           id: "data",
@@ -3924,7 +3924,7 @@ const ar: Copy = {
         {
           id: "message-fees",
           q: "كم تكلّف رسائل واتساب؟",
-          a: "تحتسب Meta رسوماً على بعض رسائل واتساب بأسعارها، وهي التي تحدد أي الرسائل تُحتسب. وتصلك فاتورتها من Meta مباشرة، ولا تضيف ALYR شيئاً. ونراجع معك الأسعار الحالية خلال الزيارة.",
+          a: "تحتسب Meta رسوماً على بعض رسائل واتساب بأسعارها، وهي التي تحدد أي الرسائل تُحتسب. وتصلك فاتورتها من Meta مباشرة، ولا تضيف ALYR شيئاً. ونراجع معك الأسعار الحالية عند أول اتصال بيننا.",
         },
         {
           id: "contract",
@@ -3945,7 +3945,7 @@ const ar: Copy = {
       ],
     },
     final: {
-      title: "احجز فحصاً لمشروعك.",
+      title: "احجز فحصاً لنشاطك.",
       body: "أرسل لنا رسالة، ونريك ما سنغيّره أولاً.",
       action: "احجز فحصاً لمشروعك",
       short: "احجز فحصاً",
@@ -4402,7 +4402,7 @@ const ar: Copy = {
     },
     cta: {
       title: "أخبرنا كيف تصلك الطلبات اليوم.",
-      body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يزورك ليريك ALYR Chat على هاتفك أنت.",
+      body: "أرسل لنا رسالة، ونرتّب معك اتصالاً أو لقاءً نُريك فيه ALYR Chat.",
     },
   },
   pages: {
@@ -4768,12 +4768,12 @@ const ar: Copy = {
           {
             id: "setup",
             q: "كم يستغرق التجهيز؟",
-            a: "نتفق معك على موعد بدء التشغيل خلال الزيارة، ونضيف خدماتك وأسعارك وساعات عملك بأنفسنا.",
+            a: "نتفق معك على موعد بدء التشغيل، ونضيف خدماتك وأسعارك وساعات عملك بأنفسنا.",
           },
           {
             id: "move",
             q: "كيف أنتقل من دفتري أو هاتفي؟",
-            a: "نتفق خلال الزيارة على يوم الانتقال، وعلى طريقة نقل الحجوزات الموجودة لديك لما بعده.",
+            a: "نتفق على يوم الانتقال، وعلى طريقة نقل الحجوزات الموجودة لديك لما بعده.",
           },
           {
             id: "chairs",
@@ -4789,7 +4789,7 @@ const ar: Copy = {
       },
       cta: {
         title: "أخبرنا كيف تصلك الحجوزات اليوم.",
-        body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يزورك ليريك ALYR Bookings على هاتفك أنت.",
+        body: "أرسل لنا رسالة، ونرتّب معك اتصالاً أو لقاءً نُريك فيه ALYR Bookings.",
       },
     },
 
@@ -4903,7 +4903,7 @@ const ar: Copy = {
       },
       cta: {
         title: "أخبرنا بما تريد أن تعرفه كل صباح.",
-        body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يزورك ليريك ALYR Agent على هاتفك أنت.",
+        body: "أرسل لنا رسالة، ونرتّب معك اتصالاً أو لقاءً نُريك فيه ALYR Agent.",
       },
     },
 
@@ -5291,7 +5291,7 @@ const ar: Copy = {
       },
       cta: {
         title: "أخبرنا كيف تسجّل الآجل اليوم.",
-        body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يزورك ليريك ALYR Accounts على هاتفك أنت.",
+        body: "أرسل لنا رسالة، ونرتّب معك اتصالاً أو لقاءً نُريك فيه ALYR Accounts.",
       },
     },
     shelf: shelfAr,

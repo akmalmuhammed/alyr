@@ -120,11 +120,8 @@ export function WorkspaceGrid({ locale, words }: { locale: Locale; words: Worksp
                         {seeLink(t.products.see, product.name)}
                         <Icon name="arrow-right" className="ico ico-flip" />
                       </a>
-                      <span className="wg-state">{product.state}</span>
                     </p>
-                  ) : (
-                    (key === "checkup" || key === "monthly") && <p className="wg-foot"><span className="wg-state is-team">{words.team}</span></p>
-                  )}
+                  ) : null}
                 </div>
                 <div className="wg-vis" inert aria-hidden="true" data-nosnippet>
                   {isProduct(key) ? <Fragment card={key} locale={locale} />

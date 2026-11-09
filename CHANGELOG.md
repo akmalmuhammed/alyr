@@ -6,6 +6,9 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 
 ## Unreleased
 
+## v0.3.17 (9 Nov 2026)
+- Onboarding starts with a call or a meeting, and nothing says we come to the shop (D-165, ALY-330; no migration, no new dependency): the homepage meta and share-card facts, every product, sector, guide, Docs and Shelf closing call ("Send us a message, and we set up a call or a meeting…"), the questions, price lines, the mailto template ("Best time for a call") and the `llms` files; the labels "Done by our team", "Our team does", the product state tags, "Set up for you" and "With every product" are gone; the scenes, agent actions and times agree with each other; the homepage has no FAQPage block; the site's own Arabic is corrected after an independent review (the Agent screens' generated Arabic is unchanged).
+
 ## v0.3.16 (9 Nov 2026)
 - The footer no longer says "ALYR uses the WhatsApp Business Platform. ALYR is not affiliated with, or endorsed by, WhatsApp or Meta." (D-164, ALY-330; no migration, no new dependency): removed from every public page in English and Arabic and from the `llms.txt` files; the site still never says or implies a partnership.
 
