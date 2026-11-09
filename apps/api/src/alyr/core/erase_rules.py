@@ -51,6 +51,11 @@ RULES: dict[str, Rule] = {
         "staff_pending", "review_requests", "activity", "agent_snoozes",
     ),
     **_delete(
+        "the connector's settings, the permissions the business's people gave their own apps, "
+        "the tokens made from them (hashes only) and the previews waiting for a yes (spec 067)",
+        "mcp_settings", "mcp_grants", "mcp_tokens", "mcp_confirmations",
+    ),
+    **_delete(
         "what the business sold, booked and was paid, and the keys it connected for its own "
         "payment account (sealed); its customers' payment references are the business's, "
         "not ALYR's",
@@ -198,6 +203,9 @@ RULES: dict[str, Rule] = {
     # ── Not about any one business or client ─────────────────────────────────────────────────
     **{table: Rule(GLOBAL, reason) for table, reason in {
         "alert_state": "which alerts are firing: counts only",
+        "mcp_clients": "apps that may ask to connect (their own names and addresses)",
+        "mcp_auth_requests": "the 15 minutes while a person signs in at the connector's page",
+        "mcp_signals": "a kind, a business's ID and a time, for an alert's counts; kept two days",
         "business_templates": "the kinds of business ALYR's staff made; a shop only reads them",
         "business_type_settings": "ALYR's switches per kind of business",
         "platform_admins": "ALYR's own staff",

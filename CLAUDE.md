@@ -104,7 +104,11 @@ apps/api/                     FastAPI service (Python 3.13, managed with uv)
                               items/codes.py reads a customer's message for item codes, links and
                               SKUs and items/wa_order.py orders by them in the chat (specs/010);
                               owner/ is what an owner or staff member can ask from WhatsApp, and
-                              LINK proves a staff phone (specs/029-owner-actions, D-065)
+                              LINK proves a staff phone (specs/029-owner-actions, D-065);
+                              mcp/ is the owner's own app calling the same actions: the sign-in
+                              (oauth.py, clients.py), the endpoint's server and tool registry
+                              (server.py, registry.py, tools/), the safety layer (safety.py) and
+                              the page (page.py); it calls no model (specs/067-mcp-connector, D-170)
   src/alyr/routes/            HTTP routes. deps.py: who is calling, which shop, which modules are on
                               account.py: your account (switch business, change the sign-in email, all of a
                               business's data as one ZIP; core/account.py, core/export.py, specs/040, D-081)
