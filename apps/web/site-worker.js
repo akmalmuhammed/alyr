@@ -22,7 +22,9 @@ const worker = {
     // alyr.qa/ingest, and this forwards them to PostHog's EU region without the visitor's
     // address (PostHog is set to discard IPs; the cookieless count uses its own daily salt).
     if (url.pathname.startsWith("/ingest/")) return forward(request, url);
-    const response = await env.ASSETS.fetch(request);
+    // The home film (D-159) is one 18 MB file; Cloudflare's static files answer a Range request
+    // with the whole file, and a browser then cannot jump to another minute. Answer it here.
+    const response = url.pathname.startsWith("/media/") ? await media(request, env) : await env.ASSETS.fetch(request);
     // A pull request's preview (a version URL on workers.dev) is never indexed: search
     // engines only ever see alyr.qa.
     if (env.PREVIEW === "on") {
@@ -33,6 +35,40 @@ const worker = {
     return response;
   },
 };
+
+const RANGE = /^bytes=(\d*)-(\d*)$/;
+
+/** A file under /media/, with `Accept-Ranges` and a 206 for a byte range (a browser's seek). */
+async function media(request, env) {
+  const match = RANGE.exec((request.headers.get("Range") || "").trim());
+  const plain = new Headers(request.headers);
+  plain.delete("Range");
+  const asset = await env.ASSETS.fetch(new Request(request.url, { method: request.method, headers: plain }));
+  if (!match || (match[1] === "" && match[2] === "") || asset.status !== 200 || request.method !== "GET") {
+    const whole = new Response(asset.body, asset);
+    whole.headers.set("Accept-Ranges", "bytes");
+    return whole;
+  }
+  const body = await asset.arrayBuffer();
+  const size = body.byteLength;
+  let start;
+  let end;
+  if (match[1] === "") {
+    start = Math.max(0, size - Number(match[2]));
+    end = size - 1;
+  } else {
+    start = Number(match[1]);
+    end = match[2] === "" ? size - 1 : Math.min(Number(match[2]), size - 1);
+  }
+  if (start >= size || start > end) {
+    return new Response(null, { status: 416, headers: { "Content-Range": `bytes */${size}`, "Accept-Ranges": "bytes" } });
+  }
+  const headers = new Headers(asset.headers);
+  headers.set("Content-Range", `bytes ${start}-${end}/${size}`);
+  headers.set("Accept-Ranges", "bytes");
+  headers.delete("Content-Length");
+  return new Response(body.slice(start, end + 1), { status: 206, headers });
+}
 
 async function forward(request, url) {
   const assets = url.pathname.startsWith("/ingest/static/");

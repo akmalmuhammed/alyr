@@ -6,6 +6,9 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 
 ## Unreleased
 
+## v0.3.14 (8 Nov 2026)
+- The home film in the homepage window, and no "a person replies" on the homepage (D-159, ALY-330; no migration, no new dependency): the window plays `ALYR-your-business-1080.mp4` (2:06, as an 18.6 MB web copy with a poster; never starts by itself), shown whole on its own background; the note under the hero buttons and the closing call no longer say a person from ALYR replies. English and Arabic; the Arabic is a draft until ALY-66.
+
 ## v0.3.13 (8 Nov 2026)
 - The Convert scene shows WhatsApp and the real channel marks (D-161, ALY-330; no migration, no new dependency): six places (Instagram, TikTok, WhatsApp, Google, the order page, the counter card) drawn into one ALYR Chat inbox with the marks in their own colours, the headline "Every channel, every enquiry, one inbox.", and "Runs today" removed from the four stage panels. English and Arabic; the Arabic is a draft until ALY-66.
 

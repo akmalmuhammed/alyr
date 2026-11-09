@@ -56,13 +56,14 @@ export const TRY_FREE_LIVE = process.env.NEXT_PUBLIC_ALYR_TRY_FREE === "on" && C
  * reads none and the onboarding funnel records none. */
 export const TRY_FREE_URL = "https://app.alyr.qa/start";
 
-/** The film in the homepage's window (D-157): on when `NEXT_PUBLIC_ALYR_HOME_VIDEO=on`, and then
- * the build copies `apps/web/site-media/` to `/media/` and the window plays `home.mp4` (with
- * `home-poster.jpg` as its poster). Off, the window shows the drawn figure of one enquiry
- * through the four stages. Put captions in `home.vtt` before switching it on. */
-export const HOME_VIDEO = process.env.NEXT_PUBLIC_ALYR_HOME_VIDEO === "on"
-  ? { src: "/media/home.mp4", poster: "/media/home-poster.jpg", captions: "/media/home.vtt" }
-  : null;
+/** The film in the homepage's window (D-157, D-159): `apps/web/site-media/home.mp4` and its poster,
+ * which the build copies to `/media/`. The film has no narration (music and words on screen), so
+ * it has no captions file yet; set `captions` to `/media/home.vtt` when there is one. Set
+ * `NEXT_PUBLIC_ALYR_HOME_VIDEO=off` to show the drawn figure of one enquiry through the four
+ * stages instead. The film never starts by itself. */
+export const HOME_VIDEO = process.env.NEXT_PUBLIC_ALYR_HOME_VIDEO === "off"
+  ? null
+  : { src: "/media/home.mp4", poster: "/media/home-poster.jpg", captions: null as string | null };
 
 /** Where staff sign in. Empty on the published site, which is the public pages only:
  * the workspace is not hosted there, so the footer shows no link to it. */

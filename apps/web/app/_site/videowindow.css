@@ -5,14 +5,14 @@
    Tokens only; the 60rem is Notion's 960 px. */
 .vw {
   position: relative; margin: var(--space-6) auto 0; width: 100%; max-width: 60rem; aspect-ratio: 16 / 10;
-  border-radius: var(--radius-md); background: var(--band); box-shadow: var(--shadow-stage); overflow: clip;
+  border-radius: var(--radius-md); background: var(--film); box-shadow: var(--shadow-stage); overflow: clip;
 }
 .vw-stage { position: absolute; inset: 0; display: grid; }
 .vw-stage .fn { margin: 0; align-self: stretch; }
 .vw-stage .fn-plate { height: 100%; display: grid; align-content: center; clip-path: none; box-shadow: none; }
 [dir="rtl"] .vw-stage .fn-plate { clip-path: none; }
 .vw-stage .fn-plate::after { display: none; }
-.vw-video { display: block; width: 100%; height: 100%; object-fit: cover; background: var(--band); }
+.vw-video { display: block; width: 100%; height: 100%; object-fit: contain; background: var(--film); }
 @media (max-width: 47.99rem) {
   .vw { margin-top: var(--space-5); }
 }

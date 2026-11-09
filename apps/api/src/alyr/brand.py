@@ -21,6 +21,7 @@ COLOR = {
     },
     "brand": {
         "carbon": "#15171a",
+        "film-ink": "#141819",
         "volt": "#b7f34a",
         "volt-hover": "#a5e238",
         "volt-pressed": "#8fc42d",
