@@ -5,12 +5,12 @@ changes anything. An agent sees no money (D-035): the amounts are left out of wh
 are given, not hidden afterwards, so no door can leak them.
 """
 
-from datetime import UTC, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 import asyncpg
 
-from alyr.core.actions import ALL_ROLES, MONEY_ROLES, Caller, module_on, register
+from alyr.core.actions import ALL_ROLES, MONEY_ROLES, ActionError, Caller, module_on, register
 from alyr.modules.ledger import service as ledger_service
 
 _TENANT = "nullif(current_setting('app.tenant_id', true), '')::uuid"
@@ -18,6 +18,9 @@ OPEN_ORDERS = ("new", "confirmed", "ready")
 LATE = ("d61_90", "d90_plus")
 LIST_LIMIT = 8
 OWED_TOP = 5
+# What a caller that asks for more (the connector's apps) may be given in one answer.
+MAX_LIST = 25
+MAX_DAYS = 14
 
 
 async def _day(conn: asyncpg.Connection, now: datetime | None = None):
@@ -32,6 +35,39 @@ async def _day(conn: asyncpg.Connection, now: datetime | None = None):
     if local < start:
         start -= timedelta(days=1)
     return start, start + timedelta(days=1), zone
+
+
+def _date(text) -> date:
+    try:
+        return date.fromisoformat(str(text))
+    except ValueError:
+        raise ActionError("A date is written like 2026-11-09 (year, month, day).") from None
+
+
+async def _day_of(conn: asyncpg.Connection, when: str, on=None):
+    """The start and end of the shop's `today`, `yesterday` or a given `date`, by the same day
+    rule as `_day` (a shop's day may start before midnight's end)."""
+    start, end, zone = await _day(conn)
+    if when == "yesterday":
+        return start - timedelta(days=1), start, zone
+    if when == "date":
+        if on is None:
+            raise ActionError("Give the date as well, like 2026-11-09.")
+        day = _date(on)
+        starts = await conn.fetchval("select day_starts from shop_settings") or time(0)
+        first = datetime.combine(day, starts, tzinfo=zone)
+        return first, first + timedelta(days=1), zone
+    return start, end, zone
+
+
+def _limit(args: dict, default: int = LIST_LIMIT) -> int:
+    asked = args.get("limit")
+    if asked is None:
+        return default
+    try:
+        return max(1, min(int(asked), MAX_LIST))
+    except (TypeError, ValueError):
+        return default
 
 
 def _clock(moment: datetime, zone: ZoneInfo) -> str:
@@ -71,7 +107,7 @@ async def today(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
             start, end,
         )
         following = await conn.fetchrow(
-            "select b.starts_at, b.service_name, c.name from bookings b "
+            "select b.starts_at, b.service_name, c.name, c.phone from bookings b "
             "join contacts c on c.id = b.contact_id "
             "where b.status = 'booked' and b.starts_at >= now() and b.starts_at < $1 "
             "order by b.starts_at limit 1",
@@ -85,6 +121,7 @@ async def today(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
                 "time": _clock(following["starts_at"], zone),
                 "service": following["service_name"],
                 "customer": following["name"],
+                "phone": following["phone"],
             } if following else None,
         }
 
@@ -110,30 +147,77 @@ async def today(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
     return {"date": start.date().isoformat(), "sections": sections}
 
 
+async def _lines(conn: asyncpg.Connection, order_ids: list) -> dict:
+    """What each order holds, as short lines: "2 x Pancake"."""
+    lines: dict = {}
+    for r in await conn.fetch(
+        "select order_id, name, quantity from order_items where order_id = any($1) "
+        "order by created_at, id", order_ids,
+    ):
+        lines.setdefault(r["order_id"], []).append(f"{r['quantity']} x {r['name']}")
+    return lines
+
+
 @register("orders", ALL_ROLES, module="orders")
 async def orders(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
     """Orders still to be handled, newest first. The owner's test order (D-064) is never
-    one of them, as it is in no report."""
-    rows = await conn.fetch(
-        "select o.number, o.status, o.payment, o.total, o.created_at, c.name "
-        "from orders o join contacts c on c.id = o.contact_id "
-        "where not o.is_test and o.status = any($1) order by o.created_at desc limit $2",
-        list(OPEN_ORDERS), LIST_LIMIT,
-    )
-    open_total = await conn.fetchval(
-        "select count(*) from orders where not is_test and status = any($1)", list(OPEN_ORDERS)
-    )
-    return {
-        "open": open_total,
-        "more": max(0, open_total - len(rows)),
+    one of them, as it is in no report.
+
+    `when` asks for another view: `today`, `yesterday` or `date` (with `date`), every order of
+    that day with its count and (for those who may see money) its value, a cancelled order
+    counted on its own and never in the value, as the dashboard counts them. `limit` shows
+    fewer or more rows (the chat shows 8; no answer holds more than 25)."""
+    when = args.get("when") or "open"
+    limit = _limit(args)
+    zone = (await _day(conn))[2]
+    if when == "open":
+        rows = await conn.fetch(
+            "select o.id, o.number, o.status, o.payment, o.total, o.created_at, c.name, c.phone "
+            "from orders o join contacts c on c.id = o.contact_id "
+            "where not o.is_test and o.status = any($1) order by o.created_at desc limit $2",
+            list(OPEN_ORDERS), limit,
+        )
+        open_total = await conn.fetchval(
+            "select count(*) from orders where not is_test and status = any($1)",
+            list(OPEN_ORDERS),
+        )
+        summary = {"open": open_total, "more": max(0, open_total - len(rows))}
+    elif when in ("today", "yesterday", "date"):
+        start, end, _ = await _day_of(conn, when, args.get("date"))
+        rows = await conn.fetch(
+            "select o.id, o.number, o.status, o.payment, o.total, o.created_at, c.name, c.phone "
+            "from orders o join contacts c on c.id = o.contact_id "
+            "where not o.is_test and o.created_at >= $1 and o.created_at < $2 "
+            "order by o.created_at desc limit $3",
+            start, end, limit,
+        )
+        day = await conn.fetchrow(
+            "select count(*) filter (where status <> 'cancelled') as count, "
+            "coalesce(sum(total) filter (where status <> 'cancelled'), 0)::bigint as value, "
+            "count(*) filter (where status = 'cancelled') as cancelled "
+            "from orders where not is_test and created_at >= $1 and created_at < $2",
+            start, end,
+        )
+        summary = {
+            "date": start.date().isoformat(), "count": day["count"],
+            "value": day["value"] if caller.sees_money else None,
+            "cancelled": day["cancelled"],
+            "more": max(0, day["count"] + day["cancelled"] - len(rows)),
+        }
+    else:
+        raise ActionError("Choose open, today, yesterday or a date.")
+    lines = await _lines(conn, [r["id"] for r in rows])
+    return summary | {
         "items": [
             {
                 "number": r["number"],
                 "customer": r["name"],
+                "phone": r["phone"],
                 "status": r["status"],
                 "payment": r["payment"],
                 "total": r["total"] if caller.sees_money else None,
-                "placed_at": r["created_at"].isoformat(),
+                "placed_at": r["created_at"].astimezone(zone).isoformat(timespec="minutes"),
+                "lines": lines.get(r["id"], []),
             }
             for r in rows
         ],
@@ -142,28 +226,42 @@ async def orders(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
 
 @register("bookings", ALL_ROLES, module="bookings")
 async def bookings(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
-    """Today's bookings in time order."""
+    """Today's bookings in time order. `date` asks for another day and `days` for that many days
+    from it (at most 14), each booking with its day and time in the shop's own zone."""
     start, end, zone = await _day(conn)
+    days = 1
+    if args.get("date"):
+        start, _, zone = await _day_of(conn, "date", args["date"])
+    if args.get("days") is not None:
+        try:
+            days = max(1, min(int(args["days"]), MAX_DAYS))
+        except (TypeError, ValueError):
+            raise ActionError("days is a number from 1 to 14.") from None
+    end = start + timedelta(days=days)
     rows = await conn.fetch(
-        "select b.number, b.starts_at, b.service_name, b.status, c.name "
+        "select b.number, b.starts_at, b.service_name, b.status, c.name, c.phone "
         "from bookings b join contacts c on c.id = b.contact_id "
         "where b.starts_at >= $1 and b.starts_at < $2 "
         "and b.status in ('booked', 'completed', 'no_show') order by b.starts_at",
         start, end,
     )
+    shown = LIST_LIMIT * 2 if days == 1 else MAX_LIST * 2
     return {
         "date": start.date().isoformat(),
+        "to": (end - timedelta(days=1)).date().isoformat(),
         "items": [
             {
                 "number": r["number"],
+                "date": r["starts_at"].astimezone(zone).date().isoformat(),
                 "time": _clock(r["starts_at"], zone),
                 "service": r["service_name"],
                 "customer": r["name"],
+                "phone": r["phone"],
                 "status": r["status"],
             }
-            for r in rows[:LIST_LIMIT * 2]
+            for r in rows[:shown]
         ],
-        "more": max(0, len(rows) - LIST_LIMIT * 2),
+        "more": max(0, len(rows) - shown),
     }
 
 
@@ -182,7 +280,8 @@ async def owed(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
         "late_total": sum(c["buckets"][b] for c in late for b in LATE),
         "late_customers": len(late),
         "top": [
-            {"name": c["name"], "balance": c["balance"], "late": c["id"] in late_ids}
+            {"name": c["name"], "phone": c["phone"], "balance": c["balance"],
+             "late": c["id"] in late_ids}
             for c in owing[:OWED_TOP]
         ],
     }

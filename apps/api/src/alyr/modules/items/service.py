@@ -617,10 +617,12 @@ async def update_item(
 
 
 async def set_available(
-    conn: asyncpg.Connection, item_id: UUID, available: bool, actor: Actor
+    conn: asyncpg.Connection, item_id: UUID, available: bool, actor: Actor,
+    channel: str = "portal",
 ) -> bool | None:
     """Flip an item's switch. Returns None if there is no such item; refuses an item whose
-    rule has no switch."""
+    rule has no switch. `channel` says which door the change came through, for the activity
+    record: the workspace by default, `mcp` for an owner's own app (spec 067)."""
     row = await conn.fetchrow(
         "select stock_rule, available, is_sample from items where id = $1", item_id
     )
@@ -638,7 +640,8 @@ async def set_available(
             item_id, available,
         )
         await team.record(
-            conn, "item", item_id, "switched_on" if available else "switched_off", actor
+            conn, "item", item_id, "switched_on" if available else "switched_off", actor,
+            channel=channel,
         )
         if available:
             await events.item_changed(conn, item_id)

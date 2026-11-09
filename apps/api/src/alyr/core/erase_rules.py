@@ -52,8 +52,9 @@ RULES: dict[str, Rule] = {
     ),
     **_delete(
         "the connector's settings, the permissions the business's people gave their own apps, "
-        "the tokens made from them (hashes only) and the previews waiting for a yes (spec 067)",
-        "mcp_settings", "mcp_grants", "mcp_tokens", "mcp_confirmations",
+        "the tokens made from them (hashes only), the previews waiting for a yes and the stock "
+        "changes an app made, kept so they can be undone (spec 067)",
+        "mcp_settings", "mcp_grants", "mcp_tokens", "mcp_confirmations", "mcp_stock_changes",
     ),
     **_delete(
         "what the business sold, booked and was paid, and the keys it connected for its own "
