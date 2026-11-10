@@ -11,6 +11,7 @@ through `counted()` and `agree()`), never joined from fragments.
 
 from alyr.core.words import Noun, counted
 from alyr.modules.agent.words import DAY_SHORT, MONTHS, agree
+from alyr.modules.discovery import answer_words
 
 PROBLEMS: Noun = (
     ("problem", "problems"),
@@ -461,6 +462,10 @@ STEP_SUMMARIES = {
     "{closed} closed.",
     "proposals.verify": "Looked at applied changes: {confirmed} confirmed, {again} still found.",
 }
+
+# Phase 3 (spec 068): the Answers check's refusals and its step sentences.
+ERRORS.update(answer_words.ERRORS)
+STEP_SUMMARIES.update(answer_words.STEP)
 
 STATUSES = ("open", "skipped", "owner_done", "verified", "gone")
 

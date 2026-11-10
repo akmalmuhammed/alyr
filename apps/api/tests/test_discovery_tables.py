@@ -11,23 +11,23 @@ import pytest
 from conftest import APP_DSN
 from test_consent import owner_sql
 
-TABLES = ("discovery_asks", "discovery_connections", "discovery_facts", "discovery_findings",
+TABLES = ("discovery_answer_settings", "discovery_answers", "discovery_asks",
+          "discovery_connections", "discovery_facts", "discovery_findings",
           "discovery_location_managers", "discovery_locations", "discovery_proposals",
           "discovery_reviews", "discovery_run_steps", "discovery_runs", "discovery_sample_state",
           "discovery_settings")
 MIGRATIONS = Path(__file__).resolve().parents[1] / "migrations"
 
 
-def test_the_migrations_are_in_the_range_reserved_for_discovery():
-    # 0124 is the Answers check's (ALY-326), in a branch of its own.
+def test_the_migrations_are_0120_to_0125_in_the_range_reserved_for_discovery():
     names = sorted(p.name for p in MIGRATIONS.glob("01[2-2]*_*.sql"))
     assert names == ["0120_discovery.sql", "0121_discovery_proposals.sql",
                      "0122_discovery_asks.sql", "0123_discovery_sample_state.sql",
-                     "0125_discovery_checks.sql"]
-    assert len(owner_sql("select name from schema_migrations where name like '012%'")) == 5
+                     "0124_discovery_answers.sql", "0125_discovery_checks.sql"]
+    assert len(owner_sql("select name from schema_migrations where name like '012%'")) == 6
 
 
-def test_discovery_has_exactly_these_twelve_tables():
+def test_discovery_has_exactly_these_fourteen_tables():
     rows = owner_sql("select relname from pg_class c join pg_namespace n on n.oid = c.relnamespace "
                      "where n.nspname = 'public' and c.relkind = 'r' and relname like 'discovery%' "
                      "order by 1")

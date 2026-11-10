@@ -4,7 +4,7 @@
 -- a list of {rule, location, state}, where location is a place's id or null for the whole business
 -- and state is pass, fail or not_measured. Null for every run made before this migration: the API
 -- then says "not measured", never a guess. No new table, so the row-level security, the grants, the
--- erasure rule and the owner's download of discovery_runs cover it as they are. 0124 is taken by the
--- Answers check (ALY-326).
+-- erasure rule and the owner's download of discovery_runs cover it as they are. 0124 is the Answers
+-- check's (ALY-326), whose answers are kept in a table of their own and are not in this list.
 
 alter table discovery_runs add column checks jsonb;

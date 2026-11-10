@@ -113,6 +113,15 @@ class SettingsIn(Strict):
     receivers: list[UUID] | None = Field(default=None, max_length=100)
 
 
+class AnswersSettingsIn(Strict):
+    """Spec 068. Only keys of the closed lists are accepted; nothing typed becomes a question."""
+
+    enabled: bool | None = None
+    trade: str | None = Field(default=None, max_length=40)
+    city: str | None = Field(default=None, max_length=40)
+    engines: list[str] | None = Field(default=None, max_length=10)
+
+
 @router.get("/overview")
 async def overview(
     request: Request, lang: str | None = Lang, staff: Staff = Depends(current_staff)
@@ -343,4 +352,25 @@ async def put_settings(body: SettingsIn, request: Request, staff: Staff = Depend
     return await _act(
         request, staff, "discovery.settings", ask_cap_per_day=body.ask_cap_per_day,
         weekly_run=body.weekly_run, receivers=body.receivers,
+    )
+
+
+# ── Phase 3: the Answers check (spec 068, D-168) ────────────────────────────────────────
+
+
+@router.get("/answers")
+async def get_answers_route(
+    request: Request, lang: str | None = Lang, staff: Staff = Depends(current_staff)
+):
+    return await _act(request, staff, "discovery.answers", lang=lang)
+
+
+@router.put("/answers/settings")
+async def put_answers_settings(
+    body: AnswersSettingsIn, request: Request, lang: str | None = Lang,
+    staff: Staff = Depends(current_staff),
+):
+    return await _act(
+        request, staff, "discovery.set_answers", lang=lang,
+        **body.model_dump(exclude_unset=True),
     )

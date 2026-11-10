@@ -69,7 +69,8 @@ def test_the_fails_are_exactly_the_open_findings_and_the_score_is_made_of_these_
     failed |= {(None, rule) for rule, s in answer["business"]["checks"].items() if s == "fail"}
     found = {((f["location"] or {}).get("id"), f["rule_id"]) for f in findings(shop.owner)}
     assert failed == found and failed
-    # the same outcomes, scored again, give the run's score: nothing else went into it
+    # the same outcomes, scored again, give the run's score: with the Answers check off (the
+    # default), nothing else went into it
     kept = json.loads(owner_sql("select checks::text as checks from discovery_runs where id = $1",
                                 UUID(run["id"]))[0]["checks"])
     outcomes = [rules.Outcome(c["rule"], UUID(c["location"]) if c["location"] else None, c["state"])

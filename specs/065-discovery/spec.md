@@ -152,7 +152,7 @@ API on real PostgreSQL through HTTP (`tests/test_discovery_*.py`): the migration
 
 A check-up works out, for every rule and every place it looks at, one of `pass`, `fail` or `not_measured`, and makes the score from that. Until this addition it kept only the fails (as findings) and the score, so a screen could not set every place against every check: a check with no finding might have passed, or might not have been measured.
 
-**Kept.** Migration `0125_discovery_checks.sql` adds `discovery_runs.checks` (jsonb, null for every run made before it): a list of `{rule, location, state}`, `location` a place's id or null for a rule about the whole business. It is written in the same statement as the score, from the same outcomes, and never changed afterwards. No new table: the run's row-level security, grants, erasure rule and place in the owner's download are the run's.
+**Kept.** Migration `0125_discovery_checks.sql` adds `discovery_runs.checks` (jsonb, null for every run made before it): a list of `{rule, location, state}`, `location` a place's id or null for a rule about the whole business. It is written in the same statement as the score, from the same rule outcomes, and never changed afterwards. The Answers check (spec 068) is not a rule: its answers are kept in `discovery_answers` and are not in this list. No new table: the run's row-level security, grants, erasure rule and place in the owner's download are the run's.
 
 **Asked.** `GET /api/discovery/checks?lang=en|ar`, the workspace's session cookie, module on, every role (it is a read, like findings; it is not on the activity record).
 
@@ -174,7 +174,7 @@ A check-up works out, for every rule and every place it looks at, one of `pass`,
 * `measured` is false, with no places, when there is no finished check-up or the last one was made before the column. **Never a guess:** the API does not work an old run's outcomes back from its findings, and a rule or a state it does not know in the column is left out.
 * There is no score per place. The spec has one score, and a score is not a ranking.
 
-**Tests** (`tests/test_discovery_checks.py`, real PostgreSQL through HTTP): the shape and the order; every rule present; the fails are exactly the open findings; the kept outcomes scored again give the run's score; `fixed` across two sample check-ups; a run with a null or unknown column is not measured; both languages; every role reads and nothing is recorded; module off; another shop's rows.
+**Tests** (`tests/test_discovery_checks.py`, real PostgreSQL through HTTP): the shape and the order; every rule present; the fails are exactly the open findings; the kept outcomes scored again give the run's score (with the Answers check off, as it is by default); `fixed` across two sample check-ups; a run with a null or unknown column is not measured; both languages; every role reads and nothing is recorded; module off; another shop's rows.
 
 **Not in this addition:** the screen (the matrix on Home, which builds on ALY-332).
 
