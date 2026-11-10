@@ -42,6 +42,12 @@ class Settings(BaseSettings):
     # only inside their 24-hour window (as a message with buttons). Outside it nothing is sent and
     # no message is recorded as blocked: the proposal waits in the workspace.
     discovery_ask_template_approved: bool = False
+    # The Answers check (spec 068, D-168): asking a real answer tool a plain public question. OFF.
+    # No engine is built: this flag and a provider's key (a setting each provider adds, never in the
+    # repository) are the gate a real engine would have to pass, and the founder switches it on
+    # after choosing providers and reading their terms (ALY-51, ALY-329). The sample engine needs
+    # neither and never reaches outside ALYR.
+    discovery_ai_live: bool = False
     # First retry delay; it doubles on each further attempt.
     jobs_backoff_seconds: float = 5.0
     # How many jobs one process runs at once (a customer's own jobs still one at a time, in
