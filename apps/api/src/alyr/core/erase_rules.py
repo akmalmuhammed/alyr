@@ -93,6 +93,13 @@ RULES: dict[str, Rule] = {
         "discovery_settings", "discovery_sample_state",
     ),
     **_delete(
+        "Discovery Phase 3 (spec 068): whether the business is named in the answers of answer "
+        "tools to plain public questions about its trade and city: its settings and each "
+        "answer with its counting. No customer's data; the answers are third-party text, kept "
+        "as data and deleted with the business",
+        "discovery_answer_settings", "discovery_answers",
+    ),
+    **_delete(
         "the records of the business's photos; the files in the photo store are emptied by the "
         "worker from `erasure_files`",
         "media_assets", "media_links", "media_ops", "media_usage",

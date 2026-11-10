@@ -29,6 +29,7 @@ from alyr.modules.discovery import apply as applying
 from alyr.modules.discovery import connectors, engine, proposals, rules
 from alyr.modules.discovery import facts as facts_module
 from alyr.modules.discovery import words as w
+from alyr.modules.discovery.answers import service as answers_service
 from alyr.modules.discovery.connectors import Location, sample
 from alyr.modules.discovery.errors import DiscoveryError
 
@@ -222,6 +223,7 @@ async def get_overview(conn: asyncpg.Connection, caller: Caller, args: dict) -> 
         "done": [by_id[str(r["id"])] for r in done],
         "delta": delta,
         "proposals": await proposals.overview_block(conn, caller, scope, lang),
+        "answers": await answers_service.overview_block(conn, lang),
     }
 
 
@@ -391,6 +393,7 @@ async def get_report(conn: asyncpg.Connection, caller: Caller, args: dict) -> di
         "new": await finding_views(conn, caller, lang, new),
         "by_part": by_part,
         "runs": len(runs),
+        "answers": await answers_service.report_block(conn, [r["id"] for r in runs]),
     }
 
 
@@ -919,3 +922,7 @@ async def set_my_asks(conn: asyncpg.Connection, caller: Caller, args: dict) -> d
             await consent.record(conn, contact_id, "service", "granted", "discovery_asks_setting")
         await _record(conn, caller, caller.user_id, "asks.opt", {"on": on})
     return {"on": on, "linked": contact_id is not None}
+
+
+# Phase 3 (spec 068, D-168): the Answers check. Its actions are in their own file.
+from alyr.modules.discovery import answers_actions  # noqa: E402,F401

@@ -31,7 +31,8 @@ import asyncpg
 from alyr.config import get_settings
 from alyr.core import jobs
 from alyr.db import Database
-from alyr.modules.discovery import connectors, proposals, rules, scoring
+from alyr.modules.discovery import answer_words, connectors, proposals, rules, scoring
+from alyr.modules.discovery.answers import service as answers
 from alyr.modules.discovery.apply import load_overrides
 from alyr.modules.discovery.connectors import ConnectorError, Location, RunContext, Snapshot
 from alyr.modules.discovery.errors import DiscoveryError
@@ -392,10 +393,29 @@ async def _carry_out(db, tenant_id, run, log_, get_connector) -> None:
             started,
         )
 
-    # 7. Score, and finish.
+    # 7. Phase 3 (spec 068): only when the Answers check is switched on, ask the public questions
+    # and count the answers. It never fails the check-up: an engine's failure is a row and a
+    # sentence in the log, and the part is then measured on what was counted, or not at all.
+    tally = None
+    async with db.tenant(tenant_id, readonly=True) as conn:
+        answer_settings = await answers.load_settings(conn)
+    if answer_settings.enabled:
+        log_.guard("ai.answers")
+        started = clock()
+        try:
+            tally, sentence, ok, spent = await answers.run_step(
+                db, tenant_id, run["id"], answer_settings, prior, started
+            )
+        except Exception:  # noqa: BLE001 - what is asked of other tools never fails a check-up
+            log.exception("discovery answers step failed for run %s", run["id"])
+            tally, sentence, ok, spent = None, answer_words.STEP["ai.answers.failed"], False, 0
+        async with db.tenant(tenant_id) as conn:
+            await log_.add(conn, "ai.answers", sentence, started, ok=ok, cost=spent)
+
+    # 8. Score, and finish.
     log_.guard("score.compute")
     started = clock()
-    total, parts = scoring.score(outcomes)
+    total, parts = scoring.score(outcomes, tally)
     async with db.tenant(tenant_id) as conn:
         await log_.add(conn, "score.compute", _summary("score.compute"), started)
         await conn.execute(
