@@ -2727,3 +2727,23 @@ D-160 said Phase 2 would turn findings into proposals the owner approves. This f
 **Revisit when** Meta approves or refuses the ask template, Google grants API access, ALY-134 is built, or the Arabic review (ALY-66) changes the words.
 
 **Taken from the reserved range:** D-166 (D-165 is taken by the homepage work, PR #281) and migrations 0121 to 0123.
+
+## D-168 · Discovery Phase 3: counting whether a business is named in answers, on public questions only, rule-based, sample first
+
+**Date** 10 Nov 2026 · **Status** Accepted for the build (the founder's brief of 10 Nov: "write the spec first, sample connector first, real engines only behind keys and a flag, off") · ALY-326, spec 068 · Builds on D-160 (one agent, two doors), D-166 (Phase 2), D-012 (no model required), D-035 (the honest voice), hard rule 2
+
+**Decision.**
+- **Only generic public questions leave ALYR, and nobody types them.** A question is built from a closed list of trades and cities and three fixed templates ("best car care in Doha"). It holds no business name, person, number or digit. The request an engine receives has exactly two fields, `text` and `lang`; a test fails if a field is added.
+- **Counting is by rule.** Whether the business is named, where in the answer's list, and which other businesses are named, are text matching in ALYR. No model reads an answer, no personal data goes to any model, and an answer is third-party text stored and shown as quoted data.
+- **The sample engine is the only engine built.** It is fictional (Nuqta Car Care and five made-up competitors), deterministic, marked as a sample everywhere, and has three improvement stages like the sample connector. Real engines are a contract (`LiveEngine`) and a gate (the flag `ALYR_DISCOVERY_AI_LIVE`, off; a key per engine; no key in the repository) with **no provider code**: nothing stands in for them. Tests trip every outside call.
+- **The `ai` part of the score is measured only from four counted answers or more**, otherwise it stays "Not measured yet" and out of the total. It is shown as "Answers": "named in 4 of 6 answers", with the caution that answers change each time and a few points is not a trend.
+- **Words.** Owner-facing text says "answer tools" and "answers", never "AI" or "assistant" (docs/honesty.md bans them for ALYR's own voice), never a product's name, and never says ALYR asked a model. The founder can change this in one file.
+- **No findings and no proposals come from answers.** A count does not say what to fix; ALYR does not invent advice it cannot support.
+
+**Why.** Owners will ask whether the chat tools name them. Measuring it without sending anything about the business, without a model and without a claim ALYR cannot back is possible now, on a fictional business, and leaves the real engines to the legal and provider decisions (ALY-51, ALY-329) that are the founder's.
+
+**Rejected.** Sending the business's name in a question (it would put the business in a provider's logs and bias the answer). Letting an owner type their own questions (free text could carry a customer's name or number; it would need review). A model to find competitors in free text (hard rule 2 and ALY-329 are open; a list parser is enough and its limits are written on the screen). Findings such as "get more reviews so tools name you" (no evidence of cause).
+
+**Revisit when** the founder picks providers and ALY-51 answers, when a real engine is added (its terms and region go in `docs/data-residency.md` first), or when the Arabic review (ALY-66) changes the words.
+
+**Taken from the reserved range:** D-168 (D-167 is the footer's) and migration 0124.
