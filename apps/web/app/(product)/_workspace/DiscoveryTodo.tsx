@@ -1,19 +1,20 @@
 "use client";
 
-// Discovery's To do (ALY-322, spec 065 "Screens"): every finding in three tabs (Open, Skipped,
-// Done), grouped by who does it, with a filter for the place. A row opens a side sheet with the
-// evidence, the steps that found it and the two things an owner can do with it. A link from a
-// review (`?view=todo&finding=<id>`) opens that finding at once.
+// Discovery's To do (ALY-322, spec 065 "Screens"; ALY-324, spec 066): every finding in three tabs
+// (Open, Skipped, Done), grouped by who does it, with a filter for the place and, where a change is
+// waiting for approval, a "Change ready" tag on the row and a chip that narrows the list to them. A
+// row opens a side sheet with the change (if any), the evidence, the steps that found it and what a
+// person can do with it. A link from a review (`?view=todo&finding=<id>`) opens that finding at once.
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
 import { Icon } from "./CatalogUi";
-import { FindingSheet, type Change } from "./DiscoverySheet";
+import { FindingFlow, type Change } from "./DiscoverySheet";
 import { discovery, type Finding, type FindingsAnswer } from "./discoveryApi";
 import { T, type Lang } from "./discoveryCopy";
-import { groupByKind, placeName, sayError, viewHref } from "./discoveryLogic";
-import { FindingRow, Loading, Problem, useLoad } from "./discoveryUi";
+import { groupByKind, placeName, sayError, viewHref, withChange } from "./discoveryLogic";
+import { FindingRow, Loading, Problem, TabBar, announceChange, useLoad } from "./discoveryUi";
 
 type Tab = "open" | "skipped" | "done";
 const TABS: readonly Tab[] = ["open", "skipped", "done"];
@@ -24,6 +25,7 @@ export function DiscoveryTodo({ lang, canManage, push }: { lang: Lang; canManage
   const params = useSearchParams();
   const [tab, setTab] = useState<Tab>("open");
   const [place, setPlace] = useState("");
+  const [onlyReady, setOnlyReady] = useState(false);
   const [openId, setOpenId] = useState<string | null>(() => params.get("finding"));
   const [places] = useLoad(() => discovery.places().catch(() => []), "places");
 
@@ -52,7 +54,9 @@ export function DiscoveryTodo({ lang, canManage, push }: { lang: Lang; canManage
   };
 
   const data = list.data;
-  const items = data?.items ?? [];
+  const everyItem = data?.items ?? [];
+  const readyCount = withChange(everyItem).length;
+  const items = onlyReady ? withChange(everyItem) : everyItem;
   const groups = groupByKind(items);
   const total = data ? data.counts.open + data.counts.skipped + data.counts.owner_done + data.counts.verified : 0;
   const everyPlace = places.data ?? [];
@@ -60,24 +64,14 @@ export function DiscoveryTodo({ lang, canManage, push }: { lang: Lang; canManage
   return (
     <div className="dv-todo">
       <div className="dv-toolbar">
-        <div className="ct-tabs" role="tablist" aria-label={t.tabsLabel}>
-          {TABS.map((key) => (
-            <button key={key} type="button" role="tab" id={`dv-tab-${key}`} aria-selected={tab === key} aria-controls={`dv-panel-${key}`}
-              tabIndex={tab === key ? 0 : -1} onClick={() => setTab(key)}
-              onKeyDown={(e) => {
-                const step = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
-                if (!step) return;
-                e.preventDefault();
-                // The arrows follow the reading direction: the tab bar is mirrored with the page.
-                const dir = (e.currentTarget.closest("[dir]") as HTMLElement | null)?.dir === "rtl" ? -step : step;
-                const next = TABS[(TABS.indexOf(key) + dir + TABS.length) % TABS.length];
-                setTab(next);
-                requestAnimationFrame(() => document.getElementById(`dv-tab-${next}`)?.focus());
-              }}>
-              {t.tabs[key]}
+        <TabBar keys={TABS} words={t.tabs} value={tab} onChange={setTab} label={t.tabsLabel} />
+        {(readyCount > 0 || onlyReady) && (
+          <div className="ct-chips dv-readychip" role="group" aria-label={t.changeReady}>
+            <button type="button" className="ct-chip" aria-pressed={onlyReady} onClick={() => setOnlyReady(!onlyReady)}>
+              {onlyReady && <Icon name="check" className="sh-ico ct-chip-tick" />}{t.changeReady}
             </button>
-          ))}
-        </div>
+          </div>
+        )}
         {everyPlace.length > 1 && (
           <label className="ct-field dv-place">
             <span className="ct-label">{t.placeLabel}</span>
@@ -104,7 +98,7 @@ export function DiscoveryTodo({ lang, canManage, push }: { lang: Lang; canManage
                 <Link className="btn ct-btn" href={viewHref("home")}>{t.toHome}</Link>
               </section>
             )}
-            {items.length === 0 && (total > 0 || place !== "") && <p className="dv-empty-line">{t.todoEmpty[tab]}</p>}
+            {items.length === 0 && (total > 0 || place !== "" || onlyReady) && <p className="dv-empty-line">{t.todoEmpty[tab]}</p>}
 
             {groups.map((g) => (
               <section key={g.kind} className="dv-block" aria-labelledby={`dv-g-${g.kind}`}>
@@ -119,8 +113,8 @@ export function DiscoveryTodo({ lang, canManage, push }: { lang: Lang; canManage
       </div>
 
       {openId && (
-        <FindingSheet lang={lang} id={openId} initial={items.find((f) => f.id === openId) ?? null} canMark={canManage}
-          onClose={closeSheet} onChanged={changed} />
+        <FindingFlow lang={lang} id={openId} initial={everyItem.find((f) => f.id === openId) ?? null} canMark={canManage}
+          onClose={closeSheet} onChanged={changed} onProposalChanged={() => { announceChange(); void reload(true); }} />
       )}
     </div>
   );
