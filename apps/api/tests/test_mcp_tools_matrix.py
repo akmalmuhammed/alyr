@@ -186,6 +186,11 @@ def test_every_change_through_the_connector_is_on_the_record_as_the_connector(wo
     world.change("discovery_skip", arguments["discovery_skip"])
     rows = sql("select subject, action, channel, actor_name from activity where tenant_id = $1 "
                "and created_at > $2 order by created_at", world.tenant_id, started)
+    # Skipping a finding closes a change that waited on it (Discovery Phase 2, spec 066): that
+    # close is the engine's own row, on the record as `system`. Everything else is the connector.
+    closes = [r for r in rows if r["channel"] == "system"]
+    assert all(r["action"] == "proposal.expire" for r in closes), rows
+    rows = [r for r in rows if r["channel"] != "system"]
     assert rows and {r["channel"] for r in rows} == {"mcp"}, rows
     assert {r["actor_name"] for r in rows} == {"Owner"}
     assert {r["action"] for r in rows} >= {
