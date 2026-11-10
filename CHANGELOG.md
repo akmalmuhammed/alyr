@@ -5,6 +5,8 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+
+## v0.3.20 (11 Nov 2026)
 - Discovery, Phase 3 backend, the Answers check (ALY-326, D-168, spec 068; migration 0124, no new dependency): when an owner or admin switches it on, a check-up asks six plain public questions about the business's trade in its city, built from closed lists so nothing of the business or its customers is ever in one, and counts by rule whether the business is named in each answer, where in the list and who else is named; the Answers part of the score is measured from four counted answers. Only a fictional sample engine exists, with no outside call; real engines are a gate that is off and have no code yet. No screen yet. Off for every shop. English and Arabic; the Arabic is a draft until ALY-66.
 
 ## v0.3.19 (10 Nov 2026)
