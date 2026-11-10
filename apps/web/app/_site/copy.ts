@@ -566,7 +566,7 @@ export type Copy = {
    * closing call on the pages that lead with it, in place of each page's own, which is about
    * writing to us. */
   tryFree: { action: string; note: string; bar: string; final: { title: string; body: string } };
-  footer: { line: string; rights: string; legal: string; workspace: string; links: string; products: string };
+  footer: { line: string; rights: string; legal: string; workspace: string; links: string; products: string; company: string; legalTitle: string };
   /** The "Sample" mark in a drawing's chrome; the phone header's "Sample business"; and the
    * line said first in a figure of a fictional business that is not one of the three. */
   fig: { sample: string; business: string; note: string };
@@ -778,6 +778,8 @@ const en: Copy = {
     workspace: "Staff sign-in",
     links: "Site",
     products: "Products",
+    company: "Company",
+    legalTitle: "Legal",
   },
   fig: {
     sample: "Sample",
@@ -3127,6 +3129,8 @@ const ar: Copy = {
     workspace: "دخول الموظفين",
     links: "روابط الموقع",
     products: "المنتجات",
+    company: "الشركة",
+    legalTitle: "قانوني",
   },
   fig: {
     sample: "مثال",
@@ -3149,9 +3153,9 @@ const ar: Copy = {
     time: "09:00",
     alt: {
       bakery:
-        "بطاقة التقرير الأسبوعي: مخبز قرفة، 4–10 أكتوبر، وعليها كلمة «عيّنة». المبيعات 12,005 ر.ق، أكثر بـ1% عن الأسبوع السابق. عمود لكل يوم من الأحد إلى السبت بجانب الأسبوع السابق، وأعلاها الثلاثاء: 2,947 ر.ق. الأكثر طلباً: كرواسون بالزبدة، الكمية 54. المستحق لك: 13,894 ر.ق، و6 عملاء مدينون. الزيارات: 3، والغياب 0.",
+        "بطاقة التقرير الأسبوعي: مخبز قرفة، 4–10 أكتوبر، وعليها كلمة «عيّنة». المبيعات 12,005 ر.ق، أعلى بنسبة 1% عن الأسبوع السابق. عمود لكل يوم من الأحد إلى السبت بجانب الأسبوع السابق، وأعلاها الثلاثاء: 2,947 ر.ق. الأكثر طلباً: كرواسون بالزبدة، الكمية 54. المستحق لك: 13,894 ر.ق، و6 عملاء مدينون. الزيارات: 3، والغياب 0.",
       salon:
-        "بطاقة التقرير الأسبوعي: صالون ضفيرة، 4–10 أكتوبر، وعليها كلمة «عيّنة». الزيارات 28، أكثر بـ33% عن الأسبوع السابق. عمود لكل يوم من الأحد إلى السبت بجانب الأسبوع السابق، وأعلاها السبت: 7 زيارات. الغياب: 3 من أصل 31. المحجوز القادم: 17 خلال 7 أيام. راسلوك: 33 عميلاً.",
+        "بطاقة التقرير الأسبوعي: صالون ضفيرة، 4–10 أكتوبر، وعليها كلمة «عيّنة». الزيارات 28، أعلى بنسبة 33% عن الأسبوع السابق. عمود لكل يوم من الأحد إلى السبت بجانب الأسبوع السابق، وأعلاها السبت: 7 زيارات. الغياب: 3 من أصل 31. المحجوز القادم: 17 خلال 7 أيام. راسلوك: 33 عميلاً.",
       homeservices:
         "بطاقة التقرير الأسبوعي: ظلال للتكييف، 4–10 أكتوبر، وعليها كلمة «عيّنة». المهام 22، والأسبوع السابق 19. عمود لكل يوم من الأحد إلى السبت بجانب الأسبوع السابق، والجمعة إجازة، وأعلاها الاثنين: 5 مهام. الغياب: 1 من أصل 23. المستحق لك: 13,400 ر.ق، وعميلان مدينان. المحجوز القادم: 9 خلال 7 أيام.",
     },
@@ -3439,7 +3443,7 @@ const ar: Copy = {
         accounts: {
           title: "الحسابات الآجلة",
           who: "Marina Desk Co-working",
-          sub: "أقدم دين: 35 يوماً",
+          sub: "أقدم مستحق: 35 يوماً",
           balance: "2,700 ر.ق",
           promise: "وعد بالسداد قبل 22 أكتوبر",
         },
@@ -4968,9 +4972,9 @@ const ar: Copy = {
               title: "الحسابات الآجلة",
               badge: "إرسال التذكيرات",
               rows: [
-                { main: "Marina Desk Co-working", sub: "أقدم دين: 35 يوماً · ودّي", trail: "تم التذكير", tone: "signal" },
-                { main: "Bluefin Events", sub: "أقدم دين: 48 يوماً · ودّي", trail: "تم التذكير", tone: "done" },
-                { main: "Ward Events", sub: "أقدم دين: 104 أيام · إشعار أخير", trail: "تم التذكير", tone: "done" },
+                { main: "Marina Desk Co-working", sub: "أقدم مستحق: 35 يوماً · ودّي", trail: "تم التذكير", tone: "signal" },
+                { main: "Bluefin Events", sub: "أقدم مستحق: 48 يوماً · ودّي", trail: "تم التذكير", tone: "done" },
+                { main: "Ward Events", sub: "أقدم مستحق: 104 أيام · إشعار أخير", trail: "تم التذكير", tone: "done" },
                 { main: "Palm Court Offices", sub: "وعد بالسداد قبل 19 أكتوبر", trail: "تم التخطي", tone: "quiet" },
               ],
               total: ["أُرسل", "3 تذكيرات، واستُثني عميل واحد"],
@@ -4989,7 +4993,7 @@ const ar: Copy = {
               title: "Marina Desk Co-working",
               badge: "حساب آجل",
               rows: [
-                { main: "الرصيد 3,150 ر.ق", sub: "أقدم دين: 35 يوماً", trail: "وعد بالسداد قبل 22 أكتوبر", tone: "signal" },
+                { main: "الرصيد 3,150 ر.ق", sub: "أقدم مستحق: 35 يوماً", trail: "وعد بالسداد قبل 22 أكتوبر", tone: "signal" },
               ],
             },
             caption: "الوعد بالسداد يوقف التذكيرات حتى موعده، وإن مضى دون دفع يظهر في ALYR Agent.",
@@ -5023,11 +5027,11 @@ const ar: Copy = {
               title: "الحسابات الآجلة",
               badge: "5 عملاء عليهم مبالغ",
               rows: [
-                { main: "Palm Court Offices", sub: "أقدم دين: 76 يوماً · وعد بالسداد قبل 19 أكتوبر", trail: "3,875 ر.ق", tone: "done" },
-                { main: "Bluefin Events", sub: "أقدم دين: 48 يوماً · تم التذكير", trail: "3,450 ر.ق", tone: "done" },
-                { main: "Marina Desk Co-working", sub: "أقدم دين: 35 يوماً · وعد بالسداد قبل 22 أكتوبر", trail: "2,700 ر.ق", tone: "signal" },
-                { main: "Tamr Café", sub: "أقدم دين: 12 يوماً", trail: "1,700 ر.ق", tone: "done" },
-                { main: "Ward Events", sub: "أقدم دين: 104 أيام · إشعار أخير", trail: "1,250 ر.ق", tone: "quiet" },
+                { main: "Palm Court Offices", sub: "أقدم مستحق: 76 يوماً · وعد بالسداد قبل 19 أكتوبر", trail: "3,875 ر.ق", tone: "done" },
+                { main: "Bluefin Events", sub: "أقدم مستحق: 48 يوماً · تم التذكير", trail: "3,450 ر.ق", tone: "done" },
+                { main: "Marina Desk Co-working", sub: "أقدم مستحق: 35 يوماً · وعد بالسداد قبل 22 أكتوبر", trail: "2,700 ر.ق", tone: "signal" },
+                { main: "Tamr Café", sub: "أقدم مستحق: 12 يوماً", trail: "1,700 ر.ق", tone: "done" },
+                { main: "Ward Events", sub: "أقدم مستحق: 104 أيام · إشعار أخير", trail: "1,250 ر.ق", tone: "quiet" },
               ],
             },
             caption: "تُسدِّد الدفعات الدين الأقدم أولاً.",
@@ -5087,7 +5091,7 @@ const ar: Copy = {
               {
                 move: "back",
                 title: "تضغط «أرسل التذكيرات»",
-                body: "ضغطة واحدة على شاشة الحسابات الآجلة تذكّر كل عميل مضى على أقدم دين غير مسدَّد له 30 يوماً أو أكثر.",
+                body: "ضغطة واحدة على شاشة الحسابات الآجلة تذكّر كل عميل مضى على أقدم مبلغ مستحق غير مسدَّد له 30 يوماً أو أكثر.",
                 work: ["إرسال التذكيرات: حسابات 30 يوماً أو أكثر"],
               },
               {
@@ -5098,7 +5102,7 @@ const ar: Copy = {
               {
                 title: "تتدرّج النبرة مع العمر",
                 body: "قبل 60 يوماً تذكير ودّي، ومن 60 أشد، ومن 90 إشعار أخير.",
-                work: ["أقدم دين: 35 يوماً", "النبرة: ودّية"],
+                work: ["أقدم مستحق: 35 يوماً", "النبرة: ودّية"],
               },
               {
                 move: "out",
@@ -5178,8 +5182,8 @@ const ar: Copy = {
             { label: "أكثر من 90 يوماً", amount: "1,250 ر.ق", share: 0.096 },
           ],
           remind: "إرسال التذكيرات",
-          remindHint: "للعملاء الذين مضى على أقدم دين غير مسدَّد لهم 30 يوماً أو أكثر",
-          heads: { customer: "العميل", balance: "الرصيد", age: "أقدم دين" },
+          remindHint: "للعملاء الذين مضى على أقدم مبلغ مستحق غير مسدَّد لهم 30 يوماً أو أكثر",
+          heads: { customer: "العميل", balance: "الرصيد", age: "أقدم مستحق" },
           rows: [
             { name: "Palm Court Offices", balance: "3,875 ر.ق", days: "76 يوماً", age: 2, promised: "وعد بالسداد قبل 19 أكتوبر" },
             { name: "Bluefin Events", balance: "3,450 ر.ق", days: "48 يوماً", age: 1 },

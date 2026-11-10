@@ -70,7 +70,7 @@ REASONS = {
 NO_CONSENT = Text(
     "Information only. Writing to them needs their marketing consent, which ALYR does not "
     "collect yet.",
-    "للعلم فقط. مراسلتهم تحتاج موافقتهم التسويقية، وALYR لا تجمعها بعد.",
+    "للعلم فقط. مراسلتهم تحتاج موافقتهم التسويقية، و ALYR لا تجمعها بعد.",
 )
 INFO_ONLY = Text("Information only.", "للعلم فقط.")
 
@@ -248,8 +248,8 @@ def _say_overdue(x: Finding, f: Facts, lang: str):
     if lang == "ar":
         title = rich("{a} مستحقة منذ 30 يوماً أو أكثر، دون تذكير منذ 7 أيام", a=amount)
         if x.n == 1:
-            return title, rich("يدين بها {name}، منذ {d}.", name=name, d=days)
-        return title, rich("يدين بها {who}. أقدمهم {name}، منذ {d}.",
+            return title, rich("مستحقة على {name}، منذ {d}.", name=name, d=days)
+        return title, rich("مستحقة على {who}. أقدمهم {name}، منذ {d}.",
                            who=count(x.n, x.noun, lang), name=name, d=days)
     title = rich("{a} owed 30+ days, not reminded in 7 days", a=amount)
     if x.n == 1:
@@ -347,7 +347,7 @@ def _say_ready(x: Finding, f: Facts, lang: str):
         return (
             rich("{n} " + agree(x.n, "جاهز", "جاهزان", "جاهزة") + " منذ أكثر من ساعتين",
                  n=count(x.n, ORDERS, lang)),
-            rich("الطلب {no} للعميل {name} ينتظر منذ {h}.", no=number, name=name,
+            rich("الطلب {no} للعميل {name} هو الأطول انتظاراً: {h}.", no=number, name=name,
                  h=B(f"{hours} س")),
         )
     return (
@@ -604,7 +604,7 @@ def _say_riser(x: Finding, f: Facts, lang: str):
     if lang == "ar":
         name = f.names_ar.get(n["name"], n["name"])
         return (
-            rich("{name}: أكثر بـ{d} من الأسبوع الماضي", name=B(name), d=B(str(x.n))),
+            rich("{name}: بزيادة {d} عن الأسبوع الماضي", name=B(name), d=B(str(x.n))),
             rich("{cur} حتى الآن هذا الأسبوع، و{prev} حتى الوقت نفسه من الأسبوع الماضي.",
                  cur=B(str(n["cur"])), prev=B(str(n["prev"]))),
         )
@@ -749,7 +749,7 @@ INSIGHTS: tuple[Insight, ...] = (
     Insight(
         "riser", 8, "knowledge", "orders",
         Text("the biggest rise on the same days last week, 5 or more",
-             "أكبر زيادة عن الأيام نفسها من الأسبوع الماضي، 5 أو أكثر"),
+             "أكبر زيادة مقارنةً بالأيام نفسها من الأسبوع الماضي، 5 أو أكثر"),
         _find_riser, _say_riser, status=INFO_ONLY,
     ),
     # Last: useful to know, but it never needs anything doing.

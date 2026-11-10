@@ -138,6 +138,7 @@ scripts/                      check.sh (everything CI runs), demo.sh (start and 
                               documents-screens-browser-check.mjs (the workspace's Documents screens),
                               discovery-browser-check.mjs (the workspace's Discovery screens and the menu that opens to them: a real API or a fixture, both languages, light and dark, phone and laptop),
                               connect-browser-check.mjs (the connection screen, phone width, both languages),
+                              mcp-browser-check.mjs (the connected-apps screen for the MCP connector: every state, both languages, light and dark, phone and laptop, against a fixture API),
                               golive-truth-check.mjs (every onboarding sentence of every business type proved on the
                               finished order page and workspace, English and Arabic),
                               check-edge.sh (the edge and DNS of alyr.qa from outside, docs/runbooks/cloudflare-edge.md),

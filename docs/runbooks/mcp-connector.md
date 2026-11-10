@@ -28,7 +28,7 @@ Not done yet, and not for the first pull request to do. In order:
 
 ## Stop one business
 
-The owner or an admin: the workspace API `POST /api/mcp/pause` (every call of that business is refused at once, nothing is revoked; `POST /api/mcp/resume` undoes it), `POST /api/mcp/switch-off` (the opt-in is withdrawn; an owner must confirm again), `POST /api/mcp/grants/revoke-all`.
+The owner or an admin, on the workspace screen **Connections, Connected apps** (`/app/connect-ai`: Pause all apps, End, End all connections; the entry shows only where the connector is on for the server), or the workspace API `POST /api/mcp/pause` (every call of that business is refused at once, nothing is revoked; `POST /api/mcp/resume` undoes it), `POST /api/mcp/switch-off` (the opt-in is withdrawn; an owner must confirm again), `POST /api/mcp/grants/revoke-all`.
 
 From the back office or the database, as the database owner, when nobody in the business can:
 
@@ -59,4 +59,4 @@ Both reach the founder's phone with counts only (D-073); look in the business's 
 
 ## What is not built yet
 
-The workspace screen (ALY-292), the tools that change bookings and orders (ALY-294) and send to customers (ALY-295), an email or message to the owner when a daily cap is reached, the security review and red team (ALY-296, the gate before any real business turns it on), and the lawyer's answer (ALY-51).
+the tools that change bookings and orders (ALY-294) and send to customers (ALY-295), an email or message to the owner when a daily cap is reached, the security review and red team (ALY-296, the gate before any real business turns it on), and the lawyer's answer (ALY-51).
