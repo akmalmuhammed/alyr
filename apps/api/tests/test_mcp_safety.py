@@ -202,7 +202,8 @@ def test_test_tools_exist_only_on_a_developers_machine(world):
     server.settings = settings.model_copy(update={"env": "production", "mcp_test_tools": False})
     try:
         listed = [t["name"] for t in app.rpc(token, "tools/list").json()["result"]["tools"]]
-        assert listed == ["hello"]
+        # The real tools that need no part of ALYR switched on; neither test tool is among them.
+        assert listed == ["hello", "insights", "shop_info", "today"]
         gone = app.result(token, "test_write_note", {"note": "x"})
         assert gone["isError"] is True and "no tool" in gone["content"][0]["text"]
     finally:
