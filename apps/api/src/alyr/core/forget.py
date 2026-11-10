@@ -34,6 +34,7 @@ TABLES = {
     "stock_watches": "deleted",
     "sold_out_asks": "deleted",
     "staff_pending": "only staff have these; a team member cannot be forgotten here",
+    "discovery_asks": "only staff have these; a team member cannot be forgotten here",
     "staff_changes": "only staff have these",
     "orders": "kept, without the delivery address and note",
     "bookings": "kept, without the note",

@@ -26,6 +26,7 @@ from datetime import timedelta
 from alyr.catalog import Text
 from alyr.core.words import (
     APPOINTMENTS,
+    CHANGES,
     CHATS,
     CUSTOMERS,
     DAYS,
@@ -50,6 +51,7 @@ from alyr.modules.agent.words import (
     rich,
     when_text,
 )
+from alyr.modules.discovery import proposal_words as discovery_words
 
 WEEKS: Noun = (("week", "weeks"), ("أسبوع واحد", "أسبوعان", "أسابيع", "أسبوعاً"))
 REGULARS: Noun = (
@@ -170,6 +172,25 @@ def _say_waiting(x: Finding, f: Facts, lang: str):
             if nobody else rich("longest {t}", t=longest)
         )
     return words, detail
+
+
+def _find_discovery_proposals(f: Facts) -> Finding | None:
+    if not f.discovery_waiting:
+        return None
+    return Finding(
+        f.discovery_waiting, CHANGES,
+        {"oldest": max(r.detail.get("days", 0) for r in f.discovery_waiting)},
+    )
+
+
+def _say_discovery_proposals(x: Finding, f: Facts, lang: str):
+    """The brief line's words (`modules/discovery/brief.py`), and the guarantee that is the point:
+    nothing is applied without the owner's tap."""
+    return (
+        rich(discovery_words.waiting_text(x.n, lang)),
+        rich("لا يُطبَّق شيء قبل أن تضغط." if lang == "ar"
+             else "Nothing is applied without your tap."),
+    )
 
 
 def _find_unconfirmed(f: Facts) -> Finding | None:
@@ -628,6 +649,13 @@ INSIGHTS: tuple[Insight, ...] = (
              "آخر رسالة من العميل ولم يُرد عليها منذ 10 دقائق"),
         _find_waiting, _say_waiting, Action(Text("Open the inbox", "افتح المحادثات"),
                                             "/app/inbox?show=waiting"),
+    ),
+    Insight(
+        "discovery_proposals", 90, "task", "discovery",
+        Text(discovery_words.pick(discovery_words.BRIEF["rule"], "en"),
+             discovery_words.pick(discovery_words.BRIEF["rule"], "ar")),
+        _find_discovery_proposals, _say_discovery_proposals,
+        Action(Text("Review the changes", "راجع التعديلات"), "/app/discovery?view=proposals"),
     ),
     Insight(
         "unconfirmed", 2, "task", "orders",

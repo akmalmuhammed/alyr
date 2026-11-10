@@ -30,6 +30,7 @@ WRONG_CODES: Noun = (
     ("wrong sign-in code", "wrong sign-in codes"),
     ("رمز دخول خاطئ واحد", "رمزا دخول خاطئان", "رموز دخول خاطئة", "رمز دخول خاطئ"),
 )
+CHANGES: Noun = (("change", "changes"), ("تعديل واحد", "تعديلان", "تعديلات", "تعديلاً"))
 STEPS: Noun = (("setup step", "setup steps"), ("خطوة واحدة", "خطوتان", "خطوات", "خطوة"))
 
 

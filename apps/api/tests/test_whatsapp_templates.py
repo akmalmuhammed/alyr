@@ -80,8 +80,8 @@ def rows_of(tenant):
 def test_the_templates_waiting_for_the_founders_go_are_marked_and_nothing_else():
     assert HELD == sorted([
         "booking_cancelled_deposit", "booking_deposit_due", "booking_deposit_paid",
-        "booking_released", "document_credit_note", "document_invoice", "document_receipt",
-        "review_request"])
+        "booking_released", "discovery_ask", "document_credit_note", "document_invoice",
+        "document_receipt", "review_request"])
     # A template with a sample header is the one the Meta app's ID is needed for.
     assert "weekly_report_card" in SAMPLES
 

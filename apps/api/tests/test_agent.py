@@ -42,6 +42,7 @@ THU = date(2026, 10, 15)
 # For each rule: facts just short of its threshold (one or more), and facts that meet it.
 CASES = {
     "waiting": ([{}], {"waiting": [row(minutes=11, nobody=True)]}),
+    "discovery_proposals": ([{}], {"discovery_waiting": [row(days=3), row(2, days=1)]}),
     "unconfirmed": ([{}], {"unconfirmed": [row(number=1001, minutes=16)]}),
     "unmarked": ([{}], {"unmarked": [row(number=101, starts_at=NOW)]}),
     "not_sent": ([{}], {"not_sent": [row(minutes=30)]}),

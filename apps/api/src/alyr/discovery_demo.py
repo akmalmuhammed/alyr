@@ -6,8 +6,13 @@ turned on (spec 065). For the demo shop, and for the screens' author:
     uv run python -m alyr.discovery_demo --off           # switch it off again; nothing is deleted
 
 It switches the `discovery` module on and turns the `sample` connection on, which gives the shop
-the five fictional branches if it has no places yet. It never runs a check-up (start one from the
-workspace or `POST /api/discovery/runs`), sends nothing and touches no seed. It works only with
+the five fictional branches if it has no places yet and writes what the fictional owner has
+confirmed about each (opening hours, phone, category, name and WhatsApp number: spec 066), never
+over a fact someone typed. That is all a proposal needs: run a check-up (from the workspace or
+`POST /api/discovery/runs`), and Al Sadd's missing hours become a proposal to approve, in the
+workspace or, on a linked staff number, on WhatsApp (`PROPOSALS`). The demo never runs a check-up
+itself, sends nothing and touches no seed. Approving changes the made-up listing inside ALYR, not
+anything on Google, and a later check-up shows the score going up. It works only with
 `ALYR_ENV=local`: on a real database the back office switches the module (`/ops`, a business's
 modules) and the owner turns the connection on in the workspace.
 """

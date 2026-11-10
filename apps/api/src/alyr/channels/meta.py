@@ -15,6 +15,7 @@ from urllib.parse import urlsplit
 import httpx
 
 from alyr.channels.base import Address, InboundMessage, OutboundMessage
+from alyr.core.templates import has_buttons
 
 
 def verify_signature(app_secret: str, raw_body: bytes, header: str | None) -> bool:
@@ -56,6 +57,12 @@ def parse_webhook(payload: dict) -> list[InboundMessage]:
                     inter = msg.get("interactive", {})
                     reply = inter.get("button_reply") or inter.get("list_reply") or {}
                     reply_id, text = reply.get("id", ""), reply.get("title", "")
+                elif kind == "button":
+                    # A tap on a template's quick-reply button arrives as `type: "button"` with
+                    # the payload ALYR set at send time and the button's own text (Meta's webhook
+                    # reference for button messages, checked 9 Nov 2026).
+                    tapped = msg.get("button", {})
+                    reply_id, text = tapped.get("payload", ""), tapped.get("text", "")
                 phone, user_id = msg.get("from", ""), msg.get("from_user_id", "")
                 if not (phone or user_id):
                     continue
@@ -247,6 +254,13 @@ def to_graph_payload(message: OutboundMessage, address: Address) -> dict:
     if message.template_params:
         values = [{"type": "text", "text": value} for value in message.template_params]
         components.append({"type": "body", "parameters": values})
+    # Quick-reply buttons (spec 066): one component per button, `index` its position in the
+    # template, the choice's id as the payload that comes back when it is tapped.
+    for index, choice in enumerate(message.choices if has_buttons(message.template_name) else ()):
+        components.append({
+            "type": "button", "sub_type": "quick_reply", "index": str(index),
+            "parameters": [{"type": "payload", "payload": choice.id}],
+        })
     if components:
         template["components"] = components
     return base | {"type": "template", "template": template}

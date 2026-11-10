@@ -151,6 +151,28 @@ def test_every_template_follows_metas_rules():
             assert blanks == [str(i) for i in range(1, len(template.samples) + 1)], name
             assert not text.startswith("{{") and not text.rstrip().endswith("}}"), name
             assert "\n" not in text and len(text) <= 1024, name
+        # Quick-reply buttons (spec 066): at most three, each at most 25 characters, the same
+        # number in each language.
+        assert len(template.buttons) <= 3 and len(template.buttons_ar) <= 3, name
+        assert len(template.buttons) == len(template.buttons_ar), name
+        for title in (*template.buttons, *template.buttons_ar):
+            assert 0 < len(title) <= 25 and "\n" not in title, (name, title)
+
+
+def test_the_discovery_ask_template_has_the_words_the_blanks_and_the_buttons_of_the_spec():
+    template = templates.CATALOGUE["discovery_ask"]
+    assert template.category == "utility" and template.held
+    assert template.en == (
+        "Change waiting at {{1}}: {{2}} for {{3}} would go from {{4}} to {{5}}. Nothing changes "
+        "until you tap Approve. Send PROPOSALS OFF to stop these messages.")
+    assert len(template.samples) == len(template.samples_ar) == 5
+    for text in (template.en, template.ar):
+        other = re.sub(r"\{\{\d+\}\}", " ", text).split()
+        assert len(other) >= 10  # Meta refuses a handful of words around five blanks
+    assert template.buttons == ("Approve", "Not now", "See details")
+    assert template.buttons_ar == ("موافقة", "ليس الآن", "التفاصيل")
+    # fictional samples only
+    assert template.samples[0] == "Nuqta Car Care" and template.samples[2].startswith("Nuqta")
 
 
 def test_a_value_with_a_line_break_is_put_on_one_line():

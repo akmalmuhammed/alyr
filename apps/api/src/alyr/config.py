@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     # Discovery (spec 065): a shop may start one manual check-up in this many seconds (ten minutes).
     # Tests that run a check-up several times in a row set it to 0.
     discovery_run_gap_seconds: int = 600
+    # The `discovery_ask` template (spec 066) is written and NOT submitted to Meta: until Meta has
+    # approved it in both languages and the founder turns this on, an owner is asked on WhatsApp
+    # only inside their 24-hour window (as a message with buttons). Outside it nothing is sent and
+    # no message is recorded as blocked: the proposal waits in the workspace.
+    discovery_ask_template_approved: bool = False
     # First retry delay; it doubles on each further attempt.
     jobs_backoff_seconds: float = 5.0
     # How many jobs one process runs at once (a customer's own jobs still one at a time, in
