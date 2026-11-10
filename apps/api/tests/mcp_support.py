@@ -78,7 +78,7 @@ def sql(query, *args):
 
     rows = [dict(r) for r in owner_sql(query, *args)]
     for row in rows:
-        for key in ("detail", "preview"):
+        for key in ("detail", "preview", "before", "after"):
             if isinstance(row.get(key), str):
                 row[key] = json.loads(row[key])
     return rows

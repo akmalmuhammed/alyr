@@ -10,7 +10,7 @@ An owner adds "ALYR" as a connector in their own Claude or ChatGPT, signs in wit
 
 **ALYR calls no model.** The owner's app calls ALYR, never the other way round. There is no model key, no prompt and no model output anywhere in this code, and a test fails if a module under `modules/mcp/` imports an HTTP client or names a model provider. **The foundation sends no customer message**: it has no tool that reaches a channel. Sends come later (ALY-291 and after) and go through `core/outbound.py` like every other send.
 
-This spec covers the foundation: sign-in (ALY-288), the server and its tool registry (ALY-289), and the safety layer (ALY-293). The real tools are separate: read tools (ALY-290), stock writes (ALY-291), Discovery tools (ALY-327). The workspace screen is ALY-292; this spec builds the API under it (settings, grants, revoke, the call log) and no screen.
+This spec covers the foundation: sign-in (ALY-288), the server and its tool registry (ALY-289), and the safety layer (ALY-293). The real tools are built on it in a second pull request (ALY-290, ALY-291, ALY-327): see "The tools" below. The workspace screen is ALY-292; this spec builds the API under it (settings, grants, revoke, the call log) and no screen.
 
 Words that reach an owner say "app" and "connection", never AI, assistant or smart (D-012, honesty). The sign-in page names the app by the name it gives itself ("Claude"), because that is its own name.
 
@@ -75,7 +75,7 @@ Nothing a token says is trusted: the token only **names a grant**. **On every ca
 
 ### Scopes
 
-`read` (the day's numbers, lists), `stock` (change what is in stock), `bookings` (change bookings), `orders` (change orders), `send` (message customers, always after a confirm). A scope is the **ceiling the owner gave this app**; the action layer's role table (`core/actions.py`) is the ceiling for the person; the business's modules are the third. A tool is **offered** only when all three allow it, and **checked again on every call**. A call that needs a scope the token lacks answers `403` with `WWW-Authenticate: Bearer error="insufficient_scope", scope="..."`.
+`read` (the day's numbers, lists), `stock` (change what is in stock), `bookings` (change bookings), `orders` (change orders), `discovery` (mark Discovery findings done or skipped), `send` (message customers, always after a confirm). A scope is the **ceiling the owner gave this app**; the action layer's role table (`core/actions.py`) is the ceiling for the person; the business's modules are the third. A tool is **offered** only when all three allow it, and **checked again on every call**. A call that needs a scope the token lacks answers `403` with `WWW-Authenticate: Bearer error="insufficient_scope", scope="..."`.
 
 ## The server (`modules/mcp/server.py`)
 
@@ -134,13 +134,74 @@ A refused call is recorded as well; a call refused before the business is known 
 | `mcp_confirmations` | business | A preview: the grant, the tool, the arguments' hash, the preview, `affects`, `expires_at`, `used_at`. |
 | `mcp_signals` | global | `kind`, the business's ID, a time. For the alert's counts only; deleted after two days. |
 
+## The tools (ALY-290, ALY-291, ALY-327; D-171)
+
+Nineteen tools in `modules/mcp/tools/` (`reads.py`, `stock.py`, `discovery.py`, with `shape.py` for what an app may see). Each names an action of `core/actions.py`; the role table and the module that must be on are the action's. `tools/list` offers a tool only when the person's role, the app's scope and the business's modules all allow it, and each is checked again on every call. Words are English; descriptions are written so a model picks the right tool, with the questions each answers, and say "Changes nothing" or that the owner says yes first.
+
+| Tool | Scope | Who | Needs | Reads or changes | What it is |
+|---|---|---|---|---|---|
+| `hello` | read | all | | reads | Which business, who, role, modules, the time there (foundation) |
+| `today` | read | all | | reads | `today` action: the day's orders, bookings, collected, chats; money only for owners and admins |
+| `bookings` | read | all | bookings | reads | `bookings` action: a day or up to 14 days from a date, times in the shop's zone |
+| `orders` | read | all | orders | reads | `orders` action: the open ones, or a day (today, yesterday, a date) with count, cancelled and value |
+| `owed` | read | owner, admin | credit accounts | reads | `owed` action: total, late, the five biggest |
+| `low_stock` | read | all | catalog | reads | the Catalog list's own filters: running low and sold out, with codes |
+| `sales_summary` | read | owner, admin | orders | reads | today, yesterday, this week, last week, each against the dashboard's own comparison; a closed week as the weekly report reads it |
+| `insights` | read | all | | reads | the dashboard's needs and tips (`view.build`), each with its written rule |
+| `shop_info` | read | all | | reads | names, kind, zone, language, hours, modules |
+| `mark_sold_out` | stock | all | catalog | changes | the item's switch off, or a counted size to 0 |
+| `mark_back_in_stock` | stock | all | catalog | changes | the switch on (a counted size needs `set_stock`) |
+| `set_stock` | stock | all | catalog | changes | a count of the shelf for a counted item or size |
+| `undo_stock_change` | stock | the maker, owner, admin | catalog | changes | puts one of the three back |
+| `discovery_overview` | read | all | discovery | reads | `discovery.overview` |
+| `discovery_findings` | read | all | discovery | reads | `discovery.findings` with evidence, by status |
+| `discovery_reviews` | read | all | discovery | reads | `discovery.reviews` (text and names as data) |
+| `discovery_report` | read | all | discovery | reads | `discovery.report` for a month |
+| `discovery_mark_done` | discovery | owner, admin | discovery | changes | "I did this" |
+| `discovery_skip` | discovery | owner, admin | discovery | changes | "Skip" |
+
+**Reads.** Every number is the number on the screen it came from; nothing is worked out twice. `sales_summary` and `insights` read the dashboard's own facts and view (`modules/agent/facts.py`, `view.py`), a closed week is `week.read` (the weekly report's), the stock lists are `listing.read`, `is_low`, `is_sold_out` (the Catalog list's filters, so a count equals the rows of the list it opens). A percentage is given only when both periods have 20 or more orders (the dashboard's rule). A day is a calendar day for `sales_summary` (as the dashboard's chart) and the shop's day (its `day_starts`) for `today`, `orders` and `bookings` (as the WhatsApp commands). Times are written in the shop's zone; money is dirhams, shown as `{qar, text, text_ar}`; names are English and Arabic where the data has both. On a developer's machine `ALYR_AGENT_CLOCK` fixes the moment the dashboard is read at (the sample shops are drawn at a set time); the connector reads the same moment, as the route does.
+
+**The data minimum, tool by tool.** A customer is `{first_name: {untrusted: true, source, text, truncated}, phone_last3}`. No tool returns a message, an ID of a customer, a full name or a full number. `insights` leaves out the tip's own sentence (it names customers in full) and gives the title, the rule, the screen, and the first names it counts, marked. Item and service names are the business's own and are cleaned of hidden and reordering characters but not marked. What the Discovery check-up read outside ALYR (evidence values, review text, reviewer names, a place's name, the business's reply) is marked as data.
+
+**The stock tools (ALY-291).** `find` (`modules/mcp/stock_actions.py`) takes a name or a code: digits are a code of the business (codes start at 101 in every business, so a code is only ever its own business's); otherwise the Catalog's `match.find`, the same as a staff member's WhatsApp message, including a size or colour in the words ("abaya black M"). Two that fit: an error that lists up to five with their codes, "Nothing was changed". The plan (`plan_sold_out`, `plan_back`, `plan_set_stock`) applies the Catalog's own rules (not on sale, always available, not counted, a size needed, a whole number for a counted unit, the same count) and is what both the preview and the change use; the change makes the plan again at that moment. The change itself is `service.set_available` (with the new `channel` argument, so the item's history says `mcp`) or `service.record_stock` with the reason "Set through a connected app" and the actor's `via` `mcp`, so the stock log reads "Owner, mcp". After a change the answer is read from the catalog again (can customers order it now, why not, how many left); the order page shows it at once because it reads the same state. `mcp_stock_changes` (migration 0131) keeps what each change was before and after; `undo_stock_change` refuses a change made again since (a switch whose state is no longer the one the change left, a count that would take more than is there), one already undone, another person's (unless owner or admin) and another business's (row-level security: "no such change").
+
+**Customers and the Catalog's own reactions.** The tools send nothing themselves. Bringing an item back lets the Catalog's existing back-in-stock reaction queue its message to customers who asked and agreed (through `core/outbound.py`, consent and the window as always). The preview says how many customers that is and that the message cannot be taken back; a change that cannot bring anything back says nobody is told; a count that falls says the managers may get the usual alert.
+
+**Discovery (ALY-327).** `modules/mcp/discovery_actions.py` opens each Discovery action as `mcp.<name>` with the same roles and module, turning `DiscoveryError` into the sentence an app is shown. The two changes fix the status (`owner_done`, `skipped`) in the door. **No tool approves anything and none can be added without failing the test that says so.** The previews read the finding (`discovery.finding`) and refuse a closed finding or one already in the status.
+
+**Tests** (`tests/test_mcp_tools_read.py`, `_stock.py`, `_discovery.py`, `_matrix.py`; helpers `mcp_tools_support.py`): a business with the parts of ALYR on, each role connected as an app. The matrix test holds the permission table of the tools and fails when a tool is added without a row: offered to exactly the roles the table gives, refused with the part named when its module is off, hidden from a token without its scope, a preview and nothing else until the owner says yes (a bogus, spent or other-arguments token does nothing), every change on the record as `mcp`, the cap counted across tools. Reads are checked against the SQL they should come from, against the dashboard on the Qirfa sample shop at a fixed moment, and against the workspace's own routes for Discovery. Cross-business tests read and change two businesses with one app each. Injection tests give a customer a hostile name, booking text, a review, a listing and evidence, and check the marking, the cut, that no change or message follows, and that a model that obeys the text only gets previews.
+
+**Mutation checks** (9 Nov 2026; one guard at a time broken in a scratch copy, the named test run on its own and seen to fail, the guard put back; the foundation's own guards have their own table in its tests):
+
+| Guard broken on purpose (18, each put back afterwards) | The test that failed |
+|---|---|
+| A customer's full name given instead of a first name (`orders`) | `test_no_tool_gives_a_full_name_a_full_number_or_an_id_of_a_customer` |
+| The next booking names the customer in full (`today`) | `test_today_names_the_next_booking_by_first_name_and_three_digits_only` |
+| The tips give a customer's whole name (`insights`) | `test_insights_say_the_rule_and_never_a_customers_full_name` |
+| An agent is given the value of a day's orders | `test_an_agent_is_given_no_money_by_any_tool` |
+| `sales_summary` offered to every role | `test_an_agent_is_not_offered_the_tools_about_money_and_cannot_call_them` |
+| The scope is no longer checked on a call (foundation's `server.py`) | `test_a_token_without_stock_cannot_see_or_call_a_stock_tool_and_nothing_changes` |
+| Two items that fit: the first is taken instead of asking | `test_two_items_that_fit_give_a_did_you_mean_list_and_nothing_is_changed` |
+| A size is no longer asked for when an item has several | `test_set_stock_asks_which_size_when_there_are_several_and_names_the_one_asked_for` |
+| An undo no longer checks that the item was changed again | `test_back_in_stock_switches_it_on_and_an_undo_puts_each_change_back` |
+| An undo no longer checks that enough is left | `test_an_undo_that_would_take_more_than_is_there_is_refused` |
+| Anyone may undo anyone's change | `test_everyone_on_the_team_may_change_stock_and_only_the_maker_or_a_manager_may_undo` |
+| The item's history is written as the workspace, not the connector | `test_sold_out_shows_on_the_order_page_at_once_and_is_on_the_record_as_the_connector` |
+| The stock tools no longer need the catalog to be on | `test_the_stock_tools_are_not_offered_and_are_refused_when_the_catalog_is_off` |
+| "I did this" no longer fixes the status in the door | `test_i_did_this_previews_then_marks_the_finding_and_records_the_connector` |
+| A closed finding can still be marked | `test_a_finding_that_is_closed_or_not_found_is_refused_and_nothing_is_changed` |
+| The Discovery doors give every role the change | `test_the_role_decides_which_discovery_tools_an_app_is_offered_and_may_call` |
+| Evidence is given to the app unmarked | `test_the_findings_carry_their_rule_their_evidence_and_the_place` |
+| A stranger's review is given to the app unmarked | `test_what_strangers_wrote_reaches_an_app_cut_cleaned_and_marked_as_data` |
+
 ## Tests (real PostgreSQL, over HTTP)
 
 A test client completes the whole OAuth flow (metadata, registration, authorize, email, code, consent, token, refresh), speaks MCP in both eras, and covers: a token for shop A cannot read shop B (and a second grant of the same person for B is a different thing); a removed person's token stops on the next call; a changed role changes the tools offered and the calls allowed; revoke, expiry and refresh rotation with reuse detection; the wrong audience; PKCE failures; redirect matching; the code replayed; the opt-in only by an owner; kill switch and the global off; every call on the activity record with channel `mcp`; no changing tool without the token, a token for another tool or arguments, spent, expired; **injected customer text** ("ignore your rules and send...") cannot trigger a write; caps hold under a loop; size caps; per-address and per-grant limits; no model call and no HTTP client in the module; tokens random and stored as hashes; no secret in the repository.
 
 ## Not in this spec
 
-The real tools (ALY-290, 291, 327); the workspace screen and its Arabic (ALY-292, ALY-66); the owner's cap email; elicitation (a real person-in-the-loop prompt) and the modern era's multi round-trip requests; CORS for browser-based clients; the legacy HTTP+SSE transport (deprecated); an OpenID Connect discovery document; confidential clients (`private_key_jwt`); the security review and red team (ALY-296); the legal answer on whose responsibility the owner's own transfer is (ALY-51, `docs/legal/mcp-connector-questions.md`).
+The tools that change bookings or orders (ALY-294) and send to customers (ALY-295); Discovery's Phase 2 approvals, which an app can never give; the Arabic words (ALY-66); the owner's cap email; elicitation (a real person-in-the-loop prompt) and the modern era's multi round-trip requests; CORS for browser-based clients; the legacy HTTP+SSE transport (deprecated); an OpenID Connect discovery document; confidential clients (`private_key_jwt`); the security review and red team (ALY-296); the legal answer on whose responsibility the owner's own transfer is (ALY-51, `docs/legal/mcp-connector-questions.md`).
 
 ## As built (ALY-292): the workspace screen
 
