@@ -418,6 +418,80 @@ async def latest_run(conn: asyncpg.Connection, caller: Caller, args: dict) -> di
     return run_view(row, lang, list(steps))
 
 
+CHECK_STATES = (rules.PASS, rules.FAIL, rules.NOT_MEASURED)
+
+
+def _states(checks) -> dict[tuple[str | None, str], str]:
+    """A run's kept outcomes as {(place id, or None for the whole business; rule id): state}. A
+    rule or a state this code does not know is left out: it is never shown as something else."""
+    found: dict[tuple[str | None, str], str] = {}
+    for item in checks or []:
+        if not isinstance(item, dict):
+            continue
+        rule, state, place = item.get("rule"), item.get("state"), item.get("location")
+        if rule not in rules.RULE_BY_ID or state not in CHECK_STATES:
+            continue
+        if place is None or isinstance(place, str):
+            found[(place, rule)] = state
+    return found
+
+
+def _checks_row(place: str | None, now: dict, before: dict) -> dict:
+    checks = {r.id: now[(place, r.id)] for r in rules.RULES if (place, r.id) in now}
+    states = list(checks.values())
+    return {
+        "checks": checks,
+        # failed in the check-up before, passes now
+        "fixed": [
+            rule
+            for rule, state in checks.items()
+            if state == rules.PASS and before.get((place, rule)) == rules.FAIL
+        ],
+        "passed": states.count(rules.PASS),
+        "failed": states.count(rules.FAIL),
+        "not_measured": states.count(rules.NOT_MEASURED),
+    }
+
+
+@register("discovery.checks", ALL_ROLES, MODULE)
+async def get_checks(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
+    """Every place against every check, from the last finished check-up (spec 065, "Checks per
+    place"). A check-up made before outcomes were kept answers `measured: false`."""
+    lang = await _lang(conn, args.get("lang"))
+    columns = [
+        {"id": r.id, "part": r.part, "label": w.pick(w.CHECK_NAMES[r.id], lang)}
+        for r in rules.RULES
+    ]
+    runs = await conn.fetch(
+        "select id, finished_at, checks from discovery_runs where status = 'done' "
+        "order by created_at desc limit 2"
+    )
+    last = runs[0] if runs else None
+    now = _states(last["checks"]) if last else {}
+    answer = {
+        "run_id": str(last["id"]) if last else None,
+        "finished_at": _iso(last["finished_at"]) if last else None,
+        "measured": bool(now),
+        "rules": columns,
+        "places": [],
+        "business": None,
+    }
+    if not now:
+        return answer
+    before = _states(runs[1]["checks"]) if len(runs) > 1 else {}
+    places = await conn.fetch(
+        "select id, name, name_ar from discovery_locations order by position, created_at"
+    )
+    answer["places"] = [
+        {"id": str(p["id"]), "name": p["name_ar"] if lang == "ar" and p["name_ar"] else p["name"]}
+        | _checks_row(str(p["id"]), now, before)
+        for p in places
+    ]
+    if any(place is None for place, _ in now):
+        answer["business"] = _checks_row(None, now, before)
+    return answer
+
+
 @register("discovery.locations", ALL_ROLES, MODULE)
 async def list_locations(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
     rows = await conn.fetch("select * from discovery_locations order by position, created_at")

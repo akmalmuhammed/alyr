@@ -400,11 +400,26 @@ async def _carry_out(db, tenant_id, run, log_, get_connector) -> None:
         await log_.add(conn, "score.compute", _summary("score.compute"), started)
         await conn.execute(
             "update discovery_runs set status = 'done', score = $2, score_parts = $3, "
-            "finished_at = now() where id = $1",
+            "checks = $4, finished_at = now() where id = $1",
             run["id"],
             total,
             parts,
+            _checks(outcomes),
         )
+
+
+def _checks(outcomes: list[rules.Outcome]) -> list[dict]:
+    """What each rule found at each place, kept with the run so a screen can tell a check
+    that passed from one that was not measured (spec 065, "Checks per place"). The same
+    outcomes the score was made of, and nothing else."""
+    return [
+        {
+            "rule": o.rule_id,
+            "location": str(o.location_id) if o.location_id else None,
+            "state": o.state,
+        }
+        for o in outcomes
+    ]
 
 
 def _count_places(n: int) -> str:

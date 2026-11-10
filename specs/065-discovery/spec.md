@@ -148,6 +148,36 @@ A section at `/app/discovery` with four views carried in the address like Docume
 
 API on real PostgreSQL through HTTP (`tests/test_discovery_*.py`): the migration and the RLS rules; the module switch (off: 404; on: works); the engine (idempotent start, rate limit, budgets, failed run keeps its log, stage progression `sample` 0 to 3, fingerprint upsert, `gone`, `owner_done` to `verified` and back to `open`); each rule fires and does not; scoring arithmetic; the role matrix (`owner`, `admin`, `agent`); every route's cross-shop test; the English and Arabic words present for every rule (a test fails on an empty string, and on an ellipsis in Arabic). Web: lint, types, the design check, `pnpm test`, and a headless-browser script `scripts/discovery-browser-check.mjs` (375 px and laptop, English and Arabic, light and dark, axe) like the other sections.
 
+## Checks per place (ALY-333, an addition; nothing above changes)
+
+A check-up works out, for every rule and every place it looks at, one of `pass`, `fail` or `not_measured`, and makes the score from that. Until this addition it kept only the fails (as findings) and the score, so a screen could not set every place against every check: a check with no finding might have passed, or might not have been measured.
+
+**Kept.** Migration `0125_discovery_checks.sql` adds `discovery_runs.checks` (jsonb, null for every run made before it): a list of `{rule, location, state}`, `location` a place's id or null for a rule about the whole business. It is written in the same statement as the score, from the same outcomes, and never changed afterwards. No new table: the run's row-level security, grants, erasure rule and place in the owner's download are the run's.
+
+**Asked.** `GET /api/discovery/checks?lang=en|ar`, the workspace's session cookie, module on, every role (it is a read, like findings; it is not on the activity record).
+
+```json
+{
+  "run_id": "…", "finished_at": "2026-11-08T19:14:09+00:00", "measured": true,
+  "rules": [{"id": "listing_missing", "part": "presence", "label": "On Google Maps"}],
+  "places": [{"id": "…", "name": "Nuqta Car Care - Lusail",
+              "checks": {"listing_missing": "pass", "hours_conflict": "fail", "rating_low": "not_measured"},
+              "fixed": ["hours_missing"], "passed": 8, "failed": 2, "not_measured": 1}],
+  "business": {"checks": {"name_conflict": "fail"}, "fixed": [], "passed": 0, "failed": 1, "not_measured": 0}
+}
+```
+
+* `rules` is the registry in its order, always all of it, each with a label of a few words that says what passing looks like, in the reader's language (`words.CHECK_NAMES`; Arabic a draft until ALY-66).
+* The answer is of the **last finished check-up**. `places` are the shop's places as they are now, in their order; a place added since has no checks, a place removed since is not listed.
+* `checks` holds only the rules that looked at that row; a rule is about places or about the whole business (`business`, null when no such rule ran), never both.
+* `fixed` names the rules that were `fail` in the finished check-up before this one and are `pass` now. With no earlier check-up, or one made before the column, it is empty.
+* `measured` is false, with no places, when there is no finished check-up or the last one was made before the column. **Never a guess:** the API does not work an old run's outcomes back from its findings, and a rule or a state it does not know in the column is left out.
+* There is no score per place. The spec has one score, and a score is not a ranking.
+
+**Tests** (`tests/test_discovery_checks.py`, real PostgreSQL through HTTP): the shape and the order; every rule present; the fails are exactly the open findings; the kept outcomes scored again give the run's score; `fixed` across two sample check-ups; a run with a null or unknown column is not measured; both languages; every role reads and nothing is recorded; module off; another shop's rows.
+
+**Not in this addition:** the screen (the matrix on Home, which builds on ALY-332).
+
 ## Open questions, none blocking Phase 1
 
 * Where a model may run and how Discovery is packaged (ALY-329). Phase 1 does not need it.

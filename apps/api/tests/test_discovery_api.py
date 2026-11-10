@@ -59,6 +59,7 @@ def all_routes(ids: dict):
         ("get", f"/api/discovery/findings/{ids['finding']}", None),
         ("post", f"/api/discovery/findings/{ids['finding']}/status", {"status": "skipped"}),
         ("get", "/api/discovery/reviews", None),
+        ("get", "/api/discovery/checks", None),
         ("get", "/api/discovery/reports/2026-11", None),
         ("post", "/api/discovery/runs", None),
         ("get", "/api/discovery/runs/latest", None),

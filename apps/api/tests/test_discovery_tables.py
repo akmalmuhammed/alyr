@@ -18,11 +18,13 @@ TABLES = ("discovery_asks", "discovery_connections", "discovery_facts", "discove
 MIGRATIONS = Path(__file__).resolve().parents[1] / "migrations"
 
 
-def test_the_migrations_are_0120_to_0123_in_the_range_reserved_for_discovery():
+def test_the_migrations_are_in_the_range_reserved_for_discovery():
+    # 0124 is the Answers check's (ALY-326), in a branch of its own.
     names = sorted(p.name for p in MIGRATIONS.glob("01[2-2]*_*.sql"))
     assert names == ["0120_discovery.sql", "0121_discovery_proposals.sql",
-                     "0122_discovery_asks.sql", "0123_discovery_sample_state.sql"]
-    assert len(owner_sql("select name from schema_migrations where name like '012%'")) == 4
+                     "0122_discovery_asks.sql", "0123_discovery_sample_state.sql",
+                     "0125_discovery_checks.sql"]
+    assert len(owner_sql("select name from schema_migrations where name like '012%'")) == 5
 
 
 def test_discovery_has_exactly_these_twelve_tables():
