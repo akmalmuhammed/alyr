@@ -472,26 +472,28 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 .cta .status-line { color: var(--concrete); }
 .cta :focus-visible, .product :focus-visible { outline-color: var(--volt); }
 
-/* footer: a sign-off, three rows */
+/* footer: the sign-off, four columns of links, the legal line */
 .foot { padding-block: clamp(3rem, 6vw, 4.5rem) 0; }
-.foot-in { display: grid; gap: 1.75rem; }
+.foot-in { display: grid; gap: 1.75rem; position: relative; z-index: 1; }
 .foot-sign { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 2rem; }
 .foot-line { color: var(--text-muted); font-size: .9375rem; }
-.foot-nav { display: flex; flex-wrap: wrap; gap: 0 1.75rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.foot-nav { display: flex; flex-direction: column; align-items: flex-start; gap: 0; min-width: 0; }
 .foot-nav a { display: inline-flex; align-items: center; min-height: 2.75rem; color: var(--text-muted); font-size: .9375rem; font-weight: 500; }
 .foot-nav a:hover { color: var(--text); }
-.foot-nav a[lang="ar"] { font-family: var(--arabic); }
-.foot-nav a[lang="en"] { font-family: var(--sans); }
-.foot-legal { display: grid; gap: .375rem; font-family: var(--mono); font-size: .75rem; line-height: 1.6; color: var(--text-muted); }
+.foot-lang[lang="ar"] { font-family: var(--arabic); }
+.foot-lang[lang="en"] { font-family: var(--sans); }
+.foot-legal { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 2rem; padding-top: 1.25rem; border-top: 1px solid var(--line); font-family: var(--mono); font-size: .75rem; line-height: 1.6; color: var(--text-muted); }
 [lang="ar"] .foot-legal { font-family: var(--arabic); font-size: .8125rem; }
-.foot-legal p:first-child { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: .25rem 1.5rem; }
+.foot-legal-text { display: grid; gap: .375rem; min-width: 0; }
+.foot-lang { display: inline-flex; align-items: center; min-height: 2.75rem; padding-inline: .25rem; color: var(--text); font-family: var(--sans); font-size: .9375rem; font-weight: 500; }
+.foot-lang:hover { text-decoration: underline; text-underline-offset: .25em; }
 /* The Doha Corniche in line, under the footer's last row, edge to edge, ending the page (D-162).
    The drawing is an alpha mask (white lines on nothing), so one file serves both themes: the
    colour is --footer-art (moss on light, Volt on dark). Nothing fades and no text sits on it. It
    is a real place, so it is not mirrored in Arabic (a mask does not flip with the direction).
    The 2x file is for screens that can show it. On a phone it is cropped to the towers. */
 .foot-art {
-  width: 100%; aspect-ratio: 1440 / 664; margin-top: clamp(2.5rem, 5vw, 3.5rem); margin-bottom: env(safe-area-inset-bottom, 0px);
+  width: 100%; aspect-ratio: 1440 / 664; margin-top: calc(-1 * clamp(1.5rem, 5vw, 4.5rem)); margin-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--footer-art);
   -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
   -webkit-mask-position: center; mask-position: center;
@@ -503,7 +505,7 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
   :root:not(.al-js) .foot-art, .foot-art[data-near] { -webkit-mask-image: url("./art/corniche-line-2x.webp"); mask-image: url("./art/corniche-line-2x.webp"); }
 }
 @media (max-width: 47.99rem) {
-  .foot-art { aspect-ratio: 1 / .8; -webkit-mask-size: auto 100%; mask-size: auto 100%; -webkit-mask-position: 52% 0; mask-position: 52% 0; }
+  .foot-art { margin-top: -1.5rem; aspect-ratio: 1 / .8; -webkit-mask-size: auto 100%; mask-size: auto 100%; -webkit-mask-position: 52% 0; mask-position: 52% 0; }
 }
 
 /* ----------------------------------------------- shared by every public page */
@@ -569,14 +571,12 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 .on-dark .cap-sep, .product .cap-sep { color: var(--band-rule); }
 .on-dark .cap-n, .product .cap-n, .band .cap-n { color: var(--on-band); }
 
-/* footer: the products in their order, then the site */
-.foot-products { padding-top: 1rem; border-top: 1px solid var(--line); }
+/* footer: columns under their own headings; two across on a phone, four from 48rem */
+.foot-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem 1.5rem; padding-top: 1.75rem; border-top: 1px solid var(--line); }
+@media (min-width: 48rem) { .foot-cols { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.5rem 2rem; } }
+.foot-k { display: inline-flex; align-items: center; min-height: 2.75rem; color: var(--text); }
 .foot-products a { color: var(--text); font-weight: 600; }
-.foot-products a[aria-current="page"] { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .25em; }
-.foot-sectors, .foot-site { padding-top: 0; border-top: 0; margin-top: -1rem; }
-.foot-k { display: inline-flex; align-items: center; min-height: 2.75rem; }
-.foot-sectors a, .foot-site a { min-width: 2.75rem; justify-content: center; }
-.foot-sectors a[aria-current="page"], .foot-site a[aria-current="page"] { color: var(--text); text-decoration: underline; text-decoration-thickness: var(--rule-hairline); text-underline-offset: .25em; }
+.foot-products a[aria-current="page"], .foot-sectors a[aria-current="page"], .foot-site a[aria-current="page"] { color: var(--text); text-decoration: underline; text-decoration-thickness: var(--rule-hairline); text-underline-offset: .25em; }
 
 /* The phone's contact bar, on every page with an opening button: in once that button has
    gone, out at the closing call. */
