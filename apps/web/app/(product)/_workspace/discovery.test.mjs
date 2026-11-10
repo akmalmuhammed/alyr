@@ -17,9 +17,10 @@ import {
 } from "./discoveryApi.ts";
 import { T } from "./discoveryCopy.ts";
 import {
-  MAX_POLLS, VIEWS, appliedNoteKey, averageText, eventAt, formatDay, formatDayLong, formatWhen, groupByKind, homeState, hoursDraft, hoursText,
+  MAX_POLLS, VIEWS, appliedNoteKey, averageText, bandParts, eventAt, formatDay, formatDayLong, formatWhen, groupByKind, homeState, hoursDraft, hoursText,
   hoursValue, isLive, isNumeric, isSample, lastMonths, liveProposals, mayApprove, minutesFrom, monthName, normalizeTime, phoneValue,
-  pollDecision, proposalPillClass, proposalPollDecision, proposalWhen, readView, reviewQuery, sayError, stepKind, stepText, subItems,
+  pollDecision, proposalPillClass, proposalPollDecision, proposalWhen, readView, reviewQuery, rulerSide, sayError, scoreBefore, stepKind,
+  stepText, subItems,
   tabCount, textFact, verifiedAt, viewHref, viewsFor, waitingProposals, withChange,
 } from "./discoveryLogic.ts";
 
@@ -654,4 +655,37 @@ test("the confirmed fact and the reply are the only things sent from a person's 
   // the change a person approves is identified by its id and hash; its before and after are never posted back
   assert.match(api, /call\(`\/proposals\/\$\{encodeURIComponent\(id\)\}\/approve\$\{q\(\{ lang \}\)\}`, parseProposal, "POST", \{ change_hash \}\)/);
   assert.doesNotMatch(api, /\/proposals[^`]*`, parseProposal, "(POST|PUT)", \{[^}]*(after|before)/);
+});
+
+// ── Home's score band (ALY-332) ─────────────────────────
+
+test("the ruler's second mark is the last check-up's score, and only when the API said how far the score moved", () => {
+  assert.equal(scoreBefore({ score: 62, delta: { score_change: 7, since_run_id: "r1" } }), 55);
+  assert.equal(scoreBefore({ score: 40, delta: { score_change: -5, since_run_id: "r1" } }), 45);
+  assert.equal(scoreBefore({ score: 62, delta: { score_change: 0, since_run_id: "r1" } }), null, "no move, no second mark");
+  assert.equal(scoreBefore({ score: 62, delta: null }), null, "a first check-up has nothing before it");
+  assert.equal(scoreBefore({ score: null, delta: { score_change: 7, since_run_id: "r1" } }), null, "nothing measured, nothing drawn");
+  assert.equal(scoreBefore({ score: 5, delta: { score_change: 9, since_run_id: "r1" } }), null, "a number off the ruler is not drawn");
+  assert.equal(rulerSide(48), "start");
+  assert.equal(rulerSide(62), "end");
+});
+
+test("the parts under the ruler never show a number that was not measured, and name the lowest only when one is", () => {
+  const part = (value, measured = true) => ({ value, measured, weight: 10 });
+  const rows = bandParts({ presence: part(42), reviews: part(50), website: part(52), whatsapp: part(null, false), ai: part(null, false) });
+  assert.deepEqual(rows.map((r) => r.key), ["presence", "reviews", "website", "whatsapp"], "the order every screen uses, and no part the screens do not name");
+  assert.deepEqual(rows.map((r) => r.value), [42, 50, 52, null]);
+  assert.deepEqual(rows.map((r) => r.lowest), [true, false, false, false]);
+  assert.equal(bandParts({ presence: part(40), reviews: part(40) }).some((r) => r.lowest), false, "a tie names nothing");
+  assert.equal(bandParts({ presence: part(40) }).some((r) => r.lowest), false, "one part alone is not the lowest of anything");
+  assert.equal(bandParts({ presence: { value: 70, measured: false, weight: 40 } })[0].value, null, "not measured wins over a number");
+  assert.deepEqual(bandParts(null), []);
+});
+
+test("Home's band and layout are styled from tokens and logical positions only", () => {
+  const css = read(join(HERE, "discovery.css"));
+  const band = css.slice(css.indexOf("Home as a panel of instruments"));
+  assert.ok(band.length > 500, "the ALY-332 block is there");
+  assert.doesNotMatch(band, /#[0-9a-f]{3,8}\b|rgba?\(/i, "no colour literal");
+  assert.doesNotMatch(band, /\b(left|right)\s*:|margin-(left|right)|padding-(left|right)/, "no physical direction");
 });
