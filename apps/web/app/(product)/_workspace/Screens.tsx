@@ -184,7 +184,7 @@ const T = {
     sent: (n: number, skipped: number) =>
       `تم إرسال ${n} تذكير` + (skipped ? `، وتم تخطي ${skipped} (وعدوا بتاريخ أو تم تذكيرهم خلال ٣ أيام أو طلبوا الإيقاف)` : ""),
     collected: "المحصّل عبر روابط الدفع", payments: (n: number) => `${n} دفعة`,
-    promised: (d: string) => `وعد بالدفع قبل ${d}`, overLimit: "تجاوز حد الائتمان", optedOut: "طلب الإيقاف", customer: "العميل", balance: "الرصيد", age: "أقدم دين",
+    promised: (d: string) => `وعد بالدفع قبل ${d}`, overLimit: "تجاوز حد الائتمان", optedOut: "طلب الإيقاف", customer: "العميل", balance: "الرصيد", age: "أقدم مستحق",
     days: (n: number) => `${n} يوم`, settled: "مسدد", entries: "الحركات",
     buckets: ["٠–٣٠ يوم", "٣١–٦٠ يوم", "٦١–٩٠ يوم", "أكثر من ٩٠ يوم"],
     kinds: { sale: "بيع آجل", payment: "دفعة", adjustment: "تعديل", reversal: "إلغاء بيع آجل" } as Record<string, string>,

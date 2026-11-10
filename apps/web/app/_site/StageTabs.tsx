@@ -74,7 +74,6 @@ export function StageTabs({ locale, words }: { locale: Locale; words: StageTabsC
                     </div>
                   )}
                   <div className="stt-list is-team stt-r" style={n(3)}>
-                    <h4 className="stt-k">{s.teamLabel}</h4>
                     <ul>{p.team.map((item) => <li key={item}>{rich(item)}</li>)}</ul>
                   </div>
                   <a className="link stt-next stt-r" style={n(4)} href={`#${to.key}`} data-stt-to={to.key}>

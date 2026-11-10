@@ -46,6 +46,9 @@ GLOBAL_TABLES = {
     "billing_notices",
     # Which alerts are firing (ALY-121, D-073): a platform record with no customer data.
     "alert_state",
+    # The MCP connector (spec 067): the apps that may ask to connect, the sign-in while it is
+    # happening (the business is chosen at its end) and the alert's counts. No customer data.
+    "mcp_clients", "mcp_auth_requests", "mcp_signals",
     # What owners are asked to accept: every shop may read it, only the back office adds to it
     # (ALY-167). Forced row-level security.
     "terms_versions",

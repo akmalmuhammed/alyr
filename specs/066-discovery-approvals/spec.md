@@ -686,6 +686,124 @@ Two builders, no shared files. **If a change is needed in the other's files, it 
 
 **Not checked in writing this spec:** any code (nothing is built), the Arabic by a native speaker, Meta's current template-button request and webhook field names beyond the inbound `button` payload shape, Google's current field names and quotas for the write calls, the exact wording of every message against a phone, whether the existing `activity_subject_check` and `messages.payload` need changes for the new rows (the spec says no; the builder confirms), and whether ALY-134's eventual design fits `brief_line` as written.
 
+## As built: backend (ALY-324, branch `aly-324-discovery-approvals-api`)
+
+What is built (phases A to D; phase E, the screens, is the other builder's): migrations
+`0121_discovery_proposals.sql`, `0122_discovery_asks.sql`, `0123_discovery_sample_state.sql`;
+`modules/discovery/`: `proposals.py` (the plan, the builder, the states, the views), `facts.py`,
+`apply.py` (the job and undo), `asks.py`, `sweep.py`, `brief.py`, `proposal_words.py`; changed
+`actions.py`, `engine.py`, `rules.py`, `words.py`, `connectors/base.py`, `connectors/sample.py`;
+`routes/discovery.py`; `core/actions.py` (`ENGINE`), `core/team.py` (`ALYR`), `core/outbound.py`,
+`core/templates.py` (`discovery_ask`, held), `core/erase_rules.py`, `core/forget.py`, `core/words.py`
+(`CHANGES`); `channels/meta.py`, `templates_sync.py` (template buttons and the inbound `button`
+type: small and additive, flagged for the Go-live lane); `modules/owner/chat.py` (the commands and
+the call to `handle_reply`); `modules/agent/facts.py` and `insights.py` (one insight); `worker.py`,
+`main.py`, `config.py` (`ALYR_DISCOVERY_ASK_TEMPLATE_APPROVED`, default off); `discovery_demo.py`.
+**The routes, the shapes and the names are the spec's. Everything below is where the build chose,
+added or differs; every addition is a new key or a new route.**
+
+### Deviations (what differs from the spec as written)
+
+1. **`connector_cannot_write` is worded "This source cannot be changed from here."** The spec's
+   "can be read but not changed here" fails Phase 1's banned-word test ("read" is on the list). The
+   Proposals screen's empty-state sentence is the screens builder's.
+2. **`change_lines(change, lang, target="listing")` takes the target.** The stored `change` has
+   `{field, before, after}` only, and `where` needs the target. Both doors call this one function.
+3. **A proposal's view always carries `already` (false except on the answers of approve, decline and
+   undo), `undone` (`{by, channel: "portal", at}` or null) and `expire_reason` (set only when
+   expired).** The spec's example shows `already` in a listing and says it is only on the three
+   answers; a superset is safe for a parser that requires it. `history` is added to
+   `GET /proposals/{id}` as specified.
+4. **The two new steps run after `reviews.save`, `build` first, then `verify`** (the spec says after
+   `findings.save`): a reply is made from the saved reviews. A run now has 10 steps.
+5. **The cool-off also covers a change applied and still waiting to be verified.** Without it a
+   check-up that finds the problem again makes the same proposal in the same run, before `verify`
+   marks the old one `not_confirmed`. So: declined, expired by time, undone, or applied and not yet
+   confirmed, for 14 days.
+6. **Migration 0121 also adds `discovery_findings.observed jsonb`** (what a rule compared, as plain
+   values: `{place id: {listing: {field: value}, website: {...}}}`, only the fields a proposal of
+   that rule would change and only those measured), so a proposal's "before" is the value the
+   finding saw and `prepare` by hand needs no outside call. A field not in it was not measured.
+7. **Names are kept beside the person's id** (`decided_name`, `undone_name`, `confirmed_name`): the
+   foreign keys are `on delete set null`, so the checks (`approved` needs a channel in
+   (`portal`, `whatsapp`) and a name; an `owner` fact needs a name) use the name, not the id.
+8. **`Template` has `buttons` and `buttons_ar`** (the spec names `buttons`): the titles are in two
+   languages. `test_every_template_follows_metas_rules` learned the limits (at most three, at most 25
+   characters, the same number in each language).
+9. **A person's own "Prepare change" or fact confirmation has `proposer_kind = 'engine'` and
+   `proposed_by` naming them** (the schema offers `engine` and `agent`; a person pressing the button is
+   the rules' own work at their request). The agent door (any channel but `portal` and `whatsapp`)
+   prepares as `agent`. A proposal prepared by a person is not asked about to that person for an hour.
+10. **`discovery.settings` is one action for reading and changing** (the spec lists one key). The
+    route `PUT /facts` takes `key` in the body as specified; the action's argument is `fact_key`
+    (`actions.run` already has a `key`).
+11. **A staff-role member linked to no place:** reads answer an empty list (`GET /proposals`, `GET
+    /facts`, `overview.proposals` null) or 404 for an id; every write answers 403 `forbidden`. A
+    place outside a branch manager's places answers 404 `not_found` for every action.
+12. **Undo runs in the request**, not as a job: the sample has no network. A real connector's undo
+    (a network call) must become a job before it ships (CLAUDE.md: no outside call from a request);
+    there is no status for it in this spec.
+13. **The apply job is enqueued with `max_attempts = 3` and `apply_attempts` counts every run of it**,
+    including the runner's automatic retries of `unavailable`. After the third the dead-letter
+    handler sets `failed` / `apply_gave_up`, and a further `approve` answers 409 `retry_limit`. A job
+    that did not finish gives the row back (`apply_started_at` null) so its next try may take it.
+14. **The sweep is two transactions per shop** (housekeeping, then asking), so a failure in asking
+    never undoes an expiry. The check-up's hook (`after_done`) and the sweep take the ask function
+    (`asks.Sender`) and the result sender (`asks.Notifier`) as arguments: only `asks.py` names the
+    outbound layer, and a test reads the code to prove it.
+15. **An `owner` fact needs all seven days and at least one open day** (`bad_hours` otherwise); a
+    number is stored without spaces; a text value with a line break or a control character is
+    refused (`bad_fact`), not tidied.
+16. **`waiting` and the overview's `waiting` do not count a `proposed` row past its 14 days that the
+    sweep has not yet expired**, and `can.approve` is false for it (approve answers 409
+    `proposal_closed`).
+17. **A fact written by the sample's turn-on never overwrites a fact someone typed** (`on conflict do
+    nothing`).
+18. **`GET /findings` rows add `proposals_waiting` only** (as the spec says); `can_propose` and
+    `needs_fact` are on a single finding and on the overview's and the report's findings.
+
+19. **`GET /locations` (and the answer of `PUT /locations`) carries `managers: [{user_id, name}]` on
+    each place** (asked for by the screens' branch-manager picker): filled for an owner or admin, an
+    empty list for anyone else. No other Phase 1 key changes.
+
+### Choices where the spec was silent
+
+* **Which stage the sample's `read_current` reads:** the stage the last check-up saw (done runs minus
+  one, at most 3), so a proposal made after the first check-up is checked against what that check-up
+  showed. If the live value already equals the proposal's `after` it is recorded `applied` with
+  receipt `ref: "already_true"` and no undo window.
+* **The demo comparison (a higher score than a second shop at the same stage) uses the WhatsApp link
+  at Al Sadd and the name at Al Wakra**, not Al Sadd's hours: the script already fixes the hours at
+  stage 1, so an approval changes nothing there. Pinned: both shops 74, then 84 without and 86 with
+  the two approvals.
+* **Which reviews get a reply:** one proposal for each unanswered low review (3 stars or fewer, older
+  than 7 days), oldest first, at most 3 live for a finding (the sample's Al Sadd has four).
+* **`name_conflict` proposes only for a place whose listing name differs, by the rule's own
+  `name_key`, from that place's name fact** (so "NUQTA CAR CARE W.L.L." is not asked to become "Nuqta
+  Car Care - Al Sadd"). The sample's name facts are the branches' own names.
+* **An ask is `answered` by any tap on its buttons**; a tap on Approve sets `answer = 'approve'` even
+  when the answer was "already approved" or "closed"; asks of other people about the same change are
+  closed (`proposal_decided`, or `expired` by any expiry).
+* **The "Done" message** is an ordinary message in the person's window and is sent only then (never a
+  template, never recorded as blocked); the failed message likewise.
+* **Activity actors:** ALYR's own work (`proposal.expire`, `.apply`, `.fail`, `.verify`) is
+  `Actor(None, "ALYR")` on channel `system`; a person's is their name on `portal` or `whatsapp`. The
+  agent door's channel is recorded as `system` (the `activity.channel` check allows three values).
+* **Meta field names were checked on 9 Nov 2026** against Meta's current references: a template is
+  created with a `BUTTONS` component of `{type: QUICK_REPLY, text}` (at most 25 characters a button,
+  at most ten); sent with a `button` component per button (`sub_type: quick_reply`, `index`,
+  `parameters: [{type: payload, payload}]`); a tap comes back as `type: "button"` with
+  `button.payload` and `button.text`.
+
+### Not built, not checked
+
+Not built: the screens (the other builder), `places`, the real `gbp` connector (interface only: no
+class, no settings key, no network call; a test proves it), prefilling facts from Bookings, WhatsApp
+undo, the outbound layer's shop-wide limit (ALY-41), the morning brief itself (ALY-134).
+**The template `discovery_ask` is written and held: nothing was submitted to Meta.** Not checked: a
+real phone, a real Meta send, the Arabic by a native speaker (ALY-66), production, Cloud Run's worker
+pool running the sweep, Meta's review of the template (it may be filed as marketing).
+
 ## As built
 
 ### As built: screens (ALY-324, branch `aly-324-discovery-approvals-screens`)

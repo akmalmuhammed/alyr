@@ -297,7 +297,7 @@ const en: Words = {
   },
   how: {
     title: "How we work",
-    steps: ["We come to your shop.", "We set it up with you.", "You go live.", "Every month we sit with your numbers."],
+    steps: ["We start with a call or a meeting.", "We set it up with you.", "You go live.", "Every month we sit with your numbers."],
     objTitle: "What owners ask",
     objections: [
       ["I already have WhatsApp Business.", "Works on WhatsApp, the app your customers already use."],
@@ -536,7 +536,7 @@ const ar: Words = {
   },
   how: {
     title: "كيف نعمل",
-    steps: ["نأتي إلى محلك.", "نجهّزه معك.", "تبدأ باستقبال الطلبات.", "كل شهر نجلس معك على أرقامك."],
+    steps: ["نبدأ باتصال أو لقاء.", "نجهّزه معك.", "تبدأ باستقبال الطلبات.", "كل شهر نجلس معك على أرقامك."],
     objTitle: "ما يسأله أصحاب المحلات",
     objections: [
       ["عندي واتساب للأعمال.", "تعمل ALYR على واتساب، التطبيق الذي يستخدمه عملاؤك أصلاً."],

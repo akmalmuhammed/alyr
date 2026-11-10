@@ -155,9 +155,9 @@ export const homeStagesEn: HomeStages = {
       title: "The monthly review",
       kicker: "Three actions",
       rows: [
-        { label: "Answer enquiries within the hour", state: "Agreed", done: true },
-        { label: "Message customers who have not ordered in 60 days", state: "Agreed", done: true },
-        { label: "Add Friday hours to your Google profile", state: "Next", done: false },
+        { label: "Reply to enquiries the same day", state: "Agreed", done: true },
+        { label: "Phone customers who have not ordered in 60 days", state: "Agreed", done: true },
+        { label: "Add photos to your Google profile", state: "Next", done: false },
       ],
       foot: "Counted again next month",
     },
@@ -167,15 +167,15 @@ export const homeStagesEn: HomeStages = {
 };
 
 export const homeStagesAr: HomeStages = {
-  video: { title: "كيف تعمل ALYR", label: "فيلم عن كيف تعمل ALYR لنشاط تجاري", captions: "ترجمة عربية" },
+  video: { title: "كيف تعمل ALYR", label: "فيلم يعرض كيف تعمل ALYR مع نشاط تجاري", captions: "ترجمة عربية" },
   funnel: {
-    label: "استفسار واحد يمرّ بأربع مراحل في مخبز قرفة، وهو نشاط توضيحي افتراضي",
+    label: "استفسار واحد يمرّ بأربع مراحل في مخبز قرفة، وهو نشاط غير حقيقي",
     shop: "مخبز قرفة",
     sub: "استفسار واحد، أربع مراحل",
     stations: [
       { key: "discover", name: "الاكتشاف", line: "عميلة تجد المخبز.", card: ["مخبز قرفة", "مخبز · الدوحة", "مفتوح حتى 10 مساءً"], tag: "فريقنا", team: true },
-      { key: "convert", name: "التحويل", line: "تسأل، فيصل الطلب إلى صندوق واحد.", card: ["هل طلبي جاهز؟", "طلب #1442", "تم التأكيد"], tag: "ALYR Chat", team: false },
-      { key: "manage", name: "الإدارة", line: "المكتب يدفع بالآجل، وكل شيء في دفتر الحسابات.", card: ["Marina Desk Co-working", "أقدم دين منذ 35 يوماً", "وعد بالدفع قبل 22 أكتوبر"], tag: "ALYR Accounts", team: false },
+      { key: "convert", name: "الطلبات", line: "تسأل، فيصل الطلب إلى صندوق واحد.", card: ["هل طلبي جاهز؟", "طلب #1442", "تم التأكيد"], tag: "ALYR Chat", team: false },
+      { key: "manage", name: "الإدارة", line: "المكتب يدفع بالآجل، وكل شيء في دفتر الحسابات.", card: ["Marina Desk Co-working", "أقدم مستحق منذ 35 يوماً", "وعد بالدفع قبل 22 أكتوبر"], tag: "ALYR Accounts", team: false },
       { key: "scale", name: "التوسّع", line: "يُحسب هذا الأسبوع مقابل الذي قبله.", card: ["طلبات هذا الأسبوع", "50", "الأيام نفسها الأسبوع الماضي 45"], tag: "ALYR Agent", team: false },
     ],
   },
@@ -201,40 +201,40 @@ export const homeStagesAr: HomeStages = {
     panels: [
       {
         key: "discover", n: "01", name: "الاكتشاف",
-        title: ["أن تُوجَد.", "وأن تكون خيارهم."],
-        body: "نفحص كيف يصل إليك العملاء اليوم، ثم نصلح ما يكلّفك طلبات.",
+        title: ["أن يجدك العملاء.", "وأن تكون خيارهم."],
+        body: "نفحص كيف يصل إليك العملاء اليوم، ثم نصلح ما يُضيّع عليك طلبات.",
         runs: [],
         team: [
-          "الفحص، ثم ملفك في جوجل ورابط حسابك وبطاقة QR عند الكاونتر، جاهزة.",
-          "الأرقام الخمسة مسجّلة نقطة بداية لك.",
+          "الفحص، ثم نجهّز لك ملف نشاطك في جوجل، والرابط في سيرة حسابك على إنستغرام وتيك توك، وبطاقة QR عند الكاونتر.",
+          "نسجّل لك الأرقام الخمسة نقطة بداية.",
         ],
       },
       {
-        key: "convert", n: "02", name: "التحويل",
+        key: "convert", n: "02", name: "الطلبات",
         title: ["كل قناة، وكل استفسار،", "في صندوق واحد."],
         body: "المحادثات والطلبات والحجوزات في مكان واحد. يرد فريقك، ولكل طلب مسؤول.",
         runs: [
           "ALYR Chat: صندوق واحد. ALYR Shelf: قائمتك وصفحة طلب.",
           "ALYR Bookings: مواعيد وتذكيرات وصفحة حجز.",
         ],
-        team: ["نُدخل قائمتك ونُدرّب موظفي الكاونتر."],
+        team: ["نُدخل قائمتك ونُري فريقك كيف تعمل."],
       },
       {
         key: "manage", n: "03", name: "الإدارة",
         title: ["أدِر يومك", "من شاشة واحدة."],
-        body: "من عليه لك مال، وما الذي بِيع، وما الذي يحتاجك الآن، وبجانب كل سطر سببه.",
+        body: "من عليه مستحقات لك، وما الذي بِيع، وما الذي يحتاجك الآن، وبجانب كل سطر سببه.",
         runs: [
-          "ALYR Accounts: الآجل والأعمار والتذكيرات.",
+          "ALYR Accounts: الآجل ومدة التأخر والتذكيرات.",
           "ALYR Agent: ما يحتاجك الآن، وأرقام الأسبوع.",
         ],
-        team: ["نُعدّ حساباتك ونراجع معك الأرقام الأولى."],
+        team: ["نجهّز ALYR Accounts ونراجع معك الأرقام الأولى."],
       },
       {
         key: "scale", n: "04", name: "التوسّع",
-        title: ["انمُ بالدليل،", "كل شهر."],
-        body: "كل شهر نعدّ الأرقام الخمسة من جديد، ونتفق على ثلاثة أمور تُنجز بعدها.",
+        title: ["نمِّ نشاطك بالأرقام،", "كل شهر."],
+        body: "كل شهر نحسب الأرقام الخمسة من جديد، ونتفق على ثلاث خطوات تالية.",
         runs: ["ALYR Agent: هذا الأسبوع مقابل الأيام نفسها من الأسبوع الماضي."],
-        team: ["مراجعة شهرية: الأرقام الخمسة وثلاثة إجراءات."],
+        team: ["مراجعة شهرية: الأرقام الخمسة وثلاث خطوات."],
       },
     ],
     discover: {
@@ -249,15 +249,15 @@ export const homeStagesAr: HomeStages = {
     },
     scale: {
       title: "المراجعة الشهرية",
-      kicker: "ثلاثة إجراءات",
+      kicker: "ثلاث خطوات",
       rows: [
-        { label: "الرد على الاستفسارات خلال ساعة", state: "متفق عليه", done: true },
-        { label: "مراسلة عملاء لم يطلبوا منذ 60 يوماً", state: "متفق عليه", done: true },
-        { label: "إضافة ساعات الجمعة إلى ملفك في جوجل", state: "التالي", done: false },
+        { label: "الرد على الاستفسارات في اليوم نفسه", state: "متفق عليه", done: true },
+        { label: "الاتصال بعملاء لم يطلبوا منذ 60 يوماً", state: "متفق عليه", done: true },
+        { label: "إضافة صور إلى ملف نشاطك في جوجل", state: "التالي", done: false },
       ],
-      foot: "نعدّها من جديد الشهر القادم",
+      foot: "نحسبها من جديد الشهر القادم",
     },
-    agentLabel: "الشاشة الرئيسية لـ ALYR Agent للنشاط التوضيحي",
+    agentLabel: "الشاشة الرئيسية لـ ALYR Agent لنشاط غير حقيقي",
     agentMore: "اعرض الشاشة كاملة",
   },
 };

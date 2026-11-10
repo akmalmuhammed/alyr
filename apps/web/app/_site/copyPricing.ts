@@ -61,7 +61,7 @@ export const pricingEn: PricingPage = {
   eyebrow: "Pricing",
   title: "What ALYR costs",
   updated: "Last updated 31 October 2026",
-  lead: "ALYR is the tech team for owner-run businesses in Qatar. We set up your orders, bookings, credit accounts and stock on one screen, in your shop, and keep improving it with you. One plan, month to month, with no setup fee.",
+  lead: "ALYR is the tech team for owner-run businesses in Qatar. We set up your orders, bookings, credit accounts and stock on one screen, and keep improving it with you. One plan, month to month, with no setup fee.",
   plan: {
     title: "The plan",
     caption: "Monthly prices: by bank transfer in Qatari riyals, and by card in US dollars",

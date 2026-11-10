@@ -26,6 +26,7 @@ from datetime import timedelta
 from alyr.catalog import Text
 from alyr.core.words import (
     APPOINTMENTS,
+    CHANGES,
     CHATS,
     CUSTOMERS,
     DAYS,
@@ -50,6 +51,7 @@ from alyr.modules.agent.words import (
     rich,
     when_text,
 )
+from alyr.modules.discovery import proposal_words as discovery_words
 
 WEEKS: Noun = (("week", "weeks"), ("أسبوع واحد", "أسبوعان", "أسابيع", "أسبوعاً"))
 REGULARS: Noun = (
@@ -70,7 +72,7 @@ REASONS = {
 NO_CONSENT = Text(
     "Information only. Writing to them needs their marketing consent, which ALYR does not "
     "collect yet.",
-    "للعلم فقط. مراسلتهم تحتاج موافقتهم التسويقية، وALYR لا تجمعها بعد.",
+    "للعلم فقط. مراسلتهم تحتاج موافقتهم التسويقية، و ALYR لا تجمعها بعد.",
 )
 INFO_ONLY = Text("Information only.", "للعلم فقط.")
 
@@ -172,6 +174,25 @@ def _say_waiting(x: Finding, f: Facts, lang: str):
     return words, detail
 
 
+def _find_discovery_proposals(f: Facts) -> Finding | None:
+    if not f.discovery_waiting:
+        return None
+    return Finding(
+        f.discovery_waiting, CHANGES,
+        {"oldest": max(r.detail.get("days", 0) for r in f.discovery_waiting)},
+    )
+
+
+def _say_discovery_proposals(x: Finding, f: Facts, lang: str):
+    """The brief line's words (`modules/discovery/brief.py`), and the guarantee that is the point:
+    nothing is applied without the owner's tap."""
+    return (
+        rich(discovery_words.waiting_text(x.n, lang)),
+        rich("لا يُطبَّق شيء قبل أن تضغط." if lang == "ar"
+             else "Nothing is applied without your tap."),
+    )
+
+
 def _find_unconfirmed(f: Facts) -> Finding | None:
     if not f.unconfirmed:
         return None
@@ -248,8 +269,8 @@ def _say_overdue(x: Finding, f: Facts, lang: str):
     if lang == "ar":
         title = rich("{a} مستحقة منذ 30 يوماً أو أكثر، دون تذكير منذ 7 أيام", a=amount)
         if x.n == 1:
-            return title, rich("يدين بها {name}، منذ {d}.", name=name, d=days)
-        return title, rich("يدين بها {who}. أقدمهم {name}، منذ {d}.",
+            return title, rich("مستحقة على {name}، منذ {d}.", name=name, d=days)
+        return title, rich("مستحقة على {who}. أقدمهم {name}، منذ {d}.",
                            who=count(x.n, x.noun, lang), name=name, d=days)
     title = rich("{a} owed 30+ days, not reminded in 7 days", a=amount)
     if x.n == 1:
@@ -347,7 +368,7 @@ def _say_ready(x: Finding, f: Facts, lang: str):
         return (
             rich("{n} " + agree(x.n, "جاهز", "جاهزان", "جاهزة") + " منذ أكثر من ساعتين",
                  n=count(x.n, ORDERS, lang)),
-            rich("الطلب {no} للعميل {name} ينتظر منذ {h}.", no=number, name=name,
+            rich("الطلب {no} للعميل {name} هو الأطول انتظاراً: {h}.", no=number, name=name,
                  h=B(f"{hours} س")),
         )
     return (
@@ -604,7 +625,7 @@ def _say_riser(x: Finding, f: Facts, lang: str):
     if lang == "ar":
         name = f.names_ar.get(n["name"], n["name"])
         return (
-            rich("{name}: أكثر بـ{d} من الأسبوع الماضي", name=B(name), d=B(str(x.n))),
+            rich("{name}: بزيادة {d} عن الأسبوع الماضي", name=B(name), d=B(str(x.n))),
             rich("{cur} حتى الآن هذا الأسبوع، و{prev} حتى الوقت نفسه من الأسبوع الماضي.",
                  cur=B(str(n["cur"])), prev=B(str(n["prev"]))),
         )
@@ -628,6 +649,13 @@ INSIGHTS: tuple[Insight, ...] = (
              "آخر رسالة من العميل ولم يُرد عليها منذ 10 دقائق"),
         _find_waiting, _say_waiting, Action(Text("Open the inbox", "افتح المحادثات"),
                                             "/app/inbox?show=waiting"),
+    ),
+    Insight(
+        "discovery_proposals", 90, "task", "discovery",
+        Text(discovery_words.pick(discovery_words.BRIEF["rule"], "en"),
+             discovery_words.pick(discovery_words.BRIEF["rule"], "ar")),
+        _find_discovery_proposals, _say_discovery_proposals,
+        Action(Text("Review the changes", "راجع التعديلات"), "/app/discovery?view=proposals"),
     ),
     Insight(
         "unconfirmed", 2, "task", "orders",
@@ -749,7 +777,7 @@ INSIGHTS: tuple[Insight, ...] = (
     Insight(
         "riser", 8, "knowledge", "orders",
         Text("the biggest rise on the same days last week, 5 or more",
-             "أكبر زيادة عن الأيام نفسها من الأسبوع الماضي، 5 أو أكثر"),
+             "أكبر زيادة مقارنةً بالأيام نفسها من الأسبوع الماضي، 5 أو أكثر"),
         _find_riser, _say_riser, status=INFO_ONLY,
     ),
     # Last: useful to know, but it never needs anything doing.

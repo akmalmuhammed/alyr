@@ -14,11 +14,15 @@ shop at a time is enforced by the database (a partial unique index); a manual ru
 in ten minutes.
 
 Nothing here sends anything, calls `Outbound` or reaches outside ALYR: the connector is the only
-thing that could, and Phase 1 has only the sample one.
+thing that could, and there is only the sample one. Since Phase 2 (spec 066) a check-up also
+prepares proposals from what it found and checks the ones that were applied: two more steps,
+`proposals.build` and `proposals.verify`, after the findings and the reviews are saved. A check-up
+never approves or applies anything.
 """
 
 import logging
 import math
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -27,7 +31,8 @@ import asyncpg
 from alyr.config import get_settings
 from alyr.core import jobs
 from alyr.db import Database
-from alyr.modules.discovery import connectors, rules, scoring
+from alyr.modules.discovery import connectors, proposals, rules, scoring
+from alyr.modules.discovery.apply import load_overrides
 from alyr.modules.discovery.connectors import ConnectorError, Location, RunContext, Snapshot
 from alyr.modules.discovery.errors import DiscoveryError
 from alyr.modules.discovery.words import ERRORS, STEP_SUMMARIES
@@ -120,12 +125,16 @@ async def start_run(
 class DiscoveryRuns:
     """The job handler: `app.state.jobs.register(JOB, DiscoveryRuns(db).run, background=True)`."""
 
-    def __init__(self, db: Database, get_connector=None) -> None:
+    def __init__(
+        self, db: Database, get_connector=None,
+        after_done: Callable[[UUID], Awaitable[None]] | None = None,
+    ) -> None:
         self._db = db
         self._get = get_connector
+        self._after = after_done
 
     async def run(self, tenant_id: UUID, payload: dict) -> None:
-        await execute(self._db, tenant_id, UUID(payload["run_id"]), self._get)
+        await execute(self._db, tenant_id, UUID(payload["run_id"]), self._get, self._after)
 
 
 class _Log:
@@ -184,9 +193,14 @@ class _Log:
             raise RunFailed("run_budget_exceeded")
 
 
-async def execute(db: Database, tenant_id: UUID, run_id: UUID, get_connector=None) -> None:
+async def execute(
+    db: Database, tenant_id: UUID, run_id: UUID, get_connector=None,
+    after_done: Callable[[UUID], Awaitable[None]] | None = None,
+) -> None:
     """Carry out a queued run. It never raises for a run that fails: the failure is the run's
-    state (`failed`, with its plain sentence and its log). Only a broken database comes up."""
+    state (`failed`, with its plain sentence and its log). Only a broken database comes up.
+    `after_done` runs once a check-up has finished (the worker hands in the one that asks the
+    owner about what the check-up prepared); it can never fail the run."""
     async with db.tenant(tenant_id) as conn:
         run = await conn.fetchrow(
             "update discovery_runs set status = 'running', started_at = now() "
@@ -201,9 +215,16 @@ async def execute(db: Database, tenant_id: UUID, run_id: UUID, get_connector=Non
         await _carry_out(db, tenant_id, run, log_, get_connector)
     except (RunFailed, ConnectorError) as error:
         await _fail(db, tenant_id, log_, error.code, error.en, error.ar)
+        return
     except Exception:  # noqa: BLE001 - a run's failure is its state, with a plain sentence
         log.exception("discovery run %s failed", run_id)
         await _fail(db, tenant_id, log_, "run_failed", *ERRORS["run_failed"])
+        return
+    if after_done is not None:
+        try:
+            await after_done(tenant_id)
+        except Exception:  # noqa: BLE001 - what follows a check-up never fails it
+            log.exception("what follows discovery run %s failed", run_id)
 
 
 async def _fail(
@@ -258,6 +279,9 @@ async def _carry_out(db, tenant_id, run, log_, get_connector) -> None:
             "select count(*) from discovery_runs where status = 'done' and connector_kind = $1",
             run["connector_kind"],
         )
+        # What the sample business's owner changed by approving proposals: loaded here, so the
+        # connector still does no I/O. A real source has none.
+        overrides = await load_overrides(conn) if run["connector_kind"] == "sample" else {}
     if not connected:
         raise RunFailed("no_connection")
     locations = [
@@ -280,8 +304,14 @@ async def _carry_out(db, tenant_id, run, log_, get_connector) -> None:
     # 1. The snapshot: the one step that may reach outside (the sample connector never does).
     log_.guard("connector.snapshot")
     started = clock()
-    ctx = RunContext(now=started, prior_done_runs=prior, cost_budget=run["cost_budget"] - log_.cost)
-    snapshot: Snapshot = await get_connector(run["connector_kind"]).snapshot(locations, ctx)
+    connector = get_connector(run["connector_kind"])
+    ctx = RunContext(
+        now=started, prior_done_runs=prior, cost_budget=run["cost_budget"] - log_.cost,
+        overrides=overrides,
+    )
+    snapshot: Snapshot = await connector.snapshot(locations, ctx)
+    # What the source can change: a finding's kind is `agent` only while it can change that.
+    writes = frozenset(getattr(connector, "writes", None) or ())
     await log_.note(
         "connector.snapshot",
         _summary(
@@ -318,7 +348,9 @@ async def _carry_out(db, tenant_id, run, log_, get_connector) -> None:
     log_.guard("findings.save")
     started = clock()
     async with db.tenant(tenant_id) as conn:
-        new, kept, closed = await _save_findings(conn, run["id"], outcomes, snapshot)
+        new, kept, closed = await _save_findings(
+            conn, run["id"], outcomes, snapshot, locations, writes
+        )
         await log_.add(
             conn,
             "findings.save",
@@ -333,7 +365,34 @@ async def _carry_out(db, tenant_id, run, log_, get_connector) -> None:
         saved = await _save_reviews(conn, run["id"], snapshot)
         await log_.add(conn, "reviews.save", _summary("reviews.save", n=saved), started)
 
-    # 5. Score, and finish.
+    # 5. Proposals: prepare what the findings call for, from the facts the owner confirmed. A
+    # check-up only proposes; it never approves and never applies.
+    log_.guard("proposals.build")
+    started = clock()
+    async with db.tenant(tenant_id) as conn:
+        built = await proposals.build_step(conn, run, run["connector_kind"], writes, started)
+        await log_.add(
+            conn,
+            "proposals.build",
+            _summary(
+                "proposals.build", made=len(built.made), kept=len(built.kept), closed=built.closed
+            ),
+            started,
+        )
+
+    # 6. Check the changes that were applied before this check-up began.
+    log_.guard("proposals.verify")
+    started = clock()
+    async with db.tenant(tenant_id) as conn:
+        confirmed, again = await proposals.verify_step(conn, run)
+        await log_.add(
+            conn,
+            "proposals.verify",
+            _summary("proposals.verify", confirmed=confirmed, again=again),
+            started,
+        )
+
+    # 7. Score, and finish.
     log_.guard("score.compute")
     started = clock()
     total, parts = scoring.score(outcomes)
@@ -371,7 +430,8 @@ def _evidence(outcome: rules.Outcome, snapshot: Snapshot) -> list[dict]:
 
 
 async def _save_findings(
-    conn: asyncpg.Connection, run_id: UUID, outcomes: list[rules.Outcome], snapshot: Snapshot
+    conn: asyncpg.Connection, run_id: UUID, outcomes: list[rules.Outcome], snapshot: Snapshot,
+    locations: list[Location] | None = None, writes=frozenset(),
 ) -> tuple[int, int, int]:
     """Upsert by fingerprint. A rule that stops being true closes its finding (`gone`, or
     `verified` if the owner had marked it done); one that is true again opens it. A finding whose
@@ -390,18 +450,22 @@ async def _save_findings(
         rule = rules.RULE_BY_ID[outcome.rule_id]
         fired.add(outcome.fingerprint)
         evidence = _evidence(outcome, snapshot)
+        kind = rules.effective_kind(rule, writes)
+        observed = proposals.observed_for(rule.id, outcome.location_id, snapshot, locations or [])
         before = rows.get(outcome.fingerprint)
         if before is None:
             await conn.execute(
                 "insert into discovery_findings (fingerprint, rule_id, location_id, kind, "
                 "severity, "
-                "evidence, first_run_id, last_run_id) values ($1, $2, $3, $4, $5, $6, $7, $7)",
+                "evidence, observed, first_run_id, last_run_id) "
+                "values ($1, $2, $3, $4, $5, $6, $7, $8, $8)",
                 outcome.fingerprint,
                 rule.id,
                 outcome.location_id,
-                rule.kind,
+                kind,
                 rule.severity,
                 evidence,
+                observed,
                 run_id,
             )
             new += 1
@@ -411,15 +475,16 @@ async def _save_findings(
         status = "skipped" if before["status"] == "skipped" else "open"
         await conn.execute(
             "update discovery_findings set status = $2, evidence = $3, kind = $4, severity = $5, "
-            "last_run_id = $6, last_seen_at = now(), "
+            "last_run_id = $6, last_seen_at = now(), observed = $7, "
             "resolved_run_id = case when $2 = 'open' then null else resolved_run_id end, "
             "updated_at = case when status <> $2 then now() else updated_at end where id = $1",
             before["id"],
             status,
             evidence,
-            rule.kind,
+            kind,
             rule.severity,
             run_id,
+            observed,
         )
     for outcome in outcomes:
         if outcome.state != rules.PASS or outcome.fingerprint in fired:

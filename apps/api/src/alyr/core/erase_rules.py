@@ -51,6 +51,11 @@ RULES: dict[str, Rule] = {
         "staff_pending", "review_requests", "activity", "agent_snoozes",
     ),
     **_delete(
+        "the connector's settings, the permissions the business's people gave their own apps, "
+        "the tokens made from them (hashes only) and the previews waiting for a yes (spec 067)",
+        "mcp_settings", "mcp_grants", "mcp_tokens", "mcp_confirmations",
+    ),
+    **_delete(
         "what the business sold, booked and was paid, and the keys it connected for its own "
         "payment account (sealed); its customers' payment references are the business's, "
         "not ALYR's",
@@ -77,6 +82,15 @@ RULES: dict[str, Rule] = {
         "third-party data that lives only in this business's rows)",
         "discovery_connections", "discovery_locations", "discovery_runs", "discovery_run_steps",
         "discovery_findings", "discovery_reviews",
+    ),
+    **_delete(
+        "Discovery Phase 2 (spec 066): the changes proposed for the business's places, the facts "
+        "its owner confirmed, who manages which place, the asks sent to its own team on WhatsApp "
+        "(a staff number and what it tapped: no customer's data), its settings, and what the "
+        "fictional sample business's owner changed. Business facts and the team's own choices: "
+        "deleted with the business",
+        "discovery_facts", "discovery_proposals", "discovery_location_managers", "discovery_asks",
+        "discovery_settings", "discovery_sample_state",
     ),
     **_delete(
         "the records of the business's photos; the files in the photo store are emptied by the "
@@ -198,6 +212,9 @@ RULES: dict[str, Rule] = {
     # ── Not about any one business or client ─────────────────────────────────────────────────
     **{table: Rule(GLOBAL, reason) for table, reason in {
         "alert_state": "which alerts are firing: counts only",
+        "mcp_clients": "apps that may ask to connect (their own names and addresses)",
+        "mcp_auth_requests": "the 15 minutes while a person signs in at the connector's page",
+        "mcp_signals": "a kind, a business's ID and a time, for an alert's counts; kept two days",
         "business_templates": "the kinds of business ALYR's staff made; a shop only reads them",
         "business_type_settings": "ALYR's switches per kind of business",
         "platform_admins": "ALYR's own staff",

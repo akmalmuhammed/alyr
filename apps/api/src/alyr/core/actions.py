@@ -23,6 +23,9 @@ OWNER = "owner"
 ADMIN = "admin"
 AGENT = "agent"
 ALL_ROLES = frozenset({OWNER, ADMIN, AGENT})
+# A check-up making proposals (spec 066). Deliberately NOT in ALL_ROLES: every action that lists its
+# roles through ALL_ROLES refuses it, and the one that approves a change refuses it by name.
+ENGINE = "engine"
 # Who may see what the shop earns or is owed (D-035: agents see no money).
 MONEY_ROLES = frozenset({OWNER, ADMIN})
 
@@ -46,7 +49,7 @@ class Caller:
     user_id: UUID | None
     name: str
     role: str
-    channel: str  # "portal" or "whatsapp"
+    channel: str  # "portal", "whatsapp" or "mcp" (the owner's own app, spec 067)
 
     @property
     def sees_money(self) -> bool:
@@ -99,11 +102,16 @@ def allowed(key: str, role: str) -> bool:
     return action is not None and role in action.roles
 
 
-async def run(conn: asyncpg.Connection, caller: Caller, key: str, **args) -> dict:
-    """Carry out an action for a caller on the shop the connection is scoped to."""
+def load() -> None:
+    """Import every module that declares actions, so the registry is whole."""
     from alyr.modules import owner  # noqa: F401  (declares the actions)
     from alyr.modules.discovery import actions as discovery  # noqa: F401  (declares Discovery's)
+    from alyr.modules.mcp import actions as mcp  # noqa: F401  (the connector's own)
 
+
+async def run(conn: asyncpg.Connection, caller: Caller, key: str, **args) -> dict:
+    """Carry out an action for a caller on the shop the connection is scoped to."""
+    load()
     action = REGISTRY.get(key)
     if action is None:
         raise ActionError(f"there is no action called {key}")
