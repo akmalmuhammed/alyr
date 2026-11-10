@@ -41,6 +41,9 @@ class Actor:
 
 CUSTOMER = Actor(None, "Customer")
 ASSISTANT = Actor(None, "Assistant")
+# ALYR itself, for work it does by itself (a proposal that expired, a change it applied). Not
+# ASSISTANT, whose name is not to be shown to owners (spec 066).
+ALYR = Actor(None, "ALYR")
 
 
 def actor_of(staff: Staff) -> Actor:

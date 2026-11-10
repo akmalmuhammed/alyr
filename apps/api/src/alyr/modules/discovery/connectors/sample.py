@@ -8,8 +8,11 @@ before the name is shown to anyone outside ALYR. It does not resemble Auto Fast 
 prospect. Its phone numbers use the 5555 01xx range and its web addresses end in `.example`, so
 none of them can be a real number or site.
 
-**No network, no I/O.** `snapshot` only builds data from the locations it is given and the run's
-clock, so a run on it is the same every time and works anywhere.
+**No network, no I/O.** `snapshot` only builds data from the locations it is given, the run's
+clock and the overrides the engine loaded for it, so a run on it is the same every time and works
+anywhere. Its writes (spec 066) change nothing outside ALYR either: `apply` hands the value the
+fictional owner approved to the state store (`discovery_sample_state`, the business's own rows)
+and the script lets it win for its field, so a later check-up shows the effect of an approval.
 
 **Three improvement stages.** Run *n* returns stage `min(n_prior_done_runs, 3)`. Stage 0 is
 deliberately untidy, so every one of the twelve rules fires at least once. Each later stage is the
@@ -26,17 +29,25 @@ At stage 3 nothing is found. The five branches map to the shop's places by `plac
 (`sample:<key>`), else by position; a place past the fifth is not found.
 """
 
+from dataclasses import replace
 from datetime import timedelta
+from uuid import UUID
 
 from alyr.modules.discovery.connectors.base import (
+    Change,
     Hours,
     Listing,
     Location,
     PlaceSnapshot,
+    Receipt,
     Review,
     RunContext,
     Snapshot,
     Website,
+    WriteContext,
+    WriteError,
+    hours_to_json,
+    same,
 )
 
 KIND = "sample"
@@ -70,6 +81,40 @@ STANDARD: Hours = {
 EARLY_CLOSE: Hours = {d: (v[0], "20:00") if v else None for d, v in STANDARD.items()}
 
 
+# What the fictional owner has confirmed about each branch (spec 066): the hours the sample's
+# listings should show, the number each branch answers on, the category, the name and the
+# business's WhatsApp number. Written when the sample is turned on, so a proposal has an "after".
+PHONES = {
+    "west-bay": "+97455550110",
+    "wakra": "+97455550112",
+    "lusail": "+97455550113",
+    "sadd": "+97455550114",
+    "industrial": "+97455550115",
+}
+NAMES = {
+    "west-bay": BUSINESS,
+    "wakra": f"{BUSINESS} - Wakra",
+    "lusail": f"{BUSINESS} - Lusail",
+    "sadd": f"{BUSINESS} - Al Sadd",
+    "industrial": f"{BUSINESS} - Industrial Area",
+}
+
+
+def facts_for(location: Location, ordinal: int) -> dict[str, dict] | None:
+    """The sample's own truth for a place, or None for a place past the fifth branch."""
+    number = _index(location, ordinal)
+    if number >= len(BRANCHES):
+        return None
+    key = BRANCHES[number][0]
+    return {
+        "hours": hours_to_json(STANDARD),
+        "phone": {"phone": PHONES[key]},
+        "category": {"category": "Car wash"},
+        "name": {"name": NAMES[key]},
+        "whatsapp": {"phone": WHATSAPP},
+    }
+
+
 def locations_to_create() -> list[dict]:
     """The five branches as the places a shop gets when it turns the sample on with none."""
     return [
@@ -95,19 +140,142 @@ def _index(location: Location, ordinal: int) -> int:
     return ordinal
 
 
+# Everything the sample can change, and everything it can put back (spec 066).
+WRITES = frozenset({
+    ("listing", "hours"), ("website", "hours"), ("listing", "phone"), ("website", "phone"),
+    ("listing", "category"), ("listing", "name"), ("website", "whatsapp_link"),
+    ("listing", "review_reply"),
+})
+# A fictional owner may take back what they approved for a week.
+UNDO_DAYS = 7
+_ABSENT = object()
+
+
+def _hours_of(value: dict) -> Hours:
+    return {d: (tuple(t) if t else None) for d, t in value.items()}  # type: ignore[misc]
+
+
+def _with_overrides(place: PlaceSnapshot, overrides) -> PlaceSnapshot:
+    """The script's place with what the fictional owner changed on top: an override wins for its
+    field and can only add to what the script already improved."""
+
+    def over(target: str, field: str, ref: str = ""):
+        return overrides.get((place.location_id, target, field, ref), _ABSENT)
+
+    listing, web, reviews = place.listing, place.website, place.reviews
+    if listing.found:
+        change: dict = {}
+        if (v := over("listing", "hours")) is not _ABSENT:
+            change["hours"] = _hours_of(v)
+        if (v := over("listing", "phone")) is not _ABSENT:
+            change["phone"] = v["phone"]
+        if (v := over("listing", "category")) is not _ABSENT:
+            change["categories"] = [v["category"]] + [
+                c for c in (listing.categories or []) if c != v["category"]
+            ]
+        if (v := over("listing", "name")) is not _ABSENT:
+            change["name"] = v["name"]
+        listing = replace(listing, **change)
+    if web is not None:
+        change = {}
+        if (v := over("website", "hours")) is not _ABSENT:
+            change["hours"] = _hours_of(v)
+        if (v := over("website", "phone")) is not _ABSENT:
+            change["phone"] = v["phone"]
+        if (v := over("website", "whatsapp_link")) is not _ABSENT:
+            change["whatsapp_link"] = v["url"]
+        web = replace(web, **change)
+    if reviews is not None:
+        reviews = [
+            replace(r, replied=True, reply_text=v["reply"])
+            if (v := over("listing", "review_reply", r.source_ref)) is not _ABSENT
+            else r
+            for r in reviews
+        ]
+    return PlaceSnapshot(place.location_id, listing, web, reviews)
+
+
+def _place_at(location: Location, ordinal: int, stage: int, ctx, overrides) -> PlaceSnapshot:
+    number = _index(location, ordinal)
+    if number >= len(BRANCHES):
+        return PlaceSnapshot(location.id, Listing(found=False))
+    return _with_overrides(_branch(number, location, stage, ctx), overrides)
+
+
+def _gone(en: str, ar: str) -> WriteError:
+    return WriteError("stale_before", f"{en} Nothing was changed.", f"{ar} لم يتغير شيء.")
+
+
+def _live(place: PlaceSnapshot, change: Change):
+    """The field a change is about, as a proposal shows it."""
+    listing, web, field = place.listing, place.website, change.field
+    if field == "review_reply":
+        review = next((r for r in place.reviews or [] if r.source_ref == change.subject_ref), None)
+        if review is None:
+            raise _gone("That review is no longer there.", "لم تعد هذه المراجعة موجودة.")
+        return {"reply": review.reply_text if review.replied else ""}
+    if change.target == "website":
+        if web is None:
+            raise _gone("The website could not be read.", "تعذّرت قراءة الموقع الإلكتروني.")
+        return {
+            "hours": hours_to_json(web.hours),
+            "phone": {"phone": web.phone or ""},
+            "whatsapp_link": {"url": web.whatsapp_link or ""},
+        }[field]
+    if not listing.found:
+        raise _gone("The listing is no longer there.", "لم تعد صفحة الفرع موجودة.")
+    return {
+        "hours": hours_to_json(listing.hours),
+        "phone": {"phone": listing.phone or ""},
+        "category": {"category": (listing.categories or [""])[0]},
+        "name": {"name": listing.name or ""},
+    }[field]
+
+
 class SampleConnector:
     kind = KIND
+    writes = WRITES
+    undoable = WRITES
 
     async def snapshot(self, locations: list[Location], ctx: RunContext) -> Snapshot:
         stage = min(ctx.prior_done_runs, LAST_STAGE)
-        places = []
-        for ordinal, location in enumerate(locations):
-            number = _index(location, ordinal)
-            if number >= len(BRANCHES):
-                places.append(PlaceSnapshot(location.id, Listing(found=False)))
-                continue
-            places.append(_branch(number, location, stage, ctx))
+        places = [
+            _place_at(location, ordinal, stage, ctx, ctx.overrides)
+            for ordinal, location in enumerate(locations)
+        ]
         return Snapshot(KIND, ctx.now, places)
+
+    async def read_current(self, change: Change, ctx: WriteContext):
+        """What the fictional listing shows now: its script at the stage the last check-up saw,
+        with what its owner changed since."""
+        stage = min(ctx.stage, LAST_STAGE)
+        run = RunContext(now=ctx.now, prior_done_runs=stage)
+        place = _place_at(change.location, change.location.position, stage, run, ctx.overrides)
+        return _live(place, change)
+
+    async def apply(self, change: Change, ctx: WriteContext) -> Receipt:
+        if (change.target, change.field) not in self.writes or ctx.state is None:
+            raise WriteError(
+                "refused", "The sample business cannot change that.",
+                "لا يمكن تغيير ذلك في النشاط التوضيحي.",
+            )
+        await ctx.state.put(
+            change.location.id, change.target, change.field, change.subject_ref, change.after,
+            UUID(ctx.idempotency_key),
+        )
+        return Receipt(ctx.idempotency_key, ctx.now, ctx.now + timedelta(days=UNDO_DAYS))
+
+    async def undo(self, change: Change, receipt: Receipt, ctx: WriteContext) -> None:
+        """Put the script's value back: delete the override, if it is still the one that was
+        written. A change made since is not undone from under whoever made it."""
+        if ctx.state is None or (change.target, change.field) not in self.undoable:
+            raise WriteError(
+                "refused", "The sample business cannot put that back.",
+                "لا يمكن إرجاع ذلك في النشاط التوضيحي.",
+            )
+        if not same(change.field, await self.read_current(change, ctx), change.after):
+            raise _gone("It has changed since.", "تغيّر منذ ذلك الحين.")
+        await ctx.state.delete(change.location.id, change.target, change.field, change.subject_ref)
 
 
 def _ago(ctx: RunContext, days: int):

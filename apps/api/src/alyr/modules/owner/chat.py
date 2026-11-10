@@ -18,6 +18,9 @@ from alyr.config import get_settings
 from alyr.core import actions, staff_link
 from alyr.core.normalise import fmt_qar, has_arabic
 from alyr.core.words import CUSTOMERS, counted
+from alyr.modules.discovery import asks as discovery_asks
+from alyr.modules.discovery import proposal_words as discovery_words
+from alyr.modules.discovery import proposals as discovery_proposals
 from alyr.modules.items import wa_text
 
 RLM = "‏"  # keeps a line of Arabic running right to left next to digits and Latin
@@ -28,6 +31,11 @@ WORDS = {
     "bookings": {"bookings", "الحجوزات", "حجوزات"},
     "owed": {"owed", "المستحقات", "مستحقات"},
     "help": {"help", "مساعدة", "المساعدة"},
+    # Discovery (spec 066): the changes waiting for this person, and the number's own switch for
+    # being asked. "Approve" is not a word: approval is only ever a tap on an ask's own button.
+    "proposals": {"proposals", "التعديلات"},
+    "proposals_off": {"proposals off", "إيقاف التعديلات"},
+    "proposals_on": {"proposals on", "تشغيل التعديلات"},
 }
 # Where each answer's link points in the workspace, when ALYR_WORKSPACE_URL is set.
 SCREEN = {"today": "", "orders": "orders", "bookings": "bookings", "owed": "ledger"}
@@ -84,6 +92,12 @@ def _portal_link(command: str) -> list[str]:
 async def maybe_handle(
     conn: asyncpg.Connection, contact: asyncpg.Record, message: InboundMessage
 ) -> list[OutboundMessage] | None:
+    # A tap on a button of a Discovery ask (`dc:<ask id>:approve|later|details`), from a staff
+    # number. It has no text of its own on every channel, so it is read before the text is.
+    if message.reply_id.startswith(discovery_asks.PREFIX) and contact["role"] == "staff":
+        replies = await discovery_asks.handle_reply(conn, contact, message)
+        if replies is not None:
+            return replies
     text = message.text
     if not text:
         return None
@@ -113,6 +127,8 @@ async def maybe_handle(
             # The Catalog answers HELP too (wa_staff); a linked number sees both lists.
             lines += ["", wa_text.say("help", lang)]
         return _reply(contact, lang, lines)
+    if command in ("proposals", "proposals_off", "proposals_on"):
+        return await _proposals(conn, contact, caller, command, lang)
     try:
         data = await actions.run(conn, caller, command, lang=lang)
     except actions.NotAllowed:
@@ -127,6 +143,28 @@ async def maybe_handle(
         ])
     lines = RENDER[command](data, caller, lang)
     return _reply(contact, lang, lines + _portal_link(command))
+
+
+async def _proposals(
+    conn: asyncpg.Connection, contact: asyncpg.Record, caller: actions.Caller, command: str,
+    lang: str,
+) -> list[OutboundMessage]:
+    """PROPOSALS lists what waits for this person (read only, scoped by the same roles as the
+    workspace); PROPOSALS OFF and ON switch this number's asks."""
+    try:
+        if command == "proposals":
+            data = await actions.run(conn, caller, "discovery.proposals", lang=lang, status="live")
+            return _reply(contact, lang, discovery_asks.waiting_lines(data, lang))
+        await actions.run(
+            conn, caller, "discovery.set_my_asks", on=command == "proposals_on", lang=lang
+        )
+    except (actions.NotAllowed, actions.NotSwitchedOn):
+        return _reply(contact, lang, [
+            "هذه الخدمة غير مفعّلة لمحلك." if lang == "ar"
+            else "That is not switched on for this shop."
+        ])
+    key = "on" if command == "proposals_on" else "off"
+    return _reply(contact, lang, [discovery_words.pick(discovery_words.REPLY[key], lang)])
 
 
 async def _link(
@@ -173,6 +211,11 @@ async def _help(conn: asyncpg.Connection, caller: actions.Caller, lang: str) -> 
         word = next(w for w in sorted(WORDS[key]) if (not w.isascii()) == ar).upper()
         out.append(f"{word}: {arabic if ar else en}")
     out.append("REPORT: تقرير الأسبوع الماضي" if ar else "REPORT: last week's report")
+    if await actions.module_on(conn, "discovery") and not (
+        await discovery_proposals.scope_of(conn, caller)
+    ).nothing:
+        for key in ("proposals", "off"):
+            out.append(discovery_words.pick(discovery_words.COMMAND_HELP[key], lang))
     return out
 
 

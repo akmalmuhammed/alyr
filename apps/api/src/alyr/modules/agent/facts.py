@@ -61,6 +61,8 @@ class Facts:
     has_records: bool = True
     # Messages that did not reach a customer in the last 48 hours (specs/036), any module
     not_sent: list = field(default_factory=list)
+    # Discovery (spec 066): proposed changes waiting for approval, for owners and admins only
+    discovery_waiting: list = field(default_factory=list)
     # The team inbox
     waiting: list = field(default_factory=list)
     wrote: int = 0
@@ -236,6 +238,16 @@ async def gather(conn: asyncpg.Connection, staff: Staff, now: datetime | None = 
             {"minutes": int((now - r["created_at"]).total_seconds() // 60)})
         for r in await not_sent.failed_recently(conn, now)
     ]
+    if "discovery" in modules and staff.role in catalog.MANAGERS:
+        f.discovery_waiting = [
+            Row(str(r["id"]), r["name"] or "", {"days": max((now - r["proposed_at"]).days, 0)})
+            for r in await conn.fetch(
+                "select p.id, p.proposed_at, l.name from discovery_proposals p "
+                "join discovery_locations l on l.id = p.location_id "
+                "where p.status = 'proposed' and p.expires_at > $1 order by p.proposed_at, p.id",
+                now,
+            )
+        ]
     if "inbox" in modules:
         await _inbox(conn, f, span, last, chart)
         f.team = await team.performance(conn, staff, 7, now)

@@ -23,6 +23,9 @@ OWNER = "owner"
 ADMIN = "admin"
 AGENT = "agent"
 ALL_ROLES = frozenset({OWNER, ADMIN, AGENT})
+# A check-up making proposals (spec 066). Deliberately NOT in ALL_ROLES: every action that lists its
+# roles through ALL_ROLES refuses it, and the one that approves a change refuses it by name.
+ENGINE = "engine"
 # Who may see what the shop earns or is owed (D-035: agents see no money).
 MONEY_ROLES = frozenset({OWNER, ADMIN})
 

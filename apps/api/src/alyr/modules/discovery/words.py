@@ -382,6 +382,50 @@ ERRORS: dict[str, tuple[str, str]] = {
         "هناك فحص يعمل الآن. انتظر انتهاءه ثم عدّل الفروع.",
     ),
     "run_failed": ("The check-up could not finish. Try again.", "تعذّر إكمال الفحص. حاول مرة أخرى."),
+    # Phase 2 (spec 066): proposals, facts, managers, settings.
+    "proposal_closed": (
+        "This change is closed. Nothing was applied.", "أُغلق هذا التعديل. لم يُطبَّق شيء."),
+    "proposal_decided": (
+        "This change was already approved, so it cannot be declined.",
+        "سبقت الموافقة على هذا التعديل، فلا يمكن رفضه."),
+    "proposal_changed": (
+        "This change was updated. Reload to see the current one.",
+        "تغيّر هذا التعديل. أعد تحميل الصفحة لترى الحالي."),
+    "proposal_not_applied": (
+        "Only a change that was applied can be undone.", "لا يمكن التراجع إلا عن تعديل طُبّق."),
+    "undo_window_over": (
+        "The time to undo this change has passed.", "انتهت مهلة التراجع عن هذا التعديل."),
+    "undo_not_possible": (
+        "This cannot be undone now: it changed again, or the source cannot put it back.",
+        "لا يمكن التراجع الآن: تغيّر مرة أخرى، أو لا يستطيع المصدر إرجاعه."),
+    "retry_limit": (
+        "This change has been tried three times. Decline it, or wait for the next check-up.",
+        "جُرّب هذا التعديل ثلاث مرات. ارفضه، أو انتظر الفحص التالي."),
+    "needs_fact": (
+        "Confirm the real details first. Nothing is proposed until a person has confirmed them.",
+        "أكّد التفاصيل الصحيحة أولاً. لا يُقترح شيء قبل أن يؤكدها شخص."),
+    "bad_hours": (
+        "Hours are written as an opening and a closing time, like 07:00 and 22:00, with the "
+        "closing after the opening, for each of the seven days.",
+        "تُكتب الساعات بوقت فتح ووقت إغلاق، مثل 07:00 و22:00، ويكون الإغلاق بعد الفتح، "
+        "لكل يوم من الأيام السبعة."),
+    "bad_phone": (
+        "A number is written as +, the country code and the number.",
+        "يُكتب الرقم بعلامة + ثم رمز الدولة ثم الرقم."),
+    "bad_fact": ("That value is not valid.", "هذه القيمة غير صالحة."),
+    "nothing_to_propose": (
+        "There is no change ALYR can prepare for this item.",
+        "لا يوجد تعديل تستطيع ALYR إعداده لهذا البند."),
+    "connector_cannot_write": (
+        "This source cannot be changed from here.",
+        "لا يمكن تعديل هذا المصدر من هنا."),
+    "bad_manager": (
+        "Only members of the team with the staff role can manage a place.",
+        "يستطيع إدارة الفرع أعضاء الفريق من دور الموظف فقط."),
+    "bad_setting": ("That setting is not valid.", "هذا الإعداد غير صالح."),
+    "proposal_in_flight": (
+        "A change is being applied at this place. Take the place off after that.",
+        "يجري تطبيق تعديل في هذا الفرع. احذف الفرع بعد ذلك."),
 }
 
 # What each step of a run says in the log: one plain sentence, in English.
@@ -396,6 +440,9 @@ STEP_SUMMARIES = {
     "findings.save": "Saved the list: {new} new, {kept} still there, {closed} closed.",
     "reviews.save": "Saved {n} reviews.",
     "score.compute": "Worked out the score from the parts that were measured.",
+    "proposals.build": "Prepared changes for approval: {made} new, {kept} already waiting, "
+    "{closed} closed.",
+    "proposals.verify": "Looked at applied changes: {confirmed} confirmed, {again} still found.",
 }
 
 STATUSES = ("open", "skipped", "owner_done", "verified", "gone")
