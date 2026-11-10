@@ -163,7 +163,7 @@ test("the address names a view, and Home is the default", () => {
   // Settings is for the owner and an admin: for anyone else the address that names it is Home.
   assert.equal(readView("settings", false), "home");
   assert.equal(readView("proposals", false), "proposals");
-  assert.deepEqual([...viewsFor(false)], ["home", "todo", "proposals", "reviews", "reports"]);
+  assert.deepEqual([...viewsFor(false)], ["home", "todo", "proposals", "reviews", "reports", "answers"]);
   assert.deepEqual([...viewsFor(true)], [...VIEWS]);
   assert.equal(viewHref("home"), "/app/discovery");
   assert.equal(viewHref("todo"), "/app/discovery?view=todo");
