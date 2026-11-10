@@ -421,7 +421,19 @@ async def latest_run(conn: asyncpg.Connection, caller: Caller, args: dict) -> di
 @register("discovery.locations", ALL_ROLES, MODULE)
 async def list_locations(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
     rows = await conn.fetch("select * from discovery_locations order by position, created_at")
-    return {"items": [location_view(r) for r in rows]}
+    # Who manages each place (spec 066, for the branch-manager picker): owner and admin only.
+    managers: dict = {}
+    if caller.role in CHANGERS:
+        for m in await conn.fetch(
+            "select dm.location_id, u.id, u.name from discovery_location_managers dm "
+            "join users u on u.id = dm.user_id order by u.name, u.id"
+        ):
+            managers.setdefault(m["location_id"], []).append(
+                {"user_id": str(m["id"]), "name": m["name"]}
+            )
+    return {
+        "items": [location_view(r) | {"managers": managers.get(r["id"], [])} for r in rows]
+    }
 
 
 @register("discovery.connection", ALL_ROLES, MODULE)

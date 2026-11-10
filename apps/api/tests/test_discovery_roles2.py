@@ -328,3 +328,16 @@ def test_a_person_turns_their_own_asks_on_and_off_whatever_their_role(shop):
     # the engine has no number to switch
     with pytest.raises(actions.NotAllowed):
         run_action(shop, Caller(None, "ALYR", ENGINE, "system"), "discovery.set_my_asks", on=True)
+
+
+def test_locations_say_who_manages_each_place_to_owner_and_admin_only(shop):
+    sadd = place_id(shop.owner, "Al Sadd")
+    for client in (shop.owner, shop.admin):
+        items = {x["id"]: x for x in client.get(f"{BASE}/locations").json()["items"]}
+        assert items[sadd]["managers"] == [{"user_id": shop.manager_id, "name": "Reem"}]
+        assert items[place_id(shop.owner, "Lusail")]["managers"] == []
+    for client in (shop.manager, shop.agent):
+        assert all(x["managers"] == [] for x in client.get(f"{BASE}/locations").json()["items"])
+    put = shop.owner.put(f"{BASE}/locations", json={"items": shop.owner.get(
+        f"{BASE}/locations").json()["items"]})
+    assert put.status_code == 200 and "managers" in put.json()["items"][0]

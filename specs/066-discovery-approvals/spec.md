@@ -762,6 +762,10 @@ added or differs; every addition is a new key or a new route.**
 18. **`GET /findings` rows add `proposals_waiting` only** (as the spec says); `can_propose` and
     `needs_fact` are on a single finding and on the overview's and the report's findings.
 
+19. **`GET /locations` (and the answer of `PUT /locations`) carries `managers: [{user_id, name}]` on
+    each place** (asked for by the screens' branch-manager picker): filled for an owner or admin, an
+    empty list for anyone else. No other Phase 1 key changes.
+
 ### Choices where the spec was silent
 
 * **Which stage the sample's `read_current` reads:** the stage the last check-up saw (done runs minus

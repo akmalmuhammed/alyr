@@ -77,6 +77,9 @@ class LocationIn(Strict):
     is_primary: bool = False
     # What the list answered; accepted back and ignored (the order of the list is the position).
     position: int | None = None
+    # Who manages the place (spec 066): accepted back and ignored; `PUT /locations/{id}/managers`
+    # is the one way to change it.
+    managers: list[dict] | None = None
 
 
 class LocationsIn(Strict):
