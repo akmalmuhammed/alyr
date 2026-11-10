@@ -12,6 +12,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { ToastLayer, useToasts } from "./CatalogUi";
+import { DiscoveryAnswers } from "./DiscoveryAnswers";
 import { DiscoveryHome } from "./DiscoveryHome";
 import { DiscoveryReports } from "./DiscoveryReports";
 import { DiscoveryReviews } from "./DiscoveryReviews";
@@ -71,6 +72,7 @@ export function Discovery({ lang, canManage }: { lang: Lang; canManage: boolean 
       {view === "todo" && <DiscoveryTodo lang={lang} canManage={canManage} push={push} />}
       {view === "reviews" && <DiscoveryReviews lang={lang} />}
       {view === "reports" && <DiscoveryReports lang={lang} />}
+      {view === "answers" && <DiscoveryAnswers lang={lang} canManage={canManage} push={push} />}
 
       <ToastLayer toasts={toasts} dismiss={dismiss} lang={lang} undoWord={t.undo} dismissWord={t.dismiss} />
     </div>

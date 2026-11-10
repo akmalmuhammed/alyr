@@ -133,7 +133,7 @@ test("the screens hold no words of their own", () => {
 // ── the address and the menu ────────────────────────────
 
 test("the address names a view, and Home is the default", () => {
-  assert.deepEqual([...VIEWS], ["home", "todo", "reviews", "reports"]);
+  assert.deepEqual([...VIEWS], ["home", "todo", "reviews", "reports", "answers"]);
   for (const view of VIEWS) assert.equal(readView(view), view);
   for (const odd of [null, undefined, "", "settings", "TODO", "home&x=1", "ai"]) assert.equal(readView(odd), "home");
   assert.equal(viewHref("home"), "/app/discovery");
@@ -143,7 +143,7 @@ test("the address names a view, and Home is the default", () => {
 });
 
 test("only Discovery has views beneath it in the menu; every other section has none", () => {
-  assert.deepEqual([...subItems("discovery")], ["home", "todo", "reviews", "reports"]);
+  assert.deepEqual([...subItems("discovery")], ["home", "todo", "reviews", "reports", "answers"]);
   for (const key of ["home", "inbox", "orders", "bookings", "catalog", "documents", "ledger", "team", "products", "connections", "account", "connect", "unsent", ""]) {
     assert.deepEqual([...subItems(key)], [], key);
   }

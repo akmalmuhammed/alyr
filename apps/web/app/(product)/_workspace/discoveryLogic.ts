@@ -16,7 +16,7 @@ import { T } from "./discoveryCopy.ts";
 
 // ── the four views and the address that carries them ────
 
-export const VIEWS = ["home", "todo", "reviews", "reports"] as const;
+export const VIEWS = ["home", "todo", "reviews", "reports", "answers"] as const;
 export type View = (typeof VIEWS)[number];
 
 /** The view an address names (`?view=`); anything else, or nothing, is Home. */
@@ -80,7 +80,7 @@ export function minutesFrom(seconds: number | null): number {
 
 // ── how a step is worded ────────────────────────────────
 
-export type StepKind = { kind: "snapshot" } | { kind: "rules"; family: PartKey | null } | { kind: "other"; word: "start" | "findings" | "reviews" | "score" | null };
+export type StepKind = { kind: "snapshot" } | { kind: "rules"; family: PartKey | null } | { kind: "other"; word: "start" | "findings" | "reviews" | "score" | "answers" | null };
 
 /**
  * What a logged step is, from its `tool` ("connector.snapshot", "rules.evaluate…"). The log's own
@@ -94,7 +94,7 @@ export function stepKind(tool: string): StepKind {
     const rest = t.slice("rules.".length);
     return { kind: "rules", family: PARTS_SHOWN.find((part) => rest.includes(part)) ?? null };
   }
-  const word = ({ "run.start": "start", "findings.save": "findings", "reviews.save": "reviews", "score.compute": "score" } as const)[t as "run.start"];
+  const word = ({ "run.start": "start", "findings.save": "findings", "reviews.save": "reviews", "score.compute": "score", "ai.answers": "answers" } as const)[t as "run.start"];
   return { kind: "other", word: word ?? null };
 }
 

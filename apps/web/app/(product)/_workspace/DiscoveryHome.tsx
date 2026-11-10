@@ -10,6 +10,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Fold, Icon } from "./CatalogUi";
+import { AnswersLine } from "./DiscoveryAnswers";
 import { FindingSheet, type Change } from "./DiscoverySheet";
 import { discovery, DiscoveryError, type Finding, type Overview, type Run } from "./discoveryApi";
 import { T, type Lang } from "./discoveryCopy";
@@ -183,6 +184,7 @@ export function DiscoveryHome({ lang, canManage, push, onConnection }: {
       {state !== "noConnection" && (
         <>
           {state !== "noRun" && <ScoreLine lang={lang} o={o} action={running ? null : runButton} />}
+          {state !== "noRun" && <AnswersLine key={o.last_run?.id ?? "none"} lang={lang} />}
 
           {running && shown && <RunPanel lang={lang} run={shown} slow={slow} onCheck={() => { setSlow(false); polls.current = 0; }} />}
 
