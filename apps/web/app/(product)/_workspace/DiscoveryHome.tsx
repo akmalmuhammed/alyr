@@ -6,18 +6,27 @@
 // itself, steps appearing as they are logged (asked about every 1.5 s, and never again once it
 // is done or failed). Before a connection or a first run the screen is drawn as dashed slots
 // that say what will be here.
+//
+// Phase 2 (ALY-324, spec 066 "Home"): while a change waits for this person, the page's one Volt
+// button is "Review N changes" (it opens the Proposals area) and "Run check-up" becomes its outlined
+// twin; the one card, when its finding has a waiting change, shows the exact change in one line and
+// its action is "Review the change" (it opens the approval sheet: the card never approves); a short
+// strip of up to three waiting changes sits under "Up next"; and a finding whose change was applied
+// says in Done whether a check-up has confirmed it. For a person who may not list changes nothing
+// about them is drawn.
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Fold, Icon } from "./CatalogUi";
 import { AnswersLine } from "./DiscoveryAnswers";
-import { FindingSheet, type Change } from "./DiscoverySheet";
-import { discovery, DiscoveryError, type Finding, type Overview, type Run } from "./discoveryApi";
+import { ApprovalSheet } from "./DiscoveryApproval";
+import { FindingFlow, type Change } from "./DiscoverySheet";
+import { discovery, DiscoveryError, type Finding, type Overview, type Proposal, type Run } from "./discoveryApi";
 import { T, type Lang } from "./discoveryCopy";
 import {
-  POLL_MS, homeState, inOrder, isFinished, isRunning, minutesFrom, pollDecision, sayError, stepText, viewHref,
+  POLL_MS, homeState, inOrder, isFinished, isRunning, minutesFrom, pollDecision, sayError, stepText, viewHref, waitingProposals,
 } from "./discoveryLogic";
-import { FindingMeta, FindingRow, Loading, Problem, When, useLoad } from "./discoveryUi";
+import { ChangeLine, FindingMeta, FindingRow, Loading, Problem, ProposalRow, When, announceChange, useLoad } from "./discoveryUi";
 import { usePolling } from "./poll";
 
 type Push = (text: string, options?: { tone?: "ok" | "bad" | "warn"; undo?: () => void }) => number;
@@ -28,6 +37,8 @@ export function DiscoveryHome({ lang, canManage, push, onConnection }: {
   const t = T[lang];
   const [overview, reload] = useLoad(() => discovery.overview(lang), lang);
   const o = overview.data;
+  // The waiting changes, for the strip. A person who may not list them gets nothing, and nothing is drawn.
+  const [live, reloadLive] = useLoad(() => discovery.proposals(lang, { status: "live" }).catch(() => null), lang);
 
   // The run being followed: started here, or already running when the screen opened.
   const [followed, setFollowed] = useState<Run | null>(null);
@@ -36,6 +47,7 @@ export function DiscoveryHome({ lang, canManage, push, onConnection }: {
   const [busy, setBusy] = useState(false);
   const [announce, setAnnounce] = useState("");
   const [sheet, setSheet] = useState<Finding | null>(null);
+  const [approval, setApproval] = useState<Proposal | null>(null);
   const polls = useRef(0);
   const focusCard = useRef(false);
   const cardHeading = useRef<HTMLHeadingElement>(null);
@@ -146,6 +158,13 @@ export function DiscoveryHome({ lang, canManage, push, onConnection }: {
     void reload(true);
   }
 
+  // A change moved (approved, declined, undone, prepared): the overview and the strip are asked again, once.
+  function proposalMoved() {
+    announceChange();
+    void reload(true);
+    void reloadLive(true);
+  }
+
   // After the card is acted on, the next one takes the focus, so a keyboard or a screen reader
   // lands on what is new and not on the page's top.
   const nextId = o?.next?.id ?? "";
@@ -163,9 +182,22 @@ export function DiscoveryHome({ lang, canManage, push, onConnection }: {
   const shown = followed ?? o.last_run;
   const failed = !running && o.last_run?.status === "failed" ? o.last_run : null;
   const open = (f: Finding) => setSheet(f);
+  // While a change waits for this person, the one Volt button is the one that reviews it.
+  // (Before a first check-up there is nothing to review, and the one Volt button is the check-up.)
+  const waitingN = state === "noRun" ? 0 : (o.proposals?.waiting ?? 0);
+  const runMain = waitingN === 0;
   const runButton = tooSoon !== null
     ? <p className="dv-toosoon" role="status">{t.tooSoon(tooSoon)}</p>
-    : <button type="button" className="btn volt ct-btn" disabled={busy} onClick={() => void runNow()}>{failed ? t.runAgain : t.runCheckup}</button>;
+    : <button type="button" className={`btn ${runMain ? "volt" : ""} ct-btn`} disabled={busy} onClick={() => void runNow()}>{failed ? t.runAgain : t.runCheckup}</button>;
+  const scoreAction = running ? null : waitingN > 0
+    ? (
+      <>
+        <Link className="btn volt ct-btn" href={viewHref("proposals")}>{t.reviewChanges(waitingN)}</Link>
+        {runButton}
+      </>
+    )
+    : runButton;
+  const strip = (live.data?.items ?? []).filter((p) => p.status === "proposed").slice(0, 3);
 
   return (
     <div className="dv-home">
@@ -183,7 +215,7 @@ export function DiscoveryHome({ lang, canManage, push, onConnection }: {
 
       {state !== "noConnection" && (
         <>
-          {state !== "noRun" && <ScoreLine lang={lang} o={o} action={running ? null : runButton} />}
+          {state !== "noRun" && <ScoreLine lang={lang} o={o} action={scoreAction} />}
           {state !== "noRun" && <AnswersLine key={o.last_run?.id ?? "none"} lang={lang} />}
 
           {running && shown && <RunPanel lang={lang} run={shown} slow={slow} onCheck={() => { setSlow(false); polls.current = 0; }} />}
@@ -206,7 +238,8 @@ export function DiscoveryHome({ lang, canManage, push, onConnection }: {
 
           {state === "content" && o.next && !running && (
             <NextCard lang={lang} f={o.next} busy={busy} canMark={canManage} headingRef={cardHeading}
-              onDone={() => void mark(o.next!, "owner_done")} onSkip={() => void mark(o.next!, "skipped")} onOpen={() => open(o.next!)} />
+              onDone={() => void mark(o.next!, "owner_done")} onSkip={() => void mark(o.next!, "skipped")} onOpen={() => open(o.next!)}
+              onReview={setApproval} />
           )}
 
           {state === "content" && o.up_next.length > 0 && (
@@ -214,6 +247,14 @@ export function DiscoveryHome({ lang, canManage, push, onConnection }: {
               <h2 id="dv-up-h">{t.upNext}</h2>
               <ul className="dv-list">{o.up_next.map((f) => <FindingRow key={f.id} f={f} lang={lang} onOpen={() => open(f)} />)}</ul>
               {o.counts.open > 1 + o.up_next.length && <Link className="dv-link" href={viewHref("todo")}>{t.allToDo}</Link>}
+            </section>
+          )}
+
+          {state === "content" && strip.length > 0 && (
+            <section className="dv-block" aria-labelledby="dv-prop-h">
+              <h2 id="dv-prop-h">{t.proposalsTitle}</h2>
+              <ul className="dv-list">{strip.map((p) => <ProposalRow key={p.id} p={p} lang={lang} onOpen={() => setApproval(p)} />)}</ul>
+              <Link className="dv-link" href={viewHref("proposals")}>{t.allProposals}</Link>
             </section>
           )}
 
@@ -226,7 +267,8 @@ export function DiscoveryHome({ lang, canManage, push, onConnection }: {
         </>
       )}
 
-      {sheet && <FindingSheet lang={lang} id={sheet.id} initial={sheet} canMark={canManage} onClose={() => setSheet(null)} onChanged={changed} />}
+      {sheet && <FindingFlow lang={lang} id={sheet.id} initial={sheet} canMark={canManage} onClose={() => setSheet(null)} onChanged={changed} onProposalChanged={proposalMoved} />}
+      {approval && <ApprovalSheet lang={lang} id={approval.id} initial={approval} onClose={() => setApproval(null)} onChanged={proposalMoved} />}
     </div>
   );
 }
@@ -270,11 +312,13 @@ function ScoreLine({ lang, o, action }: { lang: Lang; o: Overview; action: React
 
 // ── the one card ────────────────────────────────────────
 
-function NextCard({ lang, f, busy, canMark, headingRef, onDone, onSkip, onOpen }: {
+function NextCard({ lang, f, busy, canMark, headingRef, onDone, onSkip, onOpen, onReview }: {
   lang: Lang; f: Finding; busy: boolean; canMark: boolean; headingRef: React.RefObject<HTMLHeadingElement | null>;
-  onDone: () => void; onSkip: () => void; onOpen: () => void;
+  onDone: () => void; onSkip: () => void; onOpen: () => void; onReview: (proposal: Proposal) => void;
 }) {
   const t = T[lang];
+  // The change waiting for this finding, if there is one: the card shows it exactly, and only opens it.
+  const change = waitingProposals(f)[0] ?? null;
   return (
     <section key={f.id} className="sh-tile raised folded dv-card" aria-labelledby="dv-next-h">
       <p className="dv-eyebrow">{t.doNext}</p>
@@ -285,7 +329,14 @@ function NextCard({ lang, f, busy, canMark, headingRef, onDone, onSkip, onOpen }
         {f.what_happens && <div><dt>{t.whatHappens}</dt><dd><bdi dir="auto">{f.what_happens}</bdi></dd></div>}
         {f.what_is_needed && <div><dt>{t.whatNeeded}</dt><dd><bdi dir="auto">{f.what_is_needed}</bdi></dd></div>}
       </dl>
+      {change && (
+        <div className="dv-cardchange">
+          <p className="dv-cardchange-label">{t.theChange}</p>
+          <ChangeLine p={change} lang={lang} />
+        </div>
+      )}
       <div className="dv-actions">
+        {change && <button type="button" className="btn primary ct-btn" onClick={() => onReview(change)}>{t.reviewChange}</button>}
         {canMark && (
           <>
             <button type="button" className="btn ct-btn" disabled={busy} onClick={onDone}>{t.didThis}</button>
@@ -294,6 +345,7 @@ function NextCard({ lang, f, busy, canMark, headingRef, onDone, onSkip, onOpen }
         )}
         <button type="button" className="ct-linkbtn dv-evidence-link" onClick={onOpen}>{t.seeEvidence}</button>
       </div>
+      {canMark && change && <p className="ct-quiet dv-owner-note">{t.closesChange}</p>}
       {!canMark && <p className="ct-quiet dv-owner-note">{t.ownerMarks}</p>}
     </section>
   );
