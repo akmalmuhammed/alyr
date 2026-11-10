@@ -107,6 +107,7 @@ def load() -> None:
     from alyr.modules import owner  # noqa: F401  (declares the actions)
     from alyr.modules.discovery import actions as discovery  # noqa: F401  (declares Discovery's)
     from alyr.modules.mcp import actions as mcp  # noqa: F401  (the connector's own)
+    from alyr.modules.mcp import discovery_actions, stock_actions  # noqa: F401  (and its tools')
 
 
 async def run(conn: asyncpg.Connection, caller: Caller, key: str, **args) -> dict:

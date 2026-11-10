@@ -5,8 +5,10 @@ the person, and the business's modules are the third: a tool is offered only whe
 it, and each is checked again on every call.
 """
 
-READ, STOCK, BOOKINGS, ORDERS, SEND = "read", "stock", "bookings", "orders", "send"
-ALL = (READ, STOCK, BOOKINGS, ORDERS, SEND)
+READ, STOCK, BOOKINGS, ORDERS, DISCOVERY, SEND = (
+    "read", "stock", "bookings", "orders", "discovery", "send"
+)
+ALL = (READ, STOCK, BOOKINGS, ORDERS, DISCOVERY, SEND)
 # What the protected resource asks for at the start: the minimum. The rest come by step-up.
 BASIC = (READ,)
 
@@ -18,6 +20,8 @@ WORDS = {
             "تغيير ما هو متوفر في المخزون، بعد موافقتك"),
     BOOKINGS: ("Change bookings, after you say yes", "تغيير الحجوزات، بعد موافقتك"),
     ORDERS: ("Change orders, after you say yes", "تغيير الطلبات، بعد موافقتك"),
+    DISCOVERY: ("Mark items on your Discovery list done or skipped, after you say yes",
+                "وضع علامة «تم» أو «تخطّي» على بنود قائمة الاكتشاف، بعد موافقتك"),
     SEND: ("Send messages to customers, after you say yes",
            "إرسال رسائل إلى العملاء، بعد موافقتك"),
 }
