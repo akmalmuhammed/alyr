@@ -26,11 +26,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Fold, Icon } from "./CatalogUi";
 import { ApprovalSheet } from "./DiscoveryApproval";
 import { FindingFlow, type Change } from "./DiscoverySheet";
-import { discovery, DiscoveryError, type Finding, type Overview, type Proposal, type Run, type ScoreParts } from "./discoveryApi";
+import { discovery, DiscoveryError, type Finding, type MarkKind, type Overview, type Proposal, type Run, type ScoreParts } from "./discoveryApi";
 import { T, type Lang } from "./discoveryCopy";
 import {
-  POLL_MS, bandParts, homeState, inOrder, isFinished, isRunning, minutesFrom, pollDecision, rulerSide, sayError, scoreBefore, stepText,
-  viewHref, waitingProposals,
+  POLL_MS, bandParts, homeState, inOrder, isFinished, isRunning, markOf, matrixColumns, minutesFrom, pollDecision, rowCounts, rulerSide,
+  sayError, scoreBefore, stepText, viewHref, waitingProposals,
 } from "./discoveryLogic";
 import { FindingMeta, FindingRow, Loading, Problem, ProposalRow, When, announceChange, useLoad } from "./discoveryUi";
 import { usePolling } from "./poll";
@@ -260,6 +260,8 @@ export function DiscoveryHome({ lang, canManage, push, onConnection }: {
             </div>
           )}
 
+          {state !== "noRun" && <PlacesMatrix lang={lang} runId={o.last_run?.id ?? ""} />}
+
           {/* The rest of the list and what is finished, side by side where there is room. */}
           <div className="dv-pair">
             {state === "content" && o.up_next.length > 0 && (
@@ -379,6 +381,86 @@ function BandParts({ lang, parts }: { lang: Lang; parts: ScoreParts | null }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+// ── every place against every check (ALY-334) ───────────
+
+const MARKS: readonly MarkKind[] = ["pass", "fail", "fixed", "not_measured"];
+const Mark = ({ kind }: { kind: MarkKind }) => <span className={`dv-mark ${kind}`} aria-hidden="true" />;
+
+// One row per place, one column per rule, from the last finished check-up (spec 065, "Checks per
+// place"). Each mark has its words for a screen reader. On a phone the table gives way to a card
+// per place: its counts, and the checks that need a fix. An API without the route, or a check-up
+// with nothing measured, draws nothing.
+function PlacesMatrix({ lang, runId }: { lang: Lang; runId: string }) {
+  const t = T[lang];
+  const [loaded] = useLoad(() => discovery.checks(lang).catch(() => null), `${lang}:${runId}`);
+  const answer = loaded.data;
+  if (!answer || !answer.measured || answer.places.length === 0) return null;
+  const { columns, groups } = matrixColumns(answer);
+  if (columns.length === 0) return null;
+  const whole = answer.business;
+  const wholeRules = whole ? answer.rules.filter((rule) => whole.checks[rule.id]) : [];
+  return (
+    <section className="dv-block dv-matrix" aria-labelledby="dv-matrix-h">
+      <h2 id="dv-matrix-h">{t.matrixTitle}</h2>
+      <ul className="dv-legend" aria-hidden="true">
+        {MARKS.map((kind) => <li key={kind}><Mark kind={kind} />{t.markWords[kind]}</li>)}
+      </ul>
+      <div className="dv-matrix-frame" role="group" aria-labelledby="dv-matrix-h" tabIndex={0}>
+        <table className="dv-matrix-table">
+          <thead>
+            <tr>
+              <th scope="col" rowSpan={2} className="dv-mx-place">{t.matrixPlace}</th>
+              {groups.map((g, i) => <th key={`${g.part}${i}`} scope="colgroup" colSpan={g.span} className="dv-mx-group">{t.partNames[g.part]}</th>)}
+            </tr>
+            <tr>{columns.map((c) => <th key={c.id} scope="col" className="dv-mx-check"><bdi dir="auto">{c.label}</bdi></th>)}</tr>
+          </thead>
+          <tbody>
+            {answer.places.map((place) => (
+              <tr key={place.id}>
+                <th scope="row"><bdi dir="auto">{place.name}</bdi></th>
+                {columns.map((c) => {
+                  const kind = markOf(place, c.id);
+                  return <td key={c.id}>{kind && <><Mark kind={kind} /><span className="ct-sr">{t.markWords[kind]}</span></>}</td>;
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <ul className="dv-matrix-cards">
+        {answer.places.map((place) => {
+          const n = rowCounts(place);
+          const fails = columns.filter((c) => place.checks[c.id] === "fail");
+          return (
+            <li key={place.id}>
+              <span className="dv-mc-name"><bdi dir="auto">{place.name}</bdi></span>
+              <span className="dv-mc-counts num">
+                <span>{t.matrixPass(n.pass)}</span><span>{t.matrixFail(n.fail)}</span><span>{t.matrixNone(n.not_measured)}</span>
+              </span>
+              {fails.length > 0 && <span className="dv-mc-label" aria-hidden="true">{t.markWords.fail}</span>}
+              {fails.length > 0 && (
+                <ul className="dv-mc-fails" aria-label={t.markWords.fail}>
+                  {fails.map((c) => <li key={c.id}><Mark kind="fail" /><bdi dir="auto">{c.label}</bdi></li>)}
+                </ul>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      {whole && wholeRules.length > 0 && (
+        <p className="dv-matrix-business">
+          <b>{t.wholeBusiness}</b>
+          {wholeRules.map((rule) => {
+            const kind = markOf(whole, rule.id);
+            return kind && <span key={rule.id}><Mark kind={kind} /><span><bdi dir="auto">{rule.label}</bdi>: {t.markWords[kind]}</span></span>;
+          })}
+        </p>
+      )}
+      <p className="dv-matrix-rule ct-quiet">{t.matrixRule}</p>
+    </section>
   );
 }
 

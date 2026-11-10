@@ -124,6 +124,18 @@ export type Overview = {
 
 export type FindingsAnswer = { items: Finding[]; counts: Counts };
 
+// Every place against every check (ALY-334; spec 065, "Checks per place").
+export type CheckState = "pass" | "fail" | "not_measured";
+/** What a cell shows: a state, or "fixed" for a check that passes now and failed in the check-up before. */
+export type MarkKind = CheckState | "fixed";
+export type CheckRule = { id: string; part: PartKey; label: string };
+export type ChecksRow = { checks: Record<string, CheckState>; fixed: string[] };
+export type ChecksPlace = ChecksRow & { id: string; name: string };
+export type ChecksAnswer = {
+  run_id: string | null; finished_at: string | null; measured: boolean;
+  rules: CheckRule[]; places: ChecksPlace[]; business: ChecksRow | null;
+};
+
 export type Review = {
   id: string; location: PlaceRef | null; rating: number; posted_at: string | null; author_name: string;
   body: string; language: string; replied: boolean; reply_text: string;
@@ -475,6 +487,44 @@ export function parseReviews(raw: unknown): ReviewsAnswer {
   };
 }
 
+const CHECK_STATES: readonly string[] = ["pass", "fail", "not_measured"];
+const PART_KEYS: readonly string[] = ["presence", "reviews", "website", "whatsapp", "ai"];
+
+function parseChecksRow(raw: unknown, known: ReadonlySet<string>): ChecksRow {
+  const r = rec(raw);
+  const checks: Record<string, CheckState> = {};
+  // A rule the answer does not name, or a state this screen does not know, is left out: never drawn as something else.
+  for (const [rule, state] of Object.entries(rec(r.checks))) {
+    if (known.has(rule) && typeof state === "string" && CHECK_STATES.includes(state)) checks[rule] = state as CheckState;
+  }
+  // "Fixed" is only believed of a check that passes now.
+  const fixed = arr(r.fixed).map((x) => str(x)).filter((rule) => checks[rule] === "pass");
+  return { checks, fixed };
+}
+
+/** `GET /checks`. When nothing was measured there are no places, whatever the answer carries. */
+export function parseChecks(raw: unknown): ChecksAnswer {
+  const r = rec(raw);
+  const rules = arr(r.rules).flatMap((x) => {
+    const v = rec(x);
+    const id = str(v.id), label = str(v.label), part = str(v.part);
+    return id && label && PART_KEYS.includes(part) ? [{ id, label, part: part as PartKey }] : [];
+  });
+  const known = new Set(rules.map((x) => x.id));
+  const measured = r.measured === true;
+  return {
+    run_id: strOrNull(r.run_id), finished_at: strOrNull(r.finished_at), measured, rules,
+    places: measured
+      ? arr(r.places).flatMap((x) => {
+        const v = rec(x);
+        const id = str(v.id);
+        return id ? [{ id, name: str(v.name), ...parseChecksRow(v, known) }] : [];
+      })
+      : [],
+    business: measured && r.business ? parseChecksRow(r.business, known) : null,
+  };
+}
+
 export function parseReport(raw: unknown): Report {
   const r = rec(raw);
   const month = str(r.month);
@@ -573,6 +623,8 @@ export const discovery = {
   startRun: (lang: Lang) => call(`/runs${q({ lang })}`, parseRun, "POST"),
   run: (lang: Lang, id: string) => call(`/runs/${encodeURIComponent(id)}${q({ lang })}`, parseRun),
   places: () => call("/locations", parsePlaces),
+  /** Every place against every check, from the last finished check-up. */
+  checks: (lang: Lang) => call(`/checks${q({ lang })}`, parseChecks),
   connection: () => call("/connection", parseConnection),
   setConnection: (kind: string, on: boolean) => call("/connection", parseConnection, "PUT", { kind, on }),
 

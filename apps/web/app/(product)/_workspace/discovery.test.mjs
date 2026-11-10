@@ -12,14 +12,14 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import {
-  DiscoveryError, errorFrom, parseConnection, parseFact, parseFacts, parseFinding, parseFindings, parseManagers, parseOverview, parsePlaces,
+  DiscoveryError, errorFrom, parseChecks, parseConnection, parseFact, parseFacts, parseFinding, parseFindings, parseManagers, parseOverview, parsePlaces,
   parseProposal, parseProposalDetail, parseProposals, parseReport, parseReviews, parseRun, parseSettings, parseTeam,
 } from "./discoveryApi.ts";
 import { T } from "./discoveryCopy.ts";
 import {
   MAX_POLLS, VIEWS, appliedNoteKey, averageText, bandParts, eventAt, formatDay, formatDayLong, formatWhen, groupByKind, homeState, hoursDraft, hoursText,
-  hoursValue, isLive, isNumeric, isSample, lastMonths, liveProposals, mayApprove, minutesFrom, monthName, normalizeTime, phoneValue,
-  pollDecision, proposalPillClass, proposalPollDecision, proposalWhen, readView, reviewQuery, rulerSide, sayError, scoreBefore, stepKind,
+  hoursValue, isLive, isNumeric, isSample, lastMonths, liveProposals, markOf, matrixColumns, mayApprove, minutesFrom, monthName, normalizeTime, phoneValue,
+  pollDecision, proposalPillClass, proposalPollDecision, proposalWhen, readView, reviewQuery, rowCounts, rulerSide, sayError, scoreBefore, stepKind,
   stepText, subItems,
   tabCount, textFact, verifiedAt, viewHref, viewsFor, waitingProposals, withChange,
 } from "./discoveryLogic.ts";
@@ -688,4 +688,63 @@ test("Home's band and layout are styled from tokens and logical positions only",
   assert.ok(band.length > 500, "the ALY-332 block is there");
   assert.doesNotMatch(band, /#[0-9a-f]{3,8}\b|rgba?\(/i, "no colour literal");
   assert.doesNotMatch(band, /\b(left|right)\s*:|margin-(left|right)|padding-(left|right)/, "no physical direction");
+});
+
+// ── every place against every check (ALY-334) ───────────
+
+const CHECKS = {
+  run_id: "r2", finished_at: "2026-11-08T19:14:09+00:00", measured: true,
+  rules: [
+    { id: "listing_missing", part: "presence", label: "On Google Maps" },
+    { id: "hours_conflict", part: "presence", label: "Hours match" },
+    { id: "name_conflict", part: "presence", label: "Name spelled one way" },
+    { id: "website_location_missing", part: "website", label: "On the website" },
+    { id: "rating_low", part: "reviews", label: "Rating 4.0 or more" },
+    { id: "", part: "presence", label: "no id" }, { id: "x", part: "moon", label: "no such part" },
+  ],
+  places: [
+    { id: "p1", name: "Lusail", checks: { listing_missing: "pass", hours_conflict: "pass", website_location_missing: "fail", rating_low: "not_measured", made_up: "pass", x: "pass" }, fixed: ["hours_conflict", "website_location_missing", "made_up"] },
+    { id: "p2", name: "Al Sadd", checks: { listing_missing: "excellent", hours_conflict: "fail" }, fixed: [] },
+    { name: "no id" },
+  ],
+  business: { checks: { name_conflict: "fail" }, fixed: [] },
+};
+
+test("the checks answer is read strictly: unknown rules and states are left out, and fixed is believed only of a check that passes", () => {
+  const a = parseChecks(CHECKS);
+  assert.deepEqual(a.rules.map((r) => r.id), ["listing_missing", "hours_conflict", "name_conflict", "website_location_missing", "rating_low"]);
+  assert.deepEqual(a.places.map((p) => p.id), ["p1", "p2"], "a place without an id is not a place");
+  assert.deepEqual(a.places[0].checks, { listing_missing: "pass", hours_conflict: "pass", website_location_missing: "fail", rating_low: "not_measured" });
+  assert.deepEqual(a.places[0].fixed, ["hours_conflict"], "a check that still fails was not fixed");
+  assert.deepEqual(a.places[1].checks, { hours_conflict: "fail" }, "a state the screen does not know is not drawn as another");
+  assert.deepEqual(a.business, { checks: { name_conflict: "fail" }, fixed: [] });
+  const none = parseChecks({ ...CHECKS, measured: false });
+  assert.deepEqual([none.measured, none.places, none.business], [false, [], null], "nothing measured, nothing drawn, whatever the answer carries");
+  assert.deepEqual(parseChecks(null), { run_id: null, finished_at: null, measured: false, rules: [], places: [], business: null });
+});
+
+test("the matrix has a column for each rule that looked at a place, grouped by part, and a mark for each cell", () => {
+  const a = parseChecks(CHECKS);
+  const { columns, groups } = matrixColumns(a);
+  assert.deepEqual(columns.map((c) => c.id), ["listing_missing", "hours_conflict", "website_location_missing", "rating_low"], "the whole-business rule is not a column");
+  assert.deepEqual(groups, [{ part: "presence", span: 2 }, { part: "website", span: 1 }, { part: "reviews", span: 1 }]);
+  assert.equal(markOf(a.places[0], "hours_conflict"), "fixed");
+  assert.equal(markOf(a.places[0], "listing_missing"), "pass");
+  assert.equal(markOf(a.places[0], "website_location_missing"), "fail");
+  assert.equal(markOf(a.places[0], "rating_low"), "not_measured");
+  assert.equal(markOf(a.places[1], "listing_missing"), null, "a rule that did not look leaves the cell empty");
+  assert.deepEqual(rowCounts(a.places[0]), { pass: 2, fail: 1, not_measured: 1 });
+  assert.deepEqual(matrixColumns({ rules: a.rules, places: [] }), { columns: [], groups: [] });
+});
+
+test("every mark has its words in both languages, and the matrix is styled from tokens", () => {
+  for (const lang of ["en", "ar"]) {
+    assert.deepEqual(Object.keys(T[lang].markWords).sort(), ["fail", "fixed", "not_measured", "pass"]);
+    assert.ok(Object.values(T[lang].markWords).every((w) => w.trim()), lang);
+  }
+  const css = read(join(HERE, "discovery.css"));
+  const block = css.slice(css.indexOf("every place against every check (ALY-334)"));
+  assert.ok(block.length > 500);
+  assert.doesNotMatch(block, /#[0-9a-f]{3,8}\b|rgba?\(/i, "no colour literal");
+  assert.doesNotMatch(block, /\b(left|right)\s*:|margin-(left|right)|padding-(left|right)/, "no physical direction");
 });
