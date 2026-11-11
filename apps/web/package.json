@@ -21,25 +21,25 @@
   },
   "dependencies": {
     "@gsap/react": "2.1.2",
-    "gsap": "3.15.0",
-    "next": "16.4.2",
-    "posthog-js": "1.290.0",
+    "gsap": "3.15.1",
+    "next": "16.4.5",
+    "posthog-js": "1.446.1",
     "qrcode-generator": "2.0.4",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },
   "devDependencies": {
-    "@opennextjs/cloudflare": "1.20.13",
-    "@types/node": "^20",
+    "@opennextjs/cloudflare": "1.20.16",
+    "@types/node": "^26",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "axe-core": "4.14.0",
-    "eslint": "^9",
-    "eslint-config-next": "16.4.2",
+    "eslint": "^10",
+    "eslint-config-next": "16.4.5",
     "jsqr": "1.4.0",
-    "lighthouse": "13.5.0",
-    "typescript": "^5",
-    "wrangler": "4.151.3"
+    "lighthouse": "13.6.0",
+    "typescript": "^7",
+    "wrangler": "4.158.0"
   },
   "packageManager": "pnpm@11.25.0"
 }
