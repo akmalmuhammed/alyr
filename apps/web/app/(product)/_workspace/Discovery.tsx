@@ -2,7 +2,7 @@
 
 // Discovery in the workspace (ALY-322, spec 065 "Screens"; ALY-324, spec 066): the section at
 // `/app/discovery` and its views, carried in the address like Documents does
-// (`?view=home|todo|proposals|reviews|reports|settings`, Home by default; Settings is for the owner
+// (`?view=home|todo|proposals|reviews|reports|answers|settings`, Home by default; Settings is for the owner
 // and an admin only). The menu lists the views beneath the section (`DiscoveryMenu.tsx`); on a
 // phone, where the menu is the tab bar and its More sheet, the same views are a row at the top of
 // the screen. This file is the frame: the heading, the view row, the note that says when the data
@@ -13,6 +13,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { ToastLayer, useToasts } from "./CatalogUi";
+import { DiscoveryAnswers } from "./DiscoveryAnswers";
 import { useWaiting } from "./DiscoveryMenu";
 import { DiscoveryHome } from "./DiscoveryHome";
 import { DiscoveryProposals } from "./DiscoveryProposals";
@@ -80,6 +81,7 @@ export function Discovery({ lang, canManage }: { lang: Lang; canManage: boolean 
       {view === "proposals" && <DiscoveryProposals lang={lang} canManage={canManage} />}
       {view === "reviews" && <DiscoveryReviews lang={lang} />}
       {view === "reports" && <DiscoveryReports lang={lang} />}
+      {view === "answers" && <DiscoveryAnswers lang={lang} canManage={canManage} push={push} />}
       {view === "settings" && <DiscoverySettings lang={lang} push={push} />}
 
       <ToastLayer toasts={toasts} dismiss={dismiss} lang={lang} undoWord={t.undo} dismissWord={t.dismiss} />
