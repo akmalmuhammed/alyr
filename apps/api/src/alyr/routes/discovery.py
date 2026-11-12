@@ -215,6 +215,13 @@ async def run(
     return await _act(request, staff, "discovery.run", id=run_id, lang=lang)
 
 
+@router.get("/checks")
+async def checks(
+    request: Request, lang: str | None = Lang, staff: Staff = Depends(current_staff)
+):
+    return await _act(request, staff, "discovery.checks", lang=lang)
+
+
 @router.get("/locations")
 async def locations(request: Request, staff: Staff = Depends(current_staff)):
     return await _act(request, staff, "discovery.locations")

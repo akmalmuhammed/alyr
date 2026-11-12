@@ -315,6 +315,23 @@ WHERE: dict[str, tuple[str, str]] = {
     "business": ("The business's details in ALYR", "بيانات المنشأة في ALYR"),
 }
 # "(sample data)": said beside where a fact came from when the source is the fictional sample.
+# rule id -> what passing looks like, in a few words: the heading of its column where every place is
+# set against every check (spec 065, "Checks per place"). (English, Arabic.)
+CHECK_NAMES: dict[str, tuple[str, str]] = {
+    "listing_missing": ("On Google Maps", "على خرائط Google"),
+    "listing_unclaimed": ("Claimed", "مُوثّقة باسم المنشأة"),
+    "hours_missing": ("Hours shown", "ساعات العمل مذكورة"),
+    "hours_conflict": ("Hours match", "ساعات العمل متطابقة"),
+    "phone_conflict": ("Phone matches", "رقم الهاتف متطابق"),
+    "name_conflict": ("Name spelled one way", "الاسم بصيغة واحدة"),
+    "category_missing": ("Main category", "التصنيف الرئيسي"),
+    "photos_few": ("5 photos or more", "5 صور أو أكثر"),
+    "website_location_missing": ("On the website", "مذكور في الموقع الإلكتروني"),
+    "whatsapp_link_missing": ("WhatsApp link", "رابط واتساب"),
+    "review_unanswered": ("Low reviews answered", "الرد على المراجعات المنخفضة"),
+    "rating_low": ("Rating 4.0 or more", "التقييم 4.0 أو أكثر"),
+}
+
 SAMPLE_NOTE = ("sample data", "بيانات تجريبية")
 VALUES: dict[str, tuple[str, str]] = {
     "~not_found": ("Not found", "غير موجودة"),
@@ -577,6 +594,8 @@ def all_texts() -> list[str]:
     for table in (LABELS, WHERE, VALUES, ERRORS):
         for pair in table.values():
             out.extend(pair)
+    for pair in CHECK_NAMES.values():
+        out.extend(pair)
     out.extend(SAMPLE_NOTE)
     out.extend(STEP_SUMMARIES.values())
     return out
