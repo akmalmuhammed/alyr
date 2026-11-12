@@ -237,6 +237,13 @@ async function home() {
   check((await count(".dv-list:not(:has(.dv-pill)) .dv-row")) <= 4, "Up next has four rows at most");
   check((await count(".dv-block:has(#dv-done-h) .dv-row")) <= 5, "Done has five rows at most");
   check((await count(".dv-figure b")) === 1 && /^\d+$/.test(await js("document.querySelector('.dv-figure b').textContent")), "the score is one whole number");
+  // ALY-334: every place against every check, drawn only when the API has the route and the check-up was measured.
+  if (await exists(".dv-matrix")) {
+    const places = await count(".dv-matrix-table tbody tr");
+    check(places > 0 && places === (await count(".dv-matrix-cards > li")), "the matrix has a row, and a card, for each place");
+    check(await js("[...document.querySelectorAll('.dv-matrix-table tbody td')].every(td => !td.querySelector('.dv-mark') || !!td.querySelector('.ct-sr')?.textContent.trim())"), "every mark in the matrix has its words");
+    check((await count(".dv-matrix-table thead th[scope=col]")) === 1 + (await count(".dv-matrix-table tbody tr:first-child td")), "a heading for every column");
+  }
   check((await count(".dv-rule")) === 1 && !(await js("document.querySelector('.dv-rule').textContent")).match(/[٠-٩]/), "one sentence by rule, with its counts in Western digits");
   check((await count(".sh-tile.folded")) === 1, "the fold marks one card only");
   check((await js("[...document.querySelectorAll('.dv *')].every(e => getComputedStyle(e).animationIterationCount !== 'infinite')")), "nothing on the screen loops or pulses");

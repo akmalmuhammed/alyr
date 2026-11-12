@@ -12,8 +12,8 @@
 import type { Lang } from "./lang";
 import {
   DAYS, DiscoveryError, KINDS, PARTS_SHOWN,
-  type Connection, type DayKey, type FactKey, type Finding, type HistoryRow, type Kind, type Overview, type PartKey, type Proposal,
-  type ProposalStatus, type Run, type Step,
+  type CheckRule, type ChecksAnswer, type ChecksRow, type Connection, type DayKey, type FactKey, type Finding, type HistoryRow, type Kind, type MarkKind, type Overview, type PartKey, type Proposal,
+  type ProposalStatus, type Run, type ScoreParts, type Step,
 } from "./discoveryApi.ts";
 import { T } from "./discoveryCopy.ts";
 
@@ -62,6 +62,65 @@ export function homeState(o: Overview): HomeState {
   if (!worked) return "noRun";
   if (!o.next && o.up_next.length === 0) return "caughtUp";
   return "content";
+}
+
+// ── Home's score band (ALY-332) ─────────────────────────
+
+/** The last check-up's score, for the ruler's second mark: only when the API said how far the score
+ *  moved, and it moved. Never a guess. */
+export function scoreBefore(o: Pick<Overview, "score" | "delta">): number | null {
+  if (o.score === null || !o.delta || o.delta.score_change === 0) return null;
+  const before = o.score - o.delta.score_change;
+  return before >= 0 && before <= 100 ? before : null;
+}
+
+/** Which side of its mark a ruler label sits on, so a label never runs past the ruler's end. */
+export const rulerSide = (n: number): "start" | "end" => (n > 50 ? "end" : "start");
+
+/** The parts drawn under the ruler, in the order every screen uses. A part that was not measured has
+ *  no value; one part is "lowest" only when exactly one measured part is, so a tie names nothing. */
+export function bandParts(parts: ScoreParts | null): { key: PartKey; value: number | null; lowest: boolean }[] {
+  const rows = PARTS_SHOWN.flatMap((key) => {
+    const part = parts?.[key];
+    return part ? [{ key, value: part.measured && part.value !== null ? part.value : null }] : [];
+  });
+  const values = rows.flatMap((r) => (r.value === null ? [] : [r.value]));
+  const min = values.length > 1 ? Math.min(...values) : null;
+  const one = min !== null && values.filter((v) => v === min).length === 1;
+  return rows.map((r) => ({ ...r, lowest: one && r.value === min }));
+}
+
+// ── every place against every check (ALY-334) ───────────
+
+/** What one cell shows. Nothing where the rule did not look at this row; "fixed" only for a check
+ *  that passes now and failed in the check-up before. */
+export function markOf(row: ChecksRow, rule: string): MarkKind | null {
+  const state = row.checks[rule];
+  if (!state) return null;
+  return state === "pass" && row.fixed.includes(rule) ? "fixed" : state;
+}
+
+/** The matrix's columns: the rules that looked at one place or more, in the answer's order, and the
+ *  runs of one part of the score, for the heading above them. */
+export function matrixColumns(answer: Pick<ChecksAnswer, "rules" | "places">): { columns: CheckRule[]; groups: { part: PartKey; span: number }[] } {
+  const columns = answer.rules.filter((rule) => answer.places.some((p) => p.checks[rule.id]));
+  const groups: { part: PartKey; span: number }[] = [];
+  for (const column of columns) {
+    const last = groups[groups.length - 1];
+    if (last && last.part === column.part) last.span += 1;
+    else groups.push({ part: column.part, span: 1 });
+  }
+  return { columns, groups };
+}
+
+/** A row's counts, counted here from its own cells. */
+export function rowCounts(row: ChecksRow): { pass: number; fail: number; not_measured: number } {
+  const states = Object.values(row.checks);
+  return {
+    pass: states.filter((s) => s === "pass").length,
+    fail: states.filter((s) => s === "fail").length,
+    not_measured: states.filter((s) => s === "not_measured").length,
+  };
 }
 
 export const isRunning = (run: Run | null | undefined): boolean => !!run && (run.status === "queued" || run.status === "running");

@@ -16,7 +16,7 @@
 // Times and amounts come from `discoveryLogic.ts`; counts agree through `an()` below in Arabic.
 
 import type { Lang } from "./lang";
-import type { DayKey, FactKey, FindingStatus, Kind, PartKey, ProposalStatus, Severity } from "./discoveryApi";
+import type { DayKey, FactKey, FindingStatus, Kind, MarkKind, PartKey, ProposalStatus, Severity } from "./discoveryApi";
 import type { View } from "./discoveryLogic";
 
 export type { Lang };
@@ -59,6 +59,19 @@ const en = {
   changeSame: "No change since the last check-up",
   lastCheck: (when: string) => `Last check-up ${when}`,
   byRule: "By rule:",
+  // The ruler on Home (ALY-332): the two marks, and the word under the lowest part.
+  rulerNow: (n: number) => `Now ${n}`,
+  rulerWas: (n: number) => `Last check-up ${n}`,
+  lowestPart: "Lowest",
+  // Every place against every check (ALY-334).
+  matrixTitle: "Every place, every check",
+  matrixPlace: "Place",
+  markWords: { pass: "Passing", fail: "Needs a fix", fixed: "Fixed since the last check-up", not_measured: "Not measured" } as Record<MarkKind, string>,
+  // A card's counts on a phone: a label and its number each, three items and not one sentence.
+  matrixPass: (n: number) => `Passing ${n}`,
+  matrixFail: (n: number) => `To fix ${n}`,
+  matrixNone: (n: number) => `Not measured ${n}`,
+  matrixRule: "By rule: a row for each place, a column for each rule of the check-up. A rule with too little to go on is not measured.",
   howScored: "How the score is made",
   runCheckup: "Run check-up",
   runAgain: "Try again",
@@ -375,6 +388,16 @@ const ar: typeof en = {
   changeSame: "لا تغيّر منذ الفحص الأخير",
   lastCheck: (when) => `آخر فحص ${when}`,
   byRule: "حسب القاعدة:",
+  rulerNow: (n) => `الآن ${n}`,
+  rulerWas: (n) => `الفحص السابق ${n}`,
+  lowestPart: "الأدنى",
+  matrixTitle: "كل فرع وكل فحص",
+  matrixPlace: "الفرع",
+  markWords: { pass: "سليم", fail: "يحتاج إصلاحاً", fixed: "أُصلح منذ الفحص السابق", not_measured: "لم يُقَس" },
+  matrixPass: (n) => `سليم ${n}`,
+  matrixFail: (n) => `للإصلاح ${n}`,
+  matrixNone: (n) => `لم يُقَس ${n}`,
+  matrixRule: "حسب القاعدة: صف لكل فرع وعمود لكل قاعدة من قواعد الفحص. القاعدة التي لا تجد ما يكفي للحكم لا تُقاس.",
   howScored: "كيف تُحسب الدرجة",
   runCheckup: "ابدأ الفحص",
   runAgain: "حاول مجدداً",

@@ -15,17 +15,24 @@
 // says in Done whether a check-up has confirmed it. For a person who may not list changes nothing
 // about them is drawn.
 
+//
+// The layout (ALY-332): the score sits on a Carbon band with a ruler from 0 to 100 (now, and the last
+// check-up) and the parts it is made of; on a wide screen the waiting changes sit beside the one card
+// and "Up next" beside "Done"; the card shows its change as now over proposed. Nothing the screen does
+// changed, and it draws only what the overview and the proposals list already return.
+
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Fold, Icon } from "./CatalogUi";
 import { ApprovalSheet } from "./DiscoveryApproval";
 import { FindingFlow, type Change } from "./DiscoverySheet";
-import { discovery, DiscoveryError, type Finding, type Overview, type Proposal, type Run } from "./discoveryApi";
+import { discovery, DiscoveryError, type Finding, type MarkKind, type Overview, type Proposal, type Run, type ScoreParts } from "./discoveryApi";
 import { T, type Lang } from "./discoveryCopy";
 import {
-  POLL_MS, homeState, inOrder, isFinished, isRunning, minutesFrom, pollDecision, sayError, stepText, viewHref, waitingProposals,
+  POLL_MS, bandParts, homeState, inOrder, isFinished, isRunning, markOf, matrixColumns, minutesFrom, pollDecision, rowCounts, rulerSide,
+  sayError, scoreBefore, stepText, viewHref, waitingProposals,
 } from "./discoveryLogic";
-import { ChangeLine, FindingMeta, FindingRow, Loading, Problem, ProposalRow, When, announceChange, useLoad } from "./discoveryUi";
+import { FindingMeta, FindingRow, Loading, Problem, ProposalRow, When, announceChange, useLoad } from "./discoveryUi";
 import { usePolling } from "./poll";
 
 type Push = (text: string, options?: { tone?: "ok" | "bad" | "warn"; undo?: () => void }) => number;
@@ -234,34 +241,44 @@ export function DiscoveryHome({ lang, canManage, push, onConnection }: {
             </section>
           )}
 
-          {state === "content" && o.next && !running && (
-            <NextCard lang={lang} f={o.next} busy={busy} canMark={canManage} headingRef={cardHeading}
-              onDone={() => void mark(o.next!, "owner_done")} onSkip={() => void mark(o.next!, "skipped")} onOpen={() => open(o.next!)}
-              onReview={setApproval} />
+          {/* The lead: the one card, and beside it on a wide screen the changes that wait (ALY-332). */}
+          {state === "content" && (
+            <div className="dv-lead">
+              {o.next && !running && (
+                <NextCard lang={lang} f={o.next} busy={busy} canMark={canManage} headingRef={cardHeading}
+                  onDone={() => void mark(o.next!, "owner_done")} onSkip={() => void mark(o.next!, "skipped")} onOpen={() => open(o.next!)}
+                  onReview={setApproval} />
+              )}
+
+              {strip.length > 0 && (
+                <section className="dv-block dv-waiting" aria-labelledby="dv-prop-h">
+                  <h2 id="dv-prop-h">{t.proposalsTitle}</h2>
+                  <ul className="dv-list">{strip.map((p) => <ProposalRow key={p.id} p={p} lang={lang} onOpen={() => setApproval(p)} />)}</ul>
+                  <Link className="dv-link" href={viewHref("proposals")}>{t.allProposals}</Link>
+                </section>
+              )}
+            </div>
           )}
 
-          {state === "content" && o.up_next.length > 0 && (
-            <section className="dv-block" aria-labelledby="dv-up-h">
-              <h2 id="dv-up-h">{t.upNext}</h2>
-              <ul className="dv-list">{o.up_next.map((f) => <FindingRow key={f.id} f={f} lang={lang} onOpen={() => open(f)} />)}</ul>
-              {o.counts.open > 1 + o.up_next.length && <Link className="dv-link" href={viewHref("todo")}>{t.allToDo}</Link>}
-            </section>
-          )}
+          {state !== "noRun" && <PlacesMatrix lang={lang} runId={o.last_run?.id ?? ""} />}
 
-          {state === "content" && strip.length > 0 && (
-            <section className="dv-block" aria-labelledby="dv-prop-h">
-              <h2 id="dv-prop-h">{t.proposalsTitle}</h2>
-              <ul className="dv-list">{strip.map((p) => <ProposalRow key={p.id} p={p} lang={lang} onOpen={() => setApproval(p)} />)}</ul>
-              <Link className="dv-link" href={viewHref("proposals")}>{t.allProposals}</Link>
-            </section>
-          )}
+          {/* The rest of the list and what is finished, side by side where there is room. */}
+          <div className="dv-pair">
+            {state === "content" && o.up_next.length > 0 && (
+              <section className="dv-block" aria-labelledby="dv-up-h">
+                <h2 id="dv-up-h">{t.upNext}</h2>
+                <ul className="dv-list">{o.up_next.map((f) => <FindingRow key={f.id} f={f} lang={lang} onOpen={() => open(f)} />)}</ul>
+                {o.counts.open > 1 + o.up_next.length && <Link className="dv-link" href={viewHref("todo")}>{t.allToDo}</Link>}
+              </section>
+            )}
 
-          {state !== "noRun" && o.done.length > 0 && (
-            <section className="dv-block" aria-labelledby="dv-done-h">
-              <h2 id="dv-done-h">{t.done}</h2>
-              <ul className="dv-list">{o.done.map((f) => <FindingRow key={f.id} f={f} lang={lang} status onOpen={() => open(f)} />)}</ul>
-            </section>
-          )}
+            {state !== "noRun" && o.done.length > 0 && (
+              <section className="dv-block" aria-labelledby="dv-done-h">
+                <h2 id="dv-done-h">{t.done}</h2>
+                <ul className="dv-list">{o.done.map((f) => <FindingRow key={f.id} f={f} lang={lang} status onOpen={() => open(f)} />)}</ul>
+              </section>
+            )}
+          </div>
         </>
       )}
 
@@ -280,6 +297,7 @@ function ScoreLine({ lang, o, action }: { lang: Lang; o: Overview; action: React
       : o.delta.score_change < 0 ? t.changeDown(-o.delta.score_change) : t.changeSame
     : "";
   const dir = o.delta ? (o.delta.score_change > 0 ? "up" : o.delta.score_change < 0 ? "down" : "same") : "";
+  const was = scoreBefore(o);
   return (
     <section className="dv-score" aria-label={t.scoreLabel}>
       <div className="dv-score-main">
@@ -303,7 +321,145 @@ function ScoreLine({ lang, o, action }: { lang: Lang; o: Overview; action: React
           <Link className="dv-link" href={viewHref("reports")}>{t.howScored}</Link>
         </p>
       </div>
+      {o.score !== null && (
+        <div className="dv-gauge">
+          <Ruler lang={lang} now={o.score} was={was} />
+          <BandParts lang={lang} parts={o.score_parts} />
+        </div>
+      )}
       {action && <div className="dv-score-act">{action}</div>}
+    </section>
+  );
+}
+
+// The score on a ruler from 0 to 100: where it is now, and where the last check-up left it. A drawing
+// of two numbers the section already says in words, so it is hidden from a screen reader. Positions
+// are logical, so in Arabic the ruler runs from the right.
+const at = (n: number) => ({ "--at": `${Math.min(100, Math.max(0, n))}%` }) as React.CSSProperties;
+const TICKS = Array.from({ length: 51 }, (_, i) => i * 2);
+
+function Ruler({ lang, now, was }: { lang: Lang; now: number; was: number | null }) {
+  const t = T[lang];
+  return (
+    <div className="dv-ruler" aria-hidden="true">
+      <span className={`dv-ruler-label now ${rulerSide(now)}`} style={at(now)}>{t.rulerNow(now)}</span>
+      <div className="dv-ruler-scale">
+        <svg className="dv-ruler-ticks" viewBox="0 0 100 12" preserveAspectRatio="none" focusable="false">
+          {TICKS.map((x) => <line key={x} x1={x} x2={x} y1={x % 10 === 0 ? 0 : 6} y2={12} vectorEffect="non-scaling-stroke" />)}
+        </svg>
+        <span className="dv-ruler-fill" style={at(now)} />
+        {was !== null && <span className="dv-ruler-mark was" style={at(was)} />}
+        <span className="dv-ruler-mark now" style={at(now)} />
+      </div>
+      <div className="dv-ruler-foot">
+        {(was === null || was > 18) && <span className="dv-ruler-end start">0</span>}
+        {was !== null && <span className={`dv-ruler-label was ${rulerSide(was)}`} style={at(was)}>{t.rulerWas(was)}</span>}
+        {(was === null || was < 82) && <span className="dv-ruler-end end">100</span>}
+      </div>
+    </div>
+  );
+}
+
+// The parts the score is made of. A part that was not measured says so and shows a dashed slot,
+// never a number; the lowest measured part is named only when exactly one is lowest.
+function BandParts({ lang, parts }: { lang: Lang; parts: ScoreParts | null }) {
+  const t = T[lang];
+  const rows = bandParts(parts);
+  if (rows.length === 0) return null;
+  return (
+    <ul className="dv-bandparts" aria-label={t.byPart}>
+      {rows.map(({ key, value, lowest }) => (
+        <li key={key}>
+          <span className="dv-bp-name">{t.partNames[key]}</span>
+          {value !== null
+            ? <b className="dv-bp-value num">{value}</b>
+            : <span className="dv-bp-none">{t.notMeasured}</span>}
+          <span className={`dv-bp-track ${value !== null ? "" : "empty"}`} aria-hidden="true">
+            {value !== null && <span style={at(value)} />}
+          </span>
+          {lowest && <span className="dv-bp-low">{t.lowestPart}</span>}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// ── every place against every check (ALY-334) ───────────
+
+const MARKS: readonly MarkKind[] = ["pass", "fail", "fixed", "not_measured"];
+const Mark = ({ kind }: { kind: MarkKind }) => <span className={`dv-mark ${kind}`} aria-hidden="true" />;
+
+// One row per place, one column per rule, from the last finished check-up (spec 065, "Checks per
+// place"). Each mark has its words for a screen reader. On a phone the table gives way to a card
+// per place: its counts, and the checks that need a fix. An API without the route, or a check-up
+// with nothing measured, draws nothing.
+function PlacesMatrix({ lang, runId }: { lang: Lang; runId: string }) {
+  const t = T[lang];
+  const [loaded] = useLoad(() => discovery.checks(lang).catch(() => null), `${lang}:${runId}`);
+  const answer = loaded.data;
+  if (!answer || !answer.measured || answer.places.length === 0) return null;
+  const { columns, groups } = matrixColumns(answer);
+  if (columns.length === 0) return null;
+  const whole = answer.business;
+  const wholeRules = whole ? answer.rules.filter((rule) => whole.checks[rule.id]) : [];
+  return (
+    <section className="dv-block dv-matrix" aria-labelledby="dv-matrix-h">
+      <h2 id="dv-matrix-h">{t.matrixTitle}</h2>
+      <ul className="dv-legend" aria-hidden="true">
+        {MARKS.map((kind) => <li key={kind}><Mark kind={kind} />{t.markWords[kind]}</li>)}
+      </ul>
+      <div className="dv-matrix-frame" role="group" aria-labelledby="dv-matrix-h" tabIndex={0}>
+        <table className="dv-matrix-table">
+          <thead>
+            <tr>
+              <th scope="col" rowSpan={2} className="dv-mx-place">{t.matrixPlace}</th>
+              {groups.map((g, i) => <th key={`${g.part}${i}`} scope="colgroup" colSpan={g.span} className="dv-mx-group">{t.partNames[g.part]}</th>)}
+            </tr>
+            <tr>{columns.map((c) => <th key={c.id} scope="col" className="dv-mx-check"><bdi dir="auto">{c.label}</bdi></th>)}</tr>
+          </thead>
+          <tbody>
+            {answer.places.map((place) => (
+              <tr key={place.id}>
+                <th scope="row"><bdi dir="auto">{place.name}</bdi></th>
+                {columns.map((c) => {
+                  const kind = markOf(place, c.id);
+                  return <td key={c.id}>{kind && <><Mark kind={kind} /><span className="ct-sr">{t.markWords[kind]}</span></>}</td>;
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <ul className="dv-matrix-cards">
+        {answer.places.map((place) => {
+          const n = rowCounts(place);
+          const fails = columns.filter((c) => place.checks[c.id] === "fail");
+          return (
+            <li key={place.id}>
+              <span className="dv-mc-name"><bdi dir="auto">{place.name}</bdi></span>
+              <span className="dv-mc-counts num">
+                <span>{t.matrixPass(n.pass)}</span><span>{t.matrixFail(n.fail)}</span><span>{t.matrixNone(n.not_measured)}</span>
+              </span>
+              {fails.length > 0 && <span className="dv-mc-label" aria-hidden="true">{t.markWords.fail}</span>}
+              {fails.length > 0 && (
+                <ul className="dv-mc-fails" aria-label={t.markWords.fail}>
+                  {fails.map((c) => <li key={c.id}><Mark kind="fail" /><bdi dir="auto">{c.label}</bdi></li>)}
+                </ul>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      {whole && wholeRules.length > 0 && (
+        <p className="dv-matrix-business">
+          <b>{t.wholeBusiness}</b>
+          {wholeRules.map((rule) => {
+            const kind = markOf(whole, rule.id);
+            return kind && <span key={rule.id}><Mark kind={kind} /><span><bdi dir="auto">{rule.label}</bdi>: {t.markWords[kind]}</span></span>;
+          })}
+        </p>
+      )}
+      <p className="dv-matrix-rule ct-quiet">{t.matrixRule}</p>
     </section>
   );
 }
@@ -330,7 +486,10 @@ function NextCard({ lang, f, busy, canMark, headingRef, onDone, onSkip, onOpen, 
       {change && (
         <div className="dv-cardchange">
           <p className="dv-cardchange-label">{t.theChange}</p>
-          <ChangeLine p={change} lang={lang} />
+          <dl className="dv-diff">
+            <div className="was"><dt>{t.nowLabel}</dt><dd><bdi dir="auto">{change.before.text}</bdi></dd></div>
+            <div className="will"><dt>{t.proposedLabel}</dt><dd><bdi dir="auto">{change.after.text}</bdi></dd></div>
+          </dl>
         </div>
       )}
       <div className="dv-actions">
