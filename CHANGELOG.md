@@ -5,6 +5,7 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- Discovery's Home sets every place against every check (ALY-334; no migration, no new dependency): a table with a row per place and a column per rule, from `GET /api/discovery/checks` (ALY-333). Four marks, each with its words: passing, needs a fix, fixed since the last check-up, not measured. Columns are grouped by the part of the score; the checks about the whole business sit in a line under the table; on a phone each place is a card with its counts and what needs a fix. Where the API does not have the route, or nothing was measured, nothing is drawn. No score per place. Words added in English and Arabic (a draft until ALY-66).
 - Discovery's Home in a denser layout (ALY-332; no migration, no new dependency, no API change): the score sits on a Carbon band with a ruler from 0 to 100 (where it is now, and where the last check-up left it) and the parts it is made of, each a number or "Not measured yet"; on a wide screen the waiting changes sit beside the one card and "Up next" beside "Done"; the card shows its change as now over proposed. Nothing the screen does changed. Three strings added, Arabic a draft until ALY-66. Discovery is still off for every shop.
 
 ## v0.3.20 (11 Nov 2026)
