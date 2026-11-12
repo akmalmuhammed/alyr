@@ -318,3 +318,85 @@
 .dv-fact-value { font-size: var(--ui-body-sm); font-weight: var(--weight-medium); overflow-wrap: anywhere; }
 .dv-fact-none { font-size: var(--ui-body-sm); color: var(--text-muted); }
 .dv-weekly { font-size: var(--ui-body-sm); }
+
+/* ── Home as a panel of instruments (ALY-332) ──
+   The score sits on a Carbon band, the command surface. Inside the band the shell's own names
+   (--ink, --sheet, --lift) point at the band's ramp, so its buttons, links and focus ring read on
+   Carbon in both themes without a rule of their own. Volt is used twice more here and means one
+   thing each: where the score is now on the ruler, and the proposed value of the card's change.
+   Built at 375 px first; the two-column layouts start where there is room for them. */
+.sh .dv-score {
+  --ink: var(--on-band); --ink-2: var(--on-band-quiet); --ink-3: var(--on-band-faint);
+  --sheet: var(--band); --lift: 0 0 0 1px var(--band-rule) inset;
+  grid-template-columns: minmax(0, 1fr); gap: var(--space-4);
+  padding: var(--space-4); border-block-end: 0; border-radius: var(--radius-lg);
+  background: var(--band); color: var(--on-band); box-shadow: 0 0 0 1px var(--band-edge) inset;
+  clip-path: polygon(0 0, calc(100% - var(--cut-plate-sm) / 2) 0, 100% calc(var(--cut-plate-sm) / 2), 100% 100%, 0 100%);
+}
+.sh[dir="rtl"] .dv-score { clip-path: polygon(calc(var(--cut-plate-sm) / 2) 0, 100% 0, 100% 100%, 0 100%, 0 calc(var(--cut-plate-sm) / 2)); }
+.dv-score .dv-of, .dv-score .dv-rule-tag, .dv-score .ct-quiet { color: var(--on-band-quiet); }
+.dv-score .dv-change, .dv-score .dv-link { color: var(--on-band); }
+.dv-score .dv-change.up > span[aria-hidden] { color: var(--volt); }
+.dv-score .dv-rule { color: var(--on-band-soft); }
+.dv-score .dv-score-act { justify-content: flex-start; }
+.dv-score .dv-toosoon { background: transparent; box-shadow: 0 0 0 1px var(--band-rule) inset; color: var(--on-band); }
+@media (min-width: 64rem) {
+  .sh .dv-score { grid-template-columns: minmax(15rem, 0.8fr) minmax(0, 1.5fr); column-gap: var(--space-5); padding: var(--space-5); }
+  .dv-score .dv-score-main { grid-column: 1; grid-row: 1; }
+  .dv-score .dv-score-act { grid-column: 1; grid-row: 2; align-self: end; }
+  .dv-score .dv-gauge { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+}
+
+/* the ruler: 0 to 100, the last check-up's mark and today's */
+.dv-gauge { display: grid; gap: var(--space-4); min-inline-size: 0; }
+.dv-ruler { display: grid; gap: var(--space-1); min-inline-size: 0; font-family: var(--font-ui-mono); font-size: var(--ui-micro); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--on-band-faint); font-variant-numeric: tabular-nums; }
+.sh[dir="rtl"] .dv-ruler { font-family: var(--face); letter-spacing: 0; font-size: var(--ui-caption); text-transform: none; }
+.dv-ruler-label { white-space: nowrap; }
+.dv-ruler-label.now { display: block; color: var(--volt); font-weight: var(--weight-medium); }
+.dv-ruler-label.now.start { margin-inline-start: var(--at); padding-inline-start: var(--space-2); }
+.dv-ruler-label.now.end { margin-inline-end: calc(100% - var(--at)); padding-inline-end: var(--space-2); text-align: end; }
+.dv-ruler-scale { position: relative; block-size: 28px; }
+.dv-ruler-scale::after { content: ""; position: absolute; inset-inline: 0; inset-block-end: 0; block-size: 1px; background: var(--band-rule); }
+.dv-ruler-ticks { position: absolute; inset-inline: 0; inset-block-end: 0; inline-size: 100%; block-size: 12px; overflow: visible; }
+.dv-ruler-ticks line { stroke: var(--band-mark); stroke-width: 1; }
+.dv-ruler-fill { position: absolute; z-index: 1; inset-inline-start: 0; inset-block-end: 0; inline-size: var(--at); block-size: 3px; background: var(--on-band); }
+.dv-ruler-mark { position: absolute; z-index: 1; inset-block-end: 0; inset-inline-start: var(--at); }
+.dv-ruler-mark.was { inline-size: 1px; block-size: 20px; background: var(--on-band-quiet); }
+.dv-ruler-mark.now { inline-size: 3px; block-size: 28px; margin-inline-start: -1.5px; background: var(--volt); }
+.dv-ruler-foot { position: relative; block-size: 1.5em; }
+.dv-ruler-end, .dv-ruler-label.was { position: absolute; inset-block-start: 0; }
+.dv-ruler-end.start { inset-inline-start: 0; }
+.dv-ruler-end.end { inset-inline-end: 0; }
+.dv-ruler-label.was { color: var(--on-band-quiet); }
+.dv-ruler-label.was.start { inset-inline-start: calc(var(--at) + var(--space-2)); }
+.dv-ruler-label.was.end { inset-inline-end: calc(100% - var(--at) + var(--space-2)); }
+
+/* the parts the score is made of */
+.dv-bandparts { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3) var(--space-4); }
+@media (min-width: 40rem) { .dv-bandparts { grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr)); } }
+.dv-bandparts li { display: grid; gap: var(--space-1); align-content: start; min-inline-size: 0; }
+.dv-bp-name { font-size: var(--ui-small); color: var(--on-band-quiet); overflow-wrap: anywhere; }
+.dv-bp-value { font-size: var(--ui-title); font-weight: var(--weight-semibold); line-height: 1.2; font-variant-numeric: tabular-nums; }
+.dv-bp-none { font-size: var(--ui-small); line-height: 1.3; color: var(--on-band-quiet); min-block-size: calc(var(--ui-title) * 1.2); }
+.dv-bp-track { display: block; block-size: 3px; background: color-mix(in srgb, var(--on-band) 16%, transparent); }
+.dv-bp-track > span { display: block; block-size: 100%; inline-size: var(--at); background: var(--on-band-soft); }
+.dv-bp-track.empty { background: transparent; border-block-end: var(--rule-dashed) var(--band-mark); }
+.dv-bp-low { font-size: var(--ui-caption); color: var(--on-band-quiet); }
+
+/* the one card beside the changes that wait; Up next beside Done */
+.dv-lead, .dv-pair { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); min-inline-size: 0; }
+.dv-lead:empty, .dv-pair:empty { display: none; }
+@media (min-width: 75rem) {
+  .dv-lead:has(> .dv-card):has(> .dv-waiting) { grid-template-columns: minmax(0, 1.6fr) minmax(17rem, 1fr); align-items: start; }
+  .dv-pair:has(> .dv-block + .dv-block) { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+}
+
+/* the card's change: now over proposed, the proposed one on pale Volt */
+.dv-diff { display: grid; margin: 0; border-radius: var(--radius-sm); overflow: hidden; }
+.dv-diff > div { display: grid; grid-template-columns: minmax(4.5rem, auto) minmax(0, 1fr); align-items: baseline; gap: var(--space-1) var(--space-3); padding: var(--space-2); }
+.dv-diff dt { font-family: var(--font-ui-mono); font-size: var(--ui-micro); font-weight: var(--weight-medium); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--text-muted); }
+.sh[dir="rtl"] .dv-diff dt { font-family: var(--face); letter-spacing: 0; font-size: var(--ui-caption); text-transform: none; }
+.dv-diff dd { margin: 0; font-size: var(--ui-body-sm); line-height: 1.5; overflow-wrap: anywhere; }
+.dv-diff .was dd { color: var(--text-muted); text-decoration: line-through; }
+.dv-diff .will { background: var(--volt-wash); }
+.dv-diff .will dd { font-weight: var(--weight-semibold); }

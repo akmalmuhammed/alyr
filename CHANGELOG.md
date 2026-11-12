@@ -5,6 +5,7 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- Discovery's Home in a denser layout (ALY-332; no migration, no new dependency, no API change): the score sits on a Carbon band with a ruler from 0 to 100 (where it is now, and where the last check-up left it) and the parts it is made of, each a number or "Not measured yet"; on a wide screen the waiting changes sit beside the one card and "Up next" beside "Done"; the card shows its change as now over proposed. Nothing the screen does changed. Three strings added, Arabic a draft until ALY-66. Discovery is still off for every shop.
 
 ## v0.3.20 (11 Nov 2026)
 - Discovery, Phase 2 screens (ALY-324, D-166, spec 066; web only, no migration, no new dependency): Proposals and, for an owner or admin, Settings join the Discovery menu; Home shows "Review N changes" while a change waits; each change is shown exactly and approved with one tap, undone within a week; who gets WhatsApp asks, the daily limit, branch managers and confirmed details are set in Settings. Off for every shop. English and Arabic; the Arabic is a draft until ALY-66.
