@@ -1,0 +1,574 @@
+/**
+ * Scoped styles for the Inbox area (J04).
+ * Strictly using design tokens and logical properties.
+ */
+
+/* Main layout containers */
+.ibx-workbench {
+  display: flex;
+  inline-size: 100%;
+  block-size: calc(100vh - var(--space-8));
+  max-block-size: 56.25rem;
+  background: var(--surface);
+  border: var(--rule-hairline) solid var(--line);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* ── Pane 1: Conversations List ─────────────────────────────────────────── */
+.ibx-pane-list {
+  inline-size: 21.25rem; /* 340px */
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-inline-end: var(--rule-hairline) solid var(--line);
+  overflow: hidden;
+}
+
+.ibx-list-header {
+  height: 3.25rem; /* 52px */
+  padding-inline: var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  border-block-end: var(--rule-hairline) solid var(--line);
+  flex: none;
+}
+
+.ibx-list-title {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ibx-list-unread {
+  font-family: var(--font-ui-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.ibx-list-tools {
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  border-block-end: var(--rule-hairline) solid var(--line);
+  flex: none;
+}
+
+.ibx-chips-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  overflow-x: auto;
+}
+
+.ibx-list-scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.ibx-row {
+  position: relative;
+  min-height: 4.125rem; /* 66px */
+  padding-inline: var(--space-4);
+  padding-block: var(--space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  border-block-end: var(--rule-hairline) solid var(--line);
+  cursor: pointer;
+  background: var(--surface);
+  transition: background 0.15s ease;
+  user-select: none;
+}
+
+.ibx-row:hover {
+  background: var(--surface-subtle);
+}
+
+.ibx-row--active {
+  background: var(--surface-subtle);
+}
+
+.ibx-row--active::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block: 0;
+  inline-size: calc(var(--rule-hairline) * 2);
+  background: var(--text);
+}
+
+.ibx-row-main {
+  flex: 1;
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ibx-row-line1,
+.ibx-row-line2,
+.ibx-row-line3 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.ibx-row-name {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ibx-row-time {
+  font-family: var(--font-ui-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  flex: none;
+}
+
+.ibx-row-snippet {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.3;
+}
+
+.ibx-row-snippet--unread {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.ibx-row-who {
+  font-size: var(--font-size-xs);
+  color: var(--text-faint);
+}
+
+.ibx-row-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 1rem;
+  height: 1rem;
+  padding-inline: var(--space-1);
+  border-radius: var(--radius-round);
+  background: var(--text);
+  color: var(--surface);
+  font-family: var(--font-ui-mono);
+  font-size: 11px;
+  font-weight: 600;
+  flex: none;
+}
+
+/* ── Pane 2: Message Thread ─────────────────────────────────────────────── */
+.ibx-pane-thread {
+  flex: 1;
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.ibx-thread-header {
+  height: 3.75rem; /* 60px */
+  padding-inline: var(--space-5);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  border-block-end: var(--rule-hairline) solid var(--line);
+  background: var(--surface);
+  flex: none;
+}
+
+.ibx-thread-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ibx-thread-name {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ibx-thread-sub {
+  font-family: var(--font-ui-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.ibx-who-strip {
+  height: 2.25rem; /* 36px */
+  padding-inline: var(--space-5);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--surface);
+  border-block-end: var(--rule-hairline) solid var(--line);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  flex: none;
+}
+
+.ibx-messages-area {
+  flex: 1;
+  padding: var(--space-3) var(--space-5);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  background: var(--surface-subtle);
+}
+
+/* Bubbles & Activity */
+.ibx-bubble-wrap {
+  display: flex;
+  inline-size: 100%;
+}
+
+.ibx-bubble-wrap--in {
+  justify-content: flex-start;
+}
+
+.ibx-bubble-wrap--out {
+  justify-content: flex-end;
+}
+
+.ibx-bubble {
+  max-inline-size: 21.25rem; /* 340px */
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ibx-bubble--in {
+  background: var(--surface);
+  border: var(--rule-hairline) solid var(--line);
+  color: var(--text);
+}
+
+.ibx-bubble--out {
+  background: var(--wa-out);
+  color: var(--wa-ink);
+}
+
+.ibx-bubble--fail {
+  background: var(--surface);
+  border: var(--rule-hairline) dashed var(--bad);
+  color: var(--text-muted);
+}
+
+.ibx-bubble-sender {
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--wa-soft);
+}
+
+.ibx-bubble-text {
+  font-size: var(--font-size-sm);
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ibx-bubble-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: var(--font-ui-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.ibx-bubble--out .ibx-bubble-meta {
+  color: var(--wa-soft);
+}
+
+.ibx-activity-pill {
+  align-self: center;
+  margin-block: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  background: var(--surface);
+  border: var(--rule-hairline) solid var(--line);
+  border-radius: var(--radius-round);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.ibx-staff-note {
+  align-self: center;
+  max-inline-size: 25rem; /* 400px */
+  inline-size: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--warn-soft);
+  border: var(--rule-hairline) dashed var(--warn);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ibx-staff-note-hdr {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--warn);
+}
+
+.ibx-staff-note-text {
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+  color: var(--text);
+}
+
+.ibx-separator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-block: var(--space-2);
+}
+
+.ibx-separator-line {
+  flex: 1;
+  height: 0;
+  border-block-start: var(--rule-hairline) solid var(--line);
+}
+
+.ibx-separator-text {
+  font-family: var(--font-ui-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+}
+
+/* 24h Window & Composer */
+.ibx-window-bar {
+  height: 2.125rem; /* 34px */
+  padding-inline: var(--space-5);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--surface);
+  border-block-start: var(--rule-hairline) solid var(--line);
+  font-size: var(--font-size-xs);
+  color: var(--text);
+  flex: none;
+}
+
+.ibx-window-closed-bar {
+  padding: var(--space-2) var(--space-5);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--warn-soft);
+  border-block-start: var(--rule-hairline) solid var(--line);
+  font-size: var(--font-size-xs);
+  line-height: 1.35;
+  color: var(--text);
+  flex: none;
+}
+
+.ibx-composer {
+  padding: var(--space-3) var(--space-5) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  background: var(--surface);
+  border-block-start: var(--rule-hairline) solid var(--line);
+  flex: none;
+}
+
+.ibx-composer-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ibx-composer-hints {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--font-size-xs);
+  color: var(--text-faint);
+  font-family: var(--font-ui-mono);
+}
+
+.ibx-composer-box {
+  min-height: 4rem;
+  border: var(--rule-hairline) solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-sm);
+  line-height: 1.45;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--surface);
+  resize: none;
+  box-sizing: border-box;
+}
+
+.ibx-composer-box:focus {
+  outline: none;
+  border-color: var(--text);
+}
+
+.ibx-composer-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ── Pane 3: Customer Context ───────────────────────────────────────────── */
+.ibx-pane-context {
+  inline-size: 20rem; /* 320px */
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-inline-start: var(--rule-hairline) solid var(--line);
+  overflow-y: auto;
+}
+
+.ibx-ctx-sec {
+  padding: var(--space-4) var(--space-5);
+  border-block-end: var(--rule-hairline) solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ibx-ctx-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.ibx-ctx-name {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ibx-ctx-phone {
+  font-family: var(--font-ui-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.ibx-ctx-stats {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-block-start: var(--space-2);
+}
+
+.ibx-ctx-stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ibx-ctx-stat-val {
+  font-family: var(--font-ui-mono);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ibx-ctx-sec-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Not Delivered Screen ────────────────────────────────────────────────── */
+.ibx-unsent-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  max-inline-size: 80rem;
+  margin-inline: auto;
+}
+
+.ibx-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+}
+
+/* ── Closed View Band ────────────────────────────────────────────────────── */
+.ibx-closed-band {
+  display: flex;
+  align-items: stretch;
+  background: var(--band);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-6);
+  gap: var(--space-6);
+  overflow: hidden;
+}
+
+.ibx-closed-fig {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  border-inline-start: var(--rule-hairline) solid var(--band-line);
+  padding-inline-start: var(--space-4);
+}
+
+.ibx-closed-fig:first-child {
+  border-inline-start: none;
+  padding-inline-start: 0;
+}
+
+.ibx-closed-fig-val {
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--on-band);
+}
+
+/* Mobile responsive styles */
+@media (max-width: 64rem) {
+  .ibx-workbench {
+    block-size: auto;
+    flex-direction: column;
+  }
+  .ibx-pane-list,
+  .ibx-pane-context {
+    inline-size: 100%;
+    border-inline: none;
+  }
+  .ibx-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}

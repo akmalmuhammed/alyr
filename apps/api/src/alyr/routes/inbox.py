@@ -53,17 +53,17 @@ async def conversations(
     assigned: str = Query("any", pattern="^(any|me|none)$"),
     chip: str | None = Query(None),
     q: str | None = Query(None),
-    limit: int = Query(50, ge=1, le=300),
+    limit: int | None = Query(None, ge=1, le=300),
     offset: int = Query(0, ge=0),
+    counts: bool = Query(False),
     staff: Staff = Depends(current_staff),
 ) -> dict:
     async def compute() -> dict:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
-            if not q and not chip and offset == 0 and limit >= 300:
-                base = await service.listing(conn, status, assigned, staff.user_id)
-                base["counts"] = await listing.get_inbox_counts(conn, staff.user_id)
-                return base
+            if not q and not chip and not counts and limit is None and offset == 0:
+                return await service.listing(conn, status, assigned, staff.user_id)
 
+            eff_limit = limit if limit is not None else 50
             items, total = await listing.list_conversations_filtered(
                 conn,
                 status=status,
@@ -71,20 +71,20 @@ async def conversations(
                 chip=chip,
                 q=q,
                 me=staff.user_id,
-                limit=limit,
+                limit=eff_limit,
                 offset=offset,
             )
-            counts = await listing.get_inbox_counts(conn, staff.user_id)
+            c = await listing.get_inbox_counts(conn, staff.user_id)
             return {
                 "conversations": items,
                 "total": total,
-                "unread": counts.get("unread", 0),
-                "counts": counts,
+                "unread": c.get("unread", 0),
+                "counts": c,
             }
 
     # Tabs that look at the same list within a moment share one run (core/pollcache.py).
     mine = staff.user_id if assigned == "me" else None
-    cache_key = ("inbox", status, assigned, chip, q, limit, offset, mine)
+    cache_key = ("inbox", status, assigned, chip, q, limit, offset, counts, mine)
     return await request.app.state.poll.get_json(staff.tenant_id, cache_key, compute)
 
 
