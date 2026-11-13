@@ -249,8 +249,8 @@ export function OrderDetail({
               caption={t.colItems}
               density="compact"
             />
-            <PanelFooter>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%", flexWrap: "wrap", gap: "1rem" }}>
+            <div style={{ padding: "var(--space-3)", borderTop: "var(--rule-hairline) solid var(--line)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%", flexWrap: "wrap", gap: "var(--space-4)" }}>
                 {/* Left: Margin block (owners/admins only) */}
                 {isManager ? (
                   <div className="ord-margin-block" style={{ maxWidth: "20rem" }}>
@@ -290,7 +290,7 @@ export function OrderDetail({
                   </div>
                 </div>
               </div>
-            </PanelFooter>
+            </div>
           </Panel>
 
           {/* Payment Panel */}
@@ -373,9 +373,7 @@ export function OrderDetail({
             </PanelBody>
             {order.status === "cancelled" && payment.state === "paid" && (
               <PanelFooter>
-                <div style={{ color: "var(--warn)", fontSize: "0.8125rem" }}>
-                  {t.refundBanner(money(order.total))}
-                </div>
+                {t.refundBanner(money(order.total))}
               </PanelFooter>
             )}
           </Panel>
@@ -410,16 +408,14 @@ export function OrderDetail({
                 </KV>
               </KVList>
             </PanelBody>
-            <PanelFooter>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", width: "100%" }}>
-                <Button kind="line" size="sm" href={`/app/inbox?c=${customer.id}`}>
-                  {t.openConversation}
-                </Button>
-                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                  {customer.window_until ? t.replyWindowHours(23) : t.replyWindowClosed}
-                </div>
+            <div style={{ padding: "var(--space-3)", borderTop: "var(--rule-hairline) solid var(--line)", display: "flex", flexDirection: "column", gap: "var(--space-2)", width: "100%" }}>
+              <Button kind="line" size="sm" href={`/app/inbox?c=${customer.id}`}>
+                {t.openConversation}
+              </Button>
+              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                {customer.window_until ? t.replyWindowHours(23) : t.replyWindowClosed}
               </div>
-            </PanelFooter>
+            </div>
           </Panel>
 
           {/* Hand-over Card */}
@@ -487,9 +483,7 @@ export function OrderDetail({
                 </div>
               </PanelBody>
               <PanelFooter>
-                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                  {t.docImmutableNote}
-                </span>
+                {t.docImmutableNote}
               </PanelFooter>
             </Panel>
           )}

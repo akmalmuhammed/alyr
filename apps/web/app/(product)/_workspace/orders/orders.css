@@ -156,7 +156,7 @@
   justify-content: space-between;
   gap: var(--space-3);
   padding-bottom: var(--space-3);
-  border-bottom: 1px solid var(--line);
+  border-bottom: var(--rule-hairline) solid var(--line);
 }
 
 .ord-customer-info {
@@ -222,7 +222,7 @@
   flex-direction: column;
   gap: var(--space-1);
   padding-top: var(--space-2);
-  border-top: 1px dashed var(--line);
+  border-top: var(--rule-hairline) dashed var(--line);
 }
 
 .ord-sum-row {
@@ -331,7 +331,7 @@
   color: var(--wa-ink);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
-  box-shadow: 0 1px 1px var(--wa-shadow);
+  box-shadow: 0 var(--rule-hairline) var(--rule-hairline) var(--wa-shadow);
   align-self: flex-start;
   max-width: 90%;
 }
@@ -370,7 +370,7 @@
     right: 0;
     padding: var(--space-2) var(--space-3);
     background: var(--surface);
-    border-top: 1px solid var(--line);
+    border-top: var(--rule-hairline) solid var(--line);
     gap: var(--space-2);
     z-index: 50;
   }

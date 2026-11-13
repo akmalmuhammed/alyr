@@ -429,38 +429,32 @@ export function OrdersTable({
           onRowOpen={onRowClick}
           cards="auto"
         />
-        <PanelFooter>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem", width: "100%" }}>
-            <Pager
-              summary={
-                <span>
-                  {lastUpdated && (
-                    <span style={{ color: "var(--text-faint)", marginInlineEnd: "0.75rem" }}>
-                      {t.updatedAt(lastUpdated)}
-                    </span>
-                  )}
-                  {pagerSummary}
-                </span>
-              }
-              previous={{
-                label: "Previous",
-                disabled: offset <= 0,
-                onClick: () => onFilterChange({ offset: Math.max(0, offset - limit) }),
-              }}
-              next={{
-                label: "Next",
-                disabled: offset + limit >= total,
-                onClick: () => onFilterChange({ offset: offset + limit }),
-              }}
-              navLabel="Orders pagination"
-            />
-            {footerNote && (
-              <div style={{ fontSize: "0.75rem", color: "var(--text-faint)" }}>
-                {footerNote}
-              </div>
-            )}
-          </div>
-        </PanelFooter>
+        <div style={{ padding: "var(--space-2) var(--space-3)", borderTop: "var(--rule-hairline) solid var(--line)" }}>
+          <Pager
+            summary={
+              <span>
+                {lastUpdated && (
+                  <span style={{ color: "var(--text-faint)", marginInlineEnd: "0.75rem" }}>
+                    {t.updatedAt(lastUpdated)}
+                  </span>
+                )}
+                {pagerSummary}
+              </span>
+            }
+            previous={{
+              label: "Previous",
+              disabled: offset <= 0,
+              onClick: () => onFilterChange({ offset: Math.max(0, offset - limit) }),
+            }}
+            next={{
+              label: "Next",
+              disabled: offset + limit >= total,
+              onClick: () => onFilterChange({ offset: offset + limit }),
+            }}
+            navLabel="Orders pagination"
+          />
+        </div>
+        {footerNote && <PanelFooter>{footerNote}</PanelFooter>}
       </Panel>
     </div>
   );
