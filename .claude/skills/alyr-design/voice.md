@@ -35,8 +35,13 @@ calm, with a number or an example. It names the owner's result.
 | ready for collection, complete | ready for pickup, collected (the product's words) |
 | setup | onboarding |
 | items (code), Menu / Products / Price list (screen, by business type) | SKUs, catalogue entries |
+| the staff role "Agent" as a role name only; "your team" in a sentence | "agents" in a sentence |
 
 ## House style
+
+**Numbers, money, times, dates, durations, ranges, ids, phone numbers, empty values and the
+replacement wording are in [format.md](format.md)**, which wins over the lines below for the
+product (D-180).
 
 - **British spelling:** colour, organise, cancelled, centre, licence (noun).
 - **Separator:** the middle dot with spaces, " · ". **No em dashes**; use a full stop,

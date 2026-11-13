@@ -68,7 +68,7 @@ DTCG-style: groups, `$value`, `$type`, `$description`, `{group.token}` aliases a
 
 ## Not decided yet
 
-Decided on 13 Nov 2026 (the product's redesign, Product UI foundation): the product takes the redesign's language: hairline panels at 8 px with no shadow but the menu and dialog (`--shadow-float`), 13 px body, one Volt button per screen whose notch is on the top inline-end corner like the site's, other buttons 4 px rectangles. The values that language needed are in the tokens (`--control-line`, `--scrim`, `--ok-text`, `--warn-text`, `--on-band-ok/warn/bad`, `--ui-space-*` (2 to 48), `--ui-size-*`, `--ui-figure`, `--radius-ui`, `--radius-dialog`, `--cut-band`, the UI title and figure tracking and leading). They only add: no existing value changed, so the site, the emails and the report card read the same.
+Decided on 13 Nov 2026 (D-180, the product's redesign, Product UI foundation): the product takes the redesign's language: hairline panels at 8 px with no shadow but the menu and dialog (`--shadow-float`), 13 px body, one Volt button per screen whose notch is on the top inline-end corner like the site's, other buttons 4 px rectangles. The values that language needed are in the tokens (`--control-line`, `--scrim`, `--ok-text`, `--warn-text`, `--on-band-ok/warn/bad`, `--ui-space-*` (2 to 48), `--ui-size-*`, `--ui-figure`, `--radius-ui`, `--radius-dialog`, `--cut-band`, the UI title and figure tracking and leading). They only add: no existing value changed, so the site, the emails and the report card read the same.
 
 Still open:
 

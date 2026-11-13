@@ -38,17 +38,20 @@ emitted because the site names Volt as the action and Carbon as the band.
 | `--text-muted` | Secondary text, 4.5:1 in both themes | |
 | `--text-faint` | Labels and metadata only (3:1) | A sentence |
 | `--text-inverse` | Text on a fill of `--text` | |
-| `--line` | Hairlines between items | Control borders |
-| `--line-strong` | Controls, dashed slots, marks that must be seen (3:1) | |
+| `--line` | Hairlines between items; a panel's border | Control borders |
+| `--line-strong` | A field's or select's border, dashed slots, marks that must be seen (3:1) | |
+| `--control-line` (new, product) | The border of a button or a chip | A field's border (that is `--line-strong`) |
+| `--scrim` (new, product) | Behind a dialog or a full-screen sheet; one value | A drawer on a laptop |
+| `--ok-text`, `--warn-text` (new, product) | Text on `--ok-soft`, `--warn-soft` (4.5:1) | Text on a plain surface (use `--ok`, `--warn` beside a dot) |
 | `--hair`, `--hair-strong` | Hairlines that take the colour under them | |
 | `--focus` | Focus rings: moss on light, Volt on dark | Anything else |
 | `--volt` (`--volt-hover`, `--volt-pressed`) | The four Volt meanings: main action, current state, confirmed progress, one signal | Text on light, a background, a numbered disc |
 | `--on-volt` | Text and icons on Volt | |
 | `--volt-ink` | Volt as text: dark green on light, Volt on dark | |
-| `--volt-wash` | Pale Volt behind the current row | Decoration |
+| `--volt-wash` | Pale Volt behind the live "now" row or line (the current time in a day view) | Decoration; a selected row (that is `--surface-subtle`) |
 | `--pending` | The hollow dot for something not yet available | An error |
 | `--white`, `--black` | A switch's knob, text on a status fill; masks and the darkest shadows | Surfaces |
-| `--ok`, `--warn`, `--bad` and `-soft` | Status in product screens, always beside a word | The public site; the dashboard as alarms |
+| `--ok`, `--warn`, `--bad` and `-soft` | Status in product screens, always beside a word: green healthy, amber waiting, red failed (Volt dot: happening now or just done; `ui-rules.md` section 7) | The public site; any alarm: a red page, a flashing figure |
 | `--ok-text`, `--warn-text` | Text on `--ok-soft` and `--warn-soft` (4.5:1; `--ok` and `--warn` fail there) | Text on a white surface that has no soft fill |
 | `--control-line` | The border of a button or chip, whose words identify it (1.4:1, not a 3:1 border) | A field, select or search box: those take `--line-strong` |
 | `--scrim` | Behind a dialog or a sheet | Anything else |
@@ -93,8 +96,8 @@ emitted because the site names Volt as the action and Carbon as the band.
 | `--gutter`, `--wide`, `--header`, `--col-gap`, `--sec`, `--rule-gap` | The 12-column page, the header height, section padding, the space under a section rule |
 | `--radius-control` (buttons, focus rings), `--radius-sm`, `--radius-ui` (6: banner, segmented control), `--radius-md`, `--radius-dialog` (10), `--radius-lg`, `--radius-phone`, `--radius-round` (dots) | Nearly square; the 45° cut, not a radius, is the brand's shape. No pills |
 | `--rule-hairline`, `--rule-strong`, `--rule-dashed` | Solid true today, dashed coming (followed by `--line-strong` on the page, `--band-rule` on Carbon) |
-| `--cut-notch`, `--cut-notch-sm`, `--cut-band` (the product's Carbon band corner), `--cut-plate`, `--cut-plate-sm`, `--cut-fold-gap` | The button's corner, the plate's corner, the fold's gaps; mirrored in Arabic |
-| `--menu-shadow`, `--window-shadow`, `--shadow-lift`, `--shadow-float` | The only shadows |
+| `--cut-notch`, `--cut-notch-sm`, `--cut-band` (the product's Carbon band corner), `--cut-plate`, `--cut-plate-sm`, `--cut-fold-gap` | The button's corner (on the product's Volt button too: the top inline-end corner, 9 px at 28 to 36 high, 12 at 44), the plate's corner, the fold's gaps; mirrored in Arabic |
+| `--menu-shadow`, `--window-shadow`, `--shadow-lift`, `--shadow-float` | The only shadows. **In the product** only a menu, a popover and a dialog take one (`--shadow-float`); a panel takes none |
 | `--z-below`, `--z-base`, `--z-raised`, `--z-product-bar`, `--z-header`, `--z-contact-bar`, `--z-skip-link` | The stacking scale |
 | `--focus-width`, `--focus-offset`, `--focus-offset-control`, `--focus-on-band` | The ring: 2 px, off the element, Volt on Carbon |
 
@@ -118,7 +121,16 @@ on the scale yet: do not add more.
 | `--fast`, `--medium`, `--slow` | The site's older scale: fold into `--dur-*` when you touch a page; never in new code |
 | `--ease-product`, `--spring-product` | The product's curves until its screens move to `--ease` and `--spring`; never in new code |
 
+## Product redesign tokens (add-only, planned)
+
+The names marked "(new)" above are added by the foundation change for the product redesign
+(13 Nov 2026, D-180): they add values and change none. Until a name is in `tokens.json`, use
+the nearest existing token and file a request (`alyr-product-screen/ui-rules.md` section 20).
+The file wins over this page.
+
 ## Not decided yet (from the README)
 
 12 h or 24 h time in the product; moving the drawn screens to the semantic surfaces;
-product breakpoints and z-index; the icon stroke. Ask before changing any of them.
+product breakpoints and z-index; the icon stroke. Ask before changing any of them. Decided in
+D-180 and no longer open: the notch on product buttons (the Volt button's top inline-end
+corner; every other kind a 4 px rectangle).
