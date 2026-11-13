@@ -88,8 +88,8 @@ emitted because the site names Volt as the action and Carbon as the band.
 | Tokens | Use |
 |---|---|
 | `--space-1` … `--space-7` | 4, then 8 px steps up to the largest gap (the site) |
-| `--ui-space-2` … `--ui-space-32` (2, 4, 6, 8, 10, 12, 14, 16, 20, 24, 32) | The product's gaps and paddings, named by their px value; nothing else is a gap in a product screen |
-| `--ui-size-control-xs`, `-sm`, `-control`, `-touch` (28, 32, 36, 44), `-row-compact`, `-row`, `-row-tall` (44, 52, 60), `-bar` (52), `-dialog-bar`, `-sidebar`, `-drawer`, `-dialog`, `-side-column`, `-icon`, `-icon-sm`, `-icon-lg` | The product's fixed sizes: controls, rows, bars, panels |
+| `--ui-space-2` … `--ui-space-48` (2, 4, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32, 48) | The product's gaps and paddings, named by their px value; nothing else is a gap in a product screen |
+| `--ui-size-control-xs`, `-sm`, `-control`, `-touch` (28, 32, 36, 44), `-row-compact`, `-row`, `-row-tall` (44, 52, 60), `-bar` (52), `-dialog-bar`, `-sidebar`, `-page` (1144, the content column), `-drawer`, `-dialog`, `-side-column`, `-icon`, `-icon-sm`, `-icon-lg` | The product's fixed sizes: controls, rows, bars, panels |
 | `--gutter`, `--wide`, `--header`, `--col-gap`, `--sec`, `--rule-gap` | The 12-column page, the header height, section padding, the space under a section rule |
 | `--radius-control` (buttons, focus rings), `--radius-sm`, `--radius-ui` (6: banner, segmented control), `--radius-md`, `--radius-dialog` (10), `--radius-lg`, `--radius-phone`, `--radius-round` (dots) | Nearly square; the 45° cut, not a radius, is the brand's shape. No pills |
 | `--rule-hairline`, `--rule-strong`, `--rule-dashed` | Solid true today, dashed coming (followed by `--line-strong` on the page, `--band-rule` on Carbon) |

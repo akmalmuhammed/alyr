@@ -483,7 +483,9 @@ export const space = {
     "16": "16px",
     "20": "20px",
     "24": "24px",
-    "32": "32px"
+    "28": "28px",
+    "32": "32px",
+    "48": "48px"
   }
 } as const;
 
@@ -499,6 +501,7 @@ export const uiSize = {
   "bar": "52px",
   "dialog-bar": "56px",
   "sidebar": "15rem",
+  "page": "1144px",
   "drawer": "440px",
   "dialog": "520px",
   "side-column": "400px",
