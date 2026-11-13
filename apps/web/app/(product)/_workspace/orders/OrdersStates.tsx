@@ -8,6 +8,12 @@ export function OrdersSkeleton({ lang }: { lang: Lang }) {
   const t = copy(lang);
   return (
     <div className="ord-view" aria-busy="true" aria-label={t.loadingOrders}>
+      <div className="ord-header">
+        <div className="ord-header-start">
+          <h1 className="ord-title">{t.title}</h1>
+          <span className="ord-subtitle">{t.loadingOrders}</span>
+        </div>
+      </div>
       <SkeletonRows rows={6} columns={6} label={t.loadingOrders} />
     </div>
   );
