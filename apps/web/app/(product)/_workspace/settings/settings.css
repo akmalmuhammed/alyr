@@ -430,7 +430,7 @@
 .set-scrim {
   position: fixed;
   inset: 0;
-  background: var(--scrim, rgba(0, 0, 0, 0.45));
+  background: var(--scrim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -442,7 +442,7 @@
   background: var(--surface);
   border: var(--rule-hairline, 0.0625rem solid var(--line));
   border-radius: var(--radius-card, 0.375rem);
-  box-shadow: var(--shadow-float, 0 0.5rem 1.5rem rgba(0, 0, 0, 0.2));
+  box-shadow: var(--shadow-float);
   inline-size: 100%;
   max-inline-size: 36rem;
   overflow: hidden;
@@ -516,7 +516,7 @@
 .set-warn-banner {
   padding: var(--sp-3, 0.75rem);
   border-radius: var(--radius-sm, 0.25rem);
-  background: var(--warn-subtle, rgba(230, 160, 0, 0.1));
+  background: var(--warn-subtle);
   border: 0.0625rem solid var(--warn);
   font-size: 0.75rem;
   line-height: 1.4;

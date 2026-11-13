@@ -128,7 +128,7 @@ export const FIXTURE_REQUESTS: CustomerDataRequest[] = [
     askedFor: "forget",
     state: "waiting",
     handledBy: "Hana",
-    note: "Order #1033 is still open",
+    note: "Order 1033 is still open",
   },
   {
     id: "req-3",
