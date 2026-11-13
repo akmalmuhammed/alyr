@@ -206,7 +206,9 @@
   --ui-space-16: 16px;
   --ui-space-20: 20px;
   --ui-space-24: 24px;
+  --ui-space-28: 28px;
   --ui-space-32: 32px;
+  --ui-space-48: 48px;
   --ui-size-control-xs: 28px;
   --ui-size-control-sm: 32px;
   --ui-size-control: 36px;
@@ -218,6 +220,7 @@
   --ui-size-bar: 52px;
   --ui-size-dialog-bar: 56px;
   --ui-size-sidebar: 15rem;
+  --ui-size-page: 1144px;
   --ui-size-drawer: 440px;
   --ui-size-dialog: 520px;
   --ui-size-side-column: 400px;

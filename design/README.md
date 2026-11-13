@@ -51,6 +51,10 @@ The site's head script and the product layout put the stored choice (`localStora
 
 Exceptions live in `design/allow.json`, each with its reason. Keep that list short.
 
+### The product UI ratchet
+
+`node scripts/ui-check.mjs` (CI and `scripts/check.sh`, no browser) holds the product's scales. Per file in `apps/web/app/(product)` and `apps/web/app/_ui` it counts literal font sizes off the `--ui-*` scale, radii off the radius scale, paddings and gaps off the `--ui-space-*` scale, CSS rules for a `.btn` or `.xx-btn` button (there are four systems today and one is coming, in `_ui`), and banned phrases ("Ask ALYR", "free replies", the AI words, "Powered by", "At risk", "coming soon", "beta", "SKU", a `.00` amount, an em dash as an empty value). Today's counts are in `design/ui-ratchet.json`; a count can only go down, a file not listed starts at zero, and `node scripts/ui-check.mjs --update` writes the lowered counts (it never raises one). Inside `_ui` there is no ratchet: any hex colour, `rgb()`, px or rem length (media and container queries aside), banned phrase or em dash fails. The script's header documents the file's format.
+
 ## Format
 
 DTCG-style: groups, `$value`, `$type`, `$description`, `{group.token}` aliases and `$extensions`, as in the [Design Tokens Community Group format](https://www.designtokens.org/tr/2025.10/format/) (2025.10, checked 17 Oct 2026). Where it departs, on purpose, so the file stays readable and editable by hand:
@@ -64,7 +68,7 @@ DTCG-style: groups, `$value`, `$type`, `$description`, `{group.token}` aliases a
 
 ## Not decided yet
 
-Decided on 13 Nov 2026 (the product's redesign, Product UI foundation): the product takes the redesign's language: hairline panels at 8 px with no shadow but the menu and dialog (`--shadow-float`), 13 px body, one Volt button per screen whose notch is on the top inline-end corner like the site's, other buttons 4 px rectangles. The values that language needed are in the tokens (`--control-line`, `--scrim`, `--ok-text`, `--warn-text`, `--on-band-ok/warn/bad`, `--ui-space-*`, `--ui-size-*`, `--ui-figure`, `--radius-ui`, `--radius-dialog`, `--cut-band`, the UI title and figure tracking and leading). They only add: no existing value changed, so the site, the emails and the report card read the same.
+Decided on 13 Nov 2026 (the product's redesign, Product UI foundation): the product takes the redesign's language: hairline panels at 8 px with no shadow but the menu and dialog (`--shadow-float`), 13 px body, one Volt button per screen whose notch is on the top inline-end corner like the site's, other buttons 4 px rectangles. The values that language needed are in the tokens (`--control-line`, `--scrim`, `--ok-text`, `--warn-text`, `--on-band-ok/warn/bad`, `--ui-space-*` (2 to 48), `--ui-size-*`, `--ui-figure`, `--radius-ui`, `--radius-dialog`, `--cut-band`, the UI title and figure tracking and leading). They only add: no existing value changed, so the site, the emails and the report card read the same.
 
 Still open:
 
