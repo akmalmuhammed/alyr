@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from alyr.core import forget
 from alyr.core.auth import Staff
 from alyr.core.team import actor_of
-from alyr.modules.inbox import service
+from alyr.modules.inbox import listing, service
 from alyr.routes.deps import current_staff, current_tenant, require_manager
 
 router = APIRouter(prefix="/api/inbox", tags=["inbox"])
@@ -51,16 +51,54 @@ async def conversations(
     request: Request,
     status: str = Query("open", pattern="^(open|closed|all)$"),
     assigned: str = Query("any", pattern="^(any|me|none)$"),
+    chip: str | None = Query(None),
+    q: str | None = Query(None),
+    limit: int = Query(50, ge=1, le=300),
+    offset: int = Query(0, ge=0),
     staff: Staff = Depends(current_staff),
 ) -> dict:
     async def compute() -> dict:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
-            return await service.listing(conn, status, assigned, staff.user_id)
+            if not q and not chip and offset == 0 and limit >= 300:
+                base = await service.listing(conn, status, assigned, staff.user_id)
+                base["counts"] = await listing.get_inbox_counts(conn, staff.user_id)
+                return base
+
+            items, total = await listing.list_conversations_filtered(
+                conn,
+                status=status,
+                assigned=assigned,
+                chip=chip,
+                q=q,
+                me=staff.user_id,
+                limit=limit,
+                offset=offset,
+            )
+            counts = await listing.get_inbox_counts(conn, staff.user_id)
+            return {
+                "conversations": items,
+                "total": total,
+                "unread": counts.get("unread", 0),
+                "counts": counts,
+            }
 
     # Tabs that look at the same list within a moment share one run (core/pollcache.py).
     mine = staff.user_id if assigned == "me" else None
-    return await request.app.state.poll.get_json(
-        staff.tenant_id, ("inbox", status, assigned, mine), compute)
+    cache_key = ("inbox", status, assigned, chip, q, limit, offset, mine)
+    return await request.app.state.poll.get_json(staff.tenant_id, cache_key, compute)
+
+
+@router.get("/customer/{contact_id}")
+async def customer_context(
+    contact_id: UUID,
+    request: Request,
+    staff: Staff = Depends(current_staff),
+) -> dict:
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        ctx = await listing.get_customer_context(conn, contact_id)
+    if ctx is None:
+        raise HTTPException(status_code=404, detail="customer not found")
+    return ctx
 
 
 @router.get("/conversations/{contact_id}")
