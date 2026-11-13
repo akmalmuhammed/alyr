@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { ToastProvider, UiRoot, type UiLang } from "@/app/_ui";
+import "@/app/_ui/ui.css";
 import { OrdersView } from "@/app/(product)/_workspace/orders/OrdersView";
 import { queryToFilters } from "@/app/(product)/_workspace/orders/logic";
 
