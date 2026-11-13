@@ -180,7 +180,7 @@ export function TeamWeek({
           </div>
         </div>
 
-        <div className="team-table-scroll">
+        <div className="team-table-scroll" tabIndex={0} role="region" aria-label={t.teamReport}>
           <table className="team-table">
             <thead>
               <tr>
@@ -228,7 +228,7 @@ export function TeamWeek({
                             {person.open} {t.filterAll.toLowerCase()}
                           </span>
                           {person.waiting && (
-                            <span style={{ fontSize: "var(--ui-micro)", fontWeight: 600, color: "var(--warn)" }}>
+                            <span style={{ fontSize: "var(--ui-micro)", fontWeight: 600, color: "var(--warn-text)" }}>
                               {person.waiting}
                             </span>
                           )}

@@ -56,7 +56,7 @@ export function TeamInviteDialog({
         </header>
 
         <form onSubmit={handleSubmit} style={{ display: "contents" }}>
-          <div className="team-modal-body">
+          <div className="team-modal-body" tabIndex={0}>
             {/* Name & Email inputs in 2 columns */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
               <div className="team-field-group">

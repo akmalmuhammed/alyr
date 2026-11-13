@@ -188,7 +188,7 @@ export function TeamPeople({
 
       {/* ── People Table ──────────────────────────────────────────────────── */}
       <section className="team-table-panel" aria-label={t.colPerson}>
-        <div className="team-table-scroll">
+        <div className="team-table-scroll" tabIndex={0} role="region" aria-label={t.peopleCountTitle}>
           <table className="team-table">
             <thead>
               <tr>

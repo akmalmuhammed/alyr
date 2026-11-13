@@ -43,7 +43,7 @@ export async function fetchPerformance(days: number = 7): Promise<WorkPerson[]> 
         name: p.name,
         role: p.role,
         open: p.open || 0,
-        waiting: p.waiting > 0 ? `${p.waiting} waiting` : undefined,
+        waiting: (p.waiting ?? 0) > 0 ? `${p.waiting} waiting` : undefined,
         replies: p.replies || 0,
         firstAnswer: p.median_reply_seconds ? `${Math.round(p.median_reply_seconds / 60)} min` : "–",
         outcomes: p.closed || null,

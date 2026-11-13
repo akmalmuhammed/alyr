@@ -41,7 +41,7 @@ export function TeamRemoveDialog({
           </h2>
         </header>
 
-        <div className="team-modal-body">
+        <div className="team-modal-body" tabIndex={0}>
           {/* Person overview banner */}
           <div
             style={{
