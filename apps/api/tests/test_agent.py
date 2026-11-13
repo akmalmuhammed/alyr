@@ -8,7 +8,7 @@ import pytest
 
 from alyr.modules.agent import view
 from alyr.modules.agent.facts import Account, Facts, Row
-from alyr.modules.agent.insights import INSIGHT_BY_KEY, INSIGHTS
+from alyr.modules.agent.insights import CORE, INSIGHT_BY_KEY, INSIGHTS
 from alyr.modules.agent.words import plain
 from alyr.seed import AGENT_EMAIL, OWNER_EMAIL
 from test_onboarding import new_business
@@ -99,7 +99,8 @@ CASES = {
 
 
 def test_every_rule_has_a_threshold_case():
-    assert set(CASES) == {i.key for i in INSIGHTS}
+    # Rules added in `rules/` are tested in their own files (tests/test_agent_rule_<key>.py).
+    assert set(CASES) == {i.key for i in CORE}
 
 
 @pytest.mark.parametrize("key", list(CASES))
