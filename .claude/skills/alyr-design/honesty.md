@@ -41,6 +41,13 @@ description use the founder's AI wording. Nothing else takes it from them.
   "what it counted" or "what it compares" instead. A sentence that truly needs the word about
   something else may keep it («قاعدة البيانات», the database), and WhatsApp's 24-hour rule is
   "the 24-hour window".
+- **In the redesigned product screens a panel footer writes the rule as a sentence,** "By
+  rule: owed for 30 days or more, no reminder in 7 days · 4 customers", in English and Arabic
+  (D-180). The ALYR Agent dashboard keeps its RULE line until it is restyled.
+- **Phrases ruled out in the product** (13 Nov 2026): "Ask ALYR" (it reads as an assistant;
+  say what happens), "At risk" and "Churned" as a label (it predicts; name the counted
+  signal), "Free replies" (see the claims table), "Powered by ALYR" (say "Set up by ALYR"),
+  "SKU" (say "Code"). The replacement wording is in [format.md](format.md).
 - **"Agent" never carries a sentence alone.** Wherever "agent" appears, the same screen,
   card or post says what it counted or compared (in the product, its rule line). ALYR (the
   company) is the agent; ALYR Agent is its screen and report. ALYR Chat and ALYR Bookings send
@@ -59,7 +66,7 @@ description use the founder's AI wording. Nothing else takes it from them.
 | "Keep your number", "the app stays on your phone", "the number you already use", "in the chat you already use", "as she always has" | A shop cannot connect its own number (ALY-39) | "Which number your customers message is agreed with you at setup." |
 | Card payments live; "paid straight to your account"; provider names or logos (SADAD, SkipCash, Dibsy, NAPS, Apple Pay); "licensed payment partner"; "paid through ALYR links" in a sample | No provider integrated (ALY-17); the pay page is a stand-in | "Payment links are built and tested on a test page; card payments start once a payment provider is connected. ALYR is built never to hold your money." |
 | Payment reminders that go by themselves | They go when someone presses Send reminders | "One press sends reminders…" |
-| "Free messages", "free replies for 24 hours", "ALYR adds nothing" without the condition | Meta bills some messages at its own rates | "Meta charges for some WhatsApp messages at its own rates, and bills you directly." |
+| "Free messages", "free replies for 24 hours", "ALYR adds nothing" without the condition | Meta bills some messages at its own rates | "Meta charges for some WhatsApp messages at its own rates, and bills you directly." In a product screen about the window: "Typed replies allowed for 23 more hours" or "Window open until Fri 09:27" |
 | The Sunday report as running ("every Sunday on your phone", "weekly on WhatsApp") | Built, never sent to an owner; templates need Meta's approval | Frame it: "The first reports go out once WhatsApp approves the report's wording." |
 | "Live in 48 hours", a go-live date, "free pilot", "free trial", a free plan | Not offered (D-025, D-034). Nothing is paid before go-live (D-053) and there is no setup fee (D-092), but there is no trial period and no free plan | "We agree your go-live date with you." The one allowed use of "free" is the self-serve button's own pair, "Try it free" with "Free to try. You pay only when you go live." (`copy.ts` `tryFree`, D-119), and only while `NEXT_PUBLIC_ALYR_TRY_FREE=on`; `banned-words.mjs` refuses the three phrases |
 | Any price, the money-back first month, "no commission" as a price point, outside the offer switch | The homepage's prepared offer copy still names a setup fee (D-092) | Behind `NEXT_PUBLIC_ALYR_OFFER=on` only. **The one exception is `/pricing`** (ALY-301, D-124): its prices, from the back office's price list, sit in `copyPricing.ts` and are allowed there by `allow/banned.json` "pricePages", and nowhere else. The CR was issued on 26 Oct 2026 |
@@ -74,7 +81,7 @@ description use the founder's AI wording. Nothing else takes it from them.
 | Parallel bookings, chairs, tables, party sizes, per-stylist calendars | One booking at a time per business (until ALY-27) | "Two customers can never take the same slot." |
 | One message becoming a booking, an order and a payment; free questions answered | Keyword and button matching | "It answers the everyday requests: order, book, balance, pay. Everything else goes to your team." |
 | Delivery tracking, drivers, maps | Tracking ends at ready for collection and complete | "Confirmed, ready for collection, complete." |
-| Staff see no money, beyond the Agent screen | Orders, Credit accounts and the API still show amounts | Only on `/agent`, about that screen |
+| Staff see no money, beyond the Agent screen | Orders, Credit accounts and the API still show amounts until the redesigned screens replace them. The rule (D-180): staff with the agent role see per-order totals only; aggregates and margin are owner and admin only, enforced on the server | Only on `/agent`, about that screen. In a redesigned screen, never say staff see no money |
 | Statements of account; ALYR Docs as available to a shop | Statements have no flow; Docs is built and off for every shop | Statements under "Not yet"; Docs as "set up with you" |
 | "Tax invoice" as something ALYR Docs issues, VAT, e-invoicing or the tax authority's system as connected, a retention period, compliance with Qatar's Arabic invoice rule, invoices without a CR, a named POS | Tax is off; ALY-51 open; no POS tried | Quote the no-CR note exactly; "ALYR never deletes an issued document"; "Arabic first, and Arabic always on documents for consumers" |
 | A document sent on WhatsApp at any time | Outside the 24-hour window it needs three templates not yet submitted | "In the chat as a PDF, when the customer has written in the last 24 hours" |

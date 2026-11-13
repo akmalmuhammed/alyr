@@ -2768,3 +2768,28 @@ D-160 said Phase 2 would turn findings into proposals the owner approves. This f
 **Revisit when** the founder picks providers and ALY-51 answers, when a real engine is added (its terms and region go in `docs/data-residency.md` first), or when the Arabic review (ALY-66) changes the words.
 
 **Taken from the reserved range:** D-168 (D-167 is the footer's) and migration 0124.
+
+## D-180 · The product UI follows the redesign's language
+
+**Date** 13 Nov 2026 · **Status** Accepted (the founder's decision on the redesign of the product screens) · Amends D-150 for the product only; builds on D-040 (Carbon and Volt), D-092 (no setup fee), D-155 (the light page is white), D-039 (what is not ready stays hidden) · The work is `docs/design-system/02-product-ui.md`
+
+The product's screens (the workspace, the back office, sign-in, sign-up and the customer pages) were redesigned as about 190 drawn screens. The written design rules, made for the public site, contradicted the drawings in 39 places. This records what the product now follows; the public site keeps its own system and is not touched.
+
+**Decision.**
+1. **The redesign's language is the product's,** with the resolution recorded for each of the 39 conflicts in `02-product-ui.md`. In short: hybrid numerals (mono for identifiers, times, phone numbers and money in tables and key-value rows; Instrument Sans tabular figures from 24 px and for amounts inside sentences); the Volt button's notch on the top inline-end corner as on the site, mirrored in Arabic, and every other button a 4 px rectangle; icons allowed on outlined and icon-only buttons and never on a Volt button (this amends D-150 for the product; the site keeps "a button is its words"); icons redrawn in the brand's geometry (24 px grid, square ends, mitred corners) and shown at 16 px; panels at 8 px with a hairline, dialogs at 10, no shadows except a menu and a dialog; 13 px body, 12 px captions, 11 px mono labels, 24 px page titles, Arabic one step up; a dashed slot for a first-run object and an empty state for a filtered list; the primary button on a shop's customer page in the shop's colour, with the footer "Set up by ALYR"; "Ask ALYR" renamed to what actually happens.
+2. **One workspace is one place.** No place switch and no per-place column or filter in anything built, and no place model is invented.
+3. **Staff with the agent role see per-order totals only.** Aggregates (the open-orders total, spent, owes, the band's figures) and margin are for owners and admins, enforced on the server.
+4. **The pay-ALYR screens are drawn but not built.** There is no setup fee anywhere (D-092), and a price on any screen comes from the real price list, never typed in.
+
+**Why.** The drawings are what the owner asked for, and are denser and calmer than the product's four button systems and five icon sets (`00-audit.md`, `components.md`). Rules that contradict the screens would make ten agents each "fix" the drawings back, or each choose a side. One set of rules, with the old ones edited where they conflicted, lets the parts be built once and the screens in parallel.
+
+**What changed in the written rules.** `alyr-product-screen/ui-rules.md` (new), a "Product UI" section in `alyr-design/components.md`, `alyr-product-screen/screen-checklist.md` (new), `alyr-design/format.md` (new, linked from `voice.md`), and the old lines they contradicted in `alyr-design/SKILL.md`, `tokens.md`, `honesty.md`, `voice.md`, `alyr-product-screen/SKILL.md`, `design/README.md` and `docs/brand.md`. New tokens are added by the foundation change, add-only: none of an existing value changes.
+
+**Not decided.** Sample-name checks, which price figures the drawings show, the pay-ALYR screens, a 12-hour clock, how many minutes an unpaid booking's slot is kept, marketing consent, merge rules for two records of one customer. The rules do not rely on any of them.
+
+**Rejected.** *Editing the drawings to match the old rules* (the drawings are the intended product). *Two systems inside the product* (the old and the new, screen by screen, forever). *Restyling the public site to match* (it has its own look and its checks).
+
+**Revisit when** a screen needs something the rules do not cover (a one-line request, then a rule), when the clock question is answered, or when the pay-ALYR screens are built.
+
+**Reserved.** Decisions D-180 to D-199 belong to the product UI redesign (rules, kit, tokens, areas). Migrations: none.
+

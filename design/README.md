@@ -64,6 +64,6 @@ DTCG-style: groups, `$value`, `$type`, `$description`, `{group.token}` aliases a
 
 ## Not decided yet
 
-- The workspace's four button systems and the notch on product buttons (a visible change; the founder decides).
+- The workspace's four button systems are replaced by the product kit's one button (`apps/web/app/_ui/`, planned). The notch on product buttons is decided (D-180): the Volt button's top inline-end corner, every other kind a 4 px rectangle. The tokens the redesign adds (`--control-line`, `--scrim`, `--ok-text`, `--warn-text`, `--on-band-ok`, `--on-band-warn`, `--on-band-bad`, `--ui-figure`, the UI space and size steps, `--radius-ui`, `--radius-dialog`, `--cut-band`) are listed in `.claude/skills/alyr-design/tokens.md`; they add values and change none.
 - The drawn product screens on the site still use the product's old surfaces (`component.drawing`, the steps marked "retire" in the grey ramp); moving them changes the site.
 - Product breakpoints and z-index values are not on the scale yet.

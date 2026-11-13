@@ -32,7 +32,7 @@ differ, the newer decision in `docs/decisions.md` wins; say so in your PR and fi
 | You are making | Load |
 |---|---|
 | A public page, section, menu, product page, the header or footer | `alyr-site-page` |
-| A workspace (`/app`), back office (`/ops`), sign-in, onboarding (`/start`) or customer page (`/s`, `/b`, `/pay`, `/t`) screen, or the ALYR Agent dashboard | `alyr-product-screen` |
+| A workspace (`/app`), back office (`/ops`), sign-in, onboarding (`/start`) or customer page (`/s`, `/b`, `/pay`, `/t`) screen, or the ALYR Agent dashboard | `alyr-product-screen` (and its `ui-rules.md`, `screen-checklist.md`) |
 | A WhatsApp reply, a template, a reminder, the report card's caption | `alyr-whatsapp-message` |
 | An email ALYR sends | `alyr-email` |
 | An image drawn by code: report card, social card, share image | `alyr-generated-image` |
@@ -69,7 +69,11 @@ asymmetry over centring.
    its outlined twin, the hero plate, drawn phones, the agreement and the shop monogram; the
    fold's three planes with the symbol's gaps at the entry to a Carbon band and the closing
    call; motion that arrives along the diagonal. Every cut is mirrored in Arabic, because
-   `clip-path` does not flip. Rounded panels and pills are not ALYR.
+   `clip-path` does not flip. On the public site, rounded panels and pills are not ALYR. **The
+   product is the exception on purpose** (D-180): its panels take `--radius-md` (8 px) with a
+   hairline, its dialogs `--radius-dialog`, its Volt button the notch on the top inline-end
+   corner and every other button a 4 px rectangle; pills are still not used
+   ([ui-rules.md](../alyr-product-screen/ui-rules.md)).
 5. **The "Sample" mark** (founder, 24 Oct 2026, `docs/site-audit/00-decisions.md`). Every
    drawing of a product screen is marked as a sample once, in its own chrome: beside the
    shop's name in the window's title bar ("Qirfa Bakery · SAMPLE / Home"), "Sample business"
@@ -97,7 +101,9 @@ asymmetry over centring.
     the pace, stopped off screen and in a hidden tab. Text and sections arrive once and stay.
     With reduced motion only the end state shows ([motion.md](motion.md)).
 11. **It must not look machine-made** (the founder, 31 Oct 2026, D-150). No icon or arrow on a
-    button, on any page. On the homepage: no arrow on a link, no mono capitals outside a drawing
+    button on the public site, and none on a Volt button anywhere; in the product an icon is
+    allowed on an outlined or quiet button and on an icon-only button (D-180, which amends D-150
+    for the product). On the homepage: no arrow on a link, no mono capitals outside a drawing
     of the product, no floating centred kicker, no tick lists, no numbered badges or boxed
     counts, no row of big stats, no row of identical icon cards, no construction marks (grids,
     dot fields, crosses on rules), no dashed line as decoration, and no "X, Y and Z" rhythm
@@ -129,10 +135,15 @@ the semantic tier, never a primitive, in components. Full list and usage:
 
 - **Families:** Instrument Sans for Latin (with its width axis on the site), IBM Plex Sans
   Arabic for Arabic, IBM Plex Mono for small labels and identifiers inside drawings of the
-  product (and for labels on pages other than the homepage). Figures are
-  Instrument Sans with tabular digits, not mono. Arabic mono labels switch to Plex Sans Arabic.
+  product (and for labels on pages other than the homepage). On the site, figures are
+  Instrument Sans with tabular digits, not mono. **In the product the numerals are hybrid**
+  (D-180): mono for identifiers, times, dates, phone numbers and money in table cells and
+  key-value rows; Instrument Sans with tabular digits for figures from 24 px up and for amounts
+  inside a sentence ([ui-rules.md](../alyr-product-screen/ui-rules.md) section 5).
+  Arabic mono labels switch to Plex Sans Arabic.
 - **Scale:** the site's `--display`, `--h2`, `--h3`, `--fs-*` steps and the product's
-  `--ui-*` steps (`--ui-input` for inputs). Use a step; never a one-off size or a half-pixel.
+  `--ui-*` steps (the product's body is 13 px, `--ui-small`; `--ui-input` is for inputs on a
+  phone). Use a step; never a one-off size or a half-pixel.
   Generated images have their own floor (`font.size.card.min`, `alyr-generated-image`).
 - **Weights:** `--weight-regular`, `--weight-medium`, `--weight-semibold` (400, 500, 600) in
   the product, the Agent and images; the site's in-between weights from `--weight-*`. No 700.
@@ -140,7 +151,8 @@ the semantic tier, never a primitive, in components. Full list and usage:
   sections, where a label is sentence case in Instrument Sans (D-150; `home.css`). **Arabic is never tracked, never in
   capitals, never italic, never with kashida**, and takes the looser line heights.
 - **Spacing:** `--space-1` to `--space-7` (4, then 8 px steps); sections `--sec`, and
-  `--rule-gap` under a section rule.
+  `--rule-gap` under a section rule. The product has its own steps from 2 to 48 px
+  (`--ui-space-*`, [ui-rules.md](../alyr-product-screen/ui-rules.md) section 5).
 - **Grid:** 12 columns (`--col-gap`) up to `--wide`, inside `--gutter`; logical start and end;
   4 columns on phones; at least 16 px side gutter. Breakpoints only from the tokens' list
   (media queries cannot read custom properties, so write the listed numbers); do not add one
@@ -159,8 +171,9 @@ the pending dot and status line, the "Sample" mark, section rules, the fold, the
 Carbon plate, the drawn phone and workspace window, the ALYR Agent dashboard
 (`_agent/AgentDashboard.tsx`, the one component shared by site and product).
 
-Icons are drawn on the 24 px grid in one line (1.7 px, square ends, mitred corners). A
-direction arrow flips in RTL (`.ico-flip`); ▲▼, the logo and clocks never mirror. Unicode
+Icons are drawn on the 24 px grid in one line (1.7 px, square ends, mitred corners). The
+product's set uses the same geometry rendered at 16 px with a stroke that reads about 1.5 px
+(D-180). A direction arrow flips in RTL (`.ico-flip`); ▲▼, the logo and clocks never mirror. Unicode
 arrows and "×" in text do not flip: use the icon.
 
 ## 5. Motion
@@ -248,7 +261,8 @@ Full list, the claims table and the names register: [honesty.md](honesty.md).
 - **No invented metrics, customers, logos, testimonials or ratings.** Percentages only when
   both periods count 20 or more. Dates fall on their real weekdays.
 - **Never imply WhatsApp or Meta affiliation:** no WhatsApp logo, no WhatsApp green on
-  ALYR's own surfaces, never "partner"; the disclaimer is on every page.
+  ALYR's own surfaces, never "partner" (the footer's disclaimer line was removed in D-164; the
+  rule stands).
 
 ## 10. Verify
 
