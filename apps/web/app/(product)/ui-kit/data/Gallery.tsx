@@ -7,6 +7,7 @@
 
 import { useEffect } from "react";
 import { Button, ToastProvider, UiRoot } from "../../../_ui";
+import { useLang } from "../../../_ui/useLang";
 import "../../../_ui/ui.css";
 import "../gallery.css";
 import "./data.css";
@@ -18,7 +19,10 @@ import { MenuDemo, OverlayDemo, SkeletonDemo, ToastDemo } from "./OverlayDemo";
 import { TableDemo } from "./TableDemo";
 import { T } from "./copy";
 
-export function Gallery({ lang, theme }: { lang: "en" | "ar"; theme: "light" | "dark" | null }) {
+export function Gallery({ lang: asked, theme }: { lang: "en" | "ar" | null; theme: "light" | "dark" | null }) {
+  // `?lang=` wins; without it the language kept on this device, as the product reads it.
+  const kept = useLang().lang;
+  const lang = asked ?? kept;
   const t = T[lang];
 
   // `?theme=` sets the same attribute the product layout and the site's switch set.

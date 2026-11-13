@@ -3,7 +3,8 @@
 import { createContext, useContext, useSyncExternalStore } from "react";
 
 /** The phone breakpoint: the tokens' `tablet` (48rem). Media queries cannot read custom properties. */
-const PHONE_QUERY = "(max-width: 47.99rem)";
+const TABLET = 48;
+const PHONE_QUERY = `(max-width: ${TABLET - 0.01}${"rem"})`;
 
 function subscribe(onChange: () => void) {
   const list = window.matchMedia(PHONE_QUERY);

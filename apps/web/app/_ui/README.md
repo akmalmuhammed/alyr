@@ -59,5 +59,29 @@ nothing depends on the workspace shell's `.sh`. The public site (`_site`) does n
 Pure logic (class builders, tab keys, field ids, initials, colours) is in `variants.ts` and tested by
 `variants.test.mjs` (`pnpm test`).
 
-Group 2 (dialogs, drawers, menus, toasts, tables, charts) is built beside this by agent 0B3 and appends
-its exports to `index.ts` and its own import line to `ui.css`.
+## Group 2: data display, overlays, charts, calendar and icons
+
+Gallery: `/ui-kit/data?lang=ar&theme=dark` (development only, 404 in production). Styles: `ui-data.css`.
+Layers draw into `useUiHost()` (the `UiRoot` element); while a modal layer is open the rest of that root is
+`inert`, so put the whole screen inside the root.
+
+| Export | Use | Never |
+|---|---|---|
+| `Table`, `BulkBar` | Mono caps headers, 52 px rows (`density="compact"` 44), sorting (`sort`, `onSortChange`), selection with shift-range and a header checkbox, a "more" menu per row (`rowActions`), keyboard row focus (arrows, Home, End, Page keys, Enter opens, Space selects), skeleton rows (`loading`), `empty` when there are no rows, and under 48 rem a list of cards (`phone` slot on a column: kicker, tag, title, amount, body, foot, foot-end; `phoneCell`, `showOn`). `caption` names it. | Sorting inside it (hand it rows in order, or use `sortRows`); a page-level sticky header together with `scrollX` (see requests.md); words of its own |
+| `Pager` | Where you are and two arrows under a list; `pageRange` writes the range | |
+| `Drawer` | Detail of one thing from the inline-end edge (left in Arabic), 440 or `wide` 480; `mode="docked"` sits beside a list (no scrim, no trap); a bottom sheet under 48 rem | A drawer inside a drawer for the same job; a footer with two main buttons |
+| `Modal`, `ConfirmDialog` | A 520 dialog, 10 px radius, float shadow, footer on a quiet fill; `ConfirmDialog` names the act, safe choice first and focused, `destructive` draws the confirm as `bad`, scrim does not dismiss | "Yes" or "OK" as the button; a confirm for something that can simply be undone (use a toast with Undo) |
+| `Menu`, `ContextMenu` | A list of actions from a button (the trigger is yours and must spread the props it gets) or from a right-click; arrows, Home, End, typing, Escape; `tone: "bad"` rows, separators, group labels, shortcut key caps | A destructive item that acts at once; a ContextMenu as the only door to an action |
+| `ToastProvider`, `useToast` | One provider per screen inside the root; `push({ text, tone, meta, undo, key })`: three show at once, the rest wait; 4.5 s, 8 s for a problem, 9 s with Undo; pauses on hover and focus; polite live region, a problem is announced at once | A toast as the only record of something that matters; a toast for a field error |
+| `Skeleton`, `SkeletonRows`, `SkeletonText` | A grey bar where something will be, same height as the real thing | Shimmer, pulse, a spinner |
+| `Spark`, `Area`, `Bars`, `Ring`, `Stack` | Plain SVG and CSS charts; `summary` (a sentence, both languages) is required and is read by screen readers; Volt marks only today (`signal`, `today`); time runs right to left in Arabic | Volt as a fill; a chart with no figures beside it; a tooltip |
+| `CalendarGrid` | A day: time axis, a column per person or bay, bookings placed by start and length (CSS, 72 px an hour), overlap lanes, off-hours shading, the now line, free stretches (`freeSlots`), sideways scroll with the axis fixed, legend. `formatTime` is the one place a time is written | Fetching or polling (the screen does); a Volt block |
+| `HourHeat` | Bookings (or anything counted) by day and hour as a real table, four steps, closed hours flat, the now line | Colour as the only carrier: every number is text with a count label |
+| `Composer` | A growing multi-line field, Reply / Note switch, counter, send hint, a tools slot, the send button (Volt for a reply, dark for a note); `closed` switches it off with the reason; Ctrl or Cmd Enter sends | A saved reply sent without the person pressing send |
+| `Workbench` | List, main and context panes filling their height, each scrolling alone; three panes from 62 rem (of the workbench itself), two below, one under 48 rem (`pane`) | Content padding (panes draw their own headers edge to edge) |
+| `PhoneFrame` | A 390 frame for the gallery; the Table's cards switch on inside it | Use in the product |
+| `Icon` | One glyph by name (the drawing kit's `IC` names, plus `chat`, `undo`, `mail`); 24 grid, square ends, mitred corners, `currentColor`, 16 px; `size` sm 12, md 16, lg 22; `aria-hidden` unless `label`; `right`, `left`, `arrow`, `send` mirror in Arabic | A WhatsApp logo or lookalike (`wa` is a plain chat bubble); the `robot` glyph (reads as AI) |
+
+Pure logic, each with a `node --test` file: `tableLogic.ts` (sort, selection, row focus, page range),
+`calendarLayout.ts` (times, placement, overlap lanes, free gaps, now line), `chartScale.ts` (points,
+fractions, stack shares), `heat.ts` (levels), `toastQueue.ts` (the queue and its timings).

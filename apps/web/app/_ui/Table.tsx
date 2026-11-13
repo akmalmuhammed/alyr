@@ -233,9 +233,9 @@ export function Table<R>(props: TableProps<R>) {
     );
   }
 
-  // The narrowest the table gets before it scrolls: its fixed columns, the select and menu columns, and room for the one that fills.
+  // The narrowest the table gets before it scrolls: its fixed columns, the select and menu columns, and room (200 px) for the one that fills.
   const fixed = tableColumns.map((c) => c.width).filter((w): w is string => Boolean(w));
-  const extra = [selection && "(var(--ui-size-touch) + var(--ui-space-12))", rowActions && "(var(--ui-size-touch) + var(--ui-space-12))", fixed.length < tableColumns.length && "var(--ui-size-side-column)"].filter(Boolean);
+  const extra = [selection && "(var(--ui-size-touch) + var(--ui-space-12))", rowActions && "(var(--ui-size-touch) + var(--ui-space-12))", fixed.length < tableColumns.length && "(var(--ui-size-side-column) / 2)"].filter(Boolean);
   const floor = `calc(${[...fixed, ...extra].join(" + ") || "0px"})`;
   const columnCount = tableColumns.length + (selection ? 1 : 0) + (rowActions ? 1 : 0);
 

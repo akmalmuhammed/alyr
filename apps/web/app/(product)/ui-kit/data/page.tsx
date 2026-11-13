@@ -10,7 +10,8 @@ export default async function UiKitDataPage({ searchParams }: { searchParams: Pr
   if (process.env.NODE_ENV === "production") notFound();
   const query = await searchParams;
   const one = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
-  const lang = one(query.lang) === "ar" ? "ar" : "en";
+  const asked = one(query.lang);
+  const lang = asked === "ar" ? "ar" : asked === "en" ? "en" : null;
   const theme = one(query.theme) === "dark" ? "dark" : one(query.theme) === "light" ? "light" : null;
   return <Gallery lang={lang} theme={theme} />;
 }
