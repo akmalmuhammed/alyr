@@ -1,0 +1,5 @@
+/* The product UI kit. Import this once, where the kit is used (the gallery imports it today; the
+   product layout will, when the shell is rebuilt on the kit). Group 1 (controls and content
+   blocks) lives in ui-core.css; later groups add their own import line here. */
+@import "./ui-core.css";
+@import "./ui-data.css";
