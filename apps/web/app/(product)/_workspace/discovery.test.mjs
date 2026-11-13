@@ -183,11 +183,13 @@ test("only Discovery has views beneath it in the menu; every other section has n
 });
 
 test("the shell draws a sub-list only for an item that has views", () => {
-  const shell = read(join(HERE, "../app/[[...section]]/page.tsx"));
+  // The shell's drawing is LegacyShell; the data and the palette's commands are useWorkspace.
+  const shell = read(join(HERE, "LegacyShell.tsx"));
   assert.match(shell, /subItems\(item\.key, state\.can_manage\)\.length > 0 && section === item\.key/);
   assert.match(shell, /return withViews \? \[link, <SubNav/);
   // The palette adds rows only through subItems too.
-  assert.match(shell, /\.\.\.subItems\(item\.key, state\?\.can_manage \?\? false\)\.map/);
+  const workspace = read(join(HERE, "useWorkspace.ts"));
+  assert.match(workspace, /\.\.\.subItems\(item\.key, state\?\.can_manage \?\? false\)\.map/);
 });
 
 // ── the client ──────────────────────────────────────────
