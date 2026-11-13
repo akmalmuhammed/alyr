@@ -40,7 +40,7 @@ export default async function InboxPreviewPage({
   return (
     <UiRoot lang={lang} data-theme={theme}>
       <ToastProvider labels={{ dismiss: lang === "ar" ? "إغلاق" : "Dismiss", undo: lang === "ar" ? "تراجع" : "Undo" }}>
-        <div style={{ maxWidth: "90rem", margin: "0 auto", padding: "1.5rem" }}>
+        <div className="ibx-preview-wrap">
           <InboxWorkbench
             initialFilters={initialFilters}
             initialSelectedId={thread ? "rm-148" : "rm-148"}

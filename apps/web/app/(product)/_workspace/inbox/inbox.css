@@ -557,6 +557,20 @@
   color: var(--on-band);
 }
 
+.ibx-preview-wrap {
+  max-inline-size: 90rem;
+  margin-inline: auto;
+  padding: var(--space-4);
+  box-sizing: border-box;
+}
+
+.ibx-closed-layout {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
 /* Mobile responsive styles */
 @media (max-width: 64rem) {
   .ibx-workbench {
@@ -570,5 +584,31 @@
   }
   .ibx-stats-grid {
     grid-template-columns: 1fr;
+  }
+  .ibx-unsent-view {
+    padding: var(--space-3);
+  }
+  .ibx-preview-wrap {
+    padding: 0;
+  }
+  .ibx-closed-layout {
+    flex-direction: column;
+  }
+  .ibx-closed-side {
+    inline-size: 100% !important;
+  }
+  .ibx-closed-band {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  .ibx-closed-fig {
+    border-inline-start: none;
+    padding-inline-start: 0;
+    border-block-start: var(--rule-hairline) solid var(--band-line);
+    padding-block-start: var(--space-2);
+  }
+  .ibx-closed-fig:first-child {
+    border-block-start: none;
+    padding-block-start: 0;
   }
 }

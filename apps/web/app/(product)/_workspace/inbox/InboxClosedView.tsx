@@ -125,11 +125,11 @@ export function InboxClosedView({ onReopen, lang }: InboxClosedViewProps) {
       </div>
 
       {/* Main Content Layout */}
-      <div style={{ display: "flex", gap: "var(--space-4)", alignItems: "flex-start" }}>
+      <div className="ibx-closed-layout">
         {/* Table Panel */}
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: "1 1 20rem", minInlineSize: 0, maxInlineSize: "100%", overflowX: "auto" }}>
           <Panel>
-            <div style={{ padding: "var(--space-3) var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-2)", borderBottom: "var(--rule-hairline) solid var(--line)" }}>
+            <div style={{ padding: "var(--space-3) var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-2)", borderBottom: "var(--rule-hairline) solid var(--line)", flexWrap: "wrap" }}>
               <Chip on={outcomeFilter === "all"} onClick={() => setOutcomeFilter("all")}>
                 {t.chipAll} (142)
               </Chip>
@@ -150,13 +150,13 @@ export function InboxClosedView({ onReopen, lang }: InboxClosedViewProps) {
               caption={t.tabClosed}
               columns={columns}
               rows={filteredRows}
-              rowKey={(r) => r.phone}
+              rowKey={(r) => `${r.customer}-${r.closedAt}`}
             />
           </Panel>
         </div>
 
         {/* Side Cards (Why lost & Speed) */}
-        <div style={{ inlineSize: "20rem", display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+        <div className="ibx-closed-side" style={{ inlineSize: "20rem", display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
           {/* Selected Reopen Card */}
           <Panel>
             <PanelHeader

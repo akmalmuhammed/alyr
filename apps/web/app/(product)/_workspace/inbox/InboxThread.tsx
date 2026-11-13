@@ -170,7 +170,7 @@ export function InboxThread({
                 {isOut && m.sender && (
                   <span className="ibx-bubble-sender">{m.sender}</span>
                 )}
-                <div className="ibx-bubble-text" dir={m.arabic ? "rtl" : undefined}>
+                <div className="ibx-bubble-text" style={{ direction: m.arabic ? "rtl" : undefined, textAlign: m.arabic ? "start" : undefined }}>
                   {m.text}
                 </div>
                 <div className="ibx-bubble-meta">

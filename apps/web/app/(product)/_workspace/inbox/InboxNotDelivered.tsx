@@ -162,7 +162,7 @@ export function InboxNotDelivered({ onRetry, onOpenConversation, lang }: InboxNo
         title={t.notDeliveredTitle}
         sub={t.notDeliveredSub}
         right={
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexWrap: "wrap" }}>
             <Search
               label={t.searchNotDelivered}
               placeholder={t.searchNotDelivered}
@@ -202,12 +202,14 @@ export function InboxNotDelivered({ onRetry, onOpenConversation, lang }: InboxNo
       {(activeTab === "all" || activeTab === "held") && (
         <Panel>
           <PanelHeader title={t.statHeldBack} sub={String(data.heldBack.length)} />
-          <Table
-            caption={t.statHeldBack}
-            columns={heldCols}
-            rows={data.heldBack}
-            rowKey={(r) => r.phone + r.when}
-          />
+          <div style={{ overflowX: "auto", maxInlineSize: "100%" }}>
+            <Table
+              caption={t.statHeldBack}
+              columns={heldCols}
+              rows={data.heldBack}
+              rowKey={(r) => r.phone + r.when}
+            />
+          </div>
           <PanelFooter>{t.heldBackFooter}</PanelFooter>
         </Panel>
       )}
@@ -216,12 +218,14 @@ export function InboxNotDelivered({ onRetry, onOpenConversation, lang }: InboxNo
       {(activeTab === "all" || activeTab === "failed") && (
         <Panel>
           <PanelHeader title={t.statFailed} sub={String(data.failed.length)} />
-          <Table
-            caption={t.statFailed}
-            columns={failedCols}
-            rows={data.failed}
-            rowKey={(r) => r.id}
-          />
+          <div style={{ overflowX: "auto", maxInlineSize: "100%" }}>
+            <Table
+              caption={t.statFailed}
+              columns={failedCols}
+              rows={data.failed}
+              rowKey={(r) => r.id}
+            />
+          </div>
           <PanelFooter>{t.failedFooter}</PanelFooter>
         </Panel>
       )}
