@@ -869,6 +869,19 @@ async def set_status(
         raise OrderError("bad_status", "Unknown order status.")
     if status == "cancelled":
         return await cancel_order(conn, order_id, outbound, actor, restock) is not None
+    current = await conn.fetchval("select status from orders where id = $1", order_id)
+    if current is None:
+        return False
+    if current == "cancelled":
+        # Its stock has gone back, so it cannot be brought back; the customer orders again.
+        raise OrderError(
+            "cancelled", "A cancelled order cannot be moved on. Place a new order instead."
+        )
+    if status == current:
+        return True
+    _ORDER = {"new": 0, "confirmed": 1, "ready": 2, "done": 3}
+    if current in _ORDER and status in _ORDER and _ORDER[status] < _ORDER[current]:
+        raise OrderError("backwards", "Cannot move an order backwards.")
     row = await conn.fetchrow(
         "update orders set status = $2 where id = $1 and status is distinct from $2 "
         "and status <> 'cancelled' returning contact_id, number, fulfilment",

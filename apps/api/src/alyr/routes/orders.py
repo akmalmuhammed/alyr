@@ -16,10 +16,9 @@ from alyr.core import team
 from alyr.core.auth import Staff
 from alyr.core.normalise import fmt_qar
 from alyr.modules.documents import payments as manual_payments
-from alyr.modules.documents import refs as doc_refs
 from alyr.modules.items import access, clock
 from alyr.modules.items import service as items
-from alyr.modules.orders import pay_ways, service
+from alyr.modules.orders import listing, pay_ways, service
 from alyr.routes.deps import current_staff, current_tenant
 
 router = APIRouter(prefix="/api", tags=["orders"])
@@ -63,20 +62,64 @@ class Availability(BaseModel):
 
 
 @router.get("/orders")
-async def orders(request: Request, tenant_id: UUID = Depends(current_tenant)) -> dict:
-    async def compute() -> dict:
-        async with request.app.state.db.tenant(tenant_id) as conn:
-            slug = await conn.fetchval("select slug from tenants where id = $1", tenant_id)
-            rows = await service.list_orders(conn)
-            # A shop with Documents on sees a pointer to the receipt or invoice an order made.
-            # A shop without it is answered exactly as before (no `document` key at all).
-            made = await doc_refs.by_source(conn, "order", [o["id"] for o in rows])
-            for order in rows:
-                if order["id"] in made:
-                    order["document"] = made[order["id"]]
-            return {"slug": slug, "orders": rows}
+async def orders(
+    request: Request,
+    staff: Staff = Depends(current_staff),
+    status: str | None = None,
+    payment: str | None = None,
+    mode: str | None = None,
+    assigned: str | None = None,
+    q: str | None = None,
+    sort: str | None = None,
+    limit: int | None = None,
+    offset: int = 0,
+) -> dict:
+    role_class = "manager" if staff.role in MANAGERS else "agent"
+    cache_key = (
+        "orders",
+        role_class,
+        status or "",
+        payment or "",
+        mode or "",
+        assigned or "",
+        q or "",
+        sort or "",
+        str(limit or ""),
+        str(offset),
+    )
 
-    return await request.app.state.poll.get_json(tenant_id, ("orders",), compute)
+    async def compute() -> dict:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            slug = await conn.fetchval("select slug from tenants where id = $1", staff.tenant_id)
+            data = await listing.list_orders_filtered(
+                conn,
+                staff,
+                status=status,
+                payment=payment,
+                mode=mode,
+                assigned=assigned,
+                q=q,
+                sort=sort,
+                limit=limit,
+                offset=offset,
+            )
+            return {"slug": slug, **data}
+
+    return await request.app.state.poll.get_json(staff.tenant_id, cache_key, compute)
+
+
+@router.get("/orders/{order_id}")
+async def get_order_detail(
+    order_id: UUID, request: Request, staff: Staff = Depends(current_staff)
+) -> dict:
+    """One order's full detail: lines, customer, payment state, timeline, document, and access."""
+    async with request.app.state.db.tenant(staff.tenant_id) as conn:
+        detail = await listing.order_detail(
+            conn, staff, order_id, get_settings().public_web_url
+        )
+        if detail is None:
+            raise HTTPException(status_code=404, detail="order not found")
+        return detail
 
 
 @router.post("/orders/{order_id}/status")
@@ -86,6 +129,8 @@ async def change_status(
 ) -> dict:
     """Move an order along. Cancelling puts the stock back if the order was not made yet,
     and says when a refund is due (the shop refunds from its own payment account)."""
+    if body.status == "cancelled" and staff.role not in MANAGERS:
+        raise HTTPException(status_code=403, detail="only owners and admins cancel an order")
     outbound = request.app.state.outbound
     try:
         async with request.app.state.db.tenant(staff.tenant_id) as conn:
