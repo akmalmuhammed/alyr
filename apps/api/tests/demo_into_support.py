@@ -6,7 +6,7 @@ from alyr.seed_into_business import cli
 from test_consent import owner_sql
 from test_onboarding import new_business
 
-__all__ = ["bakery", "mark", "run", "sql", "table_counts"]
+__all__ = ["bakery", "mark", "run", "sql", "story_of", "table_counts"]
 
 
 def bakery(client, name=None):
@@ -24,13 +24,17 @@ def mark(tenant_id, allowed=True):
     owner_sql("update tenants set demo_data_allowed = $2 where id = $1", tenant_id, allowed)
 
 
-def run(*argv):
-    """The command, as a person types it. Returns (exit code, what it printed)."""
+def run(*argv, story_end=None):
+    """The command, as a person types it. Returns (exit code, what it printed).
+
+    `story_end` holds the end of the story still, for a test that compares two loads: a load is
+    made from its seed and from the moment it begins, so two loads a minute apart are two
+    stories (`story_of`, ALY-335). It is not something a person can type."""
     lines: list[str] = []
     original = cli.print if hasattr(cli, "print") else None
     cli.print = lambda *a, **k: lines.append(" ".join(str(x) for x in a))
     try:
-        code = asyncio.run(cli.main(list(argv)))
+        code = asyncio.run(cli.main(list(argv), story_end=story_end))
     finally:
         if original is None:
             del cli.print
@@ -41,6 +45,13 @@ def run(*argv):
 
 def sql(query, *args):
     return owner_sql(query, *args)
+
+
+def story_of(tenant_id):
+    """The moment the story of the business's load ends: what a second load is given so that it
+    tells the same story."""
+    return owner_sql("select story_end from demo_seed_runs where tenant_id = $1 and "
+                     "status = 'active'", tenant_id)[0]["story_end"]
 
 
 def table_counts(tenant_id) -> dict:
