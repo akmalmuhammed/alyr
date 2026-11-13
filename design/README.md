@@ -17,7 +17,7 @@
 | Semantic | `semantic.*` | Every page and screen. **These names are the API**: canvas, surface, surface-subtle, text, text-muted, text-faint, text-inverse, line, line-strong, hair, hair-strong, focus, on-volt, volt-ink, volt-wash, pending, ok, warn, bad (and their `-soft`). |
 | Component | `component.*` | One component each: `band` (Carbon blocks and what sits on them), `window`, `theme-switch`, `chat` (the drawn WhatsApp chat), `drawing` (product screens drawn on the site), `agent`, `card` (the report card), `email`, `social`. |
 
-Then the non-colour groups: `font` (family, file, weight, size, leading, tracking), `space`, `layout`, `radius`, `border`, `cut` (the 45° cut), `shadow`, `motion` (duration, pace, ease, travel), `breakpoint`, `z`, `focus`. In `motion.pace`, every token marked `paced` is multiplied by `pace` (CSS `calc(… * var(--pace))`; TypeScript and Python get the product), so one number sets the speed of every timed piece on the site.
+Then the non-colour groups: `font` (family, file, weight, size, leading, tracking), `space` (the site's `--space-N` steps, and `space.ui`, the product's gaps named by their px value), `ui-size` (the product's control, row, bar and panel sizes), `layout`, `radius`, `border`, `cut` (the 45° cut), `shadow`, `motion` (duration, pace, ease, travel), `breakpoint`, `z`, `focus`. In `motion.pace`, every token marked `paced` is multiplied by `pace` (CSS `calc(… * var(--pace))`; TypeScript and Python get the product), so one number sets the speed of every timed piece on the site.
 
 The brand primitives `--carbon`, `--volt`, `--volt-hover`, `--volt-pressed`, `--concrete` and `--graphite` are also exposed in CSS, because the site names them directly (Volt as the action, Carbon as the band). The grey ramp is not: use a semantic name, or add one.
 
@@ -64,6 +64,12 @@ DTCG-style: groups, `$value`, `$type`, `$description`, `{group.token}` aliases a
 
 ## Not decided yet
 
-- The workspace's four button systems and the notch on product buttons (a visible change; the founder decides).
+Decided on 13 Nov 2026 (the product's redesign, Product UI foundation): the product takes the redesign's language: hairline panels at 8 px with no shadow but the menu and dialog (`--shadow-float`), 13 px body, one Volt button per screen whose notch is on the top inline-end corner like the site's, other buttons 4 px rectangles. The values that language needed are in the tokens (`--control-line`, `--scrim`, `--ok-text`, `--warn-text`, `--on-band-ok/warn/bad`, `--ui-space-*`, `--ui-size-*`, `--ui-figure`, `--radius-ui`, `--radius-dialog`, `--cut-band`, the UI title and figure tracking and leading). They only add: no existing value changed, so the site, the emails and the report card read the same.
+
+Still open:
+
+- 12 h or 24 h time in the product (`formatTime` in `apps/web/app/_ui/format.ts` has one switch; 24 h until the founder decides).
+- Arabic one size up in the product: no token, because each component maps its size to the next step in `--ui-*`; say so here if a token turns out to be needed.
 - The drawn product screens on the site still use the product's old surfaces (`component.drawing`, the steps marked "retire" in the grey ramp); moving them changes the site.
 - Product breakpoints and z-index values are not on the scale yet.
+- The icon geometry (24 grid drawn at 16 px) and the mark's polygons as one source: not tokens yet.

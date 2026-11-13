@@ -80,6 +80,8 @@ export const color = {
     "carbon-08": "rgb(21 23 26 / .08)",
     "carbon-10": "rgb(21 23 26 / .1)",
     "carbon-14": "rgb(21 23 26 / .14)",
+    "carbon-50": "rgb(21 23 26 / .5)",
+    "black-60": "rgb(0 0 0 / .6)",
     "white-07": "rgb(255 255 255 / .07)",
     "white-09": "rgb(255 255 255 / .09)",
     "white-13": "rgb(255 255 255 / .13)",
@@ -95,10 +97,12 @@ export const color = {
     "green-300": "#7fd09a",
     "green-100": "#e4f1e7",
     "green-900": "#173424",
+    "green-800": "#2a7541",
     "amber-700": "#a96400",
     "amber-300": "#e5bb6c",
     "amber-100": "#f7ecd9",
     "amber-900": "#3a2c12",
+    "amber-800": "#9a5b00",
     "red-700": "#b42318",
     "red-300": "#f09a86",
     "red-100": "#fbe5e2",
@@ -178,7 +182,11 @@ export const semantic = {
   "warn": "#a96400",
   "warn-soft": "#f7ecd9",
   "bad": "#b42318",
-  "bad-soft": "#fbe5e2"
+  "bad-soft": "#fbe5e2",
+  "ok-text": "#2a7541",
+  "warn-text": "#9a5b00",
+  "control-line": "#d5d9dd",
+  "scrim": "rgb(21 23 26 / .5)"
 } as const;
 
 export const component = {
@@ -195,6 +203,9 @@ export const component = {
     "on-band-soft": "#d5d9dd",
     "on-band-quiet": "#c4c9cf",
     "on-band-faint": "#8a9199",
+    "on-band-ok": "#7fd09a",
+    "on-band-warn": "#e5bb6c",
+    "on-band-bad": "#f09a86",
     "band-mark": "#6b7480",
     "band-rule": "#555d65"
   },
@@ -419,6 +430,7 @@ export const font = {
       "title": "20px",
       "heading": "24px",
       "heading-lg": "28px",
+      "figure": "32px",
       "display-sm": "36px",
       "display": "56px"
     },
@@ -437,6 +449,8 @@ export const font = {
     "heading": 1.04,
     "body": 1.55,
     "ui": 1.45,
+    "ui-title": 1.25,
+    "ui-figure": 1.15,
     "arabic-display": 1.25,
     "arabic-heading": 1.3,
     "arabic-body": 1.7
@@ -444,7 +458,9 @@ export const font = {
   "tracking": {
     "label": ".08em",
     "label-lg": ".09em",
-    "heading": "-.03em"
+    "heading": "-.03em",
+    "ui-title": "-.015em",
+    "ui-figure": "-.02em"
   }
 } as const;
 
@@ -455,7 +471,40 @@ export const space = {
   "4": "1.5rem",
   "5": "2.5rem",
   "6": "4rem",
-  "7": "6.5rem"
+  "7": "6.5rem",
+  "ui": {
+    "2": "2px",
+    "4": "4px",
+    "6": "6px",
+    "8": "8px",
+    "10": "10px",
+    "12": "12px",
+    "14": "14px",
+    "16": "16px",
+    "20": "20px",
+    "24": "24px",
+    "32": "32px"
+  }
+} as const;
+
+export const uiSize = {
+  "control-xs": "28px",
+  "control-sm": "32px",
+  "control": "36px",
+  "touch": "44px",
+  "control-touch": "44px",
+  "row-compact": "44px",
+  "row": "52px",
+  "row-tall": "60px",
+  "bar": "52px",
+  "dialog-bar": "56px",
+  "sidebar": "15rem",
+  "drawer": "440px",
+  "dialog": "520px",
+  "side-column": "400px",
+  "icon": "16px",
+  "icon-sm": "12px",
+  "icon-lg": "22px"
 } as const;
 
 export const layout = {
@@ -470,7 +519,9 @@ export const layout = {
 export const radius = {
   "control": "2px",
   "sm": "4px",
+  "ui": "6px",
   "md": ".5rem",
+  "dialog": "10px",
   "lg": ".75rem",
   "phone": "1.75rem",
   "panel": "1.75rem",
@@ -489,6 +540,7 @@ export const cut = {
   "notch-sm": "9px",
   "plate": "6rem",
   "plate-sm": "3rem",
+  "band": "28px",
   "fold-gap": "6px"
 } as const;
 
@@ -589,7 +641,11 @@ export const dark = {
     "warn": "#e5bb6c",
     "warn-soft": "#3a2c12",
     "bad": "#f09a86",
-    "bad-soft": "#3d1f18"
+    "bad-soft": "#3d1f18",
+    "ok-text": "#7fd09a",
+    "warn-text": "#e5bb6c",
+    "control-line": "#3a3f45",
+    "scrim": "rgb(0 0 0 / .6)"
   },
   "component": {
     "band": {

@@ -49,12 +49,15 @@ emitted because the site names Volt as the action and Carbon as the band.
 | `--pending` | The hollow dot for something not yet available | An error |
 | `--white`, `--black` | A switch's knob, text on a status fill; masks and the darkest shadows | Surfaces |
 | `--ok`, `--warn`, `--bad` and `-soft` | Status in product screens, always beside a word | The public site; the dashboard as alarms |
+| `--ok-text`, `--warn-text` | Text on `--ok-soft` and `--warn-soft` (4.5:1; `--ok` and `--warn` fail there) | Text on a white surface that has no soft fill |
+| `--control-line` | The border of a button or chip, whose words identify it (1.4:1, not a 3:1 border) | A field, select or search box: those take `--line-strong` |
+| `--scrim` | Behind a dialog or a sheet | Anything else |
 
 ## Colour: components
 
 | Group | CSS names | For |
 |---|---|---|
-| Band | `--band`, `--band-edge`, `--dark-canvas` (a well inside Carbon), `--dark-surface` (a panel inside Carbon), `--dark-subtle`, `--dark-line`, `--dark-text`, `--on-band`, `--on-band-soft`, `--on-band-quiet`, `--on-band-faint`, `--band-mark`, `--band-rule` | Carbon blocks: the band, the hero plate, the closing call, the product page opening; everything that sits on them. No more untokenised greys on Carbon |
+| Band | `--band`, `--band-edge`, `--dark-canvas` (a well inside Carbon), `--dark-surface` (a panel inside Carbon), `--dark-subtle`, `--dark-line`, `--dark-text`, `--on-band`, `--on-band-soft`, `--on-band-quiet`, `--on-band-faint`, `--on-band-ok`, `--on-band-warn`, `--on-band-bad` (status as text or a mark on Carbon), `--band-mark`, `--band-rule` | Carbon blocks: the band, the hero plate, the closing call, the product page opening; everything that sits on them. No more untokenised greys on Carbon |
 | Window | `--window`, `--window-line`, `--mark-ring`, `--monogram-bg`, `--monogram-ink`, `--phone-frame`, `--phone-outline` | The drawn workspace window, numbered marks (Carbon discs, a Volt ring only in dark), shop monograms, drawn phones |
 | Theme switch | `--night`, `--when-light`, `--when-dark` | The switch's glyphs, with no per-theme rules |
 | Chat (`--wa-*`) | `--wa-head`, `--wa-paper`, `--wa-in`, `--wa-out`, `--wa-ink`, `--wa-soft`, `--wa-soft-out`, `--wa-link`, `--wa-tick`, `--wa-chip`, `--wa-rule`, `--wa-field`, `--wa-green`, … `--wa-brand` | Drawn WhatsApp chats only. WhatsApp's colours, never ALYR's; never with WhatsApp's logo; `--wa-brand` (its brand green) never on ALYR's own surfaces |
@@ -75,20 +78,22 @@ emitted because the site names Volt as the action and Carbon as the band.
 | `--weight-regular` 400, `--weight-medium` 500, `--weight-semibold` 600 | Product, Agent, card: these three only |
 | `--weight-body`, `--weight-strong`, `--weight-heading`, `--weight-display` | The site's in-between weights of the variable face |
 | `--display`, `--h2`, `--h3`, `--fs-body`, `--fs-base`, `--fs-small`, `--fs-note`, `--fs-caption`, `--fs-label`, `--fs-micro` | The site's scale (fluid headings, rem steps); Arabic uses the same sizes |
-| `--ui-micro` … `--ui-display` (`micro`, `caption`, `small`, `body-sm`, `body`, `input`, `title-sm`, `title`, `heading`, `heading-lg`, `display-sm`, `display`) | Product screens and the Agent; `--ui-input` (16 px) for inputs, so phones do not zoom |
+| `--ui-micro` … `--ui-display` (`micro`, `caption`, `small`, `body-sm`, `body`, `input`, `title-sm`, `title`, `heading`, `heading-lg`, `figure` (32, a figure on the band), `display-sm`, `display`) | Product screens and the Agent; `--ui-input` (16 px) for inputs, so phones do not zoom |
 | `font.size.card.min` | The report card's floor: nothing smaller on its 1080 canvas |
-| `--leading-display`, `--leading-heading`, `--leading-body`, `--leading-ui`, `--leading-arabic-display`, `--leading-arabic-heading`, `--leading-arabic-body` | Line heights; Arabic always takes its own |
-| `--tracking-label`, `--tracking-label-lg`, `--tracking-heading` | Latin only; Arabic is never tracked |
+| `--leading-display`, `--leading-heading`, `--leading-body`, `--leading-ui`, `--leading-ui-title`, `--leading-ui-figure`, `--leading-arabic-display`, `--leading-arabic-heading`, `--leading-arabic-body` | Line heights; Arabic always takes its own |
+| `--tracking-label`, `--tracking-label-lg`, `--tracking-heading`, `--tracking-ui-title`, `--tracking-ui-figure` | Latin only; Arabic is never tracked. The `ui-` pair is a product page title (24 px) and figures (28 and 32 px) |
 
 ## Space, layout, shape
 
 | Tokens | Use |
 |---|---|
-| `--space-1` … `--space-7` | 4, then 8 px steps up to the largest gap |
+| `--space-1` … `--space-7` | 4, then 8 px steps up to the largest gap (the site) |
+| `--ui-space-2` … `--ui-space-32` (2, 4, 6, 8, 10, 12, 14, 16, 20, 24, 32) | The product's gaps and paddings, named by their px value; nothing else is a gap in a product screen |
+| `--ui-size-control-xs`, `-sm`, `-control`, `-touch` (28, 32, 36, 44), `-row-compact`, `-row`, `-row-tall` (44, 52, 60), `-bar` (52), `-dialog-bar`, `-sidebar`, `-drawer`, `-dialog`, `-side-column`, `-icon`, `-icon-sm`, `-icon-lg` | The product's fixed sizes: controls, rows, bars, panels |
 | `--gutter`, `--wide`, `--header`, `--col-gap`, `--sec`, `--rule-gap` | The 12-column page, the header height, section padding, the space under a section rule |
-| `--radius-control` (buttons, focus rings), `--radius-sm`, `--radius-md`, `--radius-lg`, `--radius-phone`, `--radius-round` (dots) | Nearly square; the 45° cut, not a radius, is the brand's shape. No pills |
+| `--radius-control` (buttons, focus rings), `--radius-sm`, `--radius-ui` (6: banner, segmented control), `--radius-md`, `--radius-dialog` (10), `--radius-lg`, `--radius-phone`, `--radius-round` (dots) | Nearly square; the 45° cut, not a radius, is the brand's shape. No pills |
 | `--rule-hairline`, `--rule-strong`, `--rule-dashed` | Solid true today, dashed coming (followed by `--line-strong` on the page, `--band-rule` on Carbon) |
-| `--cut-notch`, `--cut-notch-sm`, `--cut-plate`, `--cut-plate-sm`, `--cut-fold-gap` | The button's corner, the plate's corner, the fold's gaps; mirrored in Arabic |
+| `--cut-notch`, `--cut-notch-sm`, `--cut-band` (the product's Carbon band corner), `--cut-plate`, `--cut-plate-sm`, `--cut-fold-gap` | The button's corner, the plate's corner, the fold's gaps; mirrored in Arabic |
 | `--menu-shadow`, `--window-shadow`, `--shadow-lift`, `--shadow-float` | The only shadows |
 | `--z-below`, `--z-base`, `--z-raised`, `--z-product-bar`, `--z-header`, `--z-contact-bar`, `--z-skip-link` | The stacking scale |
 | `--focus-width`, `--focus-offset`, `--focus-offset-control`, `--focus-on-band` | The ring: 2 px, off the element, Volt on Carbon |
@@ -115,5 +120,5 @@ on the scale yet: do not add more.
 
 ## Not decided yet (from the README)
 
-The notch on product buttons and their four systems; moving the drawn screens to the
-semantic surfaces; product breakpoints and z-index. Ask before changing any of them.
+12 h or 24 h time in the product; moving the drawn screens to the semantic surfaces;
+product breakpoints and z-index; the icon stroke. Ask before changing any of them.
