@@ -223,7 +223,7 @@ export function SettingsAccount({
                   </div>
                   <div className="set-list-info">
                     <span className="set-list-title">
-                      {biz.nameEn} · <span dir="rtl">{biz.nameAr}</span>
+                      {biz.nameEn} · <span>{biz.nameAr}</span>
                     </span>
                     <span className="set-list-sub">
                       {biz.role === "owner" ? t.ownerBadge : biz.role} · {biz.peopleCount} people
@@ -282,7 +282,7 @@ export function SettingsAccount({
                   checked={language === "ar"}
                   onChange={() => onLanguageChange("ar")}
                 />
-                <span className="set-list-title" dir="rtl">
+                <span className="set-list-title">
                   {t.arabicOption}
                 </span>
               </div>

@@ -420,7 +420,7 @@ export const SETTINGS_COPY: { en: SettingsCopy; ar: SettingsCopy } = {
 
     languageSection: "اللغة",
     languageHelp: "تُحفظ مع حسابك وتطبق على كل أجهزتك",
-    englishOption: "English",
+    englishOption: "الإنجليزية",
     englishSub: "من اليسار إلى اليمين",
     arabicOption: "العربية",
     arabicSub: "من اليمين إلى اليسار",
