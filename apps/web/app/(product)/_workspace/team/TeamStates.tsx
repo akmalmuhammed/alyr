@@ -379,7 +379,7 @@ export function TeamStates({
                 {t.sendingInviteNotice}
               </span>
             </div>
-            <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-faint)" }}>
+            <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>
               {t.busyButtonNotice}
             </span>
           </div>

@@ -333,7 +333,7 @@
 
 .team-you-tag {
   font-size: var(--ui-micro);
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .team-person-email {
@@ -375,7 +375,7 @@
 
 .team-status-volt {
   background: var(--volt);
-  color: var(--volt-text);
+  color: var(--on-volt);
 }
 
 .team-status-warn {

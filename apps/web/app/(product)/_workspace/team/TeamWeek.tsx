@@ -234,7 +234,7 @@ export function TeamWeek({
                           )}
                         </div>
                       ) : (
-                        <span style={{ color: "var(--text-faint)", fontSize: "var(--font-size-xs)" }}>
+                        <span style={{ color: "var(--text-muted)", fontSize: "var(--font-size-xs)" }}>
                           {t.none}
                         </span>
                       )}
@@ -248,7 +248,7 @@ export function TeamWeek({
                       {person.firstAnswer !== "–" ? (
                         <span style={{ fontFamily: "var(--font-ui-mono)" }}>{person.firstAnswer}</span>
                       ) : (
-                        <span style={{ color: "var(--text-faint)", fontSize: "var(--font-size-xs)" }}>
+                        <span style={{ color: "var(--text-muted)", fontSize: "var(--font-size-xs)" }}>
                           {t.noRepliesYet}
                         </span>
                       )}
@@ -275,7 +275,7 @@ export function TeamWeek({
                           </span>
                         </div>
                       ) : (
-                        <span style={{ color: "var(--text-faint)", fontSize: "var(--font-size-xs)" }}>
+                        <span style={{ color: "var(--text-muted)", fontSize: "var(--font-size-xs)" }}>
                           {t.nothingClosedYet}
                         </span>
                       )}
@@ -292,7 +292,7 @@ export function TeamWeek({
                           </span>
                         </div>
                       ) : (
-                        <span style={{ color: "var(--text-faint)" }}>{t.dash}</span>
+                        <span style={{ color: "var(--text-muted)" }}>{t.dash}</span>
                       )}
                     </td>
 
@@ -329,12 +329,12 @@ export function TeamWeek({
                   </div>
                 </td>
                 <td className="team-td team-td-right">{t.dash}</td>
-                <td className="team-td" style={{ color: "var(--text-faint)" }}>{t.dash}</td>
+                <td className="team-td" style={{ color: "var(--text-muted)" }}>{t.dash}</td>
                 <td className="team-td team-td-right">{t.dash}</td>
-                <td className="team-td" style={{ color: "var(--text-faint)", fontSize: "var(--font-size-xs)" }}>
+                <td className="team-td" style={{ color: "var(--text-muted)", fontSize: "var(--font-size-xs)" }}>
                   {t.rowNobodyNote}
                 </td>
-                <td className="team-td" style={{ color: "var(--text-faint)" }}>{t.dash}</td>
+                <td className="team-td" style={{ color: "var(--text-muted)" }}>{t.dash}</td>
                 <td className="team-td team-td-right">3</td>
                 <td className="team-td team-td-right">QAR 2,912</td>
               </tr>

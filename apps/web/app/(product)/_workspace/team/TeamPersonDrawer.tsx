@@ -215,7 +215,7 @@ export function TeamPersonDrawer({
               <div className="team-perm-row team-perm-disabled">
                 <span style={{ color: "var(--text-faint)" }}>✕</span>
                 <span>{t.permMarkPaid}</span>
-                <span style={{ marginInlineStart: "auto", fontSize: "var(--ui-micro)", color: "var(--text-faint)" }}>
+                <span style={{ marginInlineStart: "auto", fontSize: "var(--ui-micro)", color: "var(--text-muted)" }}>
                   {t.permNoteOrdersSettings}
                 </span>
               </div>
