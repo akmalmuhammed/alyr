@@ -11,6 +11,7 @@ import {
   SectionLabel, Select, Stat, Status, Steps, Tabs, Tag, Textarea, Thumb, Timeline, Toggle, UTabs, UiIcon, UiRoot,
   tabPanelId,
 } from "../../_ui";
+import { useLang } from "../../_ui/useLang";
 import "../../_ui/ui.css";
 import "./gallery.css";
 
@@ -222,7 +223,10 @@ function Cell({ cap, children }: { cap: string; children: React.ReactNode }) {
   );
 }
 
-export function Gallery({ lang, theme }: { lang: "en" | "ar"; theme: "light" | "dark" | null }) {
+export function Gallery({ lang: asked, theme }: { lang: "en" | "ar" | null; theme: "light" | "dark" | null }) {
+  // `?lang=` wins; without it the language kept on this device, as the product reads it.
+  const kept = useLang().lang;
+  const lang = asked ?? kept;
   const t = T[lang];
 
   // `?theme=` sets the same attribute the product layout and the site's switch set.
@@ -407,7 +411,7 @@ export function Gallery({ lang, theme }: { lang: "en" | "ar"; theme: "light" | "
             <Cell cap="Field + Input">
               <div className="u-kg-col">
                 <Field label={t.nameEn} hint={t.hintShown}><Input defaultValue={t.valueInterior} /></Field>
-                <Field label={t.nameAr} optional={t.optional}><Input dir="rtl" lang="ar" defaultValue="العناية الداخلية" /></Field>
+                <Field label={t.nameAr} optional={t.optional}><Input dir="auto" lang="ar" defaultValue="العناية الداخلية" /></Field>
                 <Field label={t.nameEn} error={t.errName}><Input defaultValue="" /></Field>
                 <Field label={t.price} hint={t.hintShown} error={t.errPrice}><Input defaultValue="two" prefix="QAR" inputMode="decimal" /></Field>
                 <Field label={t.duration}><Input defaultValue="45" suffix="min" inputMode="numeric" /></Field>

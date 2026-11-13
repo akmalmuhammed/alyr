@@ -91,7 +91,7 @@
 .u-mono { font-family: var(--font-ui-mono); font-variant-numeric: tabular-nums; }
 .u-fig { font-variant-numeric: tabular-nums; }
 .u-sr {
-  position: absolute; inline-size: 1px; block-size: 1px; margin: -1px; padding: 0; border: 0;
+  position: absolute; inline-size: var(--rule-hairline); block-size: var(--rule-hairline); margin: calc(-1 * var(--rule-hairline)); padding: 0; border: 0;
   overflow: hidden; clip-path: inset(50%); white-space: nowrap;
 }
 
@@ -470,7 +470,7 @@
   border: var(--rule-dashed) var(--line-strong); border-radius: var(--u-r-md);
 }
 .u-slot-dot { margin-block-start: var(--u-sp-6); }
-.u-slot-body { flex: 1; min-inline-size: 14rem; display: grid; gap: var(--u-sp-4); }
+.u-slot-body { flex: 1; min-inline-size: calc(var(--ui-size-side-column) / 2); display: grid; gap: var(--u-sp-4); }
 .u-slot-title { margin: 0; font-size: var(--u-fs-head); font-weight: var(--weight-semibold); line-height: var(--u-lh); }
 .u-slot-text { margin: 0; max-inline-size: 60ch; color: var(--text-muted); font-size: var(--u-fs-body); line-height: var(--u-lh); }
 .u-slot-action { display: flex; flex-wrap: wrap; gap: var(--u-sp-8); }
