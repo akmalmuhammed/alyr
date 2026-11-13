@@ -34,10 +34,21 @@ export function CreditWorkbench({
   const [currentView, setCurrentView] = useState<"statement" | null>(initialView);
   const [currentState, setCurrentState] = useState<"loading" | "empty" | "offline" | "filtered" | null>(initialState);
 
+  React.useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
+      document.documentElement.lang = lang;
+      const urlTheme = new URLSearchParams(window.location.search).get("theme");
+      if (urlTheme === "dark" || urlTheme === "light") {
+        document.documentElement.setAttribute("data-theme", urlTheme);
+      }
+    }
+  }, [lang]);
+
   // If a state override is active (e.g. state=loading)
   if (currentState) {
     return (
-      <div style={{ padding: isPhone ? "1rem" : "1.5rem 1.75rem" }}>
+      <div className="crd-preview-wrap">
         <CreditStates
           state={currentState}
           lang={lang}
@@ -51,7 +62,7 @@ export function CreditWorkbench({
   // Mobile layout
   if (isPhone) {
     return (
-      <div style={{ padding: "0.75rem" }}>
+      <div className="crd-preview-wrap">
         <CreditPhone
           view={currentAccount ? "account" : "accounts"}
           lang={lang}
@@ -91,7 +102,7 @@ export function CreditWorkbench({
   // Desktop Statement of account view
   if (currentView === "statement") {
     return (
-      <div style={{ padding: "1.5rem 1.75rem" }}>
+      <div className="crd-preview-wrap">
         <CreditStatement
           lang={lang}
           onBack={() => setCurrentView(null)}
@@ -103,9 +114,10 @@ export function CreditWorkbench({
   // Desktop Single Customer Account view
   if (currentAccount) {
     return (
-      <div style={{ padding: "1.5rem 1.75rem" }}>
+      <div className="crd-preview-wrap">
         <CreditAccount
           lang={lang}
+          hasOpenDialog={activeDialog !== null}
           onBack={() => setCurrentAccount(null)}
           onOpenPayment={() => setActiveDialog("payment")}
           onOpenLimit={() => setActiveDialog("limit")}
@@ -139,9 +151,10 @@ export function CreditWorkbench({
 
   // Desktop Main Accounts view
   return (
-    <div style={{ padding: "1.5rem 1.75rem" }}>
+    <div className="crd-preview-wrap">
       <CreditAccounts
         lang={lang}
+        hasOpenDialog={activeDialog !== null}
         onOpenAccount={(id) => setCurrentAccount(id)}
         onOpenReminders={() => setActiveDialog("reminders")}
         onOpenRecordPayment={() => {

@@ -35,7 +35,7 @@ export default async function CreditPreviewPage({
   const isPhone = phoneQuery === "1" || phoneQuery === "true";
 
   return (
-    <UiRoot lang={lang} data-theme={theme}>
+    <UiRoot lang={lang} data-theme={theme} style={{ inlineSize: "100%", maxInlineSize: "100%", overflowX: "hidden" }}>
       <ToastProvider
         labels={{
           dismiss: lang === "ar" ? "إغلاق" : "Dismiss",

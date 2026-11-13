@@ -21,14 +21,16 @@ export function CreditStates({
   if (state === "loading") {
     return (
       <div className="crd-root" aria-busy="true" aria-label={t.loadingAccounts}>
-        {/* Header Skeleton */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            <div style={{ inlineSize: "8rem", blockSize: "1.75rem", background: "var(--subtle)", borderRadius: "var(--radius-sm)" }} />
-            <div style={{ inlineSize: "20rem", blockSize: "1rem", background: "var(--subtle)", borderRadius: "var(--radius-sm)" }} />
+        {/* Header with Title and Subtitle */}
+        <header className="crd-header">
+          <div className="crd-title-group">
+            <h1 className="crd-title">{t.creditTitle}</h1>
+            <p className="crd-subtitle">{t.loadingAccounts}</p>
           </div>
-          <div style={{ inlineSize: "9rem", blockSize: "2.25rem", background: "var(--subtle)", borderRadius: "var(--radius-sm)" }} />
-        </div>
+          <button type="button" className="u-btn u-btn--line" disabled>
+            {t.btnSendReminders}
+          </button>
+        </header>
 
         {/* Owed Band Skeleton */}
         <div className="crd-band" style={{ minBlockSize: "9rem", opacity: 0.7 }}>
@@ -74,7 +76,7 @@ export function CreditStates({
           </div>
           <button
             type="button"
-            className="u-btn u-btn--volt"
+            className="u-btn u-btn--line"
             onClick={onAction}
           >
             {t.btnGiveCredit}

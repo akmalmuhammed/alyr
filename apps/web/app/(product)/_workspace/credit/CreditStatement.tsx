@@ -51,10 +51,10 @@ export function CreditStatement({
       </header>
 
       {/* ── Main Layout: Paper stage on left, Options on right ────────────── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 25rem", gap: "1.25rem", alignItems: "start" }}>
+      <div className="crd-statement-layout">
         {/* Left Paper Stage */}
         <div className="crd-statement-stage">
-          <div style={{ inlineSize: "41.25rem", display: "flex", alignItems: "center", justifyContent: "space-between", color: "var(--text-muted)", fontSize: "var(--font-size-xs)" }}>
+          <div style={{ inlineSize: "100%", maxInlineSize: "41.25rem", display: "flex", alignItems: "center", justifyContent: "space-between", color: "var(--text-muted)", fontSize: "var(--font-size-xs)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
               <span style={{ fontWeight: 600 }}>{lang === "ar" ? "معاينة" : "Preview"}</span>
               <span style={{ fontFamily: "var(--font-ui-mono)" }}>{t.previewMeta}</span>
@@ -84,7 +84,7 @@ export function CreditStatement({
             </div>
 
             {/* Recipient & Period */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem", padding: "0.75rem 0", borderBlock: "var(--rule-hairline) solid var(--line)" }}>
+            <div className="crd-dialog-row-2" style={{ gap: "2rem", padding: "0.75rem 0", borderBlock: "var(--rule-hairline) solid var(--line)" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.1875rem" }}>
                 <span style={{ fontFamily: "var(--font-ui-mono)", fontSize: "var(--ui-micro)", textTransform: "uppercase", color: "var(--text-muted)" }}>{t.toLabel}</span>
                 <span style={{ fontWeight: 600, fontSize: "var(--font-size-sm)" }}>Bluefin Events</span>
@@ -248,7 +248,7 @@ export function CreditStatement({
             )}
 
             {/* Payment Details */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", padding: "0.75rem 0", borderBlockStart: "var(--rule-hairline) solid var(--line)" }}>
+            <div className="crd-dialog-row-2" style={{ gap: "1.5rem", padding: "0.75rem 0", borderBlockStart: "var(--rule-hairline) solid var(--line)" }}>
               {toggleLink && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.1875rem" }}>
                   <span style={{ fontFamily: "var(--font-ui-mono)", fontSize: "var(--ui-micro)", textTransform: "uppercase", color: "var(--text-muted)" }}>

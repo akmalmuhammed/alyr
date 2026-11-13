@@ -112,7 +112,7 @@ export function CreditLimitDialog({
             </div>
 
             {limitType === "limit" && (
-              <div style={{ display: "grid", gridTemplateColumns: "11rem 1fr", gap: "1rem", alignItems: "center", marginBlockStart: "0.25rem" }}>
+              <div className="crd-dialog-row-limit">
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
                   <label style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>{t.fieldLimit}</label>
                   <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
@@ -153,7 +153,7 @@ export function CreditLimitDialog({
               </span>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+            <div className="crd-dialog-row-2">
               <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
                 <label style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>{t.fieldPayBy}</label>
                 <input

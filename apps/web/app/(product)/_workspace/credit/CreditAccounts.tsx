@@ -18,6 +18,7 @@ import {
 
 interface CreditAccountsProps {
   lang?: CreditLang;
+  hasOpenDialog?: boolean;
   onOpenAccount?: (id: string) => void;
   onOpenReminders?: () => void;
   onOpenRecordSale?: () => void;
@@ -26,6 +27,7 @@ interface CreditAccountsProps {
 
 export function CreditAccounts({
   lang = "en",
+  hasOpenDialog = false,
   onOpenAccount,
   onOpenReminders,
   onOpenRecordSale,
@@ -86,7 +88,7 @@ export function CreditAccounts({
           </button>
           <button
             type="button"
-            className="u-btn u-btn--volt"
+            className={`u-btn ${hasOpenDialog ? "u-btn--line" : "u-btn--volt"}`}
             onClick={onOpenReminders}
           >
             {t.btnSendReminders}

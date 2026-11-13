@@ -562,8 +562,8 @@ export const CREDIT_COPY = {
     btnSave: "حفظ",
 
     // Statement of account screen
-    statementDocTitle: "Statement of account",
-    statementDocArTitle: "كشف حساب",
+    statementDocTitle: "كشف حساب",
+    statementDocArTitle: "Statement of account",
     statementSubtitle: "بلوفين للفعاليات · ما سُجل على الحساب، ما سُدد، والرصيد بعد كل سطر.",
     btnPrint: "طباعة",
     btnPdf: "PDF",

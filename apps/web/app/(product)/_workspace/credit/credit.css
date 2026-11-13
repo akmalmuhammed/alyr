@@ -1,10 +1,21 @@
 /* Scoped styles for ALYR Redesign Credit Module (J06) */
 
+.crd-preview-wrap {
+  inline-size: 100%;
+  max-inline-size: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  padding: 1.5rem 1.75rem;
+}
+
 .crd-root {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
   inline-size: 100%;
+  max-inline-size: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
   color: var(--text);
   font-family: var(--font-ui);
 }
@@ -43,6 +54,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 /* ── Owed Carbon Band ──────────────────────────────────────────────────────── */
@@ -225,6 +237,8 @@
 
 .crd-search {
   inline-size: 15rem;
+  max-inline-size: 100%;
+  box-sizing: border-box;
   block-size: 2rem;
   padding: 0 0.75rem;
   font-size: var(--font-size-sm);
@@ -282,6 +296,8 @@
 
 .crd-table-scroll {
   inline-size: 100%;
+  max-inline-size: 100%;
+  box-sizing: border-box;
   overflow-x: auto;
 }
 
@@ -526,6 +542,8 @@
   justify-content: space-between;
   gap: 1rem;
   font-size: var(--font-size-sm);
+  flex-wrap: wrap;
+  box-sizing: border-box;
 }
 
 .crd-account-band {
@@ -614,6 +632,7 @@
   justify-content: center;
   z-index: 100;
   padding: 1.5rem;
+  box-sizing: border-box;
 }
 
 .crd-modal {
@@ -622,15 +641,16 @@
   box-shadow: var(--shadow-float);
   border: var(--rule-hairline) solid var(--ctl);
   inline-size: 100%;
-  max-inline-size: 54rem;
+  max-inline-size: min(54rem, 100%);
   max-block-size: 90vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .crd-modal-sm {
-  max-inline-size: 37.5rem;
+  max-inline-size: min(37.5rem, 100%);
 }
 
 .crd-modal-header {
@@ -650,9 +670,11 @@
 .crd-modal-body {
   padding: 1.25rem 1.5rem;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  box-sizing: border-box;
 }
 
 .crd-modal-footer {
@@ -662,6 +684,42 @@
   align-items: center;
   justify-content: space-between;
   background: var(--surface);
+}
+
+/* ── Dialog Grid Layouts ───────────────────────────────────────────────────── */
+
+.crd-reminders-grid {
+  display: grid;
+  grid-template-columns: 1fr 18.75rem;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.crd-dialog-row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.25fr;
+  gap: 1rem;
+}
+
+.crd-dialog-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.crd-dialog-row-limit {
+  display: grid;
+  grid-template-columns: 11rem 1fr;
+  gap: 1rem;
+  align-items: center;
+  margin-block-start: 0.25rem;
+}
+
+.crd-tone-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-block-end: var(--rule-hairline) solid var(--line);
+  background: var(--subtle);
 }
 
 /* ── WhatsApp Preview Bubble ───────────────────────────────────────────────── */
@@ -710,6 +768,13 @@
 
 /* ── Statement of Account Paper Stage ──────────────────────────────────────── */
 
+.crd-statement-layout {
+  display: grid;
+  grid-template-columns: 1fr 25rem;
+  gap: 1.25rem;
+  align-items: start;
+}
+
 .crd-statement-stage {
   background: var(--subtle);
   border-radius: var(--radius-md);
@@ -722,7 +787,9 @@
 }
 
 .crd-paper {
-  inline-size: 41.25rem;
+  inline-size: 100%;
+  max-inline-size: 41.25rem;
+  box-sizing: border-box;
   background: var(--surface);
   border: var(--rule-hairline) solid var(--ctl);
   border-radius: var(--radius-xs);
@@ -761,6 +828,10 @@
 /* ── Responsive Mobile Overrides (Phone) ────────────────────────────────────── */
 
 @media (max-width: 48rem) {
+  .crd-preview-wrap {
+    padding: 0.75rem;
+  }
+
   .crd-header {
     flex-direction: column;
     align-items: stretch;
@@ -770,6 +841,11 @@
     flex-direction: column;
     padding: 1rem;
     gap: 1rem;
+    box-sizing: border-box;
+  }
+
+  .crd-band-main {
+    padding: 0;
   }
 
   .crd-band-col {
@@ -777,10 +853,17 @@
     padding: 0.75rem 0 0 0;
     border-inline-start: none;
     border-block-start: var(--rule-hairline) solid var(--band-line);
+    box-sizing: border-box;
   }
 
   .crd-split-grid,
-  .crd-three-panels {
+  .crd-three-panels,
+  .crd-reminders-grid,
+  .crd-statement-layout,
+  .crd-dialog-row-3,
+  .crd-dialog-row-2,
+  .crd-dialog-row-limit,
+  .crd-tone-strip {
     grid-template-columns: 1fr;
   }
 
@@ -801,6 +884,19 @@
 
   .crd-paper {
     inline-size: 100%;
-    padding: 1.5rem;
+    padding: 1rem;
+  }
+
+  .crd-paper-summary-band {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .crd-scrim {
+    padding: 0.5rem;
+  }
+
+  .crd-modal {
+    max-inline-size: 100%;
+    border-radius: var(--radius-md);
   }
 }

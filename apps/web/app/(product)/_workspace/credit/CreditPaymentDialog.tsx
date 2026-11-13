@@ -60,7 +60,7 @@ export function CreditPaymentDialog({
           </div>
 
           {/* Form Fields: Amount, Date, Reference */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1.25fr", gap: "1rem" }}>
+          <div className="crd-dialog-row-3">
             <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
               <label style={{ fontSize: "var(--font-size-xs)", fontWeight: 500, color: "var(--text-muted)" }}>
                 {t.fieldAmountPaid}

@@ -72,7 +72,7 @@ export function CreditRemindersDialog({
           </div>
 
           {/* 2-column layout: Lists on left, WhatsApp preview on right */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 18.75rem", gap: "1.5rem", alignItems: "start" }}>
+          <div className="crd-reminders-grid">
             {/* Left Column */}
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
               {/* 3 will be reminded */}

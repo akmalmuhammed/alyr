@@ -15,6 +15,7 @@ import {
 
 interface CreditAccountProps {
   lang?: CreditLang;
+  hasOpenDialog?: boolean;
   onBack?: () => void;
   onOpenPayment?: () => void;
   onOpenLimit?: () => void;
@@ -24,6 +25,7 @@ interface CreditAccountProps {
 
 export function CreditAccount({
   lang = "en",
+  hasOpenDialog = false,
   onBack,
   onOpenPayment,
   onOpenLimit,
@@ -79,7 +81,7 @@ export function CreditAccount({
           </button>
           <button
             type="button"
-            className="u-btn u-btn--volt"
+            className={`u-btn ${hasOpenDialog ? "u-btn--line" : "u-btn--volt"}`}
             onClick={onOpenPayment}
           >
             {t.btnRecordPayment}
@@ -322,7 +324,7 @@ export function CreditAccount({
           </div>
 
           {/* Tone progression strip */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", borderBlockEnd: "var(--rule-hairline) solid var(--line)", background: "var(--subtle)" }}>
+          <div className="crd-tone-strip">
             <div style={{ padding: "0.625rem 0.75rem", borderInlineEnd: "var(--rule-hairline) solid var(--line)", background: "var(--surface)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
                 <span style={{ inlineSize: "0.4375rem", blockSize: "0.4375rem", borderRadius: "var(--radius-full)", background: "var(--text)" }} />
