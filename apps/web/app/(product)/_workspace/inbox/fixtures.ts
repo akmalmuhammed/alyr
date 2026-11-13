@@ -58,7 +58,7 @@ export const FIXTURE_CONVERSATIONS: ConversationItem[] = [
     unread: 0,
     assigned: { id: "u-auto", name: "Automatic replies" },
     last: {
-      body: "Auto: Paid. Order #1039 is confirmed.",
+      body: "Auto: Paid. Order 1039 is confirmed.",
       direction: "out",
       kind: "text",
       status: "sent",
@@ -283,9 +283,9 @@ export const FIXTURE_CONTEXT_RASHID: CustomerContextData = {
     deposit: "Deposit QAR 300 paid · R-2026-1893",
   },
   orders: [
-    { name: "Tyre shine, Air freshener", number: "#1013 · 3 Nov · paid", total: "QAR 45" },
-    { name: "Carnauba wax 500 ml", number: "#1005 · 21 Oct · paid", total: "QAR 65" },
-    { name: "Microfibre cloth pack × 2", number: "#1002 · 6 Oct · paid", total: "QAR 50" },
+    { name: "Tyre shine, Air freshener", number: "Order 1013 · 3 Nov · paid", total: "QAR 45" },
+    { name: "Carnauba wax 500 ml", number: "Order 1005 · 21 Oct · paid", total: "QAR 65" },
+    { name: "Microfibre cloth pack × 2", number: "Order 1002 · 6 Oct · paid", total: "QAR 50" },
   ],
   allow: [
     { purpose: "Bookings and receipts", status: "Agreed · 14 Mar 2025" },
@@ -311,8 +311,8 @@ export const FIXTURE_CONTEXT_MARIAM: CustomerContextData = {
   credit: false,
   booking: null,
   orders: [
-    { name: "Air freshener × 2", number: "#1010 · 2 Nov · paid", total: "QAR 30" },
-    { name: "Glass cleaner", number: "#1001 · 29 Sep · paid", total: "QAR 22" },
+    { name: "Air freshener × 2", number: "Order 1010 · 2 Nov · paid", total: "QAR 30" },
+    { name: "Glass cleaner", number: "Order 1001 · 29 Sep · paid", total: "QAR 22" },
   ],
   allow: [
     { purpose: "Bookings and receipts", status: "Agreed · 8 Jun 2026" },
@@ -461,15 +461,15 @@ export const FIXTURE_CLOSED = {
   },
   rows: [
     { customer: "Aisha Hamad", phone: "+974 5555 0101", outcome: "Booked", note: "Booking 147", closedBy: "Salma", closedAt: "Today 09:14" },
-    { customer: "Dana Home Services", phone: "+974 5555 0161", outcome: "Sold", note: "#1037 · QAR 720", closedBy: "Salma", closedAt: "Today 08:50" },
+    { customer: "Dana Home Services", phone: "+974 5555 0161", outcome: "Sold", note: "Order 1037 · QAR 720", closedBy: "Salma", closedAt: "Today 08:50" },
     { customer: "+974 5555 0190", phone: "No name yet", outcome: "Lost", note: "Not available", closedBy: "Bilal", closedAt: "Today 08:31" },
     { customer: "Palm Court Offices", phone: "+974 5555 0166", outcome: "Booked", note: "Booking 139", closedBy: "Omar", closedAt: "Wed 18:40" },
     { customer: "Bluefin Events", phone: "+974 5555 0173", outcome: "Answered", note: "Opening hours on Friday", closedBy: "Reem", closedAt: "Wed 17:22" },
     { customer: "+974 5555 0193", phone: "No name yet", outcome: "Lost", note: "Price", closedBy: "Reem", closedAt: "Wed 15:05" },
-    { customer: "+974 5555 0187", phone: "No name yet", outcome: "Sold", note: "#1031 · QAR 95", closedBy: "Yusuf", closedAt: "Wed 13:48" },
+    { customer: "+974 5555 0187", phone: "No name yet", outcome: "Sold", note: "Order 1031 · QAR 95", closedBy: "Yusuf", closedAt: "Wed 13:48" },
     { customer: "+974 5555 0182", phone: "No name yet", outcome: "Answered", note: "Car ready for pickup", closedBy: "Yusuf", closedAt: "Wed 12:10" },
     { customer: "+974 5555 0179", phone: "No name yet", outcome: "Lost", note: "Stopped replying", closedBy: "Reem", closedAt: "Wed 11:30" },
-    { customer: "+974 5555 0171", phone: "No name yet", outcome: "Sold", note: "#1019 · QAR 60", closedBy: "Bilal", closedAt: "Tue 19:02" },
+    { customer: "+974 5555 0171", phone: "No name yet", outcome: "Sold", note: "Order 1019 · QAR 60", closedBy: "Bilal", closedAt: "Tue 19:02" },
   ],
   whyLost: [
     { reason: "Stopped replying", count: 4 },

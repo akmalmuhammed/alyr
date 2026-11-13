@@ -244,7 +244,7 @@ export function InboxWorkbench({
     );
   }
 
-  // Mobile rendering (390px)
+  // Mobile view
   if (isPhone) {
     if (phoneShowThread) {
       return (
