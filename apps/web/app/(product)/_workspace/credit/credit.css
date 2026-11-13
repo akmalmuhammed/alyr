@@ -1,0 +1,806 @@
+/* Scoped styles for ALYR Redesign Credit Module (J06) */
+
+.crd-root {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  inline-size: 100%;
+  color: var(--text);
+  font-family: var(--font-ui);
+}
+
+/* ── Top Bar & Header ──────────────────────────────────────────────────────── */
+
+.crd-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.crd-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.crd-title {
+  font-size: var(--font-size-2xl);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.crd-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.crd-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ── Owed Carbon Band ──────────────────────────────────────────────────────── */
+
+.crd-band {
+  background: var(--band);
+  color: var(--on-band);
+  border-radius: var(--radius-md);
+  padding: 1.25rem 0.25rem;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+}
+
+.crd-band-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0 1.5rem;
+}
+
+.crd-band-label {
+  font-family: var(--font-ui-mono);
+  font-size: var(--ui-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--band-muted);
+}
+
+.crd-band-hero-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.625rem;
+}
+
+.crd-band-total {
+  font-size: var(--font-size-3xl);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--on-band);
+}
+
+.crd-band-count {
+  font-family: var(--font-ui-mono);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--band-muted);
+}
+
+/* Stacked horizontal bar */
+.crd-stack-bar {
+  display: flex;
+  inline-size: 100%;
+  max-inline-size: 28rem;
+  block-size: 0.5rem;
+  border-radius: var(--radius-xs);
+  overflow: hidden;
+  background: var(--band-line);
+}
+
+.crd-stack-segment {
+  block-size: 100%;
+}
+
+.crd-band-legend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-inline-size: 28rem;
+}
+
+.crd-legend-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.crd-legend-header {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.crd-legend-dot {
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  border-radius: var(--radius-xs);
+}
+
+.crd-legend-label {
+  font-size: var(--ui-micro);
+  color: var(--band-muted);
+}
+
+.crd-legend-val {
+  font-family: var(--font-ui-mono);
+  font-size: var(--font-size-xs);
+  color: var(--on-band);
+}
+
+/* Stat columns inside the band */
+.crd-band-col {
+  inline-size: 13.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0 1.5rem;
+  border-inline-start: var(--rule-hairline) solid var(--band-line);
+}
+
+.crd-band-col-val {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--on-band);
+}
+
+.crd-band-col-sub {
+  font-size: var(--font-size-xs);
+  line-height: 1.35;
+  color: var(--band-muted);
+}
+
+/* ── Tabs & Filter Chips ───────────────────────────────────────────────────── */
+
+.crd-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-block-end: var(--rule-hairline) solid var(--line);
+}
+
+.crd-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  border-block-end: 0.125rem solid transparent;
+  margin-block-end: calc(-1 * var(--rule-hairline));
+}
+
+.crd-tab:hover {
+  color: var(--text);
+}
+
+.crd-tab-active {
+  color: var(--text);
+  border-block-end-color: var(--text);
+}
+
+.crd-tab-count {
+  font-family: var(--font-ui-mono);
+  font-size: var(--ui-micro);
+  padding: 0.125rem 0.375rem;
+  border-radius: var(--radius-sm);
+  background: var(--subtle);
+  color: var(--text-muted);
+}
+
+.crd-tab-active .crd-tab-count {
+  background: var(--text);
+  color: var(--inv);
+}
+
+.crd-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.crd-search {
+  inline-size: 15rem;
+  block-size: 2rem;
+  padding: 0 0.75rem;
+  font-size: var(--font-size-sm);
+  color: var(--text);
+  background: var(--surface);
+  border: var(--rule-hairline) solid var(--ctl);
+  border-radius: var(--radius-sm);
+}
+
+.crd-search:focus {
+  outline: none;
+  border-color: var(--text);
+}
+
+.crd-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  border-radius: var(--radius-full);
+  background: var(--subtle);
+  color: var(--text-muted);
+  border: var(--rule-hairline) solid transparent;
+  cursor: pointer;
+}
+
+.crd-chip:hover {
+  background: var(--ctl);
+  color: var(--text);
+}
+
+.crd-chip-active {
+  background: var(--text);
+  color: var(--inv);
+}
+
+.crd-chip-count {
+  font-family: var(--font-ui-mono);
+  font-size: var(--ui-micro);
+  opacity: 0.8;
+}
+
+/* ── Accounts Table Panel ──────────────────────────────────────────────────── */
+
+.crd-panel {
+  background: var(--surface);
+  border: var(--rule-hairline) solid var(--line);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.crd-table-scroll {
+  inline-size: 100%;
+  overflow-x: auto;
+}
+
+.crd-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  text-align: start;
+  font-size: var(--font-size-sm);
+}
+
+.crd-th {
+  padding: 0.625rem 0.875rem;
+  font-size: var(--ui-micro);
+  font-family: var(--font-ui-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  border-block-end: var(--rule-hairline) solid var(--line);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.crd-th-right {
+  text-align: end;
+}
+
+.crd-tr {
+  border-block-end: var(--rule-hairline) solid var(--line);
+  transition: background 0.1s ease;
+}
+
+.crd-tr:last-child {
+  border-block-end: none;
+}
+
+.crd-tr:hover {
+  background: var(--subtle);
+}
+
+.crd-td {
+  padding: 0.75rem 0.875rem;
+  vertical-align: middle;
+}
+
+.crd-td-right {
+  text-align: end;
+  font-family: var(--font-ui-mono);
+}
+
+.crd-customer-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.crd-customer-top {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.crd-customer-name {
+  font-weight: 500;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.crd-customer-name:hover {
+  text-decoration: underline;
+}
+
+.crd-customer-phone {
+  font-family: var(--font-ui-mono);
+  font-size: var(--ui-micro);
+  color: var(--text-muted);
+}
+
+.crd-meter-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  inline-size: 9.375rem;
+}
+
+.crd-meter-top {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: var(--font-size-xs);
+}
+
+.crd-meter-percent {
+  font-family: var(--font-ui-mono);
+  font-weight: 500;
+}
+
+.crd-meter-of {
+  font-family: var(--font-ui-mono);
+  font-size: var(--ui-micro);
+  color: var(--text-muted);
+}
+
+.crd-meter-track {
+  inline-size: 100%;
+  block-size: 0.25rem;
+  background: var(--subtle);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.crd-meter-fill {
+  block-size: 100%;
+  border-radius: var(--radius-full);
+  background: var(--text);
+}
+
+.crd-meter-fill-bad {
+  background: var(--bad);
+}
+
+.crd-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-full);
+  font-size: var(--ui-micro);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.crd-badge-n {
+  background: var(--subtle);
+  color: var(--text);
+}
+
+.crd-badge-warn {
+  background: var(--warn-soft);
+  color: var(--warn-text);
+}
+
+.crd-badge-bad {
+  background: var(--bad-soft);
+  color: var(--bad);
+}
+
+.crd-badge-volt {
+  background: var(--volt);
+  color: var(--on-volt);
+}
+
+.crd-who-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: var(--font-size-sm);
+}
+
+.crd-avatar {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  border-radius: var(--radius-full);
+  background: var(--subtle);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--ui-micro);
+  font-weight: 600;
+}
+
+.crd-table-footer {
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border-block-start: var(--rule-hairline) solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.crd-pager-text {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.crd-rule-text {
+  font-size: var(--ui-micro);
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* ── Bottom Split Panels ───────────────────────────────────────────────────── */
+
+.crd-split-grid {
+  display: grid;
+  grid-template-columns: 1fr 25rem;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.crd-panel-header {
+  padding: 0.875rem 1.25rem;
+  border-block-end: var(--rule-hairline) solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.crd-panel-title {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  margin: 0;
+}
+
+.crd-panel-subtitle {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.crd-list-row {
+  padding: 0.75rem 1.25rem;
+  border-block-end: var(--rule-hairline) solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: var(--font-size-sm);
+}
+
+.crd-list-row:last-child {
+  border-block-end: none;
+}
+
+/* ── Single Account Ledger View ────────────────────────────────────────────── */
+
+.crd-refund-banner {
+  background: var(--warn-soft);
+  color: var(--text);
+  border: var(--rule-hairline) solid var(--warn);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: var(--font-size-sm);
+}
+
+.crd-account-band {
+  background: var(--band);
+  color: var(--on-band);
+  border-radius: var(--radius-md);
+  padding: 1.25rem 0.25rem;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  overflow: hidden;
+}
+
+.crd-account-band-col {
+  padding: 0 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border-inline-start: var(--rule-hairline) solid var(--band-line);
+}
+
+.crd-account-band-col:first-child {
+  border-inline-start: none;
+}
+
+.crd-three-panels {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+.crd-kv-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-block-end: var(--rule-hairline) solid var(--line);
+  font-size: var(--font-size-sm);
+}
+
+.crd-kv-row:last-child {
+  border-block-end: none;
+}
+
+.crd-kv-key {
+  color: var(--text-muted);
+}
+
+.crd-kv-val {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.crd-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.crd-timeline-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-inline-start: 0.75rem;
+  border-inline-start: 0.125rem solid var(--line);
+}
+
+.crd-timeline-text {
+  font-size: var(--font-size-sm);
+  color: var(--text);
+}
+
+.crd-timeline-meta {
+  font-size: var(--ui-micro);
+  color: var(--text-muted);
+}
+
+/* ── Modals & Drawers ──────────────────────────────────────────────────────── */
+
+.crd-scrim {
+  position: fixed;
+  inset: 0;
+  background: var(--scrim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 1.5rem;
+}
+
+.crd-modal {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-float);
+  border: var(--rule-hairline) solid var(--ctl);
+  inline-size: 100%;
+  max-inline-size: 54rem;
+  max-block-size: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.crd-modal-sm {
+  max-inline-size: 37.5rem;
+}
+
+.crd-modal-header {
+  padding: 1rem 1.5rem;
+  border-block-end: var(--rule-hairline) solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.crd-modal-title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  margin: 0;
+}
+
+.crd-modal-body {
+  padding: 1.25rem 1.5rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.crd-modal-footer {
+  padding: 1rem 1.5rem;
+  border-block-start: var(--rule-hairline) solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+}
+
+/* ── WhatsApp Preview Bubble ───────────────────────────────────────────────── */
+
+.crd-wa-paper {
+  background: var(--wa-paper);
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.crd-wa-bubble {
+  background: var(--wa-out);
+  color: var(--wa-ink);
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.625rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: var(--font-size-sm);
+  line-height: 1.35;
+}
+
+.crd-wa-time {
+  font-family: var(--font-ui-mono);
+  font-size: var(--ui-micro);
+  color: var(--wa-soft);
+  align-self: flex-end;
+}
+
+.crd-wa-action {
+  block-size: 2.125rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border: var(--rule-hairline) solid var(--line);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* ── Statement of Account Paper Stage ──────────────────────────────────────── */
+
+.crd-statement-stage {
+  background: var(--subtle);
+  border-radius: var(--radius-md);
+  padding: 1.75rem 0 2rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.875rem;
+  flex: 1;
+}
+
+.crd-paper {
+  inline-size: 41.25rem;
+  background: var(--surface);
+  border: var(--rule-hairline) solid var(--ctl);
+  border-radius: var(--radius-xs);
+  padding: 2.5rem 2.5rem 2rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  box-shadow: var(--shadow-float);
+}
+
+.crd-paper-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.crd-paper-summary-band {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border: var(--rule-hairline) solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.crd-paper-sum-col {
+  padding: 0.625rem 0.875rem;
+  border-inline-start: var(--rule-hairline) solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.crd-paper-sum-col:first-child {
+  border-inline-start: none;
+}
+
+/* ── Responsive Mobile Overrides (Phone) ────────────────────────────────────── */
+
+@media (max-width: 48rem) {
+  .crd-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .crd-band {
+    flex-direction: column;
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .crd-band-col {
+    inline-size: 100%;
+    padding: 0.75rem 0 0 0;
+    border-inline-start: none;
+    border-block-start: var(--rule-hairline) solid var(--band-line);
+  }
+
+  .crd-split-grid,
+  .crd-three-panels {
+    grid-template-columns: 1fr;
+  }
+
+  .crd-account-band {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .crd-account-band-col {
+    padding: 0;
+    border-inline-start: none;
+    border-block-start: var(--rule-hairline) solid var(--band-line);
+  }
+
+  .crd-account-band-col:first-child {
+    border-block-start: none;
+  }
+
+  .crd-paper {
+    inline-size: 100%;
+    padding: 1.5rem;
+  }
+}
