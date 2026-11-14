@@ -1049,7 +1049,7 @@ nextjs-portal {
 .auth-price-card-amount {
   font-size: var(--text-3xl);
   font-weight: 600;
-  letter-spacing: -0.15625rem;
+  letter-spacing: -0.03125rem;
   line-height: 2.75rem;
   color: var(--on-band);
 }
