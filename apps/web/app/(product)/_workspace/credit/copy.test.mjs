@@ -33,3 +33,20 @@ test("formatted currency contains non-breaking spaces", () => {
   assert.ok(CREDIT_COPY.ar.totalOwed.includes("\u00a0"), "Arabic money must use non-breaking space");
   assert.ok(CREDIT_COPY.en.owesBluefinVal.includes("\u00a0"), "Bluefin owes must use non-breaking space");
 });
+
+test("arabic copy contains zero Eastern digits and zero 'QAR '", () => {
+  const arCopy = CREDIT_COPY.ar;
+  const easternDigitsRegex = /[٠-٩۰-۹]/;
+  for (const [key, value] of Object.entries(arCopy)) {
+    if (typeof value === "string") {
+      assert.ok(
+        !easternDigitsRegex.test(value),
+        `Found Eastern digits in AR copy [${key}]: "${value}"`
+      );
+      assert.ok(
+        !value.includes("QAR "),
+        `Found "QAR " in AR copy [${key}]: "${value}"`
+      );
+    }
+  }
+});

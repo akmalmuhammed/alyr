@@ -224,8 +224,8 @@
 }
 
 .crd-tab-active .crd-tab-count {
-  background: var(--text);
-  color: var(--inv);
+  background: var(--surface-subtle);
+  color: var(--text);
 }
 
 .crd-filters {
@@ -244,7 +244,7 @@
   font-size: var(--font-size-sm);
   color: var(--text);
   background: var(--surface);
-  border: var(--rule-hairline) solid var(--ctl);
+  border: var(--rule-hairline) solid var(--line-strong);
   border-radius: var(--radius-sm);
 }
 
@@ -268,13 +268,13 @@
 }
 
 .crd-chip:hover {
-  background: var(--ctl);
+  background: var(--surface-subtle);
   color: var(--text);
 }
 
 .crd-chip-active {
   background: var(--text);
-  color: var(--inv);
+  color: var(--text-inv);
 }
 
 .crd-chip-count {
@@ -639,7 +639,7 @@
   background: var(--surface);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-float);
-  border: var(--rule-hairline) solid var(--ctl);
+  border: var(--rule-hairline) solid var(--line-strong);
   inline-size: 100%;
   max-inline-size: min(54rem, 100%);
   max-block-size: 90vh;
@@ -791,7 +791,7 @@
   max-inline-size: 41.25rem;
   box-sizing: border-box;
   background: var(--surface);
-  border: var(--rule-hairline) solid var(--ctl);
+  border: var(--rule-hairline) solid var(--line-strong);
   border-radius: var(--radius-xs);
   padding: 2.5rem 2.5rem 2rem 2.5rem;
   display: flex;
