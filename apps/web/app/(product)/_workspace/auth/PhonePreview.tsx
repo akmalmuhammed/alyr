@@ -83,12 +83,12 @@ export function PhonePreview({
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-xs)" }}>
-                <div className="auth-phone-btn">{isAr ? "احجز زيارة" : "Book a visit"}</div>
+                <div className="auth-phone-action">{isAr ? "احجز زيارة" : "Book a visit"}</div>
                 <div style={{ display: "flex", gap: "var(--space-xs)" }}>
-                  <div className="auth-phone-btn" style={{ flex: 1 }}>
+                  <div className="auth-phone-action" style={{ flex: 1 }}>
                     {isAr ? "قائمة الأسعار" : "Price list"}
                   </div>
-                  <div className="auth-phone-btn" style={{ flex: 1 }}>
+                  <div className="auth-phone-action" style={{ flex: 1 }}>
                     {isAr ? "موظف" : "A person"}
                   </div>
                 </div>
@@ -141,7 +141,7 @@ export function PhonePreview({
                 <span className="auth-phone-bubble-meta">09:40 · {isAr ? "رد تلقائي" : "automatic reply"}</span>
               </div>
 
-              <div className="auth-phone-btn">{isAr ? "احجز زيارة" : "Book a visit"}</div>
+              <div className="auth-phone-action">{isAr ? "احجز زيارة" : "Book a visit"}</div>
             </>
           )}
 

@@ -199,7 +199,7 @@ export const AUTH_COPY: Record<"en" | "ar", AuthCopyStrings> = {
     sessionEndedSub: "after 30 days on one device",
     sessionEndedHeadline: "Sign in again to carry on",
     sessionEndedBanner: "Your sign-in on this device ended after 30 days. Nothing was lost.",
-    returnToOrderNote: "After the code you go back to Orders · #1042.",
+    returnToOrderNote: "After the code you go back to Orders · Order 1042.",
     statesFooterNote: "Codes cannot be sent right now. Try again shortly. · shown the same way when the email service is down",
 
     steps: [
@@ -368,7 +368,7 @@ export const AUTH_COPY: Record<"en" | "ar", AuthCopyStrings> = {
     sessionEndedSub: "بعد 30 يوماً على جهاز واحد",
     sessionEndedHeadline: "سجل الدخول مجدداً للمتابعة",
     sessionEndedBanner: "انتهت جلستك على هذا الجهاز بعد 30 يوماً. لم تفقد أي بيانات.",
-    returnToOrderNote: "بعد إدخال الرمز ستعود مباشرة إلى الطلبات · #1042.",
+    returnToOrderNote: "بعد إدخال الرمز ستعود مباشرة إلى الطلبات · الطلب 1042.",
     statesFooterNote: "لا يمكن إرسال الرموز حالياً. حاول ثانية بعد قليل. · يظهر بالطريقة نفسها عند توقف خدمة البريد",
 
     steps: [
