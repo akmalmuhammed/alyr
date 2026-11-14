@@ -28,7 +28,7 @@ export function TeamStates({
     >
       {/* ── Column 1: Loading State ───────────────────────────────────────── */}
       {showLoading && (
-        <div className="team-state-col" aria-label={t.stateLoadingLabel}>
+        <div className="team-state-col" aria-label={t.stateLoadingLabel} aria-busy="true">
           <div className="team-state-strip">
             <span className="team-state-strip-label">{t.stateLoadingLabel}</span>
             <span className="team-state-strip-sub">{t.stateLoadingSub}</span>
@@ -69,40 +69,53 @@ export function TeamStates({
             </div>
           </div>
 
-          {/* Skeleton rows */}
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            {[
-              [90, 150],
-              [70, 120],
-              [80, 170],
-              [60, 110],
-              [84, 140],
-              [72, 160],
-              [66, 130],
-            ].map(([w1, w2], i) => (
-              <div
-                key={i}
-                style={{
-                  height: "3.25rem",
-                  padding: "0 1rem",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.75rem",
-                  borderBottom: "var(--rule-hairline) solid var(--line-subtle)",
-                }}
-              >
-                <div
-                  className="team-skeleton-shimmer"
-                  style={{ inlineSize: "1.75rem", blockSize: "1.75rem", borderRadius: "var(--radius-full)", flex: "none" }}
-                />
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", flex: 1 }}>
-                  <div className="team-skeleton-shimmer" style={{ inlineSize: `${w1 * 0.0625}rem`, blockSize: "0.625rem" }} />
-                  <div className="team-skeleton-shimmer" style={{ inlineSize: `${w2 * 0.05}rem`, blockSize: "0.5rem" }} />
-                </div>
-                <div className="team-skeleton-shimmer" style={{ inlineSize: "3rem", blockSize: "0.625rem" }} />
-                <div className="team-skeleton-shimmer" style={{ inlineSize: "2.5rem", blockSize: "0.625rem" }} />
-              </div>
-            ))}
+          {/* Skeleton table */}
+          <div className="team-table-scroll" aria-busy="true">
+            <table className="team-table">
+              <thead>
+                <tr>
+                  <th className="team-th">{t.colPerson}</th>
+                  <th className="team-th">{t.colRole}</th>
+                  <th className="team-th">{t.colOwnPhone}</th>
+                  <th className="team-th">{t.colLastSeen}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  [90, 150],
+                  [70, 120],
+                  [80, 170],
+                  [60, 110],
+                  [84, 140],
+                  [72, 160],
+                  [66, 130],
+                ].map(([w1, w2], i) => (
+                  <tr key={i} className="team-tr">
+                    <td className="team-td">
+                      <div className="team-person-cell">
+                        <div
+                          className="team-skeleton-shimmer"
+                          style={{ inlineSize: "1.75rem", blockSize: "1.75rem", borderRadius: "var(--radius-full)", flex: "none" }}
+                        />
+                        <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", flex: 1 }}>
+                          <div className="team-skeleton-shimmer" style={{ inlineSize: `${w1 * 0.0625}rem`, blockSize: "0.625rem" }} />
+                          <div className="team-skeleton-shimmer" style={{ inlineSize: `${w2 * 0.05}rem`, blockSize: "0.5rem" }} />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="team-td">
+                      <div className="team-skeleton-shimmer" style={{ inlineSize: "4.5rem", blockSize: "0.625rem" }} />
+                    </td>
+                    <td className="team-td">
+                      <div className="team-skeleton-shimmer" style={{ inlineSize: "6rem", blockSize: "0.625rem" }} />
+                    </td>
+                    <td className="team-td">
+                      <div className="team-skeleton-shimmer" style={{ inlineSize: "3rem", blockSize: "0.625rem" }} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
           <div className="team-state-strip">

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { Button } from "@/app/_ui/Button";
 import { teamCopy, type Lang } from "./copy";
 import type { RoleKey } from "./logic";
 
@@ -204,19 +205,18 @@ export function TeamInviteDialog({
           </div>
 
           <footer className="team-modal-foot">
-            <button
-              type="button"
-              className="btn quiet"
+            <Button
+              kind="quiet"
               onClick={onClose}
             >
               {t.cancel}
-            </button>
-            <button
+            </Button>
+            <Button
+              kind="volt"
               type="submit"
-              className="btn volt"
             >
               {t.btnSendInvite}
-            </button>
+            </Button>
           </footer>
         </form>
       </div>

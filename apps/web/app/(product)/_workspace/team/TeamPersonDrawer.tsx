@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
+import { Button } from "@/app/_ui/Button";
+import { Avatar } from "@/app/_ui/Avatar";
 import { teamCopy, type Lang } from "./copy";
-import { getInitials, type RoleKey, type TeamMember } from "./logic";
+import { type RoleKey, type TeamMember } from "./logic";
 
 export type TeamPersonDrawerProps = {
   lang?: Lang;
@@ -90,9 +92,7 @@ export function TeamPersonDrawer({
         <div className="team-drawer-body">
           {/* Person overview */}
           <div style={{ display: "flex", alignItems: "center", gap: "0.875rem" }}>
-            <div className="team-avatar" style={{ inlineSize: "2.75rem", blockSize: "2.75rem", fontSize: "var(--font-size-md)" }}>
-              {getInitials(person.name)}
-            </div>
+            <Avatar name={person.name} size={44} />
             <div style={{ display: "flex", flexDirection: "column", gap: "0.125rem" }}>
               <span style={{ fontSize: "var(--font-size-md)", fontWeight: 600 }}>{person.name}</span>
               <span style={{ fontFamily: "var(--font-ui-mono)", fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>
@@ -338,28 +338,25 @@ export function TeamPersonDrawer({
         {/* ── Drawer Footer Actions ─────────────────────────────────────── */}
         <footer className="team-drawer-foot">
           <div className="team-drawer-foot-actions">
-            <button
-              type="button"
-              className="btn volt"
+            <Button
+              kind="volt"
               onClick={() => onSave?.({ ...person, role: selectedRole, bays })}
             >
               {t.saveChanges}
-            </button>
-            <button
-              type="button"
-              className="btn quiet"
+            </Button>
+            <Button
+              kind="quiet"
               onClick={onClose}
             >
               {t.cancel}
-            </button>
+            </Button>
           </div>
-          <button
-            type="button"
-            className="btn bad"
+          <Button
+            kind="bad"
             onClick={() => onRemove?.(person.id)}
           >
             {t.removeFromTeam}
-          </button>
+          </Button>
         </footer>
       </div>
     </div>

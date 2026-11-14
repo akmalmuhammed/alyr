@@ -4,6 +4,8 @@ export const teamCopy = {
   en: {
     // Header & Navigation
     title: "Team",
+    peopleCountTitle: "Team members",
+    teamReport: "Team report",
     subtitle: "Seven people can sign in to Nuqta Car Care. Each has their own email and signs in with a code, never a password.",
     export: "Export",
     invitePerson: "Invite a person",
@@ -297,6 +299,8 @@ export const teamCopy = {
   ar: {
     // Header & Navigation
     title: "أعضاء الفريق",
+    peopleCountTitle: "أعضاء الفريق",
+    teamReport: "تقرير أداء الفريق",
     subtitle: "سبعة أشخاص يمكنهم تسجيل الدخول إلى نقطة للعناية بالسيارات. لكل شخص بريده الإلكتروني ورمز مؤقت، بلا كلمات مرور أبداً.",
     export: "تصدير",
     invitePerson: "دعوة عضو",
@@ -304,7 +308,7 @@ export const teamCopy = {
     rolesSubtitle: "خمسة أدوار وما يمكن لكل دور رؤيته وفعله. لكل شخص دور واحد.",
 
     // Time & Status
-    timeHeader: "الخميس ١٢ نوفمبر · الدوحة ٠٩:٤٠",
+    timeHeader: "الخميس 12 نوفمبر · الدوحة 09:40",
     whatsappLive: "واتساب متصل",
     you: "أنت",
     activeNow: "نشط الآن",
@@ -316,7 +320,7 @@ export const teamCopy = {
 
     // Stats
     statPeople: "الأعضاء",
-    statPeopleSub: "٦ سجّلوا الدخول، و١ مدعو",
+    statPeopleSub: "6 سجّلوا الدخول، و1 مدعو",
     statActiveNow: "نشط الآن",
     statActiveNowSub: "بلال، هناء، وسلمى",
     statPhoneLinked: "الهاتف الشخصي مرتبط",
@@ -325,7 +329,7 @@ export const teamCopy = {
     statSignedThisWeekSub: "مها لم تسجّل الدخول بعد",
 
     // Warning banner
-    bannerInviteWarning: "تمت دعوة مها يوم الثلاثاء ١٠ نوفمبر ولم تسجّل الدخول بعد. وصلت رسالة الدعوة إلى بريدها.",
+    bannerInviteWarning: "تمت دعوة مها يوم الثلاثاء 10 نوفمبر ولم تسجّل الدخول بعد. وصلت رسالة الدعوة إلى بريدها.",
     bannerInviteAction: "إعادة الإرسال",
 
     // Filters
@@ -351,28 +355,28 @@ export const teamCopy = {
     replySigningHint: "يعرف العميل من يتابع طلبه.",
     howItLooks: "المظهر للعميل",
     bubbleSample: "طلبك جاهز للاستلام. سلمى",
-    bubbleMeta: "٠٩:٣٨ · كتبته سلمى",
+    bubbleMeta: "09:38 · كتبته سلمى",
 
     rolesInShortTitle: "الأدوار باختصار",
     roleOwnerName: "مالك",
-    roleOwnerWho: "١ · هناء",
+    roleOwnerWho: "1 · هناء",
     roleOwnerDesc: "كل شيء. المالك وحده يحدد أو يزيل مالكاً، ويحتفظ العمل بمالك واحد دائماً.",
     roleAdminName: "مدير",
-    roleAdminWho: "١ · عمر",
+    roleAdminWho: "1 · عمر",
     roleAdminDesc: "يدير الفريق والمنتجات والربط والإعدادات مع المالك.",
     roleAgentName: "موظف",
-    roleAgentWho: "٥ · بلال، مها، ريم، سلمى، يوسف",
+    roleAgentWho: "5 · بلال، مها، ريم، سلمى، يوسف",
     roleAgentDesc: "العمل أمامه وأرقامه الخاصة. لا يرى المبيعات الإجمالية.",
 
     signinsWeekTitle: "تسجيلات الدخول هذا الأسبوع",
-    signinsStat: "٦ من ٧ أشخاص سجّلوا الدخول",
+    signinsStat: "6 من 7 أشخاص سجّلوا الدخول",
     kvActiveNow: "نشط الآن",
     kvSignedWeek: "سجّلوا هذا الأسبوع",
     kvInvitedNotSigned: "مدعو، لم يسجّل بعد",
-    signinsFootnote: "بحسب النظام: يُحسب من تسجيلات الدخول خلال آخر ٧ أيام.",
+    signinsFootnote: "بحسب النظام: يُحسب من تسجيلات الدخول خلال آخر 7 أيام.",
 
     // Drawer (Person)
-    drawerJoined: "في الفريق منذ ٢ مارس ٢٠٢٦ · بدعوة من هناء",
+    drawerJoined: "في الفريق منذ 2 مارس 2026 · بدعوة من هناء",
     sectionRole: "الدور",
     whatRolesMayDo: "ما يمكن لكل دور فعله",
     roleOwnerRadioDesc: "كل شيء، بما في ذلك المالكين الآخرين والتطبيقات المرتبطة وتنزيل كافة البيانات.",
@@ -401,7 +405,7 @@ export const teamCopy = {
     sectionWorkNow: "عملها الآن",
     openHerWeek: "عرض أسبوعها",
     kvOpenConvs: "محادثات مفتوحة",
-    tagWaiting: "١ بانتظار الرد · ٧ د",
+    tagWaiting: "1 بانتظار الرد · 7 د",
     kvOrdersHandled: "طلبات تتابعها",
 
     sectionHistory: "السجل",
@@ -411,27 +415,27 @@ export const teamCopy = {
 
     // This week (Performance report)
     weekTitle: "هذا الأسبوع",
-    weekSubtitle: "أداء الفريق من الأحد ٨ نوفمبر حتى الآن. تم التحديث ٠٩:٤٠.",
+    weekSubtitle: "أداء الفريق من الأحد 8 نوفمبر حتى الآن. تم التحديث 09:40.",
     periodToday: "اليوم",
     periodWeek: "هذا الأسبوع",
-    period28Days: "٢٨ يوماً",
+    period28Days: "28 يوماً",
     openInbox: "فتح المحادثات",
 
-    weekBanner: "٣ عملاء ينتظرون الرد، أطولهم ١٢ دقيقة. أحدهم، شركة بريد الخليج، لم يستلم طلبه أحد بعد.",
+    weekBanner: "3 عملاء ينتظرون الرد، أطولهم 12 دقيقة. أحدهم، شركة بريد الخليج، لم يستلم طلبه أحد بعد.",
     weekBannerAction: "عرض الثلاثة",
 
     statWaitingAnswer: "بانتظار الرد",
-    statWaitingDelta: "أطولها ١٢ د",
-    statWaitingSub: "أكثر من ١٠ دقائق دون رد",
+    statWaitingDelta: "أطولها 12 د",
+    statWaitingSub: "أكثر من 10 دقائق دون رد",
     statTypicalReply: "زمن أول رد المعتاد",
-    statTypicalReplyVal: "٢ د",
-    statTypicalReplySub: "٣٢٠ رداً كتبها أعضاء الفريق",
+    statTypicalReplyVal: "2 د",
+    statTypicalReplySub: "320 رداً كتبها أعضاء الفريق",
     statConvsClosed: "محادثات مغلقة",
-    statConvsClosedVal: "١١٧",
-    statConvsClosedSub: "٣٦ بيع، ٤٧ حجز، ٢٩ إجابة، ٥ خسرناها",
+    statConvsClosedVal: "117",
+    statConvsClosedSub: "36 بيع، 47 حجز، 29 إجابة، 5 خسرناها",
     statSalesLookedAfter: "مبيعات يتابعها الفريق",
-    statSalesVal: "٢١,٤٨٠\u00a0ر.ق",
-    statSalesSub: "٥٢ طلباً · ٢,٩١٢\u00a0ر.ق دون مسؤول بعد",
+    statSalesVal: "21,480\u00a0ر.ق",
+    statSalesSub: "52 طلباً · 2,912\u00a0ر.ق دون مسؤول بعد",
 
     cardWorkByPerson: "العمل بحسب العضو",
     colOpenNow: "مفتوحة الآن",
@@ -452,7 +456,7 @@ export const teamCopy = {
     rowNobodySub: "عمل لم يستلمه أحد بعد",
     rowNobodyNote: "شركة بريد الخليج بانتظار الرد",
     rowEveryone: "الجميع",
-    rowEveryoneSub: "من الأحد ٨ نوفمبر حتى الآن",
+    rowEveryoneSub: "من الأحد 8 نوفمبر حتى الآن",
     allCame: "الجميع حضر",
     didNotCome: (n: number) => `${n} لم يحضر`,
     none: "لا يوجد",
@@ -463,7 +467,7 @@ export const teamCopy = {
     weekFooterRule: "بحسب النظام: تُرتب الأسماء أبجدياً، ولا يُرتّب الموظفون تنافسياً أبداً. المبيعات التي يتابعها الموظف هي الطلبات التي أدارها ولم تُُلغَ. يرى الموظف صفه فقط دون مبالغ مالية.",
 
     whyLostTitle: "أسباب خسارة المحادثات",
-    whyLostCount: "٥ هذا الأسبوع",
+    whyLostCount: "5 هذا الأسبوع",
     whyLostPrice: "السعر",
     whyLostNotAvailable: "غير متوفر",
     whyLostNoReply: "لا يوجد رد",
@@ -473,12 +477,12 @@ export const teamCopy = {
 
     firstAnswerTitle: "أول رد بحسب اليوم",
     firstAnswerSubtitle: "الوسيط",
-    firstAnswerSlowestNote: "كان يوم الأربعاء الأبطأ بين ١٨:٠٠ و ٢٠:٠٠: ٩ دقائق، مع موظف واحد في المناوبة.",
+    firstAnswerSlowestNote: "كان يوم الأربعاء الأبطأ بين 18:00 و 20:00: 9 دقائق، مع موظف واحد في المناوبة.",
     firstAnswerFootnote: "بحسب النظام: من رسالة العميل الأولى دون رد حتى أول رد يكتبه أحد الموظفين.",
 
     howCountedTitle: "كيف تُحسب الأرقام",
     defWaitingTitle: "الانتظار",
-    defWaitingText: "كتب العميل رسالته الأخيرة ولم يتلقَ رداً منذ أكثر من ١٠ دقائق.",
+    defWaitingText: "كتب العميل رسالته الأخيرة ولم يتلقَ رداً منذ أكثر من 10 دقائق.",
     defRepliesTitle: "الردود",
     defRepliesText: "رسائل كتبها أحد الموظفين. الردود التلقائية لا تُحسب هنا.",
     defClosedTitle: "المغلقة",
@@ -503,16 +507,16 @@ export const teamCopy = {
 
     // Remove Modal
     removeModalTitle: "إزالة يوسف من الفريق؟",
-    removePersonSub: "موظف · في الفريق منذ ٢ مارس ٢٠٢٦",
+    removePersonSub: "موظف · في الفريق منذ 2 مارس 2026",
     whatHappensTitle: "ماذا يحدث عند الإزالة",
     kvSignInAction: "تسجيل الدخول",
     kvSignInResult: "ينتهي فوراً من جميع الأجهزة",
     kvOpenConvsAction: "محادثات مفتوحة",
     kvOpenConvsResult: "محادثتان تعودان إلى غير المُسندة",
     kvOrdersAction: "طلبات يتابعها",
-    kvOrdersResult: "الطلب ١٠٣٣ يعود إلى دون مسؤول",
+    kvOrdersResult: "الطلب 1033 يعود إلى دون مسؤول",
     kvShiftsAction: "المناوبات",
-    kvShiftsResult: "تُلغى ٨ مناوبات قادمة",
+    kvShiftsResult: "تُلغى 8 مناوبات قادمة",
     kvCalendarAction: "جدول المواعيد",
     kvCalendarResult: "يبقى جدول التلميع (يوسف) كما هو",
     kvHistoryAction: "سجل أعماله",
@@ -525,7 +529,7 @@ export const teamCopy = {
     // States
     stateLoadingLabel: "التحميل",
     stateLoadingSub: "قبل وصول الأرقام",
-    stateCounting: "جارٍ احتساب أرقام آخر ٢٨ يوماً…",
+    stateCounting: "جارٍ احتساب أرقام آخر 28 يوماً…",
     stateAgentLabel: "كموظف",
     stateAgentSub: "ترى سلمى أرقامها الخاصة، دون مبالغ مالية",
     agentYourNumbers: "أرقامك الخاصة",
@@ -533,14 +537,14 @@ export const teamCopy = {
     tileYourFirstAnswer: "أول رد لك",
     tileYouClosed: "أغلقتها أنت",
     tileOrdersHandled: "طلبات باشرتها",
-    tileWaitingSub: "٧ د · فاطمة درويش",
-    tileFirstAnswerSub: "٨٨ رداً",
-    tileClosedSub: "١٢ بيع، ١٣ حجز",
-    tileOrdersSub: "٥ مفتوحة الآن",
+    tileWaitingSub: "7 د · فاطمة درويش",
+    tileFirstAnswerSub: "88 رداً",
+    tileClosedSub: "12 بيع، 13 حجز",
+    tileOrdersSub: "5 مفتوحة الآن",
     howYourConvsEnded: "كيف انتهت محادثاتك",
     kvBookingsMarked: "حجوزات حدثتها",
     kvOnShiftToday: "مناوبتك اليوم",
-    shiftTodayVal: "٠٧:٠٠–١٥:٠٠ · المسار ٢",
+    shiftTodayVal: "07:00–15:00 · المسار 2",
     lockTeamSalesNotice: "المالك والمدير فقط يمكنهما رؤية مبيعات وأداء كامل الفريق.",
     lockChangeTeamNotice: "المالك والمدير فقط يمكنهما تعديل الفريق.",
 
@@ -553,7 +557,7 @@ export const teamCopy = {
     stateOfflineSub: "تبقى آخر أرقام مسجلة",
     offlineBanner: "تعذّر تحميل أرقام الفريق الآن. تحاول الصفحة مجدداً تلقائياً.",
     offlineTryNow: "المحاولة الآن",
-    offlineTimestamp: "عرض الأرقام المسجلة عند ٠٩:٣١",
+    offlineTimestamp: "عرض الأرقام المسجلة عند 09:31",
 
     stateRefusedLabel: "مرفوض",
     stateRefusedSub: "إجراء لا تسمح به قواعد النظام",
@@ -577,13 +581,13 @@ export const teamCopy = {
     undo: "تراجع",
 
     // Phone views
-    phoneTeamCount: "٧ أعضاء",
+    phoneTeamCount: "7 أعضاء",
     phoneBtnInvite: "دعوة",
     phoneLinkRoles: "الصلاحيات",
-    phoneRolesCount: "٥ أدوار",
+    phoneRolesCount: "5 أدوار",
     phoneLinkShifts: "المناوبات وتوزيع المحادثات",
-    phoneShiftsCount: "٣ في المناوبة الآن",
-    phoneBannerWaiting: "٣ عملاء ينتظرون الرد، أطولهم ١٢ دقيقة.",
+    phoneShiftsCount: "3 في المناوبة الآن",
+    phoneBannerWaiting: "3 عملاء ينتظرون الرد، أطولهم 12 دقيقة.",
     phoneOpenInbox: "فتح المحادثات",
     phoneRuleBanner: "بحسب النظام: تُرتب الأسماء أبجدياً، ولا يُرتّب الموظفون تنافسياً أبداً.",
   },

@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import { Button } from "@/app/_ui/Button";
+import { Avatar } from "@/app/_ui/Avatar";
 import { teamCopy, type Lang } from "./copy";
 import { calculateOutcomeParts, type WorkPerson } from "./logic";
 
@@ -60,7 +62,7 @@ export function TeamWeek({
             </button>
           </div>
 
-          <button type="button" className="btn line">
+          <Button kind="line" size="md">
             <svg
               width="14"
               height="14"
@@ -77,15 +79,15 @@ export function TeamWeek({
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
             {t.export}
-          </button>
+          </Button>
 
-          <button
-            type="button"
-            className="btn volt"
+          <Button
+            kind="volt"
+            size="md"
             onClick={onOpenInbox}
           >
             {t.openInbox}
-          </button>
+          </Button>
         </div>
       </header>
 
@@ -209,9 +211,7 @@ export function TeamWeek({
                   <tr key={person.name} className="team-tr">
                     <td className="team-td">
                       <div className="team-person-cell">
-                        <div className="team-avatar" style={{ inlineSize: "1.75rem", blockSize: "1.75rem" }}>
-                          {person.initials}
-                        </div>
+                        <Avatar name={person.name} initials={person.initials} size={28} />
                         <div className="team-person-meta">
                           <span className="team-person-name">{person.name}</span>
                           <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>

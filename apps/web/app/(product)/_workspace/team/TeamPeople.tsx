@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
+import { Button } from "@/app/_ui/Button";
+import { Avatar } from "@/app/_ui/Avatar";
 import { teamCopy, type Lang } from "./copy";
 import {
   filterMembers,
-  getInitials,
   type FilterChip,
   type TeamMember,
 } from "./logic";
@@ -72,7 +73,7 @@ export function TeamPeople({
           <p className="team-subtitle">{t.subtitle}</p>
         </div>
         <div className="team-header-actions">
-          <button type="button" className="btn line">
+          <Button kind="line" size="md">
             <svg
               width="14"
               height="14"
@@ -89,15 +90,15 @@ export function TeamPeople({
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
             {t.export}
-          </button>
+          </Button>
           {canManage && (
-            <button
-              type="button"
-              className="btn volt"
+            <Button
+              kind="volt"
+              size="md"
               onClick={onOpenInvite}
             >
               {t.invitePerson}
-            </button>
+            </Button>
           )}
         </div>
       </header>
@@ -225,13 +226,11 @@ export function TeamPeople({
                   >
                     <td className="team-td">
                       <div className="team-person-cell">
-                        <div
-                          className={`team-avatar ${
-                            person.isYou ? "team-avatar-inv" : ""
-                          }`}
-                        >
-                          {getInitials(person.name)}
-                        </div>
+                        <Avatar
+                          name={person.name}
+                          tone={person.isYou ? "ink" : "subtle"}
+                          size={28}
+                        />
                         <div className="team-person-meta">
                           <div className="team-person-name-row">
                             <span className="team-person-name">
