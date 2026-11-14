@@ -47,7 +47,7 @@ export function AuthTopBar({
 
       <button
         type="button"
-        className="auth-lang-btn"
+        className="auth-lang-trigger"
         onClick={onToggleLanguage}
         aria-label={t.languageName}
       >

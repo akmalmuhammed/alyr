@@ -98,7 +98,7 @@ export function SignInChooseBusiness({
               {t.openBusinessBtn(selectedBiz.name)}
             </Button>
             <div className="auth-spacer" />
-            <button type="button" className="auth-signout-btn" onClick={onSignOut}>
+            <button type="button" className="auth-signout-action" onClick={onSignOut}>
               {t.signOutBtn}
             </button>
           </div>

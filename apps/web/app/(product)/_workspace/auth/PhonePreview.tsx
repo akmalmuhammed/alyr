@@ -73,14 +73,14 @@ export function PhonePreview({
 
               {/* Quick reply buttons */}
               <div className="auth-wa-actions">
-                <div className="auth-wa-btn">
+                <div className="auth-wa-chip">
                   {isAr ? "احجز زيارة" : "Book a visit"}
                 </div>
-                <div className="auth-wa-btn-row">
-                  <div className="auth-wa-btn auth-wa-btn--half">
+                <div className="auth-wa-chips-row">
+                  <div className="auth-wa-chip auth-wa-chip--half">
                     {isAr ? "قائمة الأسعار" : "Price list"}
                   </div>
-                  <div className="auth-wa-btn auth-wa-btn--half">
+                  <div className="auth-wa-chip auth-wa-chip--half">
                     {isAr ? "موظف" : "A person"}
                   </div>
                 </div>
@@ -158,7 +158,7 @@ export function PhonePreview({
 
               {/* Quick action button */}
               <div className="auth-wa-actions">
-                <div className="auth-wa-btn">
+                <div className="auth-wa-chip">
                   {isAr ? "احجز زيارة" : "Book a visit"}
                 </div>
               </div>
@@ -195,7 +195,7 @@ export function PhonePreview({
           <div className="auth-phone-input-pill">
             <span>{isAr ? "رسالة" : "Message"}</span>
           </div>
-          <div className="auth-phone-send-btn">
+          <div className="auth-phone-send-action">
             <Icon name="send" size="sm" />
           </div>
         </div>

@@ -137,7 +137,7 @@ export function SignUpGuidedSetup({
                       <button
                         type="button"
                         onClick={() => handleRemove(s.id)}
-                        className="auth-remove-row-btn"
+                        className="auth-remove-row-action"
                         aria-label="Remove service"
                       >
                         <Icon name="x" size="sm" />
