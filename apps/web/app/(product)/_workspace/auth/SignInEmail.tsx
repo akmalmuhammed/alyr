@@ -78,6 +78,7 @@ export function SignInEmail({
 
       <div className="auth-below-card">
         <span className="auth-below-text">{t.newToAlyr}</span>
+        <span>&nbsp;</span>
         <button type="button" className="auth-below-link" onClick={onGoToSignUp}>
           {t.setUpBusiness}
         </button>
