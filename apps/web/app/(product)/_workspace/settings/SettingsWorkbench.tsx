@@ -101,35 +101,12 @@ export function SettingsWorkbench({
         <div className="set-tabs" role="tablist">
           <button
             type="button"
-            className="set-tab-link"
-            disabled
-            style={{ opacity: 0.6 }}
+            role="tab"
+            aria-selected={tab === "account"}
+            className={`set-tab-link ${tab === "account" ? "set-tab-link--active" : ""}`}
+            onClick={() => setTab("account")}
           >
-            {t.businessTab}
-          </button>
-          <button
-            type="button"
-            className="set-tab-link"
-            disabled
-            style={{ opacity: 0.6 }}
-          >
-            {t.addressTab}
-          </button>
-          <button
-            type="button"
-            className="set-tab-link"
-            disabled
-            style={{ opacity: 0.6 }}
-          >
-            {t.messagesTab}
-          </button>
-          <button
-            type="button"
-            className="set-tab-link"
-            disabled
-            style={{ opacity: 0.6 }}
-          >
-            {t.notificationsTab}
+            {t.accountTab}
           </button>
           <button
             type="button"
@@ -139,15 +116,6 @@ export function SettingsWorkbench({
             onClick={() => setTab("privacy")}
           >
             {t.privacyTab}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "account"}
-            className={`set-tab-link ${tab === "account" ? "set-tab-link--active" : ""}`}
-            onClick={() => setTab("account")}
-          >
-            {t.accountTab}
           </button>
         </div>
 

@@ -52,3 +52,18 @@ test("settings copy currency formatting uses non-breaking space", () => {
   assert.ok(arCopy.moneyDetail.includes("1\u00a0ر.ق"), "AR money should use non-breaking space");
   assert.ok(arCopy.closeWarningBanner.includes("9,840\u00a0ر.ق"), "AR warning banner should format money with NBSP");
 });
+
+test("arabic copy contains zero Eastern digits and zero 'QAR '", () => {
+  const arCopy = SETTINGS_COPY.ar;
+  const easternDigitsRegex = /[٠-٩۰-۹]/;
+  for (const [key, value] of Object.entries(arCopy)) {
+    assert.ok(
+      !easternDigitsRegex.test(value),
+      `Found Eastern digits in AR copy [${key}]: "${value}"`
+    );
+    assert.ok(
+      !value.includes("QAR "),
+      `Found "QAR " in AR copy [${key}]: "${value}"`
+    );
+  }
+});

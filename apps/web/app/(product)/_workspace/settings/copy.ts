@@ -35,7 +35,7 @@ export interface SettingsCopy {
   // Sign-in email panel
   signInEmailSection: string;
   changeEmailBtn: string;
-  magicCodeHelp: string;
+  codeHelp: string;
   lastSignInLabel: string;
 
   // Devices panel
@@ -226,7 +226,7 @@ export const SETTINGS_COPY: { en: SettingsCopy; ar: SettingsCopy } = {
 
     signInEmailSection: "Sign-in email",
     changeEmailBtn: "Change",
-    magicCodeHelp: "ALYR emails a 6-digit code to this address each time you sign in. There is no password to remember or to leak.",
+    codeHelp: "ALYR emails a 6-digit code to this address each time you sign in. There is no password to remember or to leak.",
     lastSignInLabel: "LAST SIGN-IN",
 
     devicesSection: "Where you are signed in",
@@ -402,7 +402,7 @@ export const SETTINGS_COPY: { en: SettingsCopy; ar: SettingsCopy } = {
 
     signInEmailSection: "بريد تسجيل الدخول",
     changeEmailBtn: "تغيير",
-    magicCodeHelp: "يرسل أَلير رمزاً من 6 أرقام إلى هذا العنوان في كل مرة تسجل فيها الدخول. لا توجد كلمة مرور لتتذكرها أو لتتسرب.",
+    codeHelp: "يرسل أَلير رمزاً من 6 أرقام إلى هذا العنوان في كل مرة تسجل فيها الدخول. لا توجد كلمة مرور لتتذكرها أو لتتسرب.",
     lastSignInLabel: "آخر تسجيل دخول",
 
     devicesSection: "الأجهزة المسجل الدخول منها",

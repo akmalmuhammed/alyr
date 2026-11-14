@@ -144,7 +144,7 @@ export function SettingsAccount({
                 >
                   {profile.email}
                 </span>
-                <span className="set-list-sub">{t.magicCodeHelp}</span>
+                <span className="set-list-sub">{t.codeHelp}</span>
               </div>
               <div style={{ textAlign: "end", flexShrink: 0 }}>
                 <span style={{ fontSize: "0.625rem", letterSpacing: "0.04em", color: "var(--muted)", display: "block" }}>
