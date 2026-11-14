@@ -10,15 +10,19 @@ export interface AuthFootProps {
 export function AuthFoot({ t }: AuthFootProps) {
   return (
     <footer className="auth-foot" role="contentinfo">
-      <span>{t.locationQatar}</span>
+      <span className="auth-foot-location">{t.locationQatar}</span>
+
       <div className="auth-spacer" />
-      <a href="#agreement" className="auth-foot-link" onClick={(e) => e.preventDefault()}>
-        {t.customerAgreement}
-      </a>
-      <a href="#privacy" className="auth-foot-link" onClick={(e) => e.preventDefault()}>
-        {t.privacyNotice}
-      </a>
-      <span className="auth-foot-domain">{t.appDomain}</span>
+
+      <div className="auth-foot-links">
+        <a href="#agreement" className="auth-foot-link">
+          {t.customerAgreement}
+        </a>
+        <a href="#privacy" className="auth-foot-link">
+          {t.privacyNotice}
+        </a>
+        <span className="auth-foot-domain">{t.appDomain}</span>
+      </div>
     </footer>
   );
 }

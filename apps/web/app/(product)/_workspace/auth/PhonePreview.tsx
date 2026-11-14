@@ -1,205 +1,207 @@
 "use client";
 
 import React from "react";
+import { Icon } from "../../../_ui";
 import type { ServiceItem } from "./fixtures";
 import type { LanguageChoice } from "./logic";
 
 export interface PhonePreviewProps {
   businessName: string;
   variant?: "type" | "offer" | "plan";
+  subTitle?: string;
   services?: ServiceItem[];
   lang?: LanguageChoice;
   caption?: string;
-  liveBadgeText?: string;
 }
 
 export function PhonePreview({
   businessName,
   variant = "type",
+  subTitle,
   services = [],
   lang = "en",
-  caption,
-  liveBadgeText = "Live"
+  caption
 }: PhonePreviewProps) {
   const isAr = lang === "ar";
+  const avatarLetter = businessName ? businessName[0] : "N";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-md)" }}>
-      {variant === "offer" && (
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
-          <span style={{ fontSize: "var(--text-xs)", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-muted)" }}>
-            {isAr ? "ما يراه عملاؤك" : "What your customers see"}
-          </span>
-          <span
-            style={{
-              padding: "0.125rem 0.375rem",
-              borderRadius: "var(--radius-sm)",
-              backgroundColor: "var(--volt)",
-              color: "var(--text-inv)",
-              fontSize: "0.625rem",
-              fontWeight: 700,
-              textTransform: "uppercase"
-            }}
-          >
-            {liveBadgeText}
-          </span>
-        </div>
-      )}
-
+    <div className="auth-phone-wrap">
       <div className="auth-phone-frame">
-        {/* Phone Status bar */}
+        {/* Phone Top Status Bar */}
         <div className="auth-phone-bar">
-          <span>09:40</span>
-          <span>5G</span>
+          <span className="auth-phone-bar-time">09:40</span>
+          <span className="auth-phone-bar-network">5G</span>
         </div>
 
-        {/* WhatsApp Header */}
+        {/* WhatsApp App Bar */}
         <div className="auth-phone-header">
-          <div className="auth-phone-avatar">{businessName[0] || "N"}</div>
-          <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
-            <span style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--text)" }}>{businessName}</span>
-            <span style={{ fontSize: "0.6875rem", color: "var(--text-muted)" }}>
-              {isAr ? "حساب تجاري" : "Business account"}
+          <Icon name="left" size="sm" className="auth-phone-header-back" />
+          <div className="auth-phone-avatar">{avatarLetter}</div>
+          <div className="auth-phone-header-info">
+            <span className="auth-phone-title">{businessName}</span>
+            <span className="auth-phone-subtitle">
+              {subTitle || (isAr ? "حساب تجاري" : "Business account")}
             </span>
           </div>
+          <Icon name="dots" size="sm" className="auth-phone-header-more" />
         </div>
 
-        {/* Chat conversation */}
+        {/* WhatsApp Chat Paper */}
         <div className="auth-phone-chat">
           {variant === "type" && (
             <>
-              <div className="auth-phone-bubble auth-phone-bubble--in">
-                <span>{isAr ? "مرحباً، كم سعر الغسيل الكامل؟" : "Hi, how much is a full wash?"}</span>
-                <span className="auth-phone-bubble-meta">09:38</span>
+              {/* Customer message */}
+              <div className="auth-wa-bubble auth-wa-bubble--customer">
+                <span className="auth-wa-bubble-text">
+                  {isAr ? "مرحباً، كم سعر الغسيل الكامل؟" : "Hi, how much is a full wash?"}
+                </span>
+                <span className="auth-wa-bubble-time">09:38</span>
               </div>
 
-              <div className="auth-phone-bubble auth-phone-bubble--out">
-                <span>
+              {/* Business auto-reply */}
+              <div className="auth-wa-bubble auth-wa-bubble--business">
+                <span className="auth-wa-bubble-text">
                   {isAr
                     ? "أهلاً بك، هذا حساب نشاطك التجاري على واتساب. الغسيل الكامل بـ 60 ر.ق ويستغرق 40 دقيقة. هل تود الحجز؟"
                     : "Hello, this is your business on WhatsApp. A full wash is QAR 60 and takes 40 minutes. Would you like to book?"}
                 </span>
-                <span className="auth-phone-bubble-meta">09:38 · {isAr ? "رد تلقائي" : "automatic reply"}</span>
+                <span className="auth-wa-bubble-time">
+                  09:38 · {isAr ? "رد تلقائي" : "automatic reply"}
+                </span>
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-xs)" }}>
-                <div className="auth-phone-action">{isAr ? "احجز زيارة" : "Book a visit"}</div>
-                <div style={{ display: "flex", gap: "var(--space-xs)" }}>
-                  <div className="auth-phone-action" style={{ flex: 1 }}>
+              {/* Quick reply buttons */}
+              <div className="auth-wa-actions">
+                <div className="auth-wa-btn">
+                  {isAr ? "احجز زيارة" : "Book a visit"}
+                </div>
+                <div className="auth-wa-btn-row">
+                  <div className="auth-wa-btn auth-wa-btn--half">
                     {isAr ? "قائمة الأسعار" : "Price list"}
                   </div>
-                  <div className="auth-phone-action" style={{ flex: 1 }}>
+                  <div className="auth-wa-btn auth-wa-btn--half">
                     {isAr ? "موظف" : "A person"}
                   </div>
                 </div>
+              </div>
+
+              {/* Customer choice */}
+              <div className="auth-wa-bubble auth-wa-bubble--customer">
+                <span className="auth-wa-bubble-text">
+                  {isAr ? "احجز زيارة" : "Book a visit"}
+                </span>
+                <span className="auth-wa-bubble-time">09:39</span>
+              </div>
+
+              {/* Business slot proposal */}
+              <div className="auth-wa-bubble auth-wa-bubble--business">
+                <span className="auth-wa-bubble-text">
+                  {isAr
+                    ? "اليوم في السد: 17:00 أو 17:40 أو 18:20. اضغط على الوقت لتأكيده."
+                    : "Today at Al Sadd: 17:00, 17:40 or 18:20. Tap a time to book it."}
+                </span>
+                <span className="auth-wa-bubble-time">
+                  09:39 · {isAr ? "رد تلقائي" : "automatic reply"}
+                </span>
               </div>
             </>
           )}
 
           {variant === "offer" && (
             <>
-              <div className="auth-phone-bubble auth-phone-bubble--in">
-                <span>{isAr ? "ما هي أسعاركم؟" : "What are your prices?"}</span>
-                <span className="auth-phone-bubble-meta">09:40</span>
+              {/* Customer message */}
+              <div className="auth-wa-bubble auth-wa-bubble--customer">
+                <span className="auth-wa-bubble-text">
+                  {isAr ? "ما هي أسعاركم؟" : "What are your prices?"}
+                </span>
+                <span className="auth-wa-bubble-time">09:40</span>
               </div>
 
-              <div className="auth-phone-bubble auth-phone-bubble--out">
-                <span style={{ fontWeight: 500, marginBottom: "var(--space-xs)" }}>
-                  {isAr ? `إليك قائمة أسعارنا في ${businessName}:` : `Here is our price list at ${businessName}:`}
+              {/* Business auto-reply with full price list */}
+              <div className="auth-wa-bubble auth-wa-bubble--business auth-wa-bubble--pricelist">
+                <span className="auth-wa-bubble-text auth-wa-bubble-lead">
+                  {isAr
+                    ? `إليك قائمة أسعار ${businessName}:`
+                    : `Here is our price list at ${businessName}:`}
                 </span>
 
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem", marginBlock: "var(--space-xs)" }}>
-                  {services.map((s, idx) => (
+                <div className="auth-wa-prices-table">
+                  {services.map((item, idx) => (
                     <div
-                      key={s.id || idx}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        paddingBlock: "0.125rem",
-                        borderBottom: "var(--rule-hairline) solid var(--line)",
-                        fontSize: "var(--text-xs)"
-                      }}
+                      key={item.id}
+                      className={`auth-wa-price-row ${idx === 1 ? "auth-wa-price-row--focus" : ""}`}
                     >
-                      <span style={{ fontWeight: idx === 1 ? 600 : 400 }}>{s.name}</span>
-                      <span style={{ fontFamily: "var(--font-mono)", color: "var(--text-muted)", fontSize: "0.625rem" }}>
-                        {s.length}
+                      {idx === 1 ? <span className="auth-wa-focus-indicator" /> : null}
+                      <span className={`auth-wa-service-name ${idx === 1 ? "auth-wa-service-name--focus" : ""}`}>
+                        {item.name}
                       </span>
-                      <span style={{ fontFamily: "var(--font-mono)", fontWeight: 500 }}>
-                        {isAr ? `${s.price}\u00a0ر.ق` : `QAR ${s.price}`}
+                      <div className="auth-spacer" />
+                      <span className="auth-wa-service-length">{item.length}</span>
+                      <span className="auth-wa-service-price">
+                        {isAr ? `${item.price}\u00a0ر.ق` : `QAR ${item.price}`}
                       </span>
                     </div>
                   ))}
                 </div>
 
-                <span style={{ fontSize: "0.6875rem", color: "var(--text)", marginTop: "var(--space-xs)" }}>
+                <span className="auth-wa-bubble-deposit-note">
                   {isAr
-                    ? "تتطلب طبقة النانو سيراميك عربوناً قدره 300 ر.ق لحجز الموعد."
+                    ? "تلميع السيراميك يتطلب عربوناً قدره 300\u00a0ر.ق لتثبيت الموعد."
                     : "Ceramic coating needs a QAR 300 deposit to hold the slot."}
                 </span>
 
-                <span className="auth-phone-bubble-meta">09:40 · {isAr ? "رد تلقائي" : "automatic reply"}</span>
+                <span className="auth-wa-bubble-time">
+                  09:40 · {isAr ? "رد تلقائي" : "automatic reply"}
+                </span>
               </div>
 
-              <div className="auth-phone-action">{isAr ? "احجز زيارة" : "Book a visit"}</div>
+              {/* Quick action button */}
+              <div className="auth-wa-actions">
+                <div className="auth-wa-btn">
+                  {isAr ? "احجز زيارة" : "Book a visit"}
+                </div>
+              </div>
             </>
           )}
 
           {variant === "plan" && (
             <>
-              <div className="auth-phone-bubble auth-phone-bubble--in">
-                <span>{isAr ? "أريد حجز غسيل كامل" : "I want to book a full wash"}</span>
-                <span className="auth-phone-bubble-meta">09:30</span>
+              {/* Customer booking request */}
+              <div className="auth-wa-bubble auth-wa-bubble--customer">
+                <span className="auth-wa-bubble-text">
+                  {isAr ? "أريد حجز غسيل كامل" : "I want to book a full wash"}
+                </span>
+                <span className="auth-wa-bubble-time">09:30</span>
               </div>
 
-              <div className="auth-phone-bubble auth-phone-bubble--out">
-                <span>
+              {/* Confirmation auto-reply */}
+              <div className="auth-wa-bubble auth-wa-bubble--business">
+                <span className="auth-wa-bubble-text">
                   {isAr
-                    ? "تم الحجز: غسيل كامل، الخميس 17:00 في السد. سنرسل لك تذكيراً في اليوم السابق."
+                    ? "تم الحجز: غسيل كامل، الخميس 17:00 في فرع السد. سنرسل لك تذكيراً في اليوم السابق للموعد."
                     : "Booked: Full wash, Thursday 17:00 at Al Sadd. We will remind you the day before."}
                 </span>
-                <span className="auth-phone-bubble-meta">09:31 · {isAr ? "رد تلقائي" : "automatic reply"}</span>
+                <span className="auth-wa-bubble-time">
+                  09:31 · {isAr ? "رد تلقائي" : "automatic reply"}
+                </span>
               </div>
             </>
           )}
         </div>
 
-        {/* WhatsApp Footer */}
+        {/* WhatsApp Bottom Input Bar */}
         <div className="auth-phone-foot">
-          <div
-            style={{
-              flex: 1,
-              height: "2.125rem",
-              borderRadius: "1rem",
-              backgroundColor: "var(--subtle)",
-              display: "flex",
-              alignItems: "center",
-              paddingInline: "var(--space-md)",
-              fontSize: "var(--text-xs)",
-              color: "var(--text-faint)"
-            }}
-          >
-            {isAr ? "رسالة" : "Message"}
+          <div className="auth-phone-input-pill">
+            <span>{isAr ? "رسالة" : "Message"}</span>
           </div>
-          <div
-            style={{
-              width: "2.125rem",
-              height: "2.125rem",
-              borderRadius: "50%",
-              backgroundColor: "var(--band)",
-              color: "var(--text-inv)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "var(--text-xs)"
-            }}
-          >
-            ➤
+          <div className="auth-phone-send-btn">
+            <Icon name="send" size="sm" />
           </div>
         </div>
       </div>
 
-      {caption && <span className="auth-phone-caption">{caption}</span>}
+      {caption ? <p className="auth-phone-caption">{caption}</p> : null}
     </div>
   );
 }

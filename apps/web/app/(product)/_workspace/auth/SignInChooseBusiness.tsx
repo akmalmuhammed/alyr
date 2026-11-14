@@ -1,14 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button, Check, Tag } from "../../../_ui";
+import { Button, Check, Icon, Radio, Tag } from "../../../_ui";
 import type { AuthCopyStrings } from "./copy";
-import { FIXTURE_BUSINESSES, type BusinessChoice } from "./fixtures";
+import { FIXTURE_BUSINESSES } from "./fixtures";
 
 export interface SignInChooseBusinessProps {
   t: AuthCopyStrings;
   email: string;
-  onSelectBusiness: (business: BusinessChoice) => void;
+  onSelectBusiness: (id: string) => void;
   onSignOut: () => void;
 }
 
@@ -19,88 +19,94 @@ export function SignInChooseBusiness({
   onSignOut
 }: SignInChooseBusinessProps) {
   const [selectedId, setSelectedId] = useState<string>("nuqta");
-  const [autoOpen, setAutoOpen] = useState(true);
+  const [rememberChoice, setRememberChoice] = useState(true);
 
-  const selectedBusiness = FIXTURE_BUSINESSES.find((b) => b.id === selectedId) || FIXTURE_BUSINESSES[0];
+  const selectedBiz =
+    FIXTURE_BUSINESSES.find((b) => b.id === selectedId) || FIXTURE_BUSINESSES[0];
 
-  const handleOpen = () => {
-    onSelectBusiness(selectedBusiness);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSelectBusiness(selectedId);
   };
 
   return (
     <div className="auth-stage">
       <div className="auth-card auth-card--wide">
-        <div className="auth-card-body">
+        <form onSubmit={handleSubmit} className="auth-card-body">
           <div className="auth-card-header">
-            <span className="auth-card-kicker">{t.chooseKicker(email || "hana@nuqta.qa")}</span>
+            <span className="auth-card-kicker">{t.chooseKicker(email)}</span>
             <h1 className="auth-card-title">{t.chooseTitle}</h1>
             <p className="auth-card-subtitle">{t.chooseSubtitle}</p>
           </div>
 
-          <div className="auth-business-list" role="radiogroup" aria-label={t.chooseTitle}>
-            {FIXTURE_BUSINESSES.map((b) => {
-              const isSelected = b.id === selectedId;
-              const subText = b.role === "owner" ? t.ownerSub(b.places) : t.adminSub(b.places);
+          <div className="auth-biz-list">
+            {FIXTURE_BUSINESSES.map((biz, idx) => {
+              const isSelected = biz.id === selectedId;
+              const isNuqta = biz.id === "nuqta";
+
               return (
                 <div
-                  key={b.id}
-                  className={`auth-business-row ${isSelected ? "auth-business-row--selected" : ""}`}
-                  onClick={() => setSelectedId(b.id)}
-                  role="radio"
-                  aria-checked={isSelected}
+                  key={biz.id}
+                  onClick={() => setSelectedId(biz.id)}
+                  className={`auth-biz-row ${isSelected ? "auth-biz-row--selected" : ""} ${
+                    idx < FIXTURE_BUSINESSES.length - 1 ? "auth-biz-row--bordered" : ""
+                  }`}
+                  role="button"
                   tabIndex={0}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      setSelectedId(b.id);
+                      setSelectedId(biz.id);
                     }
                   }}
                 >
-                  <input
-                    type="radio"
-                    name="business-choice"
-                    checked={isSelected}
-                    onChange={() => setSelectedId(b.id)}
-                    style={{ accentColor: "var(--text)", cursor: "pointer" }}
-                    aria-label={b.name}
-                  />
+                  <Radio checked={isSelected} readOnly />
 
-                  <div className={`auth-business-avatar ${b.id !== "nuqta" ? "auth-business-avatar--alt" : ""}`}>
-                    {b.initial}
+                  <div className={`auth-biz-mark ${isNuqta ? "auth-biz-mark--nuqta" : "auth-biz-mark--qirfa"}`}>
+                    <span className={`auth-biz-letter ${isNuqta ? "auth-biz-letter--nuqta" : ""}`}>
+                      {biz.initial}
+                    </span>
                   </div>
 
-                  <div className="auth-business-info">
-                    <div className="auth-business-names">
-                      <span className="auth-business-title">{b.name}</span>
-                      <span className="auth-business-ar">{b.name_ar}</span>
+                  <div className="auth-biz-info">
+                    <div className="auth-biz-title-line">
+                      <span className="auth-biz-name">{biz.name}</span>
+                      <span className="auth-biz-arabic">{biz.name_ar}</span>
                     </div>
-                    <span className="auth-business-desc">{subText}</span>
+                    <span className="auth-biz-meta">
+                      {biz.role === "owner" ? t.ownerSub(biz.places) : t.adminSub(biz.places)}
+                    </span>
                   </div>
 
-                  {b.usedLast && <Tag tone="n">{t.usedLast}</Tag>}
+                  {biz.usedLast ? (
+                    <Tag tone="n">
+                      {t.usedLast}
+                    </Tag>
+                  ) : null}
                 </div>
               );
             })}
           </div>
 
-          <div>
-            <Check checked={autoOpen} onChange={(e) => setAutoOpen(e.target.checked)}>
-              {t.rememberChoice}
+          <div className="auth-checkbox-row">
+            <Check checked={rememberChoice} onChange={(e) => setRememberChoice(e.target.checked)}>
+              <span className="auth-check-label">{t.rememberChoice}</span>
             </Check>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--space-md)" }}>
-            <Button kind="volt" size="md" onClick={handleOpen}>
-              {t.openBusinessBtn(selectedBusiness.name)}
+          <div className="auth-action-row">
+            <Button kind="volt" size="md" type="submit">
+              {t.openBusinessBtn(selectedBiz.name)}
             </Button>
-            <Button kind="quiet" size="md" onClick={onSignOut}>
+            <div className="auth-spacer" />
+            <button type="button" className="auth-signout-btn" onClick={onSignOut}>
               {t.signOutBtn}
-            </Button>
+            </button>
           </div>
-        </div>
+        </form>
 
         <div className="auth-card-note">
-          <span>{t.switchAnytimeNote}</span>
+          <Icon name="info" size="sm" className="auth-note-icon" />
+          <span className="auth-note-text">{t.switchAnytimeNote}</span>
         </div>
       </div>
     </div>

@@ -1,14 +1,13 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Button } from "../../../_ui";
+import { Button, Icon } from "../../../_ui";
 import type { AuthCopyStrings } from "./copy";
 import { sanitizeCode, formatCountdown } from "./logic";
 
 export interface SignInCodeProps {
   t: AuthCopyStrings;
   email: string;
-  initialCode?: string;
   onSubmit: (code: string) => void;
   onChangeEmail: () => void;
 }
@@ -16,78 +15,62 @@ export interface SignInCodeProps {
 export function SignInCode({
   t,
   email,
-  initialCode = "730518",
   onSubmit,
   onChangeEmail
 }: SignInCodeProps) {
-  const [digits, setDigits] = useState<string[]>(() => {
-    const clean = sanitizeCode(initialCode);
-    const arr = clean.split("").slice(0, 6);
-    while (arr.length < 6) arr.push("");
-    return arr;
-  });
-  const [countdown] = useState(42);
-  const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
+  const [digits, setDigits] = useState<string[]>(["7", "3", "0", "5", "1", "8"]);
+  const [countdown, setCountdown] = useState(42);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
-    // Focus first input box on mount
-    inputsRef.current[0]?.focus();
-  }, []);
+    if (countdown <= 0) return;
+    const timer = setInterval(() => {
+      setCountdown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [countdown]);
 
-  const handleChange = (index: number, val: string) => {
-    const clean = sanitizeCode(val);
-    if (!clean) {
-      const copy = [...digits];
-      copy[index] = "";
-      setDigits(copy);
+  const handleDigitChange = (index: number, val: string) => {
+    const sanitized = sanitizeCode(val);
+    if (!sanitized) {
+      const next = [...digits];
+      next[index] = "";
+      setDigits(next);
       return;
     }
 
-    if (clean.length > 1) {
-      // Pasted multiple characters
-      const copy = [...digits];
-      for (let i = 0; i < clean.length && index + i < 6; i++) {
-        copy[index + i] = clean[i];
+    if (sanitized.length > 1) {
+      // Paste handling
+      const next = [...digits];
+      for (let i = 0; i < 6; i++) {
+        if (i < sanitized.length) {
+          next[i] = sanitized[i];
+        }
       }
-      setDigits(copy);
-      const nextIndex = Math.min(5, index + clean.length);
-      inputsRef.current[nextIndex]?.focus();
+      setDigits(next);
+      const targetIdx = Math.min(5, sanitized.length);
+      inputRefs.current[targetIdx]?.focus();
       return;
     }
 
-    const copy = [...digits];
-    copy[index] = clean;
-    setDigits(copy);
+    const next = [...digits];
+    next[index] = sanitized[0];
+    setDigits(next);
 
-    if (index < 5 && clean) {
-      inputsRef.current[index + 1]?.focus();
+    if (index < 5 && sanitized[0]) {
+      inputRefs.current[index + 1]?.focus();
     }
   };
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Backspace" && !digits[index] && index > 0) {
-      inputsRef.current[index - 1]?.focus();
+      inputRefs.current[index - 1]?.focus();
     }
   };
 
-  const handlePaste = (e: React.ClipboardEvent) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData("text");
-    const clean = sanitizeCode(pasted);
-    if (!clean) return;
-
-    const copy = clean.split("").slice(0, 6);
-    while (copy.length < 6) copy.push("");
-    setDigits(copy);
-
-    const nextIndex = Math.min(5, clean.length);
-    inputsRef.current[nextIndex]?.focus();
-  };
-
-  const codeString = digits.join("");
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(codeString);
+    onSubmit(digits.join(""));
   };
 
   return (
@@ -97,59 +80,60 @@ export function SignInCode({
           <div className="auth-card-header">
             <span className="auth-card-kicker">{t.codeKicker}</span>
             <h1 className="auth-card-title">{t.codeTitle}</h1>
-            <p className="auth-card-subtitle">{t.codeSubtitle(email || "hana@nuqta.qa")}</p>
+            <p className="auth-card-subtitle">{t.codeSubtitle(email)}</p>
           </div>
 
-          <div className="auth-code-row" onPaste={handlePaste}>
-            {digits.map((digit, i) => (
+          <div className="auth-code-row">
+            {digits.map((digit, idx) => (
               <input
-                key={i}
+                key={idx}
                 ref={(el) => {
-                  inputsRef.current[i] = el;
+                  inputRefs.current[idx] = el;
                 }}
                 type="text"
                 inputMode="numeric"
                 maxLength={6}
                 value={digit}
-                onChange={(e) => handleChange(i, e.target.value)}
-                onKeyDown={(e) => handleKeyDown(i, e)}
-                className="auth-code-box"
-                aria-label={`Digit ${i + 1}`}
+                onChange={(e) => handleDigitChange(idx, e.target.value)}
+                onKeyDown={(e) => handleKeyDown(idx, e)}
+                className={`auth-code-box ${idx === 0 ? "auth-code-box--active" : ""}`}
+                aria-label={`Digit ${idx + 1}`}
               />
             ))}
           </div>
 
-          <div className="auth-code-meta">
-            <Button kind="volt" size="md" type="submit" disabled={codeString.length < 6}>
+          <div className="auth-action-row">
+            <Button kind="volt" size="md" type="submit">
               {t.signInBtn}
             </Button>
-            <span className="auth-code-resend">{t.resendCountdown(formatCountdown(countdown))}</span>
+            <div className="auth-spacer" />
+            <span className="auth-countdown-text">
+              {t.resendCountdown(formatCountdown(countdown))}
+            </span>
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              paddingTop: "var(--space-md)",
-              borderTop: "var(--rule-hairline) solid var(--line)",
-              fontSize: "var(--text-xs)"
-            }}
-          >
-            <button type="button" className="auth-link" onClick={onChangeEmail}>
-              {t.useDifferentEmail}
+          <div className="auth-subbar-row">
+            <button
+              type="button"
+              className="auth-subbar-link"
+              onClick={onChangeEmail}
+            >
+              <Icon name="left" size="sm" className="auth-subbar-icon" />
+              <span>{t.useDifferentEmail}</span>
             </button>
-            <span style={{ color: "var(--text-faint)" }}>{t.maxTriesNotice}</span>
+            <div className="auth-spacer" />
+            <span className="auth-subbar-note">{t.maxTriesNotice}</span>
           </div>
         </form>
 
         <div className="auth-card-note">
-          <span>{t.codeHint}</span>
+          <Icon name="info" size="sm" className="auth-note-icon" />
+          <span className="auth-note-text">{t.codeHint}</span>
         </div>
       </div>
 
       <div className="auth-session-info">
-        <span>{t.sessionInfo}</span>
+        {t.sessionInfo}
       </div>
     </div>
   );

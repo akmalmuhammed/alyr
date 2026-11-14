@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button, Check, Kbd } from "../../../_ui";
+import { Button, Check, Icon, Kbd } from "../../../_ui";
 import type { AuthCopyStrings } from "./copy";
 
 export interface SignInEmailProps {
@@ -36,64 +36,49 @@ export function SignInEmail({
             <p className="auth-card-subtitle">{t.signInSubtitle}</p>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-xs)" }}>
-            <label htmlFor="auth-email-input" style={{ fontSize: "var(--text-xs)", fontWeight: 500, color: "var(--text-muted)" }}>
+          <div className="auth-field-group">
+            <label htmlFor="auth-email-input" className="auth-field-label">
               {t.workEmailLabel}
             </label>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                height: "2.75rem",
-                paddingInline: "var(--space-md)",
-                gap: "var(--space-sm)",
-                border: "var(--rule-hairline) solid var(--line-strong)",
-                borderRadius: "var(--radius-sm)",
-                backgroundColor: "var(--surface)"
-              }}
-            >
+            <div className="auth-input-box auth-input-box--active">
+              <Icon name="send" size="sm" className="auth-input-icon" />
               <input
                 id="auth-email-input"
                 type="email"
                 value={email}
                 placeholder={t.workEmailPlaceholder}
                 onChange={(e) => onChangeEmail(e.target.value)}
-                style={{
-                  flex: 1,
-                  background: "none",
-                  border: "none",
-                  outline: "none",
-                  fontSize: "var(--text-sm)",
-                  color: "var(--text)",
-                  fontFamily: "inherit"
-                }}
+                className="auth-input-element"
                 required
+                autoFocus
               />
             </div>
           </div>
 
-          <div>
+          <div className="auth-checkbox-row">
             <Check checked={remember} onChange={(e) => setRemember(e.target.checked)}>
-              {t.keepMeSignedIn}
+              <span className="auth-check-label">{t.keepMeSignedIn}</span>
             </Check>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--space-md)" }}>
+          <div className="auth-action-row">
             <Button kind="volt" size="md" type="submit">
               {t.sendCodeBtn}
             </Button>
+            <div className="auth-spacer" />
             <Kbd>{t.enterKey}</Kbd>
           </div>
         </form>
 
         <div className="auth-card-note">
-          <span>{t.noCodeHelp}</span>
+          <Icon name="info" size="sm" className="auth-note-icon" />
+          <span className="auth-note-text">{t.noCodeHelp}</span>
         </div>
       </div>
 
       <div className="auth-below-card">
-        <span>{t.newToAlyr}</span>
-        <button type="button" className="auth-link" onClick={onGoToSignUp}>
+        <span className="auth-below-text">{t.newToAlyr}</span>
+        <button type="button" className="auth-below-link" onClick={onGoToSignUp}>
           {t.setUpBusiness}
         </button>
       </div>

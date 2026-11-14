@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { Button, Steps } from "../../../_ui";
+import { Icon, Steps } from "../../../_ui";
+import { AlyrLogo } from "./AlyrLogo";
 import type { AuthCopyStrings } from "./copy";
 import type { LanguageChoice } from "./logic";
 
@@ -9,40 +10,52 @@ export interface AuthTopBarProps {
   t: AuthCopyStrings;
   language?: LanguageChoice;
   onToggleLanguage: () => void;
-  steps?: string[];
+  steps?: readonly string[];
   currentStep?: number;
 }
 
 export function AuthTopBar({
   t,
+  language,
   onToggleLanguage,
   steps,
   currentStep
 }: AuthTopBarProps) {
+  const isArabic = language === "ar";
+
   return (
     <header className="auth-bar" role="banner">
       <div className="auth-bar-brand">
-        <span className="auth-bar-logo">{t.brandName}</span>
+        <AlyrLogo height={22} />
+        <span className="auth-bar-wordmark">{t.brandName}</span>
       </div>
 
       <div className="auth-spacer" />
 
       {steps && typeof currentStep === "number" ? (
-        <div style={{ flex: "0 1 auto" }}>
+        <div className="auth-bar-center">
           <Steps steps={steps} current={currentStep} />
         </div>
       ) : (
-        <>
+        <div className="auth-bar-support">
           <span className="auth-bar-help">{t.needHand}</span>
           <span className="auth-bar-email">{t.supportEmail}</span>
-        </>
+        </div>
       )}
 
-      <div className="auth-spacer" />
+      {steps && typeof currentStep === "number" ? <div className="auth-spacer" /> : null}
 
-      <Button kind="line" size="sm" onClick={onToggleLanguage} aria-label={t.languageName}>
-        {t.languageName}
-      </Button>
+      <button
+        type="button"
+        className="auth-lang-btn"
+        onClick={onToggleLanguage}
+        aria-label={t.languageName}
+      >
+        <Icon name="globe" size="sm" />
+        <span style={{ fontFamily: isArabic ? "var(--font-ui-sans)" : "var(--font-ui-arabic)" }}>
+          {t.languageName}
+        </span>
+      </button>
     </header>
   );
 }
