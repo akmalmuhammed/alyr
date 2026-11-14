@@ -43,7 +43,15 @@ export function InboxContextPane({ data, lang }: { data: CustomerContextData; la
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", flexWrap: "wrap", marginBlock: "var(--space-1)" }}>
           {data.tags.map((tag) => (
             <Tag key={tag} tone="n">
-              {tag}
+              {lang === "ar"
+                ? tag === "Regular"
+                  ? "دائم"
+                  : tag === "Ceramic"
+                  ? "سيراميك"
+                  : tag === "New this year"
+                  ? "جديد هذا العام"
+                  : tag
+                : tag}
             </Tag>
           ))}
           <button
@@ -75,11 +83,19 @@ export function InboxContextPane({ data, lang }: { data: CustomerContextData; la
           </div>
           <div className="ibx-ctx-stat">
             <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>{t.spentStat}</span>
-            <span className="ibx-ctx-stat-val">{data.spent}</span>
+            <span className="ibx-ctx-stat-val">
+              {lang === "ar" ? data.spent.replace("QAR ", "").trim() + "\u00a0ر.ق" : data.spent}
+            </span>
           </div>
           <div className="ibx-ctx-stat">
             <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>{t.sinceStat}</span>
-            <span className="ibx-ctx-stat-val">{data.since}</span>
+            <span className="ibx-ctx-stat-val">
+              {lang === "ar" && data.since === "Mar 2025"
+                ? "مارس 2025"
+                : lang === "ar" && data.since === "Jun 2026"
+                ? "يونيو 2026"
+                : data.since}
+            </span>
           </div>
         </div>
       </div>
@@ -109,10 +125,21 @@ export function InboxContextPane({ data, lang }: { data: CustomerContextData; la
         {data.owesAmount ? (
           <div>
             <div style={{ fontSize: "1.25rem", fontWeight: 600, color: "var(--text)" }}>
-              {t.owesDays(data.owesAmount, data.owesDays || 0)}
+              {t.owesDays(
+                lang === "ar"
+                  ? data.owesAmount.replace("QAR ", "").trim() + "\u00a0ر.ق"
+                  : data.owesAmount,
+                data.owesDays || 0
+              )}
             </div>
             <p style={{ margin: "var(--space-1) 0 0", fontSize: "var(--font-size-xs)", color: "var(--text-muted)", lineHeight: 1.4 }}>
-              {data.owesNote || t.limitAndPromise("QAR 500")}
+              {data.owesNote
+                ? lang === "ar"
+                  ? data.owesNote
+                      .replace("Ceramic top-up on account, 28 Oct. Limit QAR 500. No promise to pay yet.", "طلاء سيراميك إضافي على الحساب، 28 أكتوبر. الحد 500\u00a0ر.ق. لا يوجد وعد بالسداد بعد.")
+                      .replace("QAR 500", "500\u00a0ر.ق")
+                  : data.owesNote
+                : t.limitAndPromise(lang === "ar" ? "500\u00a0ر.ق" : "QAR 500")}
             </p>
           </div>
         ) : (
@@ -133,7 +160,7 @@ export function InboxContextPane({ data, lang }: { data: CustomerContextData; la
           <span>{t.nextBookingTitle}</span>
           {data.booking && (
             <span style={{ fontFamily: "var(--font-ui-mono)", fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>
-              Booking {data.booking.number}
+              {lang === "ar" ? `الحجز ${data.booking.number}` : `Booking ${data.booking.number}`}
             </span>
           )}
         </div>
@@ -153,15 +180,23 @@ export function InboxContextPane({ data, lang }: { data: CustomerContextData; la
             >
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <span style={{ fontFamily: "var(--font-ui-mono)", fontSize: "var(--font-size-sm)", fontWeight: 600 }}>
-                  {data.booking.time}
+                  {lang === "ar" && data.booking.time === "Sat 14 Nov 08:00"
+                    ? "السبت 14 نوفمبر 08:00"
+                    : data.booking.time}
                 </span>
-                <Status tone="ok">{data.booking.sub}</Status>
+                <Status tone="ok">
+                  {lang === "ar" && data.booking.sub === "Booked" ? "مؤكد" : data.booking.sub}
+                </Status>
               </div>
               <div style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>
-                {data.booking.title}
+                {lang === "ar" && data.booking.title === "Ceramic coating · 4 h · Ceramic · Bilal"
+                  ? "طلاء سيراميك · 4 س · سيراميك · بلال"
+                  : data.booking.title}
               </div>
               <div style={{ fontFamily: "var(--font-ui-mono)", fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>
-                {data.booking.deposit}
+                {lang === "ar" && data.booking.deposit.includes("Deposit QAR 300 paid")
+                  ? `عربون 300\u00a0ر.ق مدفوع · ${data.booking.deposit.split("· ")[1] || "R-2026-1893"}`
+                  : data.booking.deposit}
               </div>
             </div>
 
@@ -221,11 +256,28 @@ export function InboxContextPane({ data, lang }: { data: CustomerContextData; la
               }}
             >
               <div>
-                <div style={{ color: "var(--text)", fontWeight: 500 }}>{o.name}</div>
-                <div style={{ fontFamily: "var(--font-ui-mono)", color: "var(--text-muted)" }}>{o.number}</div>
+                <div style={{ color: "var(--text)", fontWeight: 500 }}>
+                  {lang === "ar"
+                    ? o.name
+                        .replace("Tyre shine", "ملمع إطارات")
+                        .replace("Air freshener", "معطر جو")
+                        .replace("Carnauba wax 500 ml", "شمع كارنوبا 500 مل")
+                        .replace("Microfibre cloth pack × 2", "عبوة مناشف مايكروفايبر × 2")
+                    : o.name}
+                </div>
+                <div style={{ fontFamily: "var(--font-ui-mono)", color: "var(--text-muted)" }}>
+                  {lang === "ar"
+                    ? o.number
+                        .replace("Order", "الطلب")
+                        .replace("3 Nov", "3 نوفمبر")
+                        .replace("21 Oct", "21 أكتوبر")
+                        .replace("6 Oct", "6 أكتوبر")
+                        .replace("paid", "مدفوع")
+                    : o.number}
+                </div>
               </div>
               <div style={{ fontFamily: "var(--font-ui-mono)", fontWeight: 600, color: "var(--text)" }}>
-                {o.total}
+                {lang === "ar" ? o.total.replace("QAR ", "").trim() + "\u00a0ر.ق" : o.total}
               </div>
             </div>
           ))}
@@ -242,10 +294,33 @@ export function InboxContextPane({ data, lang }: { data: CustomerContextData; la
           {data.allow.map((a) => (
             <KV
               key={a.purpose}
-              k={a.purpose}
+              k={
+                lang === "ar"
+                  ? a.purpose === "Bookings and receipts"
+                    ? "الحجوزات والإيصالات"
+                    : a.purpose === "Offers"
+                    ? "العروض"
+                    : a.purpose === "Back in stock"
+                    ? "توفر المنتجات"
+                    : a.purpose === "Price group"
+                    ? "فئة السعر"
+                    : a.purpose === "Writes in"
+                    ? "لغة المحادثة"
+                    : a.purpose
+                  : a.purpose
+              }
               className={a.off ? "u-text-muted" : undefined}
             >
-              {a.status}
+              {lang === "ar"
+                ? a.status
+                    .replace("Agreed · 14 Mar 2025", "موافق · 14 مارس 2025")
+                    .replace("Agreed · 2 Jun 2025", "موافق · 2 يونيو 2025")
+                    .replace("Agreed · 8 Jun 2026", "موافق · 8 يونيو 2026")
+                    .replace("Not agreed", "غير موافق")
+                    .replace("Not asked", "لم يُطلب")
+                    .replace("Standard", "قياسي")
+                    .replace("Arabic, English", "العربية، الإنجليزية")
+                : a.status}
             </KV>
           ))}
         </KVList>

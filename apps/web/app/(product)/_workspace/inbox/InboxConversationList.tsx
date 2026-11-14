@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Avatar, Chip, Search, Status, Tabs } from "../../../_ui";
+import { formatTime } from "../../../_ui/format";
 import { copy, type Lang } from "./copy";
 import type { ConversationItem, InboxFilters } from "./logic";
 
@@ -20,6 +21,29 @@ export interface InboxConversationListProps {
     waiting: number;
   };
   lang: Lang;
+}
+
+function formatSnippet(body: string, lang: Lang): string {
+  if (lang !== "ar") return body;
+  if (body.startsWith("Auto: Paid. Order 1039 is confirmed.")) {
+    return "رد تلقائي: تم الدفع. تم تأكيد الطلب 1039.";
+  }
+  if (body.startsWith("Auto: Booked. Full wash, Fri 17:00")) {
+    return "رد تلقائي: تم الحجز. غسيل كامل، الجمعة 17:00";
+  }
+  if (body.startsWith("Auto: Ceramic coating is QAR 1,200")) {
+    return "رد تلقائي: طلاء سيراميك 1,200\u00a0ر.ق. المتاح السبت 08:00 أو 14:00.";
+  }
+  if (body.startsWith("Auto: We are open")) {
+    return "رد تلقائي: أوقات العمل السبت–الخميس 08:00–22:00، الجمعة 13:00–22:00.";
+  }
+  if (body.startsWith("Auto: Sent payment link for QAR 300.")) {
+    return "رد تلقائي: تم إرسال رابط الدفع بمبلغ 300\u00a0ر.ق.";
+  }
+  if (body.startsWith("Auto: ")) {
+    return body.replace("Auto: ", "رد تلقائي: ");
+  }
+  return body;
 }
 
 export function InboxConversationList({
@@ -94,7 +118,11 @@ export function InboxConversationList({
       <div className="ibx-list-scroll" role="list">
         {conversations.map((item) => {
           const isSelected = item.id === selectedId;
-          const handlerName = item.assigned ? item.assigned.name : t.nobodyYet;
+          const handlerName = item.assigned
+            ? item.assigned.name === "Automatic replies"
+              ? t.automaticReplies
+              : item.assigned.name
+            : t.nobodyYet;
 
           return (
             <div
@@ -116,10 +144,7 @@ export function InboxConversationList({
                 <div className="ibx-row-line1">
                   <span className="ibx-row-name">{item.name}</span>
                   <span className="ibx-row-time">
-                    {new Date(item.last.created_at).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {formatTime(item.last.created_at, lang)}
                   </span>
                 </div>
 
@@ -129,7 +154,7 @@ export function InboxConversationList({
                       item.unread > 0 ? "ibx-row-snippet--unread" : ""
                     }`}
                   >
-                    {item.last.body}
+                    {formatSnippet(item.last.body, lang)}
                   </span>
                   {item.unread > 0 && (
                     <span className="ibx-row-badge">{item.unread}</span>
@@ -148,7 +173,13 @@ export function InboxConversationList({
                           : "n"
                       }
                     >
-                      {item.mark[1]}
+                      {lang === "ar"
+                        ? item.mark[1] === "Not delivered"
+                          ? "لم تُسلَّم"
+                          : item.mark[1] === "12 min"
+                          ? "12 د"
+                          : item.mark[1]
+                        : item.mark[1]}
                     </Status>
                   )}
                 </div>

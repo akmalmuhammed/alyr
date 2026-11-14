@@ -116,21 +116,43 @@ export function InboxThread({
       {/* Messages Stream */}
       <div className="ibx-messages-area">
         {messages.map((m) => {
+          const txt = m.text || "";
           if (m.type === "separator") {
+            const sepText = lang === "ar"
+              ? txt === "TODAY · THU 12 NOV"
+                ? "اليوم · الخميس 12 نوفمبر"
+                : txt === "TUE 10 NOV"
+                ? "الثلاثاء 10 نوفمبر"
+                : txt.includes("WINDOW CLOSED")
+                ? `الأربعاء 11 نوفمبر · أُغلقت النافذة ${txt.split("WINDOW CLOSED ")[1] || ""}`
+                : txt
+              : txt;
             return (
               <div key={m.id} className="ibx-separator">
                 <div className="ibx-separator-line" />
-                <span className="ibx-separator-text">{m.text}</span>
+                <span className="ibx-separator-text">{sepText}</span>
                 <div className="ibx-separator-line" />
               </div>
             );
           }
 
           if (m.type === "activity") {
+            let actText = txt;
+            if (lang === "ar") {
+              if (txt.includes("Booking 148 made")) {
+                actText = "تم تأكيد الحجز 148: طلاء سيراميك، السبت 14 نوفمبر 08:00";
+              } else if (txt.includes("Paid the QAR 300 deposit") || txt.includes("deposit")) {
+                actText = "سدد العربون 300\u00a0ر.ق عبر رابط الدفع";
+              } else if (txt.includes("Needs a person")) {
+                actText = "بحاجة إلى موظف: لم تتمكن الردود التلقائية من المساعدة";
+              } else if (txt.includes("Hana took this conversation")) {
+                actText = "تولت هناء متابعة هذه المحادثة";
+              }
+            }
             return (
               <div key={m.id} className="ibx-activity-pill">
                 <UiIcon name="check" className="u-ico" />
-                <span>{m.text}</span>
+                <span>{actText}</span>
                 <span style={{ fontFamily: "var(--font-ui-mono)", fontSize: "var(--font-size-xs)", opacity: 0.7 }}>
                   {m.time}
                 </span>
@@ -168,14 +190,26 @@ export function InboxThread({
                 }`}
               >
                 {isOut && m.sender && (
-                  <span className="ibx-bubble-sender">{m.sender}</span>
+                  <span className="ibx-bubble-sender">
+                    {lang === "ar" && m.sender === "Automatic reply" ? "رد تلقائي" : m.sender}
+                  </span>
                 )}
                 <div className="ibx-bubble-text" style={{ direction: m.arabic ? "rtl" : undefined, textAlign: m.arabic ? "start" : undefined }}>
-                  {m.text}
+                  {lang === "ar" && txt.startsWith("Interior detail: QAR 150")
+                    ? "تفصيل داخلي: 150\u00a0ر.ق، 90 دقيقة. الخميس 12 نوفمبر: 17:00 أو 18:30 مع يوسف."
+                    : lang === "ar" && txt.startsWith("A person from the team will answer you")
+                    ? "سيرد عليك أحد أعضاء الفريق بخصوص إبقاء السيارة حتى الصباح."
+                    : m.text}
                 </div>
                 <div className="ibx-bubble-meta">
                   <span>{m.time}</span>
-                  {m.status && <span>· {m.status}</span>}
+                  {m.status && (
+                    <span>
+                      · {lang === "ar" && m.status.startsWith("Read")
+                          ? m.status.replace("Read", "تمت القراءة")
+                          : m.status}
+                    </span>
+                  )}
                 </div>
                 {m.buttons && (
                   <div style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)", marginTop: "var(--space-1)" }}>
@@ -252,7 +286,7 @@ export function InboxThread({
 
           <div style={{ marginInlineStart: "auto" }}>
             <Button
-              kind="volt"
+              kind={text.trim() ? "volt" : "line"}
               size="sm"
               disabled={!text.trim()}
               loading={busy}

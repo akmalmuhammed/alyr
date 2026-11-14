@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { copy } from "./copy.ts";
 
 test("inbox copy keys match between English and Arabic", () => {
@@ -30,4 +31,13 @@ test("inbox copy contains zero banned AI words", () => {
       }
     }
   }
+});
+
+test("inbox copy contains zero Eastern digits and zero QAR in Arabic block", () => {
+  const src = readFileSync(new URL("./copy.ts", import.meta.url), "utf8");
+  const easternDigits = /[٠-٩۰-۹]/;
+  assert.ok(!easternDigits.test(src), "copy.ts must contain zero Eastern digits");
+
+  const arBlock = src.slice(src.indexOf("const ar:"));
+  assert.ok(!/QAR\s/.test(arBlock), "copy.ts Arabic block must not contain 'QAR '");
 });
