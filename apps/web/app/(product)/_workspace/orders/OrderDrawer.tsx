@@ -185,9 +185,9 @@ export function OrderDrawer({
                   </div>
                   <div className="ord-item-price">
                     <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginInlineEnd: "0.5rem" }}>
-                      {it.quantity} × {it.price ? money(it.price) : ""}
+                      {it.quantity} × {it.price ? money(it.price, lang) : ""}
                     </span>
-                    <strong>{it.line_total ? money(it.line_total) : ""}</strong>
+                    <strong>{it.line_total ? money(it.line_total, lang) : ""}</strong>
                   </div>
                 </div>
               );
@@ -197,13 +197,13 @@ export function OrderDrawer({
           <div className="ord-sum-block">
             <div className="ord-sum-row">
               <span>{t.sumItems}</span>
-              <span className="ord-cell-mono">{money(order.subtotal || order.total)}</span>
+              <span className="ord-cell-mono">{money(order.subtotal || order.total, lang)}</span>
             </div>
             {order.fulfilment?.mode === "delivery" ? (
               <div className="ord-sum-row">
                 <span>{order.fulfilment.zone ? (lang === "ar" ? `التوصيل إلى ${order.fulfilment.zone}` : `Delivery to ${order.fulfilment.zone}`) : t.sumDelivery}</span>
                 <span className="ord-cell-mono">
-                  {order.fulfilment.fee > 0 ? money(order.fulfilment.fee) : t.noFee}
+                  {order.fulfilment.fee > 0 ? money(order.fulfilment.fee, lang) : t.noFee}
                 </span>
               </div>
             ) : (
@@ -214,7 +214,7 @@ export function OrderDrawer({
             )}
             <div className="ord-sum-row ord-sum-total">
               <span>{t.sumTotal}</span>
-              <span className="ord-cell-mono">{money(order.total)}</span>
+              <span className="ord-cell-mono">{money(order.total, lang)}</span>
             </div>
           </div>
         </Section>
@@ -225,7 +225,7 @@ export function OrderDrawer({
             {order.fulfilment?.mode === "delivery" ? (
               <>
                 <KV k={lang === "ar" ? "المنطقة" : "Area"}>
-                  {`${order.fulfilment.zone || ""} · ${order.fulfilment.fee > 0 ? money(order.fulfilment.fee) : t.noFee}`}
+                  {`${order.fulfilment.zone || ""} · ${order.fulfilment.fee > 0 ? money(order.fulfilment.fee, lang) : t.noFee}`}
                 </KV>
                 {order.fulfilment.deliver_on && (
                   <KV k={lang === "ar" ? "اليوم" : "Day"}>{t.todayWord}</KV>

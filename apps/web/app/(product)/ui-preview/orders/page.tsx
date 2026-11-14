@@ -37,18 +37,25 @@ export default async function OrdersPreviewPage({
   const initialFilters = queryToFilters(paramMap);
 
   return (
-    <UiRoot lang={lang} data-theme={theme}>
-      <ToastProvider labels={{ dismiss: lang === "ar" ? "إغلاق" : "Dismiss", undo: lang === "ar" ? "تراجع" : "Undo" }}>
-        <div style={{ maxWidth: "80rem", margin: "0 auto", padding: "1.5rem" }}>
-          <OrdersView
-            initialFilters={initialFilters}
-            lang={lang}
-            role={role}
-            live={live}
-            stateOverride={stateOverride}
-          />
-        </div>
-      </ToastProvider>
-    </UiRoot>
+    <>
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `document.documentElement.setAttribute('data-theme', ${JSON.stringify(theme)});`,
+        }}
+      />
+      <UiRoot lang={lang} data-theme={theme} style={{ inlineSize: "100%", maxInlineSize: "100%", overflowX: "hidden" }}>
+        <ToastProvider labels={{ dismiss: lang === "ar" ? "إغلاق" : "Dismiss", undo: lang === "ar" ? "تراجع" : "Undo" }}>
+          <div style={{ maxWidth: "80rem", margin: "0 auto", padding: "1.5rem", width: "100%", boxSizing: "border-box" }}>
+            <OrdersView
+              initialFilters={initialFilters}
+              lang={lang}
+              role={role}
+              live={live}
+              stateOverride={stateOverride}
+            />
+          </div>
+        </ToastProvider>
+      </UiRoot>
+    </>
   );
 }

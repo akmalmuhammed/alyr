@@ -84,7 +84,7 @@ export function MarkPaidDialog({
             </div>
           </div>
           <div className="ord-cell-mono" style={{ fontSize: "1rem", color: "var(--text)" }}>
-            {money(order.total)}
+            {money(order.total, lang)}
           </div>
         </div>
 

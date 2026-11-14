@@ -187,7 +187,7 @@ export function OrdersView({
     await ordersApi.markPaid(markPaidOrder.id, method, reference, live);
     toast.push({
       tone: "ok",
-      text: t.toastMarkedPaid(markPaidOrder.number, method, money(markPaidOrder.total)),
+      text: t.toastMarkedPaid(markPaidOrder.number, method, money(markPaidOrder.total, lang)),
     });
     setMarkPaidOrder(null);
     updateFilters({ dialog: null, forOrder: undefined });

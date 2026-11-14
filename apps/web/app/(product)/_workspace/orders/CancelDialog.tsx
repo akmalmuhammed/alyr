@@ -60,7 +60,7 @@ export function CancelDialog({
     }
   };
 
-  const refundDueAmt = consequences.refundDue > 0 ? money(consequences.refundDue) : "";
+  const refundDueAmt = consequences.refundDue > 0 ? money(consequences.refundDue, lang) : "";
 
   return (
     <Modal
@@ -82,7 +82,7 @@ export function CancelDialog({
             </div>
           </div>
           <div className="ord-cell-mono" style={{ fontSize: "1rem", color: "var(--text)" }}>
-            {money(order.total)}
+            {money(order.total, lang)}
           </div>
         </div>
 

@@ -272,7 +272,7 @@ export function OrdersTable({
         phone: "amount",
         cell: (row) => (
           <span className="ord-cell-mono" style={{ fontWeight: 600 }}>
-            {money(row.total)}
+            {money(row.total, lang)}
           </span>
         ),
       }
@@ -296,7 +296,7 @@ export function OrdersTable({
   let footerNote: string | null = null;
   if (activeTab === "open") {
     if (isManager && openTotal !== undefined) {
-      footerNote = t.openRuleFooter(money(openTotal));
+      footerNote = t.openRuleFooter(money(openTotal, lang));
     }
   } else if (activeTab === "done" || activeTab === "cancelled") {
     footerNote = t.past30DaysNote;

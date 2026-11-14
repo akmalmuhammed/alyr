@@ -147,6 +147,9 @@ test("money: formats dirhams to QAR", () => {
   assert.equal(money(8550), "QAR 85.50");
   assert.equal(money(18500), "QAR 185");
   assert.equal(money(-2000), "-QAR 20");
+  assert.equal(money(37500, "ar"), "375\u00a0ر.ق");
+  assert.equal(money(8550, "ar"), "85.50\u00a0ر.ق");
+  assert.equal(money(-2000, "ar"), "-20\u00a0ر.ق");
 });
 
 test("timelineSentence: formats events with honest wording", () => {

@@ -154,7 +154,7 @@ export function OrderDetail({
       header: lang === "ar" ? "السعر" : "Price",
       align: "end",
       cell: (it) => (
-        <span className="ord-cell-mono">{it.price ? money(it.price) : ""}</span>
+        <span className="ord-cell-mono">{it.price ? money(it.price, lang) : ""}</span>
       ),
     },
     {
@@ -163,7 +163,7 @@ export function OrderDetail({
       align: "end",
       cell: (it) => (
         <span className="ord-cell-mono" style={{ fontWeight: 600 }}>
-          {it.line_total ? money(it.line_total) : ""}
+          {it.line_total ? money(it.line_total, lang) : ""}
         </span>
       ),
     },
@@ -269,13 +269,13 @@ export function OrderDetail({
                 <div style={{ minWidth: "14rem" }}>
                   <div className="ord-sum-row">
                     <span>{t.sumItems}</span>
-                    <span className="ord-cell-mono">{money(order.subtotal || order.total)}</span>
+                    <span className="ord-cell-mono">{money(order.subtotal || order.total, lang)}</span>
                   </div>
                   {order.fulfilment?.mode === "delivery" ? (
                     <div className="ord-sum-row">
                       <span>{order.fulfilment.zone ? (lang === "ar" ? `التوصيل إلى ${order.fulfilment.zone}` : `Delivery to ${order.fulfilment.zone}`) : t.sumDelivery}</span>
                       <span className="ord-cell-mono">
-                        {order.fulfilment.fee > 0 ? money(order.fulfilment.fee) : t.noFee}
+                        {order.fulfilment.fee > 0 ? money(order.fulfilment.fee, lang) : t.noFee}
                       </span>
                     </div>
                   ) : (
@@ -286,7 +286,7 @@ export function OrderDetail({
                   )}
                   <div className="ord-sum-row ord-sum-total">
                     <span>{t.sumTotal}</span>
-                    <span className="ord-cell-mono">{money(order.total)}</span>
+                    <span className="ord-cell-mono">{money(order.total, lang)}</span>
                   </div>
                 </div>
               </div>
@@ -304,7 +304,7 @@ export function OrderDetail({
                 {/* Left KV */}
                 <KVList>
                   <KV k={lang === "ar" ? "المبلغ" : "Amount"}>
-                    <span className="ord-cell-mono">{money(order.total)}</span>
+                    <span className="ord-cell-mono">{money(order.total, lang)}</span>
                   </KV>
                   {payment.state === "paid" && (
                     <>
@@ -373,7 +373,7 @@ export function OrderDetail({
             </PanelBody>
             {order.status === "cancelled" && payment.state === "paid" && (
               <PanelFooter>
-                {t.refundBanner(money(order.total))}
+                {t.refundBanner(money(order.total, lang))}
               </PanelFooter>
             )}
           </Panel>
@@ -429,7 +429,7 @@ export function OrderDetail({
                 {order.fulfilment?.mode === "delivery" ? (
                   <>
                     <KV k={lang === "ar" ? "المنطقة" : "Area"}>
-                      {`${order.fulfilment.zone || ""} · ${order.fulfilment.fee > 0 ? money(order.fulfilment.fee) : t.noFee}`}
+                      {`${order.fulfilment.zone || ""} · ${order.fulfilment.fee > 0 ? money(order.fulfilment.fee, lang) : t.noFee}`}
                     </KV>
                     <KV k={lang === "ar" ? "اليوم" : "Day"}>{t.todayWord}</KV>
                     {order.fulfilment.address && (

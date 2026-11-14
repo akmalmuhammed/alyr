@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { ORDERS_COPY } from "./copy.ts";
 
 test("copy: all keys match between English and Arabic", () => {
@@ -35,4 +36,13 @@ test("copy: no forbidden dishonest words in strings", () => {
       }
     }
   }
+});
+
+test("orders copy contains zero Eastern digits and zero QAR in Arabic block", () => {
+  const src = readFileSync(new URL("./copy.ts", import.meta.url), "utf8");
+  const easternDigits = /[٠-٩۰-۹]/;
+  assert.ok(!easternDigits.test(src), "copy.ts must contain zero Eastern digits");
+
+  const arBlock = src.slice(src.indexOf("ar: {"));
+  assert.ok(!/QAR\s/.test(arBlock), "copy.ts Arabic block must not contain 'QAR '");
 });

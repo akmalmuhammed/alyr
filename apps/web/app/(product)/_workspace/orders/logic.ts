@@ -229,13 +229,17 @@ export function cancelConsequences(order: {
 
 /**
  * Format money in QAR from dirhams (integer, 100 = QAR 1).
+ * English: "QAR 375" (or "QAR 375.50"); Arabic: "375\u00a0ر.ق".
  */
-export function money(dirhams: number): string {
+export function money(dirhams: number, lang: "en" | "ar" = "en"): string {
   const qar = Math.abs(dirhams) / 100;
   const formatted = qar.toLocaleString("en-US", {
     minimumFractionDigits: dirhams % 100 === 0 ? 0 : 2,
     maximumFractionDigits: 2,
   });
+  if (lang === "ar") {
+    return `${dirhams < 0 ? "-" : ""}${formatted}\u00a0ر.ق`;
+  }
   const prefix = dirhams < 0 ? "-QAR " : "QAR ";
   return `${prefix}${formatted}`;
 }
