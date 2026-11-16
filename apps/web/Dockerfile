@@ -26,7 +26,10 @@ ARG NEXT_PUBLIC_ALYR_PAYMENT_PROVIDER=
 ARG NEXT_PUBLIC_ALYR_META_STATUS=
 # PostHog's project key (D-070): public by design, it ships in every page. Empty turns analytics off.
 ARG NEXT_PUBLIC_POSTHOG_KEY=
+# `on` lets /start load Meta's SDK for Embedded Signup (ALY-39, next.config.ts). Empty keeps it out.
+ARG ALYR_EMBEDDED_SIGNUP=
 ENV ALYR_STANDALONE=1 \
+    ALYR_EMBEDDED_SIGNUP=$ALYR_EMBEDDED_SIGNUP \
     ALYR_API_URL=$ALYR_API_URL \
     NEXT_PUBLIC_ALYR_SITE_URL=$NEXT_PUBLIC_ALYR_SITE_URL \
     NEXT_PUBLIC_ALYR_CONTACT_EMAIL=$NEXT_PUBLIC_ALYR_CONTACT_EMAIL \
