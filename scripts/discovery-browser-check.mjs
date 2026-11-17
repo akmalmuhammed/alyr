@@ -21,7 +21,7 @@
 //   node scripts/discovery-browser-check.mjs --base http://localhost:31NN --out D:/shots \
 //        --profile C:/t/dsprof --port 9747 --axe C:/t/tools/node_modules/axe-core/axe.min.js \
 //        [--control http://127.0.0.1:84NN] [--langs en,ar] [--schemes light,dark] [--widths 375,1280] \
-//        [--only menu,home,todo,reviews,reports,proposals,approval,sheet,settings,roles] [--signin owner@shop.example --pg container --db alyr_x --tenant <uuid>]
+//        [--only menu,home,todo,reviews,reports,answers,proposals,approval,sheet,settings,roles] [--signin owner@shop.example --pg container --db alyr_x --tenant <uuid>]
 //
 // Two ways to run it. Against the real API (its own database, never the shared one): the shop's
 // Discovery module is switched on with `--pg`, `--db` and `--tenant` (docker + psql, as the other
@@ -35,6 +35,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { launch } from "./browser-kit.mjs";
 import { T } from "../apps/web/app/(product)/_workspace/discoveryCopy.ts";
+import { A } from "../apps/web/app/(product)/_workspace/discoveryAnswersCopy.ts";
 import { formatDay, formatDayLong, formatWhen } from "../apps/web/app/(product)/_workspace/discoveryLogic.ts";
 
 const args = Object.fromEntries(
@@ -135,7 +136,7 @@ async function menu() {
   const nav = await js("fetch('/api/workspace').then(r => r.json()).then(s => [...s.nav.core, ...s.nav.products, ...s.nav.account].map(n => ({ key: n.key, label: n.label })))");
   const others = nav.filter((n) => n.key !== "discovery");
   check(nav.some((n) => n.key === "discovery"), "the workspace's menu names Discovery (the module is on)");
-  const ORDER = ["home", "todo", "proposals", "reviews", "reports", "settings"];
+  const ORDER = ["home", "todo", "proposals", "reviews", "reports", "answers", "settings"];
   const viewLabels = ORDER.map((v) => T0.views[v]);
   const startsWithAll = (texts, labels) => texts.length === labels.length && texts.every((x, i) => x.startsWith(labels[i]));
 
@@ -148,7 +149,7 @@ async function menu() {
     check(await exists(".sh-side .sh-sub"), "the sidebar opens Discovery to a list of views");
     const subs = await js("[...document.querySelectorAll('.sh-side .sh-sub a')].map(a => ({ text: a.textContent.trim(), href: a.getAttribute('href'), current: a.getAttribute('aria-current') }))");
     check(startsWithAll(subs.map((s) => s.text), viewLabels), `the views are ${viewLabels.join(", ")}, in that order`);
-    check(JSON.stringify(subs.map((s) => s.href)) === JSON.stringify(["/app/discovery", "/app/discovery?view=todo", "/app/discovery?view=proposals", "/app/discovery?view=reviews", "/app/discovery?view=reports", "/app/discovery?view=settings"]), "each view has its address");
+    check(JSON.stringify(subs.map((s) => s.href)) === JSON.stringify(["/app/discovery", "/app/discovery?view=todo", "/app/discovery?view=proposals", "/app/discovery?view=reviews", "/app/discovery?view=reports", "/app/discovery?view=answers", "/app/discovery?view=settings"]), "each view has its address");
     if (CONTROL) {
       const waiting = await js("fetch('/api/discovery/proposals').then(r => r.json()).then(d => d.waiting)");
       check(subs[2].text === `${T0.views.proposals}${T0.waitingN(waiting)}`, `Proposals says how many wait, in words (${T0.waitingN(waiting)}), not in a number disc`);
@@ -159,7 +160,7 @@ async function menu() {
     check((await js("getComputedStyle(document.querySelector('.dv-views')).display")) === "none", "the in-screen view row is hidden where the sidebar shows");
     await axe("the sidebar's view list", ".sh-sub");
     // every view, by the menu
-    for (const [i, v] of ["todo", "proposals", "reviews", "settings", "reports", "home"].entries()) {
+    for (const [i, v] of ["todo", "proposals", "reviews", "settings", "reports", "answers", "home"].entries()) {
       await click(`[...document.querySelectorAll('.sh-side .sh-sub a')].find(a => a.getAttribute('href').endsWith(${norm(v === "home" ? "/app/discovery" : `view=${v}`)}))`);
       await until(`document.querySelector('.dv h1')?.textContent === ${norm(v === "home" ? T0.title : T0.views[v])}`, `the ${v} view`);
       const current = await js("[...document.querySelectorAll('.sh-side .sh-sub a')].map(a => a.getAttribute('aria-current'))");
@@ -177,7 +178,7 @@ async function menu() {
     const rows = await js("[...document.querySelectorAll('.sh-palette li button')].map(b => ({ text: b.textContent.trim(), cur: b.getAttribute('aria-current') }))");
     const discoveryName = nav.find((n) => n.key === "discovery").label[LANG];
     const mine = rows.filter((r) => r.text.startsWith(`${discoveryName} · `));
-    check(mine.length === 6 && JSON.stringify(mine.map((r) => r.text.split(" · ")[1])) === JSON.stringify(viewLabels), "the More sheet lists Home, To do, Proposals, Reviews, Reports and Settings beneath Discovery");
+    check(mine.length === 7 && JSON.stringify(mine.map((r) => r.text.split(" · ")[1])) === JSON.stringify(viewLabels), "the More sheet lists Home, To do, Proposals, Reviews, Reports, Answers and Settings beneath Discovery");
     check(mine.filter((r) => r.cur === "true").length === 1 && mine[0].cur === "true", "the More sheet marks the current view");
     await shot("02-more-sheet");
     await click(`[...document.querySelectorAll('.sh-palette li button')].find(b => b.textContent.trim() === ${norm(`${discoveryName} · ${T0.views.todo}`)})`);
@@ -191,7 +192,7 @@ async function menu() {
     await ready(".sh-palette", "the More sheet again");
     const all = await js("[...document.querySelectorAll('.sh-palette li button')].map(b => b.textContent.trim())");
     for (const n of others) check(all.includes(n.label[LANG]), `the More sheet still lists ${n.label[LANG]}`);
-    check(all.filter((r) => r.includes(" · ")).length === 6, "no other row of the More sheet gained a view");
+    check(all.filter((r) => r.includes(" · ")).length === 7, "no other row of the More sheet gained a view");
     await b.key("Escape");
   }
 
@@ -1231,6 +1232,144 @@ async function realAgent() {
   check(props === 200, "staff may ask for the list and get an empty one");
 }
 
+// ── 7. Answers (ALY-326, spec 068) ─────────────────────────────────────────────────────
+// Needs the fixture (`--control`): a small server that answers the spec-068 routes from fictional data
+// shaped by the spec and the backend's tests (not the real API). It takes `{ ansPreset: "off" |
+// "on-none" | "asked" | "history" | "hostile" | "error" | "few" }` on POST /__state.
+async function answersView() {
+  if (!CONTROL) { log("Answers: needs the fixture (--control); skipped"); return; }
+  const AT = A[LANG];
+  const api = (path) => js(`fetch('/api/discovery${path}${path.includes("?") ? "&" : "?"}lang=${LANG}').then(r => r.json())`);
+  const voltText = () => js("[...document.querySelectorAll('.dv .btn.volt')].map(b => b.textContent.trim())");
+  const pick = (selectIndex, value) => js(`(() => { const s = document.querySelectorAll('.dv-ans-form select')[${selectIndex}]; const set = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set; set.call(s, ${norm(value)}); s.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+
+  // 1. switched off
+  await reset(); await control({ ansPreset: "off" });
+  await open("answers");
+  await ready(".dv-answers .dv-empty", "the off state");
+  check((await h1()) === T0.views.answers, `the heading is "${T0.views.answers}"`);
+  check(JSON.stringify(await voltText()) === JSON.stringify([AT.switchOn]), `the page's one Volt button is "${AT.switchOn}"`);
+  check((await count(".dv-ans")) === 0 && (await count(".dv-ans-form select")) === 2, "nothing is asked yet; the owner has a trade and a city to choose");
+  check(!/\bAI\b|ذكاء|ذكي|assistant|مساعد|chatgpt|gemini/i.test(await text()), "nothing says AI or assistant or names a product");
+  check(!/coming|soon|قريباً/i.test(await text()), "nothing says coming");
+  await shot("60-answers-off");
+  await noSideScroll("Answers (off)"); await targets("Answers (off)"); await named("Answers (off)"); await latinInArabic("Answers (off)");
+  await axe("answers-off", null, [".sh-side", ".sh-top"]);
+
+  // a trade the sample does not cover: the API's own refusal, in words
+  await pick(0, "bakery"); await pick(1, "doha");
+  await click(btn(AT.switchOn));
+  await ready(".ct-toast", "the refusal");
+  const refusal = await js("document.querySelector('.ct-toast-text').textContent");
+  check(refusal.includes(AR ? "الإجابات التجريبية" : "sample answers"), "a trade the sample cannot answer is refused in the API's words");
+  check((await count(".dv-ans")) === 0 && (await api("/answers")).enabled === false, "a refusal switches nothing on");
+
+  // switching it on (the sample business knows its own trade and city)
+  await open("answers"); await ready(".dv-answers .dv-empty", "the off state again");
+  await click(btn(AT.switchOn));
+  await until("!document.querySelector('.dv-answers .dv-empty')", "the view after switching on", 10000);
+  check((await has(AT.notAskedYet)) && JSON.stringify(await voltText()) === JSON.stringify([T0.runCheckup]), "switched on, not asked yet: the one Volt button is Run check-up");
+  check((await count(".dv-ans-questions li")) === 6, "the six questions are shown before anything is asked");
+  check((await api("/answers")).enabled === true, "the API says it is on");
+  await shot("61-answers-not-asked");
+  await noSideScroll("Answers (not asked)"); await targets("Answers (not asked)"); await named("Answers (not asked)"); await latinInArabic("Answers (not asked)");
+  await axe("answers-not-asked", null, [".sh-side", ".sh-top"]);
+
+  // running a check-up follows it and shows the result
+  await click(btn(T0.runCheckup));
+  await ready(".dv-running", "the check-up running");
+  check((await has(AT.running)) && (await count(".btn.volt")) === 0, "while it runs the page has no Volt button and says so");
+  await shot("62-answers-running");
+  await until("document.querySelectorAll('.dv-ans').length === 6", "the six answers", 40000);
+  check(JSON.stringify(await voltText()) === JSON.stringify([T0.runCheckup]), "when it is over the Volt button is back");
+
+  // 2. asked, with a history
+  await reset(); await control({ ansPreset: "history" });
+  await open("answers");
+  await ready(".dv-ans", "the answers");
+  const data = await api("/answers");
+  check((await js("document.querySelector('.dv-ans-headline').textContent.trim()")) === data.headline, "the headline is the API's, by rule");
+  check((await count(".dv-ans")) === 6, "one row for each of the six answers");
+  check((await count(".dv-ans .sh-pill.active")) === data.last.answers.filter((x) => x.named).length, "the rows say named exactly as often as the API counted");
+  check((await count(".dv-ans-sample")) === 1 && (await has(data.sample_note)), "the sample is marked once, in the API's words");
+  check(JSON.stringify(await voltText()) === JSON.stringify([T0.runCheckup]), "the page's one Volt button is Run check-up");
+  check(await has(AT.inList(4, 5)), `a listed answer says where: ${AT.inList(4, 5)}`);
+  check((await count(".dv-ans-comp li")) >= 1 && (await count(".dv-ans-comp li")) <= 8, "the competitors table has one to eight rows");
+  check((await count(".dv-ans-hist li")) === 3 && (await count(".dv-ans-hist .dv-track")) === 3, "three check-ups in the history, each with its bar");
+  check((await has(AT.namedOf(2, 6))) && (await has(AT.namedOf(4, 6))), "the history says named N of M for each");
+  check((await count(".dv-change")) === 1, "the change since the last check-up is said once");
+  check(!(await js("document.querySelector('.dv-ans-hist').textContent")).includes("%"), "no percentage is invented");
+  await shot("63-answers-asked");
+  await noSideScroll("Answers"); await targets("Answers"); await named("Answers"); await latinInArabic("Answers");
+  await axe("answers-asked", null, [".sh-side", ".sh-top"]);
+  // what it said
+  await click("document.querySelector('.dv-ans .ct-fold summary')");
+  await sleep(200);
+  const quoted = await js("(() => { const q = document.querySelector('.dv-ans .ct-fold[open] .dv-quote'); return q ? { text: q.textContent, dir: q.getAttribute('dir') } : null; })()");
+  check(!!quoted && quoted.text === data.last.answers[0].text && quoted.dir === "auto", "What it said is the answer, quoted, in its own direction");
+  await shot("64-answers-said");
+  await axe("answers-said", null, [".sh-side", ".sh-top"]);
+  // how it is counted
+  await click("[...document.querySelectorAll('.dv-answers > .ct-fold summary')].pop()");
+  await sleep(200);
+  check((await has(data.rule)) && (await has(data.limits)) && (await has(data.caution)), "How this is counted says the rule, the limits and the caution");
+
+  // 3. Home's one line, Reports' part
+  await open("home");
+  await ready(".dv-score", "Home");
+  await until("!!document.querySelector('.dv-ans-line')", "Home's line");
+  check((await js("document.querySelector('.dv-ans-line bdi').textContent.trim()")) === data.headline, "Home says the headline under the score");
+  check((await js("document.querySelector('.dv-ans-line a').getAttribute('href')")) === "/app/discovery?view=answers", "and links to the view");
+  check((await count(".btn.volt")) === 1, "Home still has one Volt button");
+  await shot("65-home-line");
+  await noSideScroll("Home with the line"); await targets("Home with the line");
+  await open("reports");
+  await ready(".dv-report", "the report");
+  const partNames = await js("[...document.querySelectorAll('.dv-parts li b')].map(e => e.textContent.trim())");
+  check(partNames.length === 5 && partNames.at(-1) === AT.partName, "the report draws the Answers part as a fifth once it was measured");
+  await shot("66-reports-answers");
+  await axe("reports-answers", null, [".sh-side", ".sh-top"]);
+  await control({ ansPreset: "on-none" });
+  await open("home"); await ready(".dv-score", "Home");
+  await sleep(600);
+  check((await count(".dv-ans-line")) === 0, "Home has no line while the check has not been asked");
+
+  // 4. an answer is text, never markup
+  await control({ ansPreset: "hostile" });
+  await open("answers"); await ready(".dv-ans", "the hostile answers");
+  await click("document.querySelector('.dv-ans .ct-fold summary')");
+  await sleep(200);
+  check((await js("window.__xss")) === undefined && (await count(".dv-quote script, .dv-quote img, .dv-quote a, .dv-quote b")) === 0, "markup inside an answer is not drawn and runs nothing");
+  check((await js("document.querySelector('.dv-ans .ct-fold[open] .dv-quote').textContent")).includes("<script>"), "it is shown as the text it is");
+  await shot("67-answers-hostile");
+  await noSideScroll("Answers (hostile text)");
+
+  // 5. answers that could not be had, and too few
+  for (const preset of ["error", "few"]) {
+    await control({ ansPreset: preset });
+    await open("answers"); await ready(".dv-ans", `the ${preset} answers`);
+    const d = await api("/answers");
+    check((await js("document.querySelector('.dv-ans-headline').textContent.trim()")) === d.headline && !/\d+ of \d+|\d+ من \d+/.test(d.headline), `${preset}: the headline says too few were counted, with no number`);
+    check((await count(".dv-ans .sh-pill.wait")) >= 3, `${preset}: answers that could not be had say Not counted`);
+    check((await count(".dv-ans-err")) >= 3, `${preset}: each says why, in the API's words`);
+    check((await count(".dv-ans-hist .dv-track.empty")) === 1 && (await count(".dv-ans-hist .dv-track > span")) === 0, `${preset}: the history draws no bar for an unmeasured check`);
+    await shot(`68-answers-${preset}`);
+    await noSideScroll(`Answers (${preset})`); await named(`Answers (${preset})`);
+    await axe(`answers-${preset}`, null, [".sh-side", ".sh-top"]);
+  }
+
+  // 6. an agent reads and cannot change
+  await control({ ansPreset: "history", role: "agent" });
+  await open("answers"); await ready(".dv-ans", "the agent's view");
+  check((await count(".dv-ans-form")) === 0 && !(await has(AT.switchOff)) && (await has(AT.readOnlyLine(data.settings.trade_label, data.settings.city_label))), "an agent sees the trade and the city as text, with no form and no switch");
+  await shot("69-answers-agent");
+  await control({ ansPreset: "off", role: "agent" });
+  await open("answers"); await ready(".dv-answers .dv-empty", "the agent's off state");
+  check((await count(".btn.volt")) === 0 && (await has(AT.offAgent)), "an agent is told the owner or an admin can switch it on, and has no button");
+  await control({ role: "owner" });
+  await reset();
+}
+
 // ── the run ─────────────────────────────────────────────────────────────────────────────
 const combos = [];
 for (const w of WIDTHS) for (const s of SCHEMES) for (const l of LANGS) combos.push([l, s, w]);
@@ -1253,6 +1392,7 @@ try {
     await one("todo", todo);
     await one("reviews", reviews);
     await one("reports", reports);
+    await one("answers", answersView);
     // Against a real API: the whole loop on the sample business, as the owner or (`--role agent`) as staff.
     if (!CONTROL) await one(args.role === "agent" ? "reala" : "realp", args.role === "agent" ? realAgent : realOwner);
     // Phase 2 needs the fixture: its states are the ones a real run cannot be put in on demand.

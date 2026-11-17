@@ -1,0 +1,49 @@
+/* The Answers view of Discovery (ALY-326, spec 068). It takes Discovery's own parts (discovery.css:
+   the score line, the lists, the quote, the track, the dashed slot) and adds only what this view
+   needs: the headline, one answer, the form and the quiet line on Home. Every colour, size, radius
+   and space is a token, and every position is logical, so light, dark and right to left come for
+   free. Volt appears once: the page's button. Built at 375 px first: targets are 44 px or more and
+   nothing scrolls sideways. */
+
+.dv-answers { display: flex; flex-direction: column; gap: var(--space-4); min-inline-size: 0; }
+.dv-intro { margin: 0; max-inline-size: 44rem; font-size: var(--ui-body); line-height: 1.55; color: var(--text-muted); }
+
+/* ── the headline ── */
+.dv-ans-headline { margin: 0; font-size: var(--ui-heading-lg); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-heading); line-height: 1.2; text-wrap: balance; overflow-wrap: anywhere; }
+.sh[dir="rtl"] .dv-ans-headline { letter-spacing: 0; line-height: var(--leading-arabic-heading); }
+.dv-ans-sample { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); margin: 0; font-size: var(--ui-small); color: var(--text-muted); }
+
+/* ── one answer ── */
+.dv-ans { display: grid; gap: var(--space-2); padding: var(--space-3) var(--space-4); min-inline-size: 0; }
+.dv-ans + .dv-ans { border-block-start: 1px solid var(--hair); }
+.dv-ans-top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); }
+.dv-ans-where { font-size: var(--ui-body-sm); font-weight: var(--weight-medium); }
+.dv-ans-q { margin: 0; font-size: var(--ui-body); line-height: 1.45; overflow-wrap: anywhere; }
+.dv-ans-err { margin: 0; font-size: var(--ui-body-sm); color: var(--text-muted); }
+.dv-ans-also { margin: 0; font-size: var(--ui-body-sm); line-height: 1.5; overflow-wrap: anywhere; }
+.dv-ans .ct-fold { background: var(--surface-subtle); }
+.dv-ans-matched { margin: var(--space-2) 0 0; font-size: var(--ui-small); overflow-wrap: anywhere; }
+
+/* ── the lists and notes around it ── */
+.dv-ans-note { margin: 0; font-size: var(--ui-small); max-inline-size: 44rem; }
+.dv-ans-comp, .dv-ans-questions { padding-inline: var(--space-3); border-radius: var(--radius-lg); background: var(--surface); box-shadow: 0 0 0 1px var(--hair) inset; }
+.dv-ans-questions li { align-items: baseline; }
+.dv-ans-questions li > span { min-inline-size: 0; overflow-wrap: anywhere; }
+.dv-ans-hist { padding: var(--space-3); border-radius: var(--radius-lg); background: var(--surface); box-shadow: 0 0 0 1px var(--hair) inset; }
+.dv-ans-how { display: grid; gap: var(--space-2); max-inline-size: 44rem; }
+.dv-ans-how p { margin: 0; font-size: var(--ui-body-sm); line-height: 1.55; }
+
+/* ── the form, for an owner or an admin ── */
+.dv-ans-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr)); gap: var(--space-2) var(--space-3); align-items: end; inline-size: min(100%, 40rem); min-inline-size: 0; text-align: start; }
+.dv-ans-form .ct-select { inline-size: 100%; }
+.dv-empty .dv-ans-form { margin-inline: auto; }
+.dv-answers .dv-block > * { min-inline-size: 0; }
+
+/* ── Home's one quiet line ── */
+.dv-ans-line { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); margin: 0; font-size: var(--ui-body-sm); color: var(--text-muted); }
+.dv-ans-line .dv-link { display: inline-flex; align-items: center; min-block-size: 44px; }
+
+/* five views in the row on a phone: a little tighter so no word breaks in the middle */
+@media (max-width: 40rem) {
+  .dv .dv-views a { padding-inline: var(--space-1); font-size: var(--ui-small); overflow-wrap: normal; word-break: normal; }
+}

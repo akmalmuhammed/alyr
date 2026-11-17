@@ -157,13 +157,13 @@ test("the screens hold no words of their own", () => {
 // ── the address and the menu ────────────────────────────
 
 test("the address names a view, and Home is the default", () => {
-  assert.deepEqual([...VIEWS], ["home", "todo", "proposals", "reviews", "reports", "settings"]);
+  assert.deepEqual([...VIEWS], ["home", "todo", "proposals", "reviews", "reports", "answers", "settings"]);
   for (const view of VIEWS) assert.equal(readView(view), view);
   for (const odd of [null, undefined, "", "TODO", "home&x=1", "ai", "approve"]) assert.equal(readView(odd), "home");
   // Settings is for the owner and an admin: for anyone else the address that names it is Home.
   assert.equal(readView("settings", false), "home");
   assert.equal(readView("proposals", false), "proposals");
-  assert.deepEqual([...viewsFor(false)], ["home", "todo", "proposals", "reviews", "reports"]);
+  assert.deepEqual([...viewsFor(false)], ["home", "todo", "proposals", "reviews", "reports", "answers"]);
   assert.deepEqual([...viewsFor(true)], [...VIEWS]);
   assert.equal(viewHref("home"), "/app/discovery");
   assert.equal(viewHref("todo"), "/app/discovery?view=todo");
@@ -173,8 +173,8 @@ test("the address names a view, and Home is the default", () => {
 });
 
 test("only Discovery has views beneath it in the menu; every other section has none", () => {
-  assert.deepEqual([...subItems("discovery")], ["home", "todo", "proposals", "reviews", "reports"]);
-  assert.deepEqual([...subItems("discovery", true)], ["home", "todo", "proposals", "reviews", "reports", "settings"]);
+  assert.deepEqual([...subItems("discovery")], ["home", "todo", "proposals", "reviews", "reports", "answers"]);
+  assert.deepEqual([...subItems("discovery", true)], ["home", "todo", "proposals", "reviews", "reports", "answers", "settings"]);
   for (const key of ["home", "inbox", "orders", "bookings", "catalog", "documents", "ledger", "team", "products", "connections", "account", "connect", "unsent", ""]) {
     assert.deepEqual([...subItems(key)], [], key);
     assert.deepEqual([...subItems(key, true)], [], key);

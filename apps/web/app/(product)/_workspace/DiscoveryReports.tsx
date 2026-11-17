@@ -10,6 +10,7 @@ import { useState } from "react";
 import { discovery, DiscoveryError, PARTS_SHOWN, type Finding, type Report } from "./discoveryApi";
 import { T, type Lang } from "./discoveryCopy";
 import { lastMonths, monthName } from "./discoveryLogic";
+import { A } from "./discoveryAnswersCopy";
 import { Loading, Problem, When, useLoad } from "./discoveryUi";
 
 /** How many calendar months back the picker looks for a check-up. */
@@ -83,16 +84,17 @@ function ReportPaper({ lang, report }: { lang: Lang; report: Report }) {
       <section className="dv-report-sec" aria-labelledby="dv-r-parts">
         <h3 id="dv-r-parts">{t.byPart}</h3>
         <ul className="dv-parts">
-          {PARTS_SHOWN.map((key) => {
+          {/* The Answers part is drawn only when it was measured: nothing is drawn for a check that has not run. */}
+          {[...PARTS_SHOWN, ...(report.by_part.ai?.measured ? (["ai"] as const) : [])].map((key) => {
             const part = report.by_part[key];
             const value = part?.measured && part.value !== null ? part.value : null;
             return (
               <li key={key}>
                 <div className="dv-part-head">
-                  <b>{t.partNames[key]}</b>
+                  <b>{key === "ai" ? A[lang].partName : t.partNames[key]}</b>
                   {value === null ? <span className="dv-none">{t.notMeasured}</span> : <span className="num">{t.measuredOf(value)}</span>}
                 </div>
-                <small className="ct-quiet">{t.partHints[key]}</small>
+                <small className="ct-quiet">{key === "ai" ? A[lang].partHint : t.partHints[key]}</small>
                 {value === null
                   ? <span className="dv-track empty" aria-hidden="true" />
                   : <span className="dv-track" aria-hidden="true"><span style={{ inlineSize: `${Math.min(100, Math.max(0, value))}%` }} /></span>}

@@ -18,6 +18,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Fold, Icon } from "./CatalogUi";
+import { AnswersLine } from "./DiscoveryAnswers";
 import { ApprovalSheet } from "./DiscoveryApproval";
 import { FindingFlow, type Change } from "./DiscoverySheet";
 import { discovery, DiscoveryError, type Finding, type Overview, type Proposal, type Run } from "./discoveryApi";
@@ -215,6 +216,7 @@ export function DiscoveryHome({ lang, canManage, push, onConnection }: {
       {state !== "noConnection" && (
         <>
           {state !== "noRun" && <ScoreLine lang={lang} o={o} action={scoreAction} />}
+          {state !== "noRun" && <AnswersLine key={o.last_run?.id ?? "none"} lang={lang} />}
 
           {running && shown && <RunPanel lang={lang} run={shown} slow={slow} onCheck={() => { setSlow(false); polls.current = 0; }} />}
 
