@@ -32,7 +32,8 @@ class Run:
     app: Database  # the product's role: row-level security holds
     media: MediaService
     now: datetime  # the end of the story: the database's own clock at the start
-    since: datetime  # the same moment: everything the product's services stamp is after it
+    since: datetime  # when the load began (the same moment, unless a test holds the story's
+    # end still): everything the product's services stamp is after it
     seed: int
     web_url: str
     photos: str  # "queue": the worker stores them; "now": stored here (local disk)

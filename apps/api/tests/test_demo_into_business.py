@@ -24,7 +24,7 @@ from alyr.core.storage import LocalStore
 from alyr.db import Database
 from alyr.modules import report
 from alyr.modules.ledger import service as ledger
-from demo_into_support import bakery, mark, run, sql, table_counts
+from demo_into_support import bakery, mark, run, sql, story_of, table_counts
 from test_consent import owner_sql
 
 YES = "--yes-this-business-is-a-test"
@@ -248,10 +248,13 @@ def test_replace_and_remove_leave_the_business_as_it_was(client):
     loaded = counts_without_record(tenant_id)
 
     # --replace takes a copy, removes only the previous load, and loads again (it needs its own
-    # dry run, like any load)
+    # dry run, like any load). A load is made from its seed and from the moment it begins, and a
+    # minute later some order or booking has crossed a line (45 minutes old, two hours old, on
+    # the half hour) and the story has other rows in it. So the second load is told the same
+    # story, to the end of the first; only then must it leave exactly what the first left.
     assert run("--owner-email", owner, YES, "--dry-run", "--photos", "now")[0] == 0
     code, text = run("--owner-email", owner, YES, "--replace", "--photos", "now",
-                     "--export-dir", "/tmp")
+                     "--export-dir", "/tmp", story_end=story_of(tenant_id))
     assert code == 0, text
     assert "A copy of everything" in text and "Removed the load" in text
     assert counts_without_record(tenant_id) == loaded
