@@ -5,6 +5,8 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+
+## v0.3.22 (17 Nov 2026)
 - Embedded Signup can be switched on in production (ALY-39; no migration, no new dependency; still off until the founder runs `setup.sh es-on`): `infra/gcp/setup.sh es-on <config id>` makes the token key, sets the switch, the configuration and the Meta app's ID, and `es-off` undoes it; a full `setup.sh apps` keeps them. The web image takes `ALYR_EMBEDDED_SIGNUP` from the repository variable of the same name, so `/start` may load Meta's SDK.
 - Graph API calls use v26.0 by default instead of v21.0, which Meta removes on 21 Jan 2027 (`ALYR_META_GRAPH_VERSION`).
 
