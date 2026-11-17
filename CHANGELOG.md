@@ -5,6 +5,8 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- Embedded Signup can be switched on in production (ALY-39; no migration, no new dependency; still off until the founder runs `setup.sh es-on`): `infra/gcp/setup.sh es-on <config id>` makes the token key, sets the switch, the configuration and the Meta app's ID, and `es-off` undoes it; a full `setup.sh apps` keeps them. The web image takes `ALYR_EMBEDDED_SIGNUP` from the repository variable of the same name, so `/start` may load Meta's SDK.
+- Graph API calls use v26.0 by default instead of v21.0, which Meta removes on 21 Jan 2027 (`ALYR_META_GRAPH_VERSION`).
 
 ## v0.3.21 (13 Nov 2026)
 - The redesign's foundation (D-180, ALY-330; no migration, no new dependency; nothing changes on a screen yet, new screens will sit behind a switch): the product's design tokens (add-only), formatters for money, dates and times in Doha time, an API client and the `ui-check` that stops new off-scale styles, the shared UI kit under `apps/web/app/_ui/` with 71 icons (a dev-only gallery that returns 404 in production), the workspace shell split into per-section parts that load when opened (the `/app` first-load script drops from 1,023 KB to 301 KB), and the product UI rules and component catalogue in `.claude/skills`.
