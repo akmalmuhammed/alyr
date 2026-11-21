@@ -83,6 +83,8 @@ SHOP = Shop(
     owner=("owner@demo-salon.example", "Lumi", "لومي"),
     agent=("agent@demo-salon.example", "Dana", "دانة"),
     products=PRODUCTS, customers=CUSTOMERS,
-    extra_categories=(("Body care", "العناية بالجسم"), ("Gifts", "الهدايا")),
+    extra_categories=(
+        ("Beard care", "العناية باللحية"), ("Body care", "العناية بالجسم"), ("Gifts", "الهدايا"),
+    ),
     orders_a_day=0, bookings_a_day=7, open_hours=(10, 21),
 )
