@@ -2,8 +2,9 @@
 
 A message ALYR or the shop sent can end two ways short of the customer's phone:
 
-* `blocked`: the outbound layer refused it (no consent, the customer said stop, or free text
-  outside the 24-hour window). It never left ALYR.
+* `blocked`: the outbound layer refused it (no consent, the customer said stop, free text
+  outside the 24-hour window, or a template Meta has not approved on the shop's account). It
+  never left ALYR.
 * `failed`: it was let through but did not arrive. Either the job gave up after every retry
   ("could not be delivered": ALYR could not hand it to WhatsApp), or WhatsApp reported a
   failure in its own words.
@@ -20,7 +21,7 @@ from uuid import UUID
 import asyncpg
 
 from alyr.channels.base import OutboundMessage
-from alyr.core import consent, jobs, team, templates
+from alyr.core import consent, jobs, team, template_approval, templates
 from alyr.core.outbound import SEND
 from alyr.core.team import Actor
 
@@ -29,11 +30,12 @@ GAVE_UP = "could not be delivered"
 
 # What the outbound layer records for a refusal (`consent.refusal`), as the screen names it.
 BLOCKED = {"window_closed", "no_consent", "opted_out", "no_marketing_consent",
-           "no_back_in_stock_consent"}
+           "no_back_in_stock_consent", template_approval.REASON}
 
 _ROW = (
     "select m.id, m.contact_id, m.kind, m.body, m.payload, m.status, m.error, m.created_at, "
-    "       c.name, c.phone, c.consent_service, c.consent_marketing, c.consent_back_in_stock, "
+    "       c.name, c.number_id, c.phone, c.consent_service, c.consent_marketing, "
+    "       c.consent_back_in_stock, "
     "       coalesce(c.last_inbound_at > now() - interval '24 hours', false) as window_open "
     "from messages m join contacts c on c.id = m.contact_id "
     "where m.direction = 'out' "
@@ -58,11 +60,12 @@ def _file_lost(row: asyncpg.Record) -> bool:
     return header is not None and header.header in ("image", "document")
 
 
-def refusal_now(row: asyncpg.Record) -> str | None:
+async def refusal_now(conn: asyncpg.Connection, row: asyncpg.Record) -> str | None:
     """Why this message may not go now, or None. The same rule as `consent.refusal`, applied
     to what the message was: a notice sent as ordinary text inside the window is still the
     template it stood for, so its consent is the template's; and as text it also needs the
-    window open, now."""
+    window open, now. A message that goes as a template also needs Meta's approval on the shop's
+    account, as it stands now."""
     stored = row["payload"]
     if stored.get("template"):
         as_template = OutboundMessage(
@@ -72,15 +75,18 @@ def refusal_now(row: asyncpg.Record) -> str | None:
         why = consent.refusal(row, as_template)
         if why is None and row["kind"] != "template" and not row["window_open"]:
             why = "window_closed"
+        if why is None and row["kind"] == "template":
+            why = await template_approval.refusal(
+                conn, row["number_id"], stored["template"], stored.get("lang", "en"))
         return why
     kind = "document" if row["kind"] == "document" else "text"
     return consent.refusal(row, OutboundMessage(to=row["contact_id"], kind=kind))
 
 
-def _entry(row: asyncpg.Record) -> dict:
+async def _entry(conn: asyncpg.Connection, row: asyncpg.Record) -> dict:
     why = reason(row["status"], row["error"])
     lost = _file_lost(row)
-    now = None if lost else refusal_now(row)
+    now = None if lost else await refusal_now(conn, row)
     return {
         "id": str(row["id"]),
         "contact_id": str(row["contact_id"]),
@@ -104,7 +110,7 @@ async def listing(conn: asyncpg.Connection) -> list[dict]:
         f"and m.created_at > now() - interval '{DAYS} days' "
         "order by m.created_at desc limit 100"
     )
-    return [_entry(r) for r in rows]
+    return [await _entry(conn, r) for r in rows]
 
 
 class NotSendable(Exception):
@@ -123,7 +129,7 @@ async def retry(conn: asyncpg.Connection, message_id: UUID, actor: Actor) -> Non
         raise LookupError("no such message")
     if _file_lost(row):
         raise NotSendable("file_lost")
-    why = refusal_now(row)
+    why = await refusal_now(conn, row)
     if why is not None:
         if row["status"] == "blocked" and why != row["error"]:
             # Still refused, for a different reason now: say the one that holds today.

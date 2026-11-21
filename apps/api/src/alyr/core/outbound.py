@@ -2,9 +2,11 @@ from dataclasses import dataclass
 from uuid import UUID
 
 import asyncpg
+import httpx
 
 from alyr.channels.base import Address, Channel, Choice, OutboundMessage
-from alyr.core import consent, jobs, subscription, templates
+from alyr.channels.meta import describe_error, error_code
+from alyr.core import consent, jobs, subscription, template_approval, templates
 from alyr.db import Database
 
 SEND = "send_message"
@@ -13,8 +15,8 @@ SEND = "send_message"
 @dataclass(frozen=True)
 class SendResult:
     """What the outbound layer did with a message. `blocked` is the reason it was
-    refused (window_closed, no_consent, opted_out, no_marketing_consent, billing_paused),
-    or None."""
+    refused (window_closed, no_consent, opted_out, no_marketing_consent, billing_paused,
+    template_not_approved), or None."""
 
     message_id: UUID
     blocked: str | None = None
@@ -24,6 +26,21 @@ def _header_of(name: str) -> str:
     """What a template opens with: "image", "document", or "" for text only."""
     template = templates.CATALOGUE.get(name)
     return template.header if template is not None else ""
+
+
+# Meta's codes that say "try again later" or "ALYR's own access is wrong": the same message may go
+# through on another try, so it is not given up on at once.
+_TRY_AGAIN = {4, 10, 17, 32, 190, 613, 80007}
+
+
+def _refused_for_good(error: httpx.HTTPStatusError) -> bool:
+    """Whether Meta refused this message itself (a 4xx about the message), not the moment: a
+    busy Meta, a rate limit and a wrong or expired access token are all worth another try."""
+    status = error.response.status_code
+    if status in (408, 429) or not 400 <= status < 500:
+        return False
+    code = error_code(error)
+    return code not in _TRY_AGAIN and not 200 <= code <= 299
 
 
 class Outbound:
@@ -48,7 +65,7 @@ class Outbound:
         """Queue a message to a contact, or record why it may not be sent.
         `conn` must be tenant-scoped."""
         contact = await conn.fetchrow(
-            "select consent_service, consent_marketing, consent_back_in_stock, "
+            "select consent_service, consent_marketing, consent_back_in_stock, number_id, "
             "coalesce(last_inbound_at > now() - interval '24 hours', false) as window_open "
             "from contacts where id = $1",
             message.to,
@@ -89,6 +106,11 @@ class Outbound:
                     kind = "buttons"
                 payload["sent_as"] = kind
             else:
+                if blocked is None:
+                    # Outside the window only a template Meta has approved on the shop's account
+                    # will do. Said now, with the reason, not after six tries (D-194).
+                    blocked = await template_approval.refusal(
+                        conn, contact["number_id"], message.template_name, message.lang)
                 if message.template_params:
                     params = [templates.clean(value) for value in message.template_params]
                     payload["params"] = params
@@ -175,10 +197,19 @@ class Outbound:
             lang=stored.get("lang", "en"),
             media_id=media_id, filename=stored.get("filename", ""),
         )
-        provider_id = await channel.send(
-            number["number_id"], message,
-            Address(phone=row["phone"], user_id=row["wa_user_id"]),
-        )
+        try:
+            provider_id = await channel.send(
+                number["number_id"], message,
+                Address(phone=row["phone"], user_id=row["wa_user_id"]),
+            )
+        except httpx.HTTPStatusError as error:
+            if not _refused_for_good(error):
+                raise
+            # Meta looked at this message and said no (a template it does not have, a number it
+            # will not write to). Trying five more times cannot change that, so it is marked
+            # failed now, in Meta's own words, for the "Not sent" screen (D-194).
+            await self._failed(tenant_id, message_id, describe_error(error))
+            return
         async with self._db.tenant(tenant_id) as conn:
             await conn.execute(
                 "update messages set status = 'sent', wa_message_id = $2, error = null "
@@ -188,18 +219,20 @@ class Outbound:
 
     async def gave_up(self, tenant_id: UUID, payload: dict) -> None:
         """Job dead-letter handler: the message could not be sent after every retry."""
+        await self._failed(tenant_id, UUID(payload["message_id"]), "could not be delivered")
+
+    async def _failed(self, tenant_id: UUID, message_id: UUID, why: str) -> None:
         async with self._db.tenant(tenant_id) as conn:
             changed = await conn.execute(
-                "update messages set status = 'failed', error = 'could not be delivered' "
+                "update messages set status = 'failed', error = $2 "
                 "where id = $1 and status = 'queued'",
-                UUID(payload["message_id"]),
+                message_id, why[:300],
             )
             if changed == "UPDATE 1":
                 # A document that never arrived is news to the shop's other system (ALY-142).
                 from alyr.modules.documents import delivery
 
-                await delivery.on_message_failed(
-                    conn, UUID(payload["message_id"]), "could not be delivered")
+                await delivery.on_message_failed(conn, message_id, "could not be delivered")
 
     async def record_status(
         self, conn: asyncpg.Connection, provider_id: str, status: str, error: str = ""

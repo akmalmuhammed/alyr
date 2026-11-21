@@ -90,7 +90,7 @@ test("Arabic counts agree with their noun", () => {
 
 test("the reasons a reply was refused are in the person's words, not the API's codes", () => {
   for (const lang of ["en", "ar"]) {
-    for (const code of ["window_closed", "opted_out", "no_consent", "no_marketing_consent", "billing_paused"]) {
+    for (const code of ["window_closed", "opted_out", "no_consent", "no_marketing_consent", "billing_paused", "template_not_approved"]) {
       assert.ok(!copy(lang).blockedReason(code).includes("_"), `${lang} ${code}`);
     }
   }
