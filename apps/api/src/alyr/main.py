@@ -31,6 +31,7 @@ from alyr.db import Database, PoolBusy
 from alyr.gateways import registry as payment_gateways
 from alyr.modules import report
 from alyr.modules.bookings import deposits as booking_deposits
+from alyr.modules.bookings import staff_alert as booking_alert
 from alyr.modules.bookings.service import REMINDER, Reminders
 from alyr.modules.connect import webhooks as connect_webhooks
 from alyr.modules.discovery import apply as discovery_apply
@@ -243,6 +244,13 @@ def create_app() -> FastAPI:
         staff_alert.JOB,
         staff_alert.StaffAlerts(app.state.db, app.state.outbound, settings.public_web_url).run,
     )
+    # The staff numbers marked for bookings are told about each new booking and cancellation, and
+    # each owner who wants it is emailed (D-192).
+    app.state.jobs.register(
+        booking_alert.JOB,
+        booking_alert.StaffAlerts(app.state.db, app.state.outbound, settings.public_web_url).run,
+    )
+    app.state.jobs.register(booking_alert.EMAIL_JOB, booking_alert.OwnerEmails(app.state.db).run)
     # Documents sent to the customer (ALY-139): WhatsApp through the outbound layer, email with
     # the PDF attached. A delivery that fails every try shows the owner "not delivered".
     document_sender = DocumentSender(app.state.db, app.state.outbound)

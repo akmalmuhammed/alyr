@@ -181,6 +181,8 @@ function StaffNumbers({ lang, t, push }: { lang: Lang; t: Copy; push: Push }) {
   const [language, setLanguage] = useState<"en" | "ar">(lang);
   const [manager, setManager] = useState(false);
   const [orders, setOrders] = useState(false);
+  const [bookings, setBookings] = useState(false);
+  const [report, setReport] = useState(false);
   const [failure, setFailure] = useState("");
   const [busy, setBusy] = useState(false);
   const [asking, setAsking] = useState<string | null>(null);
@@ -195,12 +197,14 @@ function StaffNumbers({ lang, t, push }: { lang: Lang; t: Copy; push: Push }) {
     setBusy(true);
     setFailure("");
     try {
-      const made = await api<StaffNumber>("/api/staff-numbers", "POST", { name: name.trim(), phone: phone.trim(), lang: language, manager, order_alerts: orders });
+      const made = await api<StaffNumber>("/api/staff-numbers", "POST", { name: name.trim(), phone: phone.trim(), lang: language, manager, order_alerts: orders, booking_alerts: bookings, weekly_report: report });
       setNumbers((all) => [...(all ?? []).filter((n) => n.id !== made.id), made]);
       setName("");
       setPhone("");
       setManager(false);
       setOrders(false);
+      setBookings(false);
+      setReport(false);
       push(t.staffAdded);
     } catch (error) {
       setFailure(sayError(error, lang, t));
@@ -209,7 +213,7 @@ function StaffNumbers({ lang, t, push }: { lang: Lang; t: Copy; push: Push }) {
     }
   }
 
-  async function change(number: StaffNumber, what: { manager: boolean } | { order_alerts: boolean }) {
+  async function change(number: StaffNumber, what: { manager: boolean } | { order_alerts: boolean } | { booking_alerts: boolean } | { weekly_report: boolean }) {
     setFailure("");
     try {
       const changed = await api<StaffNumber>(`/api/staff-numbers/${number.id}`, "PUT", what);
@@ -252,6 +256,14 @@ function StaffNumbers({ lang, t, push }: { lang: Lang; t: Copy; push: Push }) {
               <span className="ct-toggle-text"><b>{t.staffOrders}</b><small>{t.staffOrdersHint}</small></span>
               <Switch on={n.order_alerts} label={`${t.staffOrders}: ${n.name}`} onChange={(next) => void change(n, { order_alerts: next })} />
             </div>
+            <div className="ct-toggle">
+              <span className="ct-toggle-text"><b>{t.staffBookings}</b><small>{t.staffBookingsHint}</small></span>
+              <Switch on={n.booking_alerts} label={`${t.staffBookings}: ${n.name}`} onChange={(next) => void change(n, { booking_alerts: next })} />
+            </div>
+            <div className="ct-toggle">
+              <span className="ct-toggle-text"><b>{t.staffReport}</b><small>{t.staffReportHint}</small></span>
+              <Switch on={n.weekly_report} label={`${t.staffReport}: ${n.name}`} onChange={(next) => void change(n, { weekly_report: next })} />
+            </div>
             {asking === n.id ? (
               <div className="ct-stack">
                 <p className="ct-hint" role="status">{t.staffRemoveAsk(n.name)}</p>
@@ -284,6 +296,8 @@ function StaffNumbers({ lang, t, push }: { lang: Lang; t: Copy; push: Push }) {
         </Field>
         <label className="ct-check"><input type="checkbox" checked={manager} onChange={(e) => setManager(e.target.checked)} />{t.staffManager}</label>
         <label className="ct-check"><input type="checkbox" checked={orders} onChange={(e) => setOrders(e.target.checked)} />{t.staffOrders}</label>
+        <label className="ct-check"><input type="checkbox" checked={bookings} onChange={(e) => setBookings(e.target.checked)} />{t.staffBookings}</label>
+        <label className="ct-check"><input type="checkbox" checked={report} onChange={(e) => setReport(e.target.checked)} />{t.staffReport}</label>
         <button type="submit" className="btn ct-btn" disabled={busy || !name.trim() || !phone.trim()}>
           <Icon name="plus" />{t.staffAdd}
         </button>

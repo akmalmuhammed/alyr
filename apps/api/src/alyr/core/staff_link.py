@@ -22,7 +22,7 @@ from uuid import UUID
 
 import asyncpg
 
-from alyr.core import team
+from alyr.core import consent, team
 from alyr.core.actions import Caller
 
 CODE_DIGITS = 8
@@ -112,6 +112,16 @@ async def redeem(
         "update contacts set user_id = $1, role = 'staff', verified_at = now() where id = $2",
         row["user_id"], contact["id"],
     )
+    if contact["role"] != "staff" and member["role"] in ("owner", "admin"):
+        # A number that was a customer's has just become the owner's or an admin's own: it is
+        # told about the week and about each booking from now on, and can switch either off on
+        # the Team screen (D-193). A number the shop already registered as staff keeps the
+        # settings the owner gave it. An agent (a stylist) is never given the weekly report.
+        await conn.execute(
+            "update contacts set weekly_report = true, booking_alerts = true where id = $1",
+            contact["id"],
+        )
+        await _agree(conn, contact["id"], "staff_link")
     await conn.execute("update staff_link_codes set used_at = now() where id = $1", row["id"])
     await team.record(
         conn, "team", row["user_id"], "whatsapp_linked",
@@ -119,6 +129,14 @@ async def redeem(
         contact_id=contact["id"], channel="whatsapp",
     )
     return Linked(row["user_id"], member["name"], member["role"])
+
+
+async def _agree(conn: asyncpg.Connection, contact_id: UUID, source: str) -> None:
+    """A person who proves their own phone and then asks for the shop's messages on it has agreed
+    to them: record it, unless the number never answered (unknown). A number that said STOP is
+    left as it is: STOP means stop, and START brings it back."""
+    if await consent.current(conn, contact_id, "service") == "unknown":
+        await consent.record(conn, contact_id, "service", "granted", source)
 
 
 async def unlink(conn: asyncpg.Connection, actor: team.Actor, user_id: UUID) -> bool:
@@ -141,7 +159,8 @@ async def unlink(conn: asyncpg.Connection, actor: team.Actor, user_id: UUID) -> 
 async def status(conn: asyncpg.Connection, user_id: UUID) -> dict:
     """Whether this person has a number linked, and which door they prefer."""
     row = await conn.fetchrow(
-        "select c.phone, c.verified_at from contacts c where c.user_id = $1", user_id
+        "select c.phone, c.verified_at, c.weekly_report, c.booking_alerts from contacts c "
+        "where c.user_id = $1", user_id
     )
     preference = await conn.fetchval(
         "select channel_preference from memberships where user_id = $1 "
@@ -149,12 +168,22 @@ async def status(conn: asyncpg.Connection, user_id: UUID) -> dict:
         user_id,
     )
     phone = row["phone"] if row else None
+    email = await conn.fetchval(
+        "select booking_emails from memberships where user_id = $1 "
+        "and tenant_id = nullif(current_setting('app.tenant_id', true), '')::uuid",
+        user_id,
+    )
     return {
         "linked": row is not None,
         # Only the end of the number: enough to recognise it, not to copy it.
         "number_ends": phone[-4:] if phone else None,
         "verified_at": row["verified_at"].isoformat() if row else None,
         "preference": preference or "both",
+        # What ALYR sends this person (D-193): the two WhatsApp messages need a linked phone
+        # (None says there is no phone to switch them on for), the email does not.
+        "weekly_report": row["weekly_report"] if row else None,
+        "booking_alerts": row["booking_alerts"] if row else None,
+        "booking_email": email,
     }
 
 
@@ -166,6 +195,67 @@ async def set_preference(conn: asyncpg.Connection, user_id: UUID, preference: st
         "and tenant_id = nullif(current_setting('app.tenant_id', true), '')::uuid",
         user_id, preference,
     )
+
+
+class AlertError(Exception):
+    """A setting that cannot be changed for this person; `code` is stable."""
+
+    def __init__(self, code: str) -> None:
+        super().__init__(code)
+        self.code = code
+
+
+async def set_alerts(
+    conn: asyncpg.Connection, user_id: UUID, role: str, *, weekly_report: bool | None = None,
+    booking_alerts: bool | None = None, booking_email: bool | None = None,
+) -> None:
+    """What ALYR sends this person: the weekly report (owner and admin only: it holds the shop's
+    money) and each new booking, both on their linked WhatsApp number, and the email for each new
+    booking (owners). Turning a message on is the person asking for it, which is the agreement to
+    receive it. Raises AlertError: `report_for_managers`, `link_first`, `emails_for_owners`."""
+    if weekly_report is not None and role not in ("owner", "admin"):
+        raise AlertError("report_for_managers")
+    if booking_email is not None and role != "owner":
+        raise AlertError("emails_for_owners")
+    if weekly_report is not None or booking_alerts is not None:
+        contact_id = await conn.fetchval(
+            "select id from contacts where user_id = $1 and role = 'staff'", user_id
+        )
+        if contact_id is None:
+            raise AlertError("link_first")
+        await conn.execute(
+            "update contacts set weekly_report = coalesce($2, weekly_report), "
+            "booking_alerts = coalesce($3, booking_alerts) where id = $1",
+            contact_id, weekly_report, booking_alerts,
+        )
+        if weekly_report or booking_alerts:
+            await _agree(conn, contact_id, "alert_setting")
+    if booking_email is not None:
+        await conn.execute(
+            "update memberships set booking_emails = $2 where user_id = $1 "
+            "and tenant_id = nullif(current_setting('app.tenant_id', true), '')::uuid",
+            user_id, booking_email,
+        )
+
+
+async def stand_down(
+    conn: asyncpg.Connection, *, contact_id: UUID | None = None, user_id: UUID | None = None
+) -> UUID | None:
+    """Stop treating a number as staff: it is an ordinary customer's from now on, the report and
+    every alert are off, it answers to no login and the history stays. Give the contact, or the
+    person whose number it is. Returns the contact's ID, or None if there was no such staff
+    number. A person taken off the team and a number the owner takes off the list both end here,
+    so an ex-colleague's phone is not left receiving the shop's figures (D-193)."""
+    found = await conn.fetchval(
+        "update contacts set role = 'customer', user_id = null, verified_at = null, "
+        "catalog_manager = false, weekly_report = false, order_alerts = false, "
+        "booking_alerts = false "
+        "where role = 'staff' and (id = $1 or user_id = $2) returning id",
+        contact_id, user_id,
+    )
+    if found is not None:
+        await conn.execute("delete from staff_pending where contact_id = $1", found)
+    return found
 
 
 async def caller_for(conn: asyncpg.Connection, contact_id: UUID) -> Caller | None:
