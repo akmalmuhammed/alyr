@@ -295,6 +295,7 @@ async def _merge_contact_fields(conn: asyncpg.Connection, keep_id: UUID, drop_id
         "                      else d.credit_limit end, "
         "  role = case when 'staff' in (k.role, d.role) then 'staff' else 'customer' end, "
         "  weekly_report = k.weekly_report or d.weekly_report, "
+        "  booking_alerts = k.booking_alerts or d.booking_alerts, "
         "  discovery_asks = k.discovery_asks or d.discovery_asks, "
         "  catalog_manager = k.catalog_manager or d.catalog_manager "
         "from contacts d where k.id = $1 and d.id = $2",

@@ -441,6 +441,9 @@ CORE_SCREENS: tuple[Screen, ...] = (Screen("home", Text("Home", "الرئيسي�
 ACCOUNT_SCREENS: tuple[Screen, ...] = (
     Screen("products", Text("Products", "المنتجات"), "apps", MANAGERS),
     Screen("connections", Text("Connections", "الاتصالات"), "plug", MANAGERS),
+    # The messages that did not reach a customer, and why (specs/036; D-194). Every member of
+    # staff may read it: the shop is told on the day a reminder or a review request could not go.
+    Screen("unsent", Text("Not sent", "لم تُرسل"), "send"),
     Screen("team", Text("Team", "الفريق"), "users"),
     # The person's own: their businesses, sign-in email and the data download (specs/040).
     Screen("account", Text("Your account", "حسابك"), "user"),
