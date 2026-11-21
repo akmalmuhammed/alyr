@@ -1,114 +1,102 @@
 "use client";
 
-import React, { useState } from "react";
-import { Button, Check, Icon, Radio, Tag } from "../../../_ui";
+import { useState } from "react";
+import { Button, Check, Icon, Panel, Radio, SectionLabel, Tag, Thumb } from "../../../_ui";
 import type { AuthCopyStrings } from "./copy";
-import { FIXTURE_BUSINESSES } from "./fixtures";
+import type { BusinessChoice } from "./fixtures";
+import type { LanguageChoice } from "./logic";
 
 export interface SignInChooseBusinessProps {
   t: AuthCopyStrings;
+  lang: LanguageChoice;
   email: string;
-  onSelectBusiness: (id: string) => void;
+  businesses: readonly BusinessChoice[];
+  /** Opens the chosen business. The preview passes a function that only moves on. */
+  onOpen: (id: string, remember: boolean) => void;
   onSignOut: () => void;
 }
 
-export function SignInChooseBusiness({
-  t,
-  email,
-  onSelectBusiness,
-  onSignOut
-}: SignInChooseBusinessProps) {
-  const [selectedId, setSelectedId] = useState<string>("nuqta");
-  const [rememberChoice, setRememberChoice] = useState(true);
-
-  const selectedBiz =
-    FIXTURE_BUSINESSES.find((b) => b.id === selectedId) || FIXTURE_BUSINESSES[0];
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSelectBusiness(selectedId);
-  };
+export function SignInChooseBusiness({ t, lang, email, businesses, onOpen, onSignOut }: SignInChooseBusinessProps) {
+  const last = businesses.find((b) => b.usedLast) ?? businesses[0];
+  const [selectedId, setSelectedId] = useState(last.id);
+  const [remember, setRemember] = useState(true);
+  const selected = businesses.find((b) => b.id === selectedId) ?? last;
+  const nameOf = (b: BusinessChoice) => (lang === "ar" ? b.name_ar : b.name);
+  const otherNameOf = (b: BusinessChoice) => (lang === "ar" ? b.name : b.name_ar);
 
   return (
     <div className="auth-stage">
-      <div className="auth-card auth-card--wide">
-        <form onSubmit={handleSubmit} className="auth-card-body">
+      <Panel className="auth-card auth-card--wide">
+        <form
+          className="auth-card-body"
+          onSubmit={(e) => {
+            e.preventDefault();
+            onOpen(selected.id, remember);
+          }}
+        >
           <div className="auth-card-header">
-            <span className="auth-card-kicker">{t.chooseKicker(email)}</span>
+            <SectionLabel>
+              {t.chooseKicker.before}
+              <bdi dir="ltr">{email}</bdi>
+              {t.chooseKicker.after}
+            </SectionLabel>
             <h1 className="auth-card-title">{t.chooseTitle}</h1>
             <p className="auth-card-subtitle">{t.chooseSubtitle}</p>
           </div>
 
-          <div className="auth-biz-list">
-            {FIXTURE_BUSINESSES.map((biz, idx) => {
-              const isSelected = biz.id === selectedId;
-              const isNuqta = biz.id === "nuqta";
-
-              return (
-                <div
-                  key={biz.id}
-                  onClick={() => setSelectedId(biz.id)}
-                  className={`auth-biz-row ${isSelected ? "auth-biz-row--selected" : ""} ${
-                    idx < FIXTURE_BUSINESSES.length - 1 ? "auth-biz-row--bordered" : ""
-                  }`}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      setSelectedId(biz.id);
-                    }
-                  }}
-                >
-                  <Radio checked={isSelected} readOnly />
-
-                  <div className={`auth-biz-mark ${isNuqta ? "auth-biz-mark--nuqta" : "auth-biz-mark--qirfa"}`}>
-                    <span className={`auth-biz-letter ${isNuqta ? "auth-biz-letter--nuqta" : ""}`}>
-                      {biz.initial}
+          <fieldset className="auth-biz-list">
+            <legend className="u-sr">{t.chooseLegend}</legend>
+            {businesses.map((b) => (
+              <Radio
+                key={b.id}
+                name="business"
+                value={b.id}
+                checked={b.id === selectedId}
+                onChange={() => setSelectedId(b.id)}
+                className="auth-biz-row"
+              >
+                <span className={b.id === "nuqta" ? "auth-biz-mark auth-biz-mark--ink" : "auth-biz-mark"} aria-hidden="true">
+                  {b.id === "nuqta" ? b.initial : <Thumb size={36} seed={b.id} initials={b.initial} />}
+                </span>
+                <span className="auth-biz-info">
+                  <span className="auth-biz-title-line">
+                    <span className="auth-biz-name" lang={lang}>
+                      {nameOf(b)}
                     </span>
-                  </div>
-
-                  <div className="auth-biz-info">
-                    <div className="auth-biz-title-line">
-                      <span className="auth-biz-name">{biz.name}</span>
-                      <span className="auth-biz-arabic">{biz.name_ar}</span>
-                    </div>
-                    <span className="auth-biz-meta">
-                      {biz.role === "owner" ? t.ownerSub(biz.places) : t.adminSub(biz.places)}
+                    <span className="auth-biz-other" lang={lang === "ar" ? "en" : "ar"}>
+                      {otherNameOf(b)}
                     </span>
-                  </div>
+                  </span>
+                  <span className="auth-biz-meta">{b.role === "owner" ? t.ownerSub : t.adminSub}</span>
+                </span>
+                {b.usedLast ? (
+                  <Tag tone="n" dot={false}>
+                    {t.usedLast}
+                  </Tag>
+                ) : null}
+              </Radio>
+            ))}
+          </fieldset>
 
-                  {biz.usedLast ? (
-                    <Tag tone="n">
-                      {t.usedLast}
-                    </Tag>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="auth-checkbox-row">
-            <Check checked={rememberChoice} onChange={(e) => setRememberChoice(e.target.checked)}>
-              <span className="auth-check-label">{t.rememberChoice}</span>
-            </Check>
-          </div>
+          <Check checked={remember} onChange={(e) => setRemember(e.target.checked)}>
+            {t.rememberChoice}
+          </Check>
 
           <div className="auth-action-row">
             <Button kind="volt" size="md" type="submit">
-              {t.openBusinessBtn(selectedBiz.name)}
+              {t.openBusinessBtn(nameOf(selected))}
             </Button>
-            <div className="auth-spacer" />
-            <button type="button" className="auth-signout-action" onClick={onSignOut}>
+            <Button kind="quiet" size="md" onClick={onSignOut}>
               {t.signOutBtn}
-            </button>
+            </Button>
           </div>
         </form>
 
         <div className="auth-card-note">
-          <Icon name="info" size="sm" className="auth-note-icon" />
-          <span className="auth-note-text">{t.switchAnytimeNote}</span>
+          <Icon name="info" size="md" className="auth-note-icon" />
+          <p className="auth-note-text">{t.switchAnytimeNote}</p>
         </div>
-      </div>
+      </Panel>
     </div>
   );
 }

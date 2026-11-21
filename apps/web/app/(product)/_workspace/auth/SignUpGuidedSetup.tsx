@@ -1,247 +1,219 @@
 "use client";
 
-import React, { useState } from "react";
-import { Button, Icon, type IconName, Kbd, Tag } from "../../../_ui";
+import { useState } from "react";
+import { Button, Icon, IconButton, Input, Kbd, Panel, Select, SectionLabel, Status } from "../../../_ui";
+import { formatTime } from "../../../_ui/format";
 import type { AuthCopyStrings } from "./copy";
-import { FIXTURE_SERVICES, type ServiceItem } from "./fixtures";
+import { FIXTURE_LAST_SAVED, FIXTURE_SERVICES, LENGTH_CHOICES, type ServiceItem } from "./fixtures";
 import { PhonePreview } from "./PhonePreview";
-import type { LanguageChoice } from "./logic";
+import { canRemoveService, durationLabel, normalizeDigits, type LanguageChoice } from "./logic";
 
 export interface SignUpGuidedSetupProps {
   t: AuthCopyStrings;
   lang: LanguageChoice;
+  businessName: string;
+  initialServices?: readonly ServiceItem[];
   onBack: () => void;
   onContinue: (services: ServiceItem[]) => void;
 }
 
-const WHERE_USED_ICONS: readonly IconName[] = ["wa", "cal", "card", "bell"];
+const WHERE_ICONS = ["inbox", "cal", "card", "bell"] as const;
+const DEFAULT_MINUTES = 30;
+/** The moment of an edit, read when the event happens (never while rendering). */
+const stamp = () => Date.now();
+const EMPTY_DRAFT = { name: "", minutes: "", price: "", deposit: "" };
 
-export function SignUpGuidedSetup({
-  t,
-  lang,
-  onBack,
-  onContinue
-}: SignUpGuidedSetupProps) {
-  const [services, setServices] = useState<ServiceItem[]>(FIXTURE_SERVICES);
-  const [newServiceName, setNewServiceName] = useState("");
-  const [newServiceLength, setNewServiceLength] = useState("");
-  const [newServicePrice, setNewServicePrice] = useState("");
-  const [newServiceDeposit, setNewServiceDeposit] = useState("");
+export function SignUpGuidedSetup({ t, lang, businessName, initialServices = FIXTURE_SERVICES, onBack, onContinue }: SignUpGuidedSetupProps) {
+  const [services, setServices] = useState<ServiceItem[]>(() => [...initialServices]);
+  const [focusId, setFocusId] = useState<string | undefined>(initialServices[1]?.id);
+  const [savedAt, setSavedAt] = useState<string | number>(FIXTURE_LAST_SAVED);
+  const [draft, setDraft] = useState(EMPTY_DRAFT);
 
-  const handleUpdate = (id: string, field: keyof ServiceItem, val: string) => {
-    setServices((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, [field]: val } : s))
-    );
+  const edit = (id: string, patch: Partial<ServiceItem>) => {
+    setServices((list) => list.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+    setFocusId(id);
+    setSavedAt(stamp());
+  };
+  const remove = (id: string) => {
+    if (!canRemoveService(services.length)) return;
+    setServices((list) => list.filter((s) => s.id !== id));
+    setSavedAt(stamp());
+  };
+  const add = () => {
+    const name = draft.name.trim();
+    if (!name) return;
+    const id = `s_${stamp()}`;
+    setServices((list) => [...list, { id, name, minutes: Number(draft.minutes) || DEFAULT_MINUTES, price: draft.price, deposit: draft.deposit }]);
+    setFocusId(id);
+    setSavedAt(stamp());
+    setDraft(EMPTY_DRAFT);
+  };
+  const addOnEnter = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      add();
+    }
   };
 
-  const handleRemove = (id: string) => {
-    if (services.length <= 1) return;
-    setServices((prev) => prev.filter((s) => s.id !== id));
-  };
-
-  const handleAdd = () => {
-    if (!newServiceName.trim()) return;
-    const newItem: ServiceItem = {
-      id: `s_${Date.now()}`,
-      name: newServiceName.trim(),
-      length: newServiceLength.trim() || "30 min",
-      price: newServicePrice.trim() || "50",
-      deposit: newServiceDeposit.trim()
-    };
-    setServices((prev) => [...prev, newItem]);
-    setNewServiceName("");
-    setNewServiceLength("");
-    setNewServicePrice("");
-    setNewServiceDeposit("");
+  const lengthOptions = (current?: number) => {
+    const set = new Set<number>(LENGTH_CHOICES);
+    if (current) set.add(current);
+    return [...set]
+      .sort((a, b) => a - b)
+      .map((m) => (
+        <option key={m} value={m}>
+          {durationLabel(m, lang)}
+        </option>
+      ));
   };
 
   return (
     <div className="auth-wizard">
-      <div className="auth-wizard-content">
-        {/* Left Step Form */}
+      <div className="auth-wizard-main">
         <div className="auth-wizard-step">
           <div className="auth-step-body">
             <div className="auth-card-header">
-              <span className="auth-card-kicker">{t.signupOfferKicker}</span>
-              <h1 className="auth-card-title auth-card-title--lg">{t.signupOfferTitle}</h1>
+              <SectionLabel>{t.signupOfferKicker}</SectionLabel>
+              <h1 className="auth-step-title">{t.signupOfferTitle}</h1>
               <p className="auth-card-subtitle">{t.signupOfferSubtitle}</p>
             </div>
 
-            {/* Price List Table Panel */}
-            <div className="auth-price-panel">
-              <div className="auth-price-header">
-                <span className="auth-price-cell-service">{t.colService}</span>
-                <span className="auth-price-cell-fixed">{t.colLength}</span>
-                <span className="auth-price-cell-fixed">{t.colPrice}</span>
-                <span className="auth-price-cell-fixed">{t.colDeposit}</span>
-                <span className="auth-price-cell-action" />
-              </div>
-
-              {services.map((s, idx) => {
-                const isFullWashFocus = idx === 1;
-
-                return (
-                  <div
-                    key={s.id}
-                    className={`auth-price-row ${isFullWashFocus ? "auth-price-row--focus" : ""}`}
-                  >
-                    <div className="auth-price-cell-service">
-                      <input
-                        type="text"
-                        value={s.name}
-                        onChange={(e) => handleUpdate(s.id, "name", e.target.value)}
-                        className="auth-cell-input"
-                      />
-                    </div>
-
-                    <div className="auth-price-cell-fixed">
-                      <div className="auth-cell-box auth-cell-box--select">
-                        <input
-                          type="text"
-                          value={s.length}
-                          onChange={(e) => handleUpdate(s.id, "length", e.target.value)}
-                          className="auth-cell-input"
+            <Panel className="auth-price-panel" clip>
+              <table className="auth-price-table" aria-label={t.priceListLabel}>
+                <thead>
+                  <tr>
+                    <th scope="col">{t.colService}</th>
+                    <th scope="col">{t.colLength}</th>
+                    <th scope="col">{t.colPrice}</th>
+                    <th scope="col">{t.colDeposit}</th>
+                    <th scope="col"><span className="u-sr">{t.colActions}</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {services.map((s, index) => (
+                    <tr key={s.id} className={s.id === focusId ? "auth-price-row auth-price-row--focus" : "auth-price-row"}>
+                      <td data-label={t.colService}>
+                        <Input
+                          value={s.name}
+                          aria-label={t.nameOfService(index + 1)}
+                          onChange={(e) => edit(s.id, { name: e.target.value })}
+                          onFocus={() => setFocusId(s.id)}
                         />
-                        <Icon name="down" size="sm" className="auth-cell-chevron" />
-                      </div>
-                    </div>
-
-                    <div className="auth-price-cell-fixed">
-                      <div className={`auth-cell-box ${isFullWashFocus ? "auth-cell-box--active" : ""}`}>
-                        <input
-                          type="text"
+                      </td>
+                      <td data-label={t.colLength}>
+                        <Select aria-label={t.lengthOf(s.name)} value={s.minutes} onChange={(e) => edit(s.id, { minutes: Number(e.target.value) })}>
+                          {lengthOptions(s.minutes)}
+                        </Select>
+                      </td>
+                      <td data-label={t.colPrice}>
+                        <Input
+                          inputMode="decimal"
+                          dir="ltr"
                           value={s.price}
-                          onChange={(e) => handleUpdate(s.id, "price", e.target.value)}
-                          className="auth-cell-input auth-cell-input--mono"
+                          suffix={t.currencyShort}
+                          aria-label={t.priceOf(s.name)}
+                          onChange={(e) => edit(s.id, { price: normalizeDigits(e.target.value) })}
+                          onFocus={() => setFocusId(s.id)}
                         />
-                        <span className="auth-cell-suffix">{lang === "ar" ? "ر.ق" : "QAR"}</span>
-                      </div>
-                    </div>
-
-                    <div className="auth-price-cell-fixed">
-                      <div className="auth-cell-box">
-                        <input
-                          type="text"
+                      </td>
+                      <td data-label={t.colDeposit}>
+                        <Input
+                          inputMode="decimal"
+                          dir="ltr"
                           value={s.deposit}
-                          placeholder={lang === "ar" ? "بدون" : "None"}
-                          onChange={(e) => handleUpdate(s.id, "deposit", e.target.value)}
-                          className="auth-cell-input auth-cell-input--mono"
+                          placeholder={t.none}
+                          suffix={t.currencyShort}
+                          aria-label={t.depositOf(s.name)}
+                          onChange={(e) => edit(s.id, { deposit: normalizeDigits(e.target.value) })}
+                          onFocus={() => setFocusId(s.id)}
                         />
-                        {s.deposit ? (
-                          <span className="auth-cell-suffix">{lang === "ar" ? "ر.ق" : "QAR"}</span>
-                        ) : null}
-                      </div>
-                    </div>
+                      </td>
+                      <td className="auth-price-action">
+                        <IconButton
+                          icon={<Icon name="x" size="md" />}
+                          label={t.removeService(s.name)}
+                          size="xs"
+                          bare
+                          disabled={!canRemoveService(services.length)}
+                          onClick={() => remove(s.id)}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                  <tr className="auth-price-row auth-price-row--add">
+                    <td data-label={t.colService}>
+                      <Input
+                        value={draft.name}
+                        placeholder={t.newServicePlaceholder}
+                        aria-label={t.newServicePlaceholder}
+                        onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+                        onKeyDown={addOnEnter}
+                      />
+                    </td>
+                    <td data-label={t.colLength}>
+                      <Select aria-label={t.newLengthLabel} value={draft.minutes} onChange={(e) => setDraft({ ...draft, minutes: e.target.value })}>
+                        <option value="">{t.colLength}</option>
+                        {lengthOptions()}
+                      </Select>
+                    </td>
+                    <td data-label={t.colPrice}>
+                      <Input
+                        inputMode="decimal"
+                        dir="ltr"
+                        value={draft.price}
+                        placeholder={t.notShown}
+                        suffix={t.currencyShort}
+                        aria-label={t.newPriceLabel}
+                        onChange={(e) => setDraft({ ...draft, price: normalizeDigits(e.target.value) })}
+                        onKeyDown={addOnEnter}
+                      />
+                    </td>
+                    <td data-label={t.colDeposit}>
+                      <Input
+                        inputMode="decimal"
+                        dir="ltr"
+                        value={draft.deposit}
+                        placeholder={t.none}
+                        suffix={t.currencyShort}
+                        aria-label={t.newDepositLabel}
+                        onChange={(e) => setDraft({ ...draft, deposit: normalizeDigits(e.target.value) })}
+                        onKeyDown={addOnEnter}
+                      />
+                    </td>
+                    <td className="auth-price-action">
+                      <IconButton icon={<Icon name="plus" size="md" />} label={t.addService} size="xs" bare disabled={!draft.name.trim()} onClick={add} />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </Panel>
 
-                    <div className="auth-price-cell-action">
-                      <button
-                        type="button"
-                        onClick={() => handleRemove(s.id)}
-                        className="auth-remove-row-action"
-                        aria-label="Remove service"
-                      >
-                        <Icon name="x" size="sm" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Add New Service Row */}
-              <div className="auth-price-row auth-price-row--add">
-                <div className="auth-price-cell-service">
-                  <input
-                    type="text"
-                    placeholder={t.newServicePlaceholder}
-                    value={newServiceName}
-                    onChange={(e) => setNewServiceName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleAdd();
-                    }}
-                    className="auth-cell-input"
-                  />
-                </div>
-
-                <div className="auth-price-cell-fixed">
-                  <div className="auth-cell-box auth-cell-box--select">
-                    <input
-                      type="text"
-                      placeholder={t.colLength}
-                      value={newServiceLength}
-                      onChange={(e) => setNewServiceLength(e.target.value)}
-                      className="auth-cell-input"
-                    />
-                    <Icon name="down" size="sm" className="auth-cell-chevron" />
-                  </div>
-                </div>
-
-                <div className="auth-price-cell-fixed">
-                  <div className="auth-cell-box">
-                    <input
-                      type="text"
-                      placeholder={lang === "ar" ? "غير معروض" : "Not shown"}
-                      value={newServicePrice}
-                      onChange={(e) => setNewServicePrice(e.target.value)}
-                      className="auth-cell-input auth-cell-input--mono"
-                    />
-                    <span className="auth-cell-suffix">{lang === "ar" ? "ر.ق" : "QAR"}</span>
-                  </div>
-                </div>
-
-                <div className="auth-price-cell-fixed">
-                  <div className="auth-cell-box">
-                    <input
-                      type="text"
-                      placeholder={lang === "ar" ? "بدون" : "None"}
-                      value={newServiceDeposit}
-                      onChange={(e) => setNewServiceDeposit(e.target.value)}
-                      className="auth-cell-input auth-cell-input--mono"
-                    />
-                    <span className="auth-cell-suffix">{lang === "ar" ? "ر.ق" : "QAR"}</span>
-                  </div>
-                </div>
-
-                <div className="auth-price-cell-action" />
-              </div>
+            <div className="auth-save-line">
+              <Status tone="ok">{t.savedAsYouType}</Status>
+              <span className="auth-last-saved">{t.lastSaved(formatTime(savedAt, lang))}</span>
+              <span className="auth-save-note">{t.photosArabicLaterNote}</span>
             </div>
 
-            {/* Auto-save status line */}
-            <div className="auth-save-status-line">
-              <span className="auth-status-dot-ok" />
-              <span className="auth-save-text">{t.savedAsYouType}</span>
-              <span className="auth-last-saved">{t.lastSavedMeta}</span>
-              <div className="auth-spacer" />
-              <span className="auth-services-note">{t.photosArabicLaterNote}</span>
-            </div>
-
-            {/* "Where the list is used" Panel */}
-            <div className="auth-starts-panel">
+            <Panel className="auth-starts-panel" clip>
               <div className="auth-starts-cols">
-                {t.whereUsedItems.map((col, idx) => (
-                  <div
-                    key={idx}
-                    className={`auth-starts-col ${idx > 0 ? "auth-starts-col--bordered" : ""}`}
-                  >
+                {t.whereUsedItems.map((col, index) => (
+                  <div key={col.title} className="auth-starts-col">
                     <div className="auth-starts-title-line">
-                      <Icon name={WHERE_USED_ICONS[idx % WHERE_USED_ICONS.length]} size="sm" />
+                      <Icon name={WHERE_ICONS[index]} size="md" />
                       <span className="auth-starts-title">{col.title}</span>
                     </div>
                     <span className="auth-starts-desc">{col.desc}</span>
                   </div>
                 ))}
               </div>
-            </div>
+            </Panel>
           </div>
 
-          {/* Bottom Actions Bar */}
           <div className="auth-wizard-actions">
-            <Button kind="line" size="md" onClick={onBack}>
+            <Button kind="line" size="md" icon={<Icon name="left" size="md" />} onClick={onBack}>
               {t.back}
             </Button>
-            <span className="auth-actions-note">
-              {t.signupOfferActionsNote(services.length)}
-            </span>
-            <div className="auth-spacer" />
+            <span className="auth-actions-note">{t.signupOfferActionsNote(services.length)}</span>
             <Kbd>{t.enterKey}</Kbd>
             <Button kind="volt" size="md" onClick={() => onContinue(services)}>
               {t.continueBtn}
@@ -249,20 +221,13 @@ export function SignUpGuidedSetup({
           </div>
         </div>
 
-        {/* Right Preview Pane */}
-        <div className="auth-wizard-preview">
-          <div className="auth-preview-header-line">
-            <span className="auth-card-kicker">{t.customerSeeHeader}</span>
-            <Tag tone="volt">{t.liveBadge}</Tag>
+        <aside className="auth-wizard-preview">
+          <div className="auth-preview-head">
+            <SectionLabel>{t.customerSeeHeader}</SectionLabel>
+            <Status tone="volt">{t.previewLive}</Status>
           </div>
-          <PhonePreview
-            businessName="Nuqta Car Care"
-            variant="offer"
-            services={services}
-            lang={lang}
-            caption={t.phonePreviewCaptionOffer}
-          />
-        </div>
+          <PhonePreview t={t} lang={lang} variant="offer" businessName={businessName} services={services} focusId={focusId} caption={t.phonePreviewCaptionOffer} />
+        </aside>
       </div>
     </div>
   );

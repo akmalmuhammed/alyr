@@ -1,88 +1,83 @@
 "use client";
 
-import React, { useState } from "react";
-import { Button, Check, Icon, Kbd } from "../../../_ui";
+import { useState } from "react";
+import { Button, Check, Field, Icon, Input, Kbd, Panel, SectionLabel } from "../../../_ui";
 import type { AuthCopyStrings } from "./copy";
+import { isValidEmail } from "./logic";
 
 export interface SignInEmailProps {
   t: AuthCopyStrings;
   email: string;
-  onChangeEmail: (val: string) => void;
+  onChangeEmail: (value: string) => void;
+  /** Asks for a code. The preview passes a function that only moves to the next screen: no email is sent. */
   onSubmit: () => void;
   onGoToSignUp: () => void;
 }
 
-export function SignInEmail({
-  t,
-  email,
-  onChangeEmail,
-  onSubmit,
-  onGoToSignUp
-}: SignInEmailProps) {
+export function SignInEmail({ t, email, onChangeEmail, onSubmit, onGoToSignUp }: SignInEmailProps) {
   const [remember, setRemember] = useState(true);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit();
-  };
+  const [invalid, setInvalid] = useState(false);
 
   return (
     <div className="auth-stage">
-      <div className="auth-card">
-        <form onSubmit={handleSubmit} className="auth-card-body">
+      <Panel className="auth-card">
+        <form
+          className="auth-card-body"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (isValidEmail(email)) onSubmit();
+            else setInvalid(true);
+          }}
+        >
           <div className="auth-card-header">
-            <span className="auth-card-kicker">{t.signInKicker}</span>
+            <SectionLabel>{t.signInKicker}</SectionLabel>
             <h1 className="auth-card-title">{t.signInTitle}</h1>
             <p className="auth-card-subtitle">{t.signInSubtitle}</p>
           </div>
 
-          <div className="auth-field-group">
-            <label htmlFor="auth-email-input" className="auth-field-label">
-              {t.workEmailLabel}
-            </label>
-            <div className="auth-input-box auth-input-box--active">
-              <Icon name="send" size="sm" className="auth-input-icon" />
-              <input
-                id="auth-email-input"
-                type="email"
-                value={email}
-                placeholder={t.workEmailPlaceholder}
-                onChange={(e) => onChangeEmail(e.target.value)}
-                className="auth-input-element"
-                required
-                autoFocus
-              />
-            </div>
-          </div>
+          <Field label={t.workEmailLabel} error={invalid ? t.emailInvalid : undefined}>
+            <Input
+              type="email"
+              name="email"
+              inputMode="email"
+              autoComplete="email"
+              autoFocus
+              required
+              dir="ltr"
+              value={email}
+              placeholder={t.workEmailPlaceholder}
+              onChange={(e) => {
+                onChangeEmail(e.target.value);
+                setInvalid(false);
+              }}
+              prefix={<Icon name="send" size="md" />}
+            />
+          </Field>
 
-          <div className="auth-checkbox-row">
-            <Check checked={remember} onChange={(e) => setRemember(e.target.checked)}>
-              <span className="auth-check-label">{t.keepMeSignedIn}</span>
-            </Check>
-          </div>
+          <Check checked={remember} onChange={(e) => setRemember(e.target.checked)}>
+            {t.keepMeSignedIn}
+          </Check>
 
           <div className="auth-action-row">
             <Button kind="volt" size="md" type="submit">
               {t.sendCodeBtn}
             </Button>
-            <div className="auth-spacer" />
             <Kbd>{t.enterKey}</Kbd>
           </div>
         </form>
 
         <div className="auth-card-note">
-          <Icon name="info" size="sm" className="auth-note-icon" />
-          <span className="auth-note-text">{t.noCodeHelp}</span>
+          <Icon name="info" size="md" className="auth-note-icon" />
+          <p className="auth-note-text">{t.noCodeHelp}</p>
         </div>
-      </div>
+      </Panel>
 
-      <div className="auth-below-card">
-        <span className="auth-below-text">{t.newToAlyr}</span>
-        <span>&nbsp;</span>
+      <p className="auth-below-card">
+        <span>{t.newToAlyr}</span>
         <button type="button" className="auth-below-link" onClick={onGoToSignUp}>
           {t.setUpBusiness}
         </button>
-      </div>
+      </p>
     </div>
   );
 }

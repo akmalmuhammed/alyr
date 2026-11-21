@@ -1,61 +1,52 @@
 "use client";
 
-import React from "react";
-import { Icon, Steps } from "../../../_ui";
-import { AlyrLogo } from "./AlyrLogo";
+import { Button, Icon, Steps } from "../../../_ui";
+import { Symbol } from "../../../_site/brand";
 import type { AuthCopyStrings } from "./copy";
 import type { LanguageChoice } from "./logic";
 
 export interface AuthTopBarProps {
   t: AuthCopyStrings;
-  language?: LanguageChoice;
+  language: LanguageChoice;
   onToggleLanguage: () => void;
+  /** The sign-up steps, with the index of the current one; sign-in has none and shows the help line. */
   steps?: readonly string[];
   currentStep?: number;
 }
 
-export function AuthTopBar({
-  t,
-  language,
-  onToggleLanguage,
-  steps,
-  currentStep
-}: AuthTopBarProps) {
-  const isArabic = language === "ar";
-
+/** The 52 px bar of the sign-in and sign-up screens: the official symbol and name, then help or the steps, then the language. */
+export function AuthTopBar({ t, language, onToggleLanguage, steps, currentStep }: AuthTopBarProps) {
+  const wizard = steps !== undefined && currentStep !== undefined;
   return (
-    <header className="auth-bar" role="banner">
+    <header className="auth-bar">
       <div className="auth-bar-brand">
-        <AlyrLogo height={22} />
+        <Symbol className="auth-bar-mark" />
         <span className="auth-bar-wordmark">{t.brandName}</span>
       </div>
 
-      <div className="auth-spacer" />
-
-      {steps && typeof currentStep === "number" ? (
-        <div className="auth-bar-center">
-          <Steps steps={steps} current={currentStep} />
-        </div>
+      {wizard ? (
+        <nav className="auth-bar-steps" aria-label={t.stepsLabel}>
+          <Steps steps={steps} current={currentStep} stateLabels={{ done: t.stepDone, current: t.stepCurrent }} />
+        </nav>
       ) : (
         <div className="auth-bar-support">
           <span className="auth-bar-help">{t.needHand}</span>
-          <span className="auth-bar-email">{t.supportEmail}</span>
+          <a className="auth-bar-email" href={`mailto:${t.supportEmail}`}>
+            {t.supportEmail}
+          </a>
         </div>
       )}
 
-      {steps && typeof currentStep === "number" ? <div className="auth-spacer" /> : null}
-
-      <button
-        type="button"
-        className="auth-lang-trigger"
+      <Button
+        kind="line"
+        size="sm"
+        icon={<Icon name="globe" size="md" />}
         onClick={onToggleLanguage}
-        aria-label={t.languageName}
+        aria-label={t.languageSwitchLabel}
+        className="auth-lang"
       >
-        <Icon name="globe" size="sm" />
-        <span style={{ fontFamily: isArabic ? "var(--font-ui-sans)" : "var(--font-ui-arabic)" }}>
-          {t.languageName}
-        </span>
-      </button>
+        <span lang={language === "en" ? "ar" : "en"}>{t.languageName}</span>
+      </Button>
     </header>
   );
 }
