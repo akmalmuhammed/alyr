@@ -1,0 +1,114 @@
+/* The redesigned shell (NewShell.tsx). Every class is `ns-`. Tokens only: the kit's aliases on `.u`
+   (`--u-*`), the colours and sizes of design/tokens.json. No colour, no px, no font name written here.
+   A section's own stylesheet owns what is inside the page; this file owns the frame around it. */
+
+.ns { color: var(--text); background: var(--canvas); font-size: var(--u-fs-body); line-height: var(--u-lh); }
+.ns-frame { display: grid; grid-template-columns: var(--ui-size-sidebar) minmax(0, 1fr); block-size: 100dvh; }
+
+.ns-skip { position: absolute; inset-inline-start: var(--u-sp-8); inset-block-start: var(--u-sp-8); z-index: var(--z-skip-link); padding: var(--u-sp-8) var(--u-sp-12); background: var(--surface); color: var(--text); border: var(--rule-hairline) solid var(--line-strong); border-radius: var(--u-r-ui); transform: translateY(-200%); }
+.ns-skip:focus-visible { transform: none; }
+
+/* ── the sidebar ─────────────────────────────────────────────────────────────────────────── */
+.ns-side { display: flex; flex-direction: column; gap: var(--u-sp-4); min-block-size: 0; padding: var(--u-sp-12) var(--u-sp-12) var(--u-sp-8); background: var(--surface); border-inline-end: var(--rule-hairline) solid var(--line); overflow-y: auto; }
+.ns-brand { display: flex; align-items: center; gap: var(--u-sp-10); padding: var(--u-sp-4) var(--u-sp-8) var(--u-sp-8); }
+.ns-brand .sh-mark { inline-size: var(--ui-size-icon-lg); block-size: var(--ui-size-icon-lg); flex: none; color: var(--text); }
+.ns-brand-text { display: grid; min-inline-size: 0; line-height: var(--u-lh-title); }
+.ns-brand-text b { font-weight: 600; font-size: var(--u-fs-head); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ns-brand-text small { font-family: var(--font-ui-mono); font-size: var(--u-fs-label); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--text-muted); }
+.ns[dir="rtl"] .ns-brand-text small { font-family: inherit; letter-spacing: 0; text-transform: none; font-size: var(--u-fs-cap); }
+.ns-brand .u-tag { margin-inline-start: auto; }
+
+.ns-search { display: flex; align-items: center; gap: var(--u-sp-8); min-block-size: var(--u-h-md); margin-block: var(--u-sp-4) var(--u-sp-8); padding-inline: var(--u-sp-10) var(--u-sp-8); background: var(--surface); color: var(--text-muted); border: var(--rule-hairline) solid var(--u-ctl); border-radius: var(--u-r-ui); font: inherit; text-align: start; cursor: pointer; }
+.ns-search:hover { color: var(--text); border-color: var(--line-strong); }
+.ns-search span { flex: 1; min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.ns-nav { display: flex; flex-direction: column; gap: var(--u-sp-2); flex: 1; }
+.ns-group { padding: var(--u-sp-16) var(--u-sp-10) var(--u-sp-6); font-family: var(--font-ui-mono); font-size: var(--u-fs-label); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--u-label-colour); }
+.ns[dir="rtl"] .ns-group { font-family: inherit; letter-spacing: 0; text-transform: none; font-size: var(--u-fs-cap); }
+.ns-link { display: flex; align-items: center; gap: var(--u-sp-10); min-block-size: var(--u-h-md); padding-inline: var(--u-sp-10); border-radius: var(--u-r-ui); color: var(--text-muted); text-decoration: none; font-size: var(--u-fs-body); font-weight: 500; }
+.ns-link:hover { color: var(--text); background: var(--surface-subtle); }
+.ns-link[aria-current="page"], .ns-sublink[aria-current="page"] { color: var(--text); background: var(--surface-subtle); font-weight: 600; }
+.ns-link--head { color: var(--text); }
+.ns-link-text { flex: 1; min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ns-count { margin-inline-start: auto; font-size: var(--u-fs-label); color: var(--text-muted); }
+.ns-sub { display: flex; flex-direction: column; gap: var(--u-sp-2); margin-inline-start: var(--u-sp-16); padding-inline-start: var(--u-sp-12); border-inline-start: var(--rule-hairline) solid var(--line); }
+.ns-sublink { display: flex; align-items: center; min-block-size: var(--u-h-sm); padding-inline: var(--u-sp-10); border-radius: var(--u-r-ui); color: var(--text-muted); text-decoration: none; font-size: var(--u-fs-body); font-weight: 500; }
+.ns-sublink:hover { color: var(--text); background: var(--surface-subtle); }
+.ns-link:focus-visible, .ns-sublink:focus-visible, .ns-search:focus-visible, .ns-textbtn:focus-visible, .ns-tabbar a:focus-visible, .ns-tabbar button:focus-visible, .ns-result:focus-visible { outline: var(--rule-strong) solid var(--text); outline-offset: var(--rule-strong); }
+
+.ns-foot { display: flex; align-items: center; gap: var(--u-sp-8); padding: var(--u-sp-12) var(--u-sp-4) var(--u-sp-4); border-block-start: var(--rule-hairline) solid var(--line); margin-block-start: var(--u-sp-8); }
+.ns-me { display: grid; flex: 1; min-inline-size: 0; line-height: var(--u-lh-title); }
+.ns-me b { font-weight: 600; font-size: var(--u-fs-body); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ns-me small { color: var(--text-muted); font-size: var(--u-fs-cap); }
+.ns-langmark { font-size: var(--u-fs-body); font-weight: 600; }
+
+/* ── the top bar ─────────────────────────────────────────────────────────────────────────── */
+.ns-body { display: grid; grid-template-rows: auto minmax(0, 1fr); min-inline-size: 0; min-block-size: 0; block-size: 100dvh; }
+.ns-top { display: flex; align-items: center; gap: var(--u-sp-16); min-block-size: var(--u-bar); padding-inline: var(--ui-space-28); border-block-end: var(--rule-hairline) solid var(--line); background: var(--surface); }
+.ns-crumbs { display: flex; align-items: center; gap: var(--u-sp-8); min-inline-size: 0; color: var(--text-muted); }
+.ns-crumbs i { font-style: normal; color: var(--text-faint); }
+.ns-crumbs b { color: var(--text); font-weight: 600; }
+.ns[dir="rtl"] .ns-crumbs i { display: inline-block; transform: scaleX(-1); }
+.ns-spacer { flex: 1; }
+.ns-clock { color: var(--text-muted); font-size: var(--u-fs-cap); white-space: nowrap; }
+.ns-textbtn { display: inline-flex; align-items: center; min-block-size: var(--u-h-sm); padding-inline: var(--u-sp-10); border: var(--rule-hairline) solid var(--u-ctl); border-radius: var(--u-r-ui); background: var(--surface); color: var(--text); font: inherit; font-size: var(--u-fs-cap); font-weight: 500; text-decoration: none; cursor: pointer; white-space: nowrap; }
+.ns-textbtn:hover { border-color: var(--line-strong); }
+.ns-mtop { display: none; }
+
+/* ── the page ────────────────────────────────────────────────────────────────────────────── */
+.ns-main { min-block-size: 0; overflow: auto; background: var(--canvas); }
+.ns-main:focus { outline: none; }
+.ns-page { max-inline-size: var(--ui-size-page); margin-inline: auto; padding: var(--ui-space-28) var(--ui-space-28) var(--ui-space-48); box-sizing: border-box; }
+.ns-main[data-fill] { overflow: hidden; display: flex; flex-direction: column; }
+.ns-notes:not(:empty) { flex: none; padding: var(--ui-space-12) var(--ui-space-28) 0; }
+.ns-fill { flex: 1; block-size: 100%; min-block-size: 0; display: flex; flex-direction: column; }
+.ns-fill > .u-wb, .ns-fill > * { min-block-size: 0; }
+.ns-offline { margin-block-end: var(--u-sp-16); padding: var(--u-sp-10) var(--u-sp-14); border: var(--rule-hairline) solid var(--warn); border-radius: var(--u-r-ui); background: var(--warn-soft); color: var(--warn-text); }
+.ns-empty { display: grid; gap: var(--u-sp-12); justify-items: start; padding: var(--u-sp-24) 0; color: var(--text-muted); }
+
+/* ── the search dialog ───────────────────────────────────────────────────────────────────── */
+.ns-results { list-style: none; margin: var(--u-sp-12) 0 0; padding: 0; max-block-size: calc(var(--ui-size-dialog) * .7); overflow: auto; }
+.ns-grp { padding: var(--u-sp-10) var(--u-sp-8) var(--u-sp-4); font-family: var(--font-ui-mono); font-size: var(--u-fs-label); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--u-label-colour); }
+.ns[dir="rtl"] .ns-grp { font-family: inherit; letter-spacing: 0; text-transform: none; font-size: var(--u-fs-cap); }
+.ns-result { display: flex; align-items: center; gap: var(--u-sp-10); inline-size: 100%; min-block-size: var(--u-h-md); padding-inline: var(--u-sp-10); border: 0; border-radius: var(--u-r-ui); background: transparent; color: var(--text); font: inherit; text-align: start; cursor: pointer; }
+.ns-result[aria-selected="true"] { background: var(--surface-subtle); }
+.ns-none { padding: var(--u-sp-12) var(--u-sp-8); color: var(--text-muted); }
+
+/* ── the phone ───────────────────────────────────────────────────────────────────────────── */
+.ns-tabbar { display: none; }
+@media (max-width: 47.99rem) {
+  .ns-frame { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+  .ns-side, .ns-top { display: none; }
+  .ns-body { grid-template-rows: auto minmax(0, 1fr); }
+  .ns-mtop { display: flex; align-items: center; gap: var(--u-sp-10); min-block-size: var(--u-bar); padding-inline: var(--ui-space-16); border-block-end: var(--rule-hairline) solid var(--line); background: var(--surface); }
+  .ns-mtop .sh-mark { inline-size: var(--ui-size-icon-lg); block-size: var(--ui-size-icon-lg); flex: none; color: var(--text); }
+  .ns-mtop .ns-brand-text { flex: 1; }
+  .ns-page { padding: var(--ui-space-16) var(--ui-space-16) var(--ui-space-32); }
+  .ns-tabbar { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--surface); border-block-start: var(--rule-hairline) solid var(--line); padding-block-end: env(safe-area-inset-bottom); }
+  .ns-tabbar a, .ns-tabbar button { display: grid; justify-items: center; align-content: center; gap: var(--u-sp-2); min-block-size: var(--ui-size-touch); padding: var(--u-sp-6) var(--u-sp-4); border: 0; background: transparent; color: var(--text-muted); font: inherit; font-size: var(--u-fs-label); text-decoration: none; cursor: pointer; }
+  .ns-tabbar [aria-current="page"] { color: var(--text); font-weight: 600; }
+}
+
+/* A statement's "Print" prints the sheet and nothing around it. */
+@media print {
+  .ns-side, .ns-top, .ns-mtop, .ns-tabbar, .ns-skip { display: none; }
+  .ns-frame, .ns-body { display: block; block-size: auto; }
+  .ns-main { overflow: visible; }
+  .ns-page { max-inline-size: none; padding: 0; }
+}
+
+/* The terms and plan notices are the classic ones (terms.css); here they sit quietly: no Volt, no
+   accent edge, a dark button, so the page keeps its one Volt. */
+.ns .tm-banner { gap: var(--u-sp-8); margin: 0 0 var(--u-sp-16); padding: var(--u-sp-12) var(--u-sp-16); border: var(--rule-hairline) solid var(--line); border-radius: var(--u-r-ui); background: var(--surface-subtle); }
+.ns .tm-banner.tm-alert { border-color: var(--bad); }
+.ns .tm-banner h2 { font-size: var(--u-fs-lead); }
+.ns .tm-banner p, .ns .tm-banner li { font-size: var(--u-fs-body); }
+.ns .tm-accept { min-block-size: var(--u-h-md); padding-inline: var(--u-sp-16); border-radius: var(--u-r-ui); background: var(--text); color: var(--text-inverse); font-size: var(--u-fs-body); }
+@media (max-width: 47.99rem) { .ns-notes:not(:empty) { padding-inline: var(--ui-space-16); } }
+
+/* The Team screen wraps itself in the preview route's padding; the shell's page already pads. */
+.ns .team-preview-wrap { padding: 0; }
+
+/* Orders draws its quiet words in `--text-faint` (3.65:1 on white): axe fails them at 12 and 13 px.
+   Until orders.css says `--text-muted` itself, the shell does (the kit's own rule for small text). */
+.ns .ord-faint { color: var(--text-muted); }
