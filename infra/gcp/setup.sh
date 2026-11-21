@@ -11,6 +11,8 @@
 #   infra/gcp/setup.sh edge-key      give the edge Worker that key, unseen (run logged in to the business Cloudflare account)
 #   infra/gcp/setup.sh client-ip-on  the API counts per-address limits by the address the edge signs (after edge-key)
 #   infra/gcp/setup.sh client-ip-off the API stops counting them again (one command back to how it was)
+#   infra/gcp/setup.sh es-on <config id>  Embedded Signup on: the token key, the configuration, the switch (ALY-39)
+#   infra/gcp/setup.sh es-off        Embedded Signup off again; businesses already connected keep working
 #   infra/gcp/setup.sh apps <tag>    migration job, API, worker, web app and the nightly export
 #   infra/gcp/setup.sh first-admin <tag> <email> <name>  the first person who can sign in
 #   infra/gcp/setup.sh github        let GitHub Actions deploy without a stored key; print its variables
@@ -68,7 +70,7 @@ DRY_RUN="${ALYR_DRY_RUN:-}"
 ACCESSOR=roles/secretmanager.secretAccessor
 MIGRATE_SECRETS=(migration-url database-url)
 # Secrets a later step may mount on the API; bound only once they exist (ALY-265).
-OPTIONAL_RUNTIME_SECRETS=(client-ip-key admin-database-url worker-database-url)
+OPTIONAL_RUNTIME_SECRETS=(client-ip-key admin-database-url worker-database-url channel-keys-key)
 # Secrets the migration job may also read once they exist: the addresses of the two logins whose
 # roles it makes (ALY-125 part 3, `roles.sh create`).
 OPTIONAL_MIGRATE_SECRETS=(admin-database-url worker-database-url)
@@ -202,6 +204,21 @@ worker_uses_own_login() {
 # Whether the live API requires the second factor of ALYR's staff (ALY-125, D-136). It is set by
 # `staff-access.sh require` and removed by `unrequire`. A full deploy (`apps`) replaces every
 # setting, so without this a laptop deploy would quietly turn the requirement off.
+# Embedded Signup (ALY-39, docs/runbooks/embedded-signup.md): `es-on` sets the switch and the
+# configuration's ID on the API and gives the API and the worker the key that seals each business's
+# own token. A full deploy (`apps`) replaces every setting, so it asks the live API and keeps them.
+# The Meta app (`alyr`); public, the sign-up page sends it to every browser.
+META_APP_ID="${ALYR_META_APP_ID:-1071845795713841}"
+live_es_config_id() {
+  value run services describe alyr-api --region="$REGION" \
+    --format='value(spec.template.spec.containers[0].env)' 2>/dev/null \
+    | tr ';' '\n' | sed -n "s/.*'name': 'ALYR_META_ES_CONFIG_ID', 'value': '\([0-9]*\)'.*/\1/p" | head -n 1
+}
+api_has_embedded_signup() {
+  local live
+  live="$(value run services describe alyr-api --region="$REGION" --format=json 2>/dev/null || true)"
+  case "$live" in *'"ALYR_EMBEDDED_SIGNUP"'*) return 0 ;; *) return 1 ;; esac
+}
 api_requires_second_factor() {
   local live
   live="$(value run services describe alyr-api --region="$REGION" --format=json 2>/dev/null || true)"
@@ -447,6 +464,36 @@ for s in json.load(sys.stdin).get('data', []):
     echo "Check it: scripts/check-client-address.sh   (undo: setup.sh client-ip-off)"
     ;;
 
+  es-on)
+    # Needs Meta's side done first (docs/runbooks/embedded-signup.md steps 1 to 4): the app's
+    # Advanced access, the client OAuth settings, the configuration, the webhook fields. The key
+    # is generated here once and never shown; lose it and every business connects again.
+    config_id="${2:-}"
+    case "$config_id" in ''|*[!0-9]*) echo "usage: setup.sh es-on <configuration id, digits only>" >&2; exit 1 ;; esac
+    if secret_exists channel-keys-key; then
+      echo "channel-keys-key already exists; kept."
+    else
+      put_secret channel-keys-key "$(openssl rand -base64 32)"
+      echo "  stored channel-keys-key."
+    fi
+    grant_secret channel-keys-key alyr-run
+    g run services update alyr-api --region="$REGION" \
+      --update-env-vars="ALYR_EMBEDDED_SIGNUP=true,ALYR_META_ES_CONFIG_ID=$config_id,ALYR_META_APP_ID=$META_APP_ID" \
+      --update-secrets="ALYR_CHANNEL_KEYS_KEY=channel-keys-key:latest"
+    g run worker-pools update alyr-worker --region="$REGION" \
+      --update-secrets="ALYR_CHANNEL_KEYS_KEY=channel-keys-key:latest"
+    echo "Embedded Signup is on in the API (configuration $config_id). The web app needs a build with"
+    echo "the repository variable ALYR_EMBEDDED_SIGNUP=on (deploy-gcp passes it). Undo: setup.sh es-off"
+    ;;
+
+  es-off)
+    # The switch and the configuration go; the key stays, so businesses that already connected
+    # their own account keep sending (their tokens stay sealed with it).
+    g run services update alyr-api --region="$REGION" \
+      --remove-env-vars=ALYR_EMBEDDED_SIGNUP,ALYR_META_ES_CONFIG_ID,ALYR_META_APP_ID
+    echo "Embedded Signup is off in the API. Businesses already connected keep working."
+    ;;
+
   client-ip-off)
     g run services update alyr-api --region="$REGION" \
       --remove-env-vars=ALYR_CLIENT_IP_HEADER --remove-secrets=ALYR_CLIENT_IP_KEYS
@@ -527,6 +574,16 @@ for s in json.load(sys.stdin).get('data', []):
     if api_requires_second_factor; then
       api_env="$api_env,ALYR_STAFF_2FA=true"
       echo "Keeping the second factor required for ALYR staff."
+    fi
+    if secret_exists channel-keys-key; then
+      # Businesses that connected their own account (ALY-39) need the key in both.
+      api_secrets="$api_secrets,ALYR_CHANNEL_KEYS_KEY=channel-keys-key:latest"
+      worker_secrets="$worker_secrets,ALYR_CHANNEL_KEYS_KEY=channel-keys-key:latest"
+    fi
+    if api_has_embedded_signup; then
+      es_config="$(live_es_config_id)"
+      api_env="$api_env,ALYR_EMBEDDED_SIGNUP=true,ALYR_META_ES_CONFIG_ID=$es_config,ALYR_META_APP_ID=$META_APP_ID"
+      echo "Keeping Embedded Signup on (configuration $es_config)."
     fi
 
     echo "The API, the worker and the web app..."

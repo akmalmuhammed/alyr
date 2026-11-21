@@ -22,9 +22,9 @@ including a number already in the WhatsApp Business app (coexistence).
 | Onboarding type and Tech Provider Terms | **Done:** Akmal chose **Independent Tech Provider** (D-007). The dashboard shows "Onboard as an independent Tech Provider", 1 of 2 steps complete, on 31 Oct |
 | Step 2a. App settings | **Done 28 Oct 2026**, saved and checked after a reload: app domain `alyr.qa`, contact `akmal@alyr.qa`, privacy policy `https://alyr.qa/privacy` (published 28 Oct, PR #148), data deletion instructions `https://alyr.qa/privacy#delete`, category "Business and pages", icon (the ALYR mark on Carbon, 1024 × 1024). Terms of service URL left empty: none is published |
 | Step 2b. Two videos | **Done:** both edited recordings are attached to their permissions in the submission |
-| Step 2c. Advanced access to `whatsapp_business_messaging` and `whatsapp_business_management` | **Requested** in the submission, with the wording in step 5. Not granted until Meta approves |
+| Step 2c. Advanced access to `whatsapp_business_messaging` and `whatsapp_business_management` | **Granted 16 Nov 2026** with the approval |
 | Website platform | **Done 31 Oct 2026:** `https://alyr.qa/`. App Review's reviewer step stays locked until the app has a platform; the app is called through the API, so Website is the fitting one |
-| Submit: **Begin App Review** | **Submitted 31 Oct 2026 (ALY-262):** Akmal ticked Meta's terms and pressed Submit. Meta shows "Review in progress". A submission cannot be edited or cancelled while it is in review |
+| Submit: **Begin App Review** | **Approved 16 Nov 2026 (ALY-262):** `whatsapp_business_messaging`, `whatsapp_business_management` and `public_profile`. The dashboard says "Congratulations! You are now a Tech Provider", 2 of 2 steps. Meta's annual data access renewal was also marked complete the same day |
 | Webhooks | Done for the test number (12 Oct); the app is subscribed to `messages` |
 
 Meta's page does not list a separate "access verification" step (it did in 2025).

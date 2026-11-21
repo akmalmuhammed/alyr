@@ -267,14 +267,19 @@ async def take_copy(app: Database, target: Target, directory: Path, say) -> Path
 
 
 async def do_load(owner: Database, app: Database, target: Target, args, settings: Settings,
-                  say, *, rehearsal: bool) -> dict:
+                  say, *, rehearsal: bool, story_end: datetime | None = None) -> dict:
     store: Store = LocalStore(Path(settings.media_local_dir))
     media = MediaService(app, store, settings)
     media.item_counter = count_active
     async with owner.unscoped() as conn:
-        now = await conn.fetchval("select clock_timestamp()")
-    run = Run(target, owner, app, media, now, now, args.seed, settings.public_web_url.rstrip("/"),
-              "now" if args.photos == "now" else "queue")
+        since = await conn.fetchval("select clock_timestamp()")
+    # The story ends at the moment the load begins. The same seed and the same end give the
+    # same story, and a minute later it is another one, so a test that compares two loads gives
+    # the second the end of the first (`main`'s `story_end`; the command has no such option).
+    # What the load may touch is still decided by when it really began.
+    now = story_end or since
+    run = Run(target, owner, app, media, now, since, args.seed,
+              settings.public_web_url.rstrip("/"), "now" if args.photos == "now" else "queue")
     async with owner.tenant(target.id) as conn:
         run.order_start, run.booking_start = await starts_after(conn, target.id)
     pks = await owner_tables(owner, target.id)
@@ -384,7 +389,9 @@ def parser() -> argparse.ArgumentParser:
     return p
 
 
-async def main(argv: list[str]) -> int:
+async def main(argv: list[str], *, story_end: datetime | None = None) -> int:
+    """The command. `story_end` is for the tests alone: the moment the story ends, in place of
+    the database's clock, so that two loads can be the same story (ALY-335)."""
     args = parser().parse_args(argv)
     settings = get_settings()
     say = print
@@ -401,7 +408,7 @@ async def main(argv: list[str]) -> int:
         require_test_business(target, needs_mark=not args.remove)
         say(f"Business: {target.name} ({target.slug}), owner {target.owner_email or '?'}")
         if args.dry_run:
-            code = await rehearse(settings, target, args, say)
+            code = await rehearse(settings, target, args, say, story_end)
             if code == 0 and not args.remove:
                 await record_rehearsal(owner, target, args)
             return code
@@ -409,7 +416,7 @@ async def main(argv: list[str]) -> int:
         if not await lock.fetchval("select pg_try_advisory_lock(hashtext($1))",
                                    f"demo-seed:{target.id}"):
             raise Refused("another load or removal is running for this business. Wait for it.")
-        return await act(owner, app, target, args, settings, say)
+        return await act(owner, app, target, args, settings, say, story_end)
     except Refused as refusal:
         say(f"Refused: {refusal}")
         return 1
@@ -421,7 +428,7 @@ async def main(argv: list[str]) -> int:
         await app.close()
 
 
-async def act(owner, app, target, args, settings, say) -> int:
+async def act(owner, app, target, args, settings, say, story_end=None) -> int:
     async with owner.tenant(target.id) as conn:
         previous = await active_run(conn, target.id)
         outside = await activity_outside(conn, target.id, previous["manifest"] if previous else {})
@@ -443,7 +450,8 @@ async def act(owner, app, target, args, settings, say) -> int:
     if args.replace:
         await take_copy(app, target, Path(args.export_dir), say)
         await remove_active(owner, target.id, say)
-    result = await do_load(owner, app, target, args, settings, say, rehearsal=False)
+    result = await do_load(owner, app, target, args, settings, say, rehearsal=False,
+                           story_end=story_end)
     run_id = await record_run(owner, target, args, result)
     async with owner.tenant(target.id) as conn:
         await conn.execute("delete from demo_seed_runs where tenant_id = $1 and "
@@ -453,7 +461,7 @@ async def act(owner, app, target, args, settings, say) -> int:
     return 0
 
 
-async def rehearse(settings, target, args, say) -> int:
+async def rehearse(settings, target, args, say, story_end=None) -> int:
     """The dry run: the real load, in a transaction that is always rolled back."""
     conn = await asyncpg.connect(settings.migration_url)
     await dbmod._init(conn)
@@ -472,7 +480,8 @@ async def rehearse(settings, target, args, say) -> int:
         if args.remove:
             say("(rehearsal) --remove would take out exactly that and nothing else.")
             return 0
-        result = await do_load(shim, shim_app, target, args, settings, say, rehearsal=True)
+        result = await do_load(shim, shim_app, target, args, settings, say, rehearsal=True,
+                               story_end=story_end)
         say("\nDRY RUN: this is what a real run would leave. Nothing was written.\n")
         say(summary.table(result["summary"]))
         say("\nRows it would add, by table: " + ", ".join(
