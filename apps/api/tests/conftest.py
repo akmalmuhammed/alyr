@@ -145,9 +145,10 @@ def client(client_factory):
 # (test_catalog_*, test_documents_*, test_demo_*...) always go together, in their usual order:
 # those files share fixed demo shops and tenant rows in the one test database, and some of them
 # only pass because a neighbour ran first (the first sliced run found one: test_catalog_demos
-# needed test_catalog_cards before it; the test now clears what it needs). Groups are picked by weight (seconds per file from tests/shard_durations.json,
-# kept by `scripts/ci/shards.py durations`; a file that is not in the list weighs the average, so
-# a new test file is never left out). The report says how many tests were collected, how many this
+# needed test_catalog_cards before it; the test now clears what it needs). Groups are picked by
+# weight (seconds per file from tests/shard_durations.json, kept by
+# `scripts/ci/shards.py durations`; a file that is not in the list weighs the average, so a new
+# test file is never left out). The report says how many tests were collected, how many this
 # shard chose and how many it ran; `scripts/ci/shards.py check` fails the `api` job unless the
 # slices add up to the whole suite.
 
