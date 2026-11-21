@@ -29,7 +29,7 @@ export type PriceCell = { amount: string; per?: string };
 export type PricingPage = {
   eyebrow: string;
   title: string;
-  /** "Last updated 31 October 2026". */
+  /** "Last updated 21 November 2026". */
   updated: string;
   lead: string;
   plan: {
@@ -60,7 +60,7 @@ export type PricingPage = {
 export const pricingEn: PricingPage = {
   eyebrow: "Pricing",
   title: "What ALYR costs",
-  updated: "Last updated 31 October 2026",
+  updated: "Last updated 21 November 2026",
   lead: "ALYR is the tech team for owner-run businesses in Qatar. We set up your orders, bookings, credit accounts and stock on one screen, and keep improving it with you. One plan, month to month, with no setup fee.",
   plan: {
     title: "The plan",
@@ -94,7 +94,7 @@ export const pricingEn: PricingPage = {
         card: { amount: "None" },
       },
     ],
-    confirm: "These are our list prices. You see your own price, in writing, before you pay anything, and you pay nothing until you go live.",
+    confirm: "These are our list prices. You see your own price, in writing, before you pay anything.",
   },
   examples: {
     title: "For example, each month",
@@ -111,7 +111,7 @@ export const pricingEn: PricingPage = {
       { name: "Term", value: "Month to month. You can stop at the end of any month by telling us at least 7 days before it ends; in your first month, up to its last day." },
       { name: "Commission", value: "None. ALYR takes no commission on your orders, bookings or payments." },
       { name: "WhatsApp message fees", value: "Meta decides which messages carry a fee and bills them to your business at Meta's rates. ALYR adds nothing to them." },
-      { name: "When you pay", value: "Each month in advance. Nothing is charged before you go live." },
+      { name: "When you pay", value: "Each month in advance. You pay your first month before you go live, after you accept your price." },
       { name: "Price changes", value: "We can change a price by telling you in writing at least 30 days before. You can stop before the new price applies." },
     ],
   },
@@ -129,7 +129,7 @@ export const pricingEn: PricingPage = {
   },
   refund: {
     title: "Your first month, refunded if the result is missed",
-    body: "Before we start, we agree one result with you in writing, for example a number of orders or bookings taken through the chat. It is counted in your workspace over the 30 days after you go live. If the result is missed, we refund your first month's subscription in full.",
+    body: "Before we start, we agree one result with you in writing, for example a number of orders or bookings taken through the chat, and how it is counted over the 30 days after you go live. If the result is missed, we refund your first month's subscription in full. This is about the monthly plan on this page; any other service we agree with you is covered only as far as we write it down.",
     link: "Read the refund policy",
   },
   pay: {
@@ -141,7 +141,7 @@ export const pricingEn: PricingPage = {
       },
       {
         name: "By bank transfer",
-        body: "ALYR invoices you in Qatari riyals and you pay by bank transfer.",
+        body: "You pay by bank transfer, in Qatari riyals. We send you the amount and our bank details in writing.",
       },
     ],
     note: "ALYR never holds, receives or moves the money your own customers pay you.",
@@ -159,7 +159,7 @@ export const pricingEn: PricingPage = {
 export const pricingAr: PricingPage = {
   eyebrow: "الأسعار",
   title: "كم تكلّف ALYR",
-  updated: "آخر تحديث: 31 أكتوبر 2026",
+  updated: "آخر تحديث: 21 نوفمبر 2026",
   lead: "ALYR فريق التقنية للأنشطة التي يديرها أصحابها في قطر. نجهّز طلباتك وحجوزاتك وحساباتك الآجلة ومخزونك في شاشة واحدة، في محلك، ونواصل تحسينها معك. خطة واحدة، شهراً بشهر، وبلا رسوم تجهيز.",
   plan: {
     title: "الخطة",
@@ -193,7 +193,7 @@ export const pricingAr: PricingPage = {
         card: { amount: "لا توجد" },
       },
     ],
-    confirm: "هذه أسعار القائمة لدينا. ترى سعرك الخاص كتابةً قبل أن تدفع أي مبلغ، ولا تدفع شيئاً قبل بدء التشغيل.",
+    confirm: "هذه أسعار القائمة لدينا. ترى سعرك الخاص كتابةً قبل أن تدفع أي مبلغ.",
   },
   examples: {
     title: "مثلاً، كل شهر",
@@ -210,7 +210,7 @@ export const pricingAr: PricingPage = {
       { name: "المدة", value: "اشتراك شهري. يمكنك الإيقاف في نهاية أي شهر بإبلاغنا قبل انتهائه بـ 7 أيام على الأقل، وفي شهرك الأول حتى آخر يوم فيه." },
       { name: "العمولة", value: "لا عمولة. ALYR لا تأخذ أي نسبة من طلباتك أو حجوزاتك أو مدفوعاتك." },
       { name: "رسوم رسائل واتساب", value: "تحدد Meta الرسائل التي تترتب عليها رسوم، وتحتسبها على مشروعك بأسعارها. ولا نضيف عليها شيئاً." },
-      { name: "موعد الدفع", value: "كل شهر مقدماً. ولا يُحصَّل أي مبلغ قبل بدء التشغيل." },
+      { name: "موعد الدفع", value: "كل شهر مقدماً. تدفع شهرك الأول قبل بدء التشغيل، بعد أن تقبل سعرك." },
       { name: "تغيير الأسعار", value: "يجوز لنا تغيير السعر بإشعارك كتابةً قبل 30 يوماً على الأقل، ولك أن تتوقف قبل سريان السعر الجديد." },
     ],
   },
@@ -228,7 +228,7 @@ export const pricingAr: PricingPage = {
   },
   refund: {
     title: "شهرك الأول، يُسترد إن لم نحقق النتيجة",
-    body: "قبل أن نبدأ، نتفق معك كتابةً على نتيجة واحدة، مثل عدد الطلبات أو الحجوزات التي تصلك عبر المحادثة. وتُحتسب في مساحة عملك خلال الـ 30 يوماً التي تلي بدء التشغيل. وإن لم تتحقق النتيجة، نعيد إليك اشتراك شهرك الأول كاملاً.",
+    body: "قبل أن نبدأ، نتفق معك كتابةً على نتيجة واحدة، مثل عدد الطلبات أو الحجوزات التي تصلك عبر المحادثة، وعلى طريقة احتسابها خلال الـ 30 يوماً التي تلي بدء التشغيل. وإن لم تتحقق النتيجة، نعيد إليك اشتراك شهرك الأول كاملاً. هذا خاص بالخطة الشهرية المذكورة في هذه الصفحة؛ وأي خدمة أخرى نتفق عليها معك لا تشملها إلا بقدر ما نكتبه.",
     link: "اقرأ سياسة الاسترداد",
   },
   pay: {
@@ -240,7 +240,7 @@ export const pricingAr: PricingPage = {
       },
       {
         name: "بالتحويل المصرفي",
-        body: "تصدر ALYR فاتورتك بالريال القطري، وتدفعها بتحويل مصرفي.",
+        body: "تدفع بتحويل مصرفي بالريال القطري. نرسل إليك المبلغ وبياناتنا المصرفية كتابةً.",
       },
     ],
     note: "لا نستلم أبداً الأموال التي يدفعها لك عملاؤك، ولا نحتفظ بها، ولا ننقلها.",

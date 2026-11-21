@@ -763,7 +763,7 @@ const en: Copy = {
   },
   tryFree: {
     action: "Try it free",
-    note: "Free to try. You pay only when you go live.",
+    note: "Free to try. You pay your first month before you go live.",
     // the phone bar's landmark name while the button says "Try it free" (`contact.bar` names the contact one)
     bar: "Try ALYR free",
     final: {
@@ -1463,7 +1463,7 @@ const en: Copy = {
           "Before we start, we agree one result with you, for example a number of orders or bookings taken through the chat in the 30 days after you go live. If we don’t reach it, we refund your first month’s subscription.",
         fields: [
           { label: "The result", value: "Agreed with you when we first talk", blank: true },
-          { label: "Counted", value: "In your workspace, where you see it too" },
+          { label: "Counted", value: "As written into your agreement" },
           { label: "Period", value: "30 days from go-live" },
           { label: "Your part", value: "Put up your QR codes and share your chat link with customers in the first week." },
           { label: "If we miss it", value: "Your first month’s subscription back. The setup fee is not refunded." },
@@ -3115,7 +3115,7 @@ const ar: Copy = {
   // A draft for the native review (ALY-66). «تبدأ العمل» is /start's own way to say go live.
   tryFree: {
     action: "جرّب مجاناً",
-    note: "التجربة مجانية. لا تدفع إلا عندما تبدأ العمل.",
+    note: "التجربة مجانية. تدفع شهرك الأول قبل أن تبدأ العمل.",
     bar: "جرّب ALYR مجاناً",
     final: {
       title: "جرّب مجاناً، أو احجز فحصاً.",
@@ -3814,7 +3814,7 @@ const ar: Copy = {
           "قبل أن نبدأ نتفق معك على نتيجة واحدة، مثل عدد الطلبات أو الحجوزات عبر المحادثة خلال 30 يوماً من بدء التشغيل. وإن لم نحققها نعيد لك اشتراك الشهر الأول.",
         fields: [
           { label: "النتيجة", value: "نتفق عليها معك عند أول اتصال", blank: true },
-          { label: "أين تُحسب", value: "في مساحة عملك، وتراها أنت أيضاً" },
+          { label: "كيف تُحسب", value: "كما هو مكتوب في اتفاقك" },
           { label: "المدة", value: "30 يوماً من بدء التشغيل" },
           { label: "دورك", value: "أن تضع رموز QR في محلك وتشارك رابط المحادثة مع عملائك في الأسبوع الأول." },
           { label: "إن لم نحققها", value: "نعيد لك اشتراك الشهر الأول. رسوم التجهيز لا تُسترد." },

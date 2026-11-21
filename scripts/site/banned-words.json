@@ -2,6 +2,41 @@
   "$comment": "Words the public site must not use, besides the AI words, which scripts/site/banned-words.mjs reads from .claude/skills/alyr-design/honesty.md section 1 itself so the prose and the check cannot drift. Sources: honesty.md section 2 (nothing 'coming', no 'Early access' or beta wording at go-live, D-039), the founder taking Payroll off the site (20 Oct 2026), and section 6 (prices only behind NEXT_PUBLIC_ALYR_OFFER=on, D-034). The 'rule' terms: the founder took the word off the public site (25 Oct 2026, docs/content-audit/02-decisions.md); the product keeps its rule lines. 'style' holds the content audit's mechanical pattern rules (docs/content-audit/01-audit.md section 4, alyr-site-page 'Words that read as written by a machine'). A true use goes in allow/banned.json with its reason, never here.",
   "terms": [
     {
+      "term": "ALYR invoices you",
+      "lang": "en",
+      "why": "No ALYR invoice exists in the product (product audit, 21 Nov 2026). Say what ALYR sends: the amount and the bank details"
+    },
+    {
+      "term": "invoiced by ALYR",
+      "lang": "en",
+      "why": "No ALYR invoice exists in the product (product audit, 21 Nov 2026)"
+    },
+    {
+      "term": "nothing is charged before you go live",
+      "lang": "en",
+      "why": "The go-live check needs the first month paid (readiness.py 'paid'), so money is asked for before go-live. Say when the first month is paid"
+    },
+    {
+      "term": "you pay nothing until you go live",
+      "lang": "en",
+      "why": "Same as above: the first month is paid before go-live"
+    },
+    {
+      "term": "counted in your workspace",
+      "lang": "en",
+      "why": "Nothing records or counts the agreed result (product audit, 21 Nov 2026). Say how it is counted is written down with the result"
+    },
+    {
+      "term": "counted in your ALYR workspace",
+      "lang": "en",
+      "why": "Nothing records or counts the agreed result (product audit, 21 Nov 2026)"
+    },
+    {
+      "term": "تصدر ALYR فاتورتك",
+      "lang": "ar",
+      "why": "No ALYR invoice exists in the product (product audit, 21 Nov 2026)"
+    },
+    {
       "term": "coming",
       "lang": "en",
       "why": "Nothing is shown as coming (D-039, honesty.md section 2)"

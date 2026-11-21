@@ -26,7 +26,7 @@ pay by card (our card provider charges in dollars). We can change a price by tel
 30 days before; you can stop before the new price applies.
 4.2 You pay each month in advance. Card payments are taken by **Paddle.com Market Limited**, our merchant of
 record, who charges in US dollars, handles sales tax and sends the receipt. Paddle's buyer terms apply to the
-card payment: https://www.paddle.com/legal/checkout-buyer-terms. Payment by bank transfer is invoiced by ALYR.
+card payment: https://www.paddle.com/legal/checkout-buyer-terms. For payment by bank transfer, we send you the amount and our bank details in writing.
 4.3 We never hold, receive or move the money your own customers pay you.
 4.4 If a payment is still unpaid 14 days after it was due, we may pause ALYR after at least 7 days' written
 notice. We charge no interest and no late fee. Pausing never deletes your data.

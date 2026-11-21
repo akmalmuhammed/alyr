@@ -8,9 +8,10 @@
 
 ## Your first month, with your money back
 Before we start, we agree one result with you in writing, for example a number of orders or bookings taken
-through the chat. It is counted in your ALYR workspace, where you can see it too, over the 30 days after you
-go live. If the result is missed, we refund your first month's subscription in full, within 14 days after the
-30 days end, the same way you paid, without your having to ask. This applies once per business. To qualify,
+through the chat, and how it is counted over the 30 days after you go live. If the result is missed, we refund
+your first month's subscription in full, within 14 days after the 30 days end, the same way you paid, without
+your having to ask. This applies once per business and to the monthly plan on our pricing page; any other
+service we agree with you is covered only as far as we write it down. To qualify,
 put up the QR codes we give you and share your chat link with your customers in the first 7 days.
 
 ## Stopping
