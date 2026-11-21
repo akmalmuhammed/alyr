@@ -91,11 +91,12 @@
 .team-swatch--booked { background: var(--line-strong); }
 .team-swatch--answered { background: var(--control-line); }
 .team-swatch--lost { background: var(--bad); }
+.team-money { white-space: nowrap; }
 .team-defs { display: grid; margin: 0; padding: 0; }
-.team-defs > div { display: grid; gap: var(--ui-space-4); align-content: start; padding: var(--ui-space-14) var(--ui-space-20); background: var(--surface); }
+.team-defs > div { display: grid; gap: var(--ui-space-4); align-content: start; padding: var(--ui-space-14) var(--ui-space-20); }
+.team-defs > div + div { border-block-start: var(--rule-hairline) solid var(--line); }
 .team-defs dt { font-weight: var(--weight-semibold); }
 .team-defs dd { margin: 0; color: var(--text-muted); }
-.team-defs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: var(--rule-hairline); background: var(--line); }
 .team-kv-val { display: inline-flex; align-items: center; gap: var(--ui-space-8); }
 
 /* A phone: the page is one column and the kit's table is cards. */

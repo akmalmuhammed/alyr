@@ -118,7 +118,7 @@ export function TeamWeek(props: TeamWeekProps) {
           <span className="team-fig"><span className="u-label">{t.colAnswer}</span>{kind === "nobody" ? none(lang) : first(row)}</span>
           <span className="team-fig"><span className="u-label">{t.colClosed}</span><span className="u-mono">{kind === "nobody" ? none(lang) : row.closedTotal}</span></span>
           <span className="team-fig"><span className="u-label">{t.colOrders}</span><span className="u-mono">{row.orders}</span></span>
-          <span className="team-fig"><span className="u-label">{t.colSales}</span><span className="u-mono"><bdi>{row.orders === 0 ? none(lang) : money(row.sales, lang)}</bdi></span></span>
+          <span className="team-fig"><span className="u-label">{t.colSales}</span><span className="u-mono"><bdi className="team-money">{row.orders === 0 ? none(lang) : money(row.sales, lang)}</bdi></span></span>
         </span>
       ),
     },
@@ -141,7 +141,7 @@ export function TeamWeek(props: TeamWeekProps) {
       },
     },
     { key: "orders", header: t.colOrders, width: "5rem", align: "end", mono: true, cell: ({ row }) => row.orders },
-    { key: "sales", header: t.colSales, width: "7rem", align: "end", mono: true, cell: ({ row }) => (row.orders === 0 ? dash : <bdi>{money(row.sales, lang)}</bdi>) },
+    { key: "sales", header: t.colSales, width: "7rem", align: "end", mono: true, cell: ({ row }) => (row.orders === 0 ? dash : <bdi className="team-money">{money(row.sales, lang)}</bdi>) },
   ];
 
   return (
@@ -172,7 +172,7 @@ export function TeamWeek(props: TeamWeekProps) {
         />
         <Stat label={t.statAnswer} value={answer === null ? none(lang) : t.answerMinutes(answer)} sub={t.statAnswerSub(all.replies)} />
         <Stat label={t.statClosed} value={all.closedTotal} sub={t.statClosedSub(all.closed)} />
-        <Stat label={t.statSales} value={<bdi>{money(all.sales, lang)}</bdi>} sub={t.statSalesSub(all.orders, nobody.sales)} />
+        <Stat label={t.statSales} value={<bdi className="team-money">{money(all.sales, lang)}</bdi>} sub={t.statSalesSub(all.orders, nobody.sales)} />
       </div>
       <Panel clip>
         <PanelHeader title={t.workTitle} sub={t.aToZ} right={<Key lang={lang} />} />
@@ -181,7 +181,7 @@ export function TeamWeek(props: TeamWeekProps) {
       </Panel>
       <Panel clip>
         <PanelHeader title={t.countedTitle} />
-        <dl className="team-defs team-defs-grid">
+        <dl className="team-defs">
           {t.defs(report.waitingMinutes).map(([term, text]) => (
             <div key={term}>
               <dt>{term}</dt>
