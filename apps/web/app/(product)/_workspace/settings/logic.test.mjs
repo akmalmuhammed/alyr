@@ -1,12 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  isValidEmail,
-  isValidVerificationCode,
-  resolveEffectiveTheme,
-  formatCodeDigits,
-  filterCustomerRequests,
-  calculateDaysRemaining,
+  closeSchedule, formatCodeDigits, isValidEmail, isValidVerificationCode, mayClose, mayDownload, normalizeCode,
+  refusalKey, resolveEffectiveTheme, sameEmail, themeAttribute, themeFromStored,
 } from "./logic.ts";
 
 test("isValidEmail checks standard email strings", () => {
@@ -16,6 +12,11 @@ test("isValidEmail checks standard email strings", () => {
   assert.ok(!isValidEmail("hana@"));
   assert.ok(!isValidEmail("@nuqta.qa"));
   assert.ok(!isValidEmail(""));
+});
+
+test("sameEmail ignores case and spaces", () => {
+  assert.ok(sameEmail("Hana@Nuqta.qa ", "hana@nuqta.qa"));
+  assert.ok(!sameEmail("hana@nuqta.qa", "hana.saeed@nuqta.qa"));
 });
 
 test("isValidVerificationCode checks exactly 6 numeric digits", () => {
@@ -28,12 +29,13 @@ test("isValidVerificationCode checks exactly 6 numeric digits", () => {
   assert.ok(!isValidVerificationCode(""));
 });
 
-test("resolveEffectiveTheme respects user choice and auto system mode", () => {
-  assert.equal(resolveEffectiveTheme("light", true), "light");
-  assert.equal(resolveEffectiveTheme("light", false), "light");
-  assert.equal(resolveEffectiveTheme("dark", false), "dark");
-  assert.equal(resolveEffectiveTheme("auto", true), "dark");
-  assert.equal(resolveEffectiveTheme("auto", false), "light");
+test("normalizeCode keeps Western digits, turns Eastern ones into them, and stops at six", () => {
+  assert.equal(normalizeCode("730 518"), "730518");
+  assert.equal(normalizeCode("٧٣٠٥١٨"), "730518");
+  assert.equal(normalizeCode("۷۳۰۵۱۸"), "730518");
+  assert.equal(normalizeCode("73a0-5"), "7305");
+  assert.equal(normalizeCode("12345678"), "123456");
+  assert.equal(normalizeCode(""), "");
 });
 
 test("formatCodeDigits pads to 6 characters", () => {
@@ -42,21 +44,43 @@ test("formatCodeDigits pads to 6 characters", () => {
   assert.deepEqual(formatCodeDigits(""), [" ", " ", " ", " ", " ", " "]);
 });
 
-test("filterCustomerRequests filters by status correctly", () => {
-  const sample = [
-    { id: "1", askedDate: "Mon 9 Nov", customerIdentifier: "+974 5555 0188", askedFor: "copy", state: "sent", handledBy: "Omar", note: "" },
-    { id: "2", askedDate: "Thu 5 Nov", customerIdentifier: "Layla Farouk", askedFor: "forget", state: "waiting", handledBy: "Hana", note: "" },
-    { id: "3", askedDate: "Mon 2 Nov", customerIdentifier: "Sara Haddad", askedFor: "no_messages", state: "done", handledBy: "By rule", note: "" },
-  ];
-
-  assert.equal(filterCustomerRequests(sample, "all").length, 3);
-  assert.equal(filterCustomerRequests(sample, "waiting").length, 1);
-  assert.equal(filterCustomerRequests(sample, "waiting")[0].customerIdentifier, "Layla Farouk");
-  assert.equal(filterCustomerRequests(sample, "done").length, 2);
+test("closeSchedule is seven days' notice, then 60 days (D-082, D-116)", () => {
+  assert.deepEqual(closeSchedule("2026-11-12"), { noticeEnds: "2026-11-19", eraseOn: "2027-01-18" });
+  // Across a month end and a year end.
+  assert.deepEqual(closeSchedule("2026-12-28"), { noticeEnds: "2027-01-04", eraseOn: "2027-03-05" });
+  assert.deepEqual(closeSchedule("2026-11-12", 0, 0), { noticeEnds: "2026-11-12", eraseOn: "2026-11-12" });
 });
 
-test("calculateDaysRemaining computes days until date", () => {
-  const current = "2026-11-12T10:00:00Z";
-  const target = "2026-11-19T10:00:00Z";
-  assert.equal(calculateDaysRemaining(target, current), 7);
+test("only an owner may download or close; the server's word counts too", () => {
+  assert.ok(mayDownload("owner", true));
+  assert.ok(!mayDownload("owner", false));
+  assert.ok(!mayDownload("admin", true));
+  assert.ok(!mayDownload("agent", true));
+  assert.ok(mayClose("owner"));
+  assert.ok(!mayClose("admin"));
+  assert.ok(!mayClose("agent"));
+});
+
+test("refusalKey maps the account routes' codes, offline, and anything else", () => {
+  for (const code of ["demo", "invalid", "same", "staff", "too_many", "code", "taken"]) {
+    assert.equal(refusalKey({ status: 422, code }), code);
+  }
+  assert.equal(refusalKey({ status: 0, code: "offline" }), "offline");
+  assert.equal(refusalKey({ status: 500, code: "boom" }), "failed");
+  assert.equal(refusalKey(new Error("x")), "failed");
+  assert.equal(refusalKey(null), "failed");
+});
+
+test("the theme is kept on this device: light, dark, or nothing for the device", () => {
+  assert.equal(resolveEffectiveTheme("light", true), "light");
+  assert.equal(resolveEffectiveTheme("dark", false), "dark");
+  assert.equal(resolveEffectiveTheme("auto", true), "dark");
+  assert.equal(resolveEffectiveTheme("auto", false), "light");
+  assert.equal(themeAttribute("light"), "light");
+  assert.equal(themeAttribute("dark"), "dark");
+  assert.equal(themeAttribute("auto"), null);
+  assert.equal(themeFromStored("dark"), "dark");
+  assert.equal(themeFromStored("light"), "light");
+  assert.equal(themeFromStored(null), "auto");
+  assert.equal(themeFromStored("sepia"), "auto");
 });
