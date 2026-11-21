@@ -5,6 +5,7 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- The workspace redesign, wave 1: six areas rebuilt on the new UI kit and tokens, each in its own folder with a dev-only preview route, English and Arabic, light and dark, phone layouts (ALY-ui-1; no migration, no new dependency; **nothing a person can open yet**: the preview routes answer 404 in production and no section is wired into the workspace, so every screen stays as it is until the founder flips a section): Orders, Inbox, Credit, Sign-in and sign-up, Team, Settings (`_workspace/{orders,inbox,credit,auth,team,settings}`). Each was scored against the Figma drawings and fixed in a review round (parity 36 to 61 of 100 before, 74 to 87 after). API: `GET /api/orders` gets filters, counts and a detail route (a backwards status step returns 422, an agent cancel returns 403, `GET /api/orders/margins` still answers), and `GET /api/inbox` gets waiting and not-delivered filters and counts, with an agent never sent spent or owed amounts and the poll cache split per role.
 
 ## v0.3.23 (17 Nov 2026)
 - opentelemetry-api 1.45.2 for CVE-2026-126360 (no migration; a patch version of a package we get through another): CI's dependency audit is green again, so releases can pass the gate.
