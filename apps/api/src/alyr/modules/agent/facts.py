@@ -60,12 +60,6 @@ class Facts:
     first_name: str = ""
     money: bool = True
     has_records: bool = True
-    # Where the numbers come from when it is not ALYR's own chat, orders or bookings: None for
-    # a shop whose records ALYR made itself. The hook for "from your <system> export, up to
-    # <date>" (task I5, docs/lanes/product.md): the importer's reader sets
-    # {"name": <system>, "as_of": <date>} in `gather`, `view.render` says it, and nothing else
-    # about a rule changes. Nothing sets it yet.
-    data_source: dict | None = None
     # Messages that did not reach a customer in the last 48 hours (specs/036), any module
     not_sent: list = field(default_factory=list)
     # Discovery (spec 066): proposed changes waiting for approval, for owners and admins only
@@ -149,6 +143,12 @@ class Facts:
     # 24-hour window the WhatsApp copy is refused (D-194): the numbers are not a sure destination
     report_whatsapp_held: bool = False
     report_at: datetime | None = None
+    # Where the numbers come from when it is not ALYR's own chat, orders or bookings: None for
+    # a shop whose records ALYR made itself. The hook for "from your <system> export, up to
+    # <date>" (task I5, docs/lanes/product.md): the importer's reader sets
+    # {"name": <system>, "as_of": <date>} in `gather`, `view.render` says it, and nothing else
+    # about a rule changes. Nothing sets it yet.
+    data_source: dict | None = None
     # Busiest hours: (Sunday-first day, hour) -> count over 28 days
     hours_grid: dict = field(default_factory=dict)
     hours_range: tuple = (7, 22)
