@@ -108,7 +108,9 @@ async def orders(
     return await request.app.state.poll.get_json(staff.tenant_id, cache_key, compute)
 
 
-@router.get("/orders/{order_id}")
+# `:uuid`, not a bare `{order_id}`: this router is included before `cost_routes`, whose
+# `GET /api/orders/margins` a bare path parameter would take for an order's ID (a 422).
+@router.get("/orders/{order_id:uuid}")
 async def get_order_detail(
     order_id: UUID, request: Request, staff: Staff = Depends(current_staff)
 ) -> dict:

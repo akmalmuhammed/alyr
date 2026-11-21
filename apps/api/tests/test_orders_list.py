@@ -237,3 +237,15 @@ def test_agent_cannot_cancel_order(client_factory, monkeypatch):
     )
     assert res_owner.status_code == 200
     assert res_owner.json()["status"] == "cancelled"
+
+
+def test_order_detail_route_does_not_shadow_margins(client_factory, monkeypatch):
+    """`GET /api/orders/margins` still reaches the costs route, not the detail route."""
+    monkeypatch.setenv("ALYR_DEMO_OPEN", "false")
+    c = client_factory()
+    sign_in(c, OWNER_EMAIL)
+    res = c.get("/api/orders/margins")
+    # 200 when the shop keeps costs, the costs route's own refusal when it does not: never 422.
+    assert res.status_code != 422
+    assert "margins" in res.json() or "detail" in res.json()
+    assert c.get("/api/orders/not-an-id").status_code == 404
