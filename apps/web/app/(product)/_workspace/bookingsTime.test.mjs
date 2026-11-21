@@ -38,3 +38,18 @@ test("the deposit rule reads as the shop set it, in both languages", () => {
   assert.match(ar, /يحتفظ المحل بالعربون/);
   assert.doesNotMatch(ar, /[٠-٩]/, "Western digits in Arabic");
 });
+
+test("the cancel window's hours agree with their noun in Arabic and English", () => {
+  const sentence = (hours, lang) => termsSentence({ no_show: "keep", late_cancel: "keep", cancel_hours: hours }, lang);
+  // after «من» and «بـ» the dual is «ساعتين», and 3 to 10 take the plural
+  assert.match(sentence(1, "ar"), /بأقل من ساعة واحدة، .* بساعة واحدة أو أكثر/);
+  assert.match(sentence(2, "ar"), /بأقل من ساعتين، .* بساعتين أو أكثر/);
+  assert.match(sentence(3, "ar"), /بأقل من 3 ساعات، .* بـ3 ساعات أو أكثر/);
+  assert.match(sentence(10, "ar"), /بأقل من 10 ساعات/);
+  assert.match(sentence(11, "ar"), /بأقل من 11 ساعة،/);
+  assert.match(sentence(24, "ar"), /بأقل من 24 ساعة، .* بـ24 ساعة أو أكثر/);
+  assert.doesNotMatch(sentence(3, "ar"), /3 ساعة/);
+  assert.match(sentence(1, "en"), /less than 1 hour before/);
+  assert.match(sentence(1, "en"), /Cancel 1 hour or more before/);
+  assert.match(sentence(6, "en"), /less than 6 hours before/);
+});

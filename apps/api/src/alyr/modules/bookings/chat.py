@@ -8,6 +8,7 @@ from alyr.channels.base import Choice, InboundMessage, OutboundMessage
 from alyr.core import links
 from alyr.core.normalise import has_arabic
 from alyr.core.outbound import Outbound
+from alyr.core.words import MINUTES, counted
 from alyr.modules.bookings import service, words
 
 # Checked before "book": a customer asking about a booking they have must not be sent
@@ -134,8 +135,10 @@ async def _prices(
     lines = []
     for s in services:
         name = s["name_ar"] if arabic and s["name_ar"] else s["name"]
-        minutes = f"{s['duration_minutes']} دقيقة" if arabic else f"{s['duration_minutes']} min"
-        price = f": {s['price_text']}" if s["price_text"] else ""
+        minutes = (counted(s["duration_minutes"], MINUTES, "ar") if arabic
+                   else f"{s['duration_minutes']} min")
+        # "QAR 60" in English, "60 ر.ق" in Arabic (the API's own `price_text` is English).
+        price = f": {words.money(s['price'], arabic)}" if s["price"] else ""
         lines.append(f"{name}{price} ({minutes})")
     head = "خدماتنا:" if arabic else "Our services:"
     return OutboundMessage(

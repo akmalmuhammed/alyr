@@ -587,19 +587,22 @@ async def create_order(
             ) from error
 
     arabic = contact["lang"] == "ar"
+    # "QAR 179" in English, "179 ر.ق" in Arabic: every amount in the message and in its template.
+    money = fmt_qar_ar if arabic else fmt_qar
+
     def _amount(c: cart.Checked) -> str:
         # "3", or "0.5 kg" for something sold in fractions.
         return qty.label(c.line.quantity, c.entry.item["unit"], _shown(c), "ar" if arabic else "en")
 
     summary = "\n".join(
         f"{_amount(c)} x {_name(c, arabic)}  "
-        f"{fmt_qar(qty.line_total(c.unit_price, c.line.quantity))}"
+        f"{money(qty.line_total(c.unit_price, c.line.quantity))}"
         for c in checked
     )
     for a in quote.applied:
         label = a.rule.code or (a.rule.name_ar if arabic and a.rule.name_ar else a.rule.name)
         word = "خصم" if arabic else "Discount"
-        summary += f"\n{word}{f' ({label})' if label else ''}: -{fmt_qar(a.amount)}"
+        summary += f"\n{word}{f' ({label})' if label else ''}: -{money(a.amount)}"
     if choice is not None:
         summary += "\n" + _delivery_line(choice, arabic, shop_clock)
     # A template blank cannot hold a line break, so the items go on one line there.
@@ -614,8 +617,8 @@ async def create_order(
         await documents_sales.credit_sale(conn, order_id)
         balance = (await ledger.aged(conn, contact_id)).balance
         closing = (
-            f"تم تسجيله على حسابك. رصيدك الآن {fmt_qar(balance)}." if arabic
-            else f"Put on your account. Your balance is now {fmt_qar(balance)}."
+            f"تم تسجيله على حسابك. رصيدك الآن {money(balance)}." if arabic
+            else f"Put on your account. Your balance is now {money(balance)}."
         )
     elif payment == "later":
         # Nothing to pay now: the order is the shop's to prepare, and staff mark it paid when
@@ -638,7 +641,7 @@ async def create_order(
             )
 
     head = f"تم استلام الطلب رقم {number}." if arabic else f"Order #{number} received."
-    total_line = f"الإجمالي: {fmt_qar(total)}" if arabic else f"Total: {fmt_qar(total)}"
+    total_line = f"الإجمالي: {money(total)}" if arabic else f"Total: {money(total)}"
     tracked = await track_link.url(conn, web_url, order_id)
     track = _track_line(tracked, arabic)
     skipped = ""
@@ -655,8 +658,8 @@ async def create_order(
         {"account": "order_received_account", "later": "order_received_later"}.get(
             payment, "order_received_pay"),
         contact["lang"], f"{head}\n{summary}\n{total_line}\n{closing}{skipped}\n{track}",
-        number, items, fmt_qar(total),
-        fmt_qar(balance) if payment == "account" else closing if payment == "later" else pay_url,
+        number, items, money(total),
+        money(balance) if payment == "account" else closing if payment == "later" else pay_url,
     ))
     return {
         "order_id": str(order_id), "number": number, "total": total,
