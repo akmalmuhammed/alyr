@@ -6,6 +6,13 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 
 ## Unreleased
 
+## v0.3.23 (17 Nov 2026)
+- opentelemetry-api 1.45.2 for CVE-2026-126360 (no migration; a patch version of a package we get through another): CI's dependency audit is green again, so releases can pass the gate.
+
+## v0.3.22 (17 Nov 2026)
+- Embedded Signup can be switched on in production (ALY-39; no migration, no new dependency; still off until the founder runs `setup.sh es-on`): `infra/gcp/setup.sh es-on <config id>` makes the token key, sets the switch, the configuration and the Meta app's ID, and `es-off` undoes it; a full `setup.sh apps` keeps them. The web image takes `ALYR_EMBEDDED_SIGNUP` from the repository variable of the same name, so `/start` may load Meta's SDK.
+- Graph API calls use v26.0 by default instead of v21.0, which Meta removes on 21 Jan 2027 (`ALYR_META_GRAPH_VERSION`).
+
 ## v0.3.21 (13 Nov 2026)
 - The redesign's foundation (D-180, ALY-330; no migration, no new dependency; nothing changes on a screen yet, new screens will sit behind a switch): the product's design tokens (add-only), formatters for money, dates and times in Doha time, an API client and the `ui-check` that stops new off-scale styles, the shared UI kit under `apps/web/app/_ui/` with 71 icons (a dev-only gallery that returns 404 in production), the workspace shell split into per-section parts that load when opened (the `/app` first-load script drops from 1,023 KB to 301 KB), and the product UI rules and component catalogue in `.claude/skills`.
 - Discovery keeps what each check found at each place (ALY-333, spec 065 "Checks per place"; migration 0125, no new dependency; Discovery is still off for every shop): a check-up now stores every rule's outcome for every place (pass, fail or not measured) with the run, and `GET /api/discovery/checks` answers the last finished check-up as rules and places, with which checks failed before and pass now. A check-up made before this answers "not measured", never a guess. An addition only; no screen yet.

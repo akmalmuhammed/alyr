@@ -17,12 +17,25 @@ Meta's pages are the source and change; read each one again before its step. Che
 **Version note.** Embedded Signup v2 and v3 end on 15 Oct 2026; ALYR's code is v4. ALYR's default Graph version setting
 (`ALYR_META_GRAPH_VERSION`) is `v21.0`; Meta's pages now show `v26.0`. Check which versions Meta still serves and set the
 setting to a current one before relying on any of this: the same setting is used by the pop-up's SDK and by every Graph call.
+**16 Nov 2026:** v21.0 is removed on 21 Jan 2027 (Meta's changelog), so the default is now `v26.0`.
 
 ## What it needs first (both are the founder's, ALY-52 and ALY-262)
 
 Meta lets an app onboard customers only after it has **Advanced access** to both permissions, so the Tech Provider steps in
 `meta-tech-provider.md` come first. Until Business Verification, App Review and Access Verification are done Meta limits an
 app to onboarding 10 new customers in a rolling 7 days; they raise it to 200.
+
+## Where it stands (16 Nov 2026)
+
+| Step | State |
+|---|---|
+| 1. Approval | **Done 16 Nov 2026**: App Review approved, Tech Provider 2 of 2 |
+| 2. Client OAuth settings | **Done 16 Nov 2026**, checked after a reload: all six on; `https://app.alyr.qa/` in both lists |
+| 3. Configuration | **Done 16 Nov 2026**: "ALYR Embedded Signup", ID `1615391736569509` (not a secret: the sign-up page sends it to the browser). WhatsApp Embedded Signup variation, WhatsApp Cloud API only (Marketing Messages untouched), system-user token that **never expires**, WhatsApp accounts, the two permissions |
+| 4. Webhook fields | **Done 16 Nov 2026**, checked after a reload: the eight fields below, callback `https://api.alyr.qa/webhooks/whatsapp` |
+| **App published (Live)** | **Not done; the founder presses it.** App dashboard → Publish → Publish. Meta says that while the app is unpublished **no production webhooks are delivered**, not even for the app's admins, and only admins, developers and testers can use the pop-up |
+| 5. Secrets and settings | One command now: `infra/gcp/setup.sh es-on 1615391736569509`, run by the founder signed in as a project owner. It makes `channel-keys-key` once (never shown), sets `ALYR_EMBEDDED_SIGNUP`, `ALYR_META_ES_CONFIG_ID` and `ALYR_META_APP_ID` (which production did not have) on the API, and the key on the API and the worker. Then `gh variable set ALYR_EMBEDDED_SIGNUP --body on` and a release (`release.md`) so the web image may load Meta's SDK on `/start` |
+| 6 and 7. A test business, then Check | After the above |
 
 ## The steps
 
@@ -49,15 +62,13 @@ app to onboarding 10 new customers in a rolling 7 days; they raise it to 200.
    not process them yet, so a moved number's chat history and the messages the owner types in the app are not shown in ALYR.)
    ALYR subscribes its app to each business's account itself when the business connects.
 5. **The secrets and settings** (a developer does this for the founder; nothing is typed into a chat or a ticket):
-   1. Make the key that seals tokens: 32 random bytes, base64. Store it in Secret Manager in Doha as `channel-keys-key` and give
-      the API and the worker `ALYR_CHANNEL_KEYS_KEY` from it (`docs/runbooks/secret-rotation.md`, "Where production stands").
-      Lose it and every business's own token is unreadable: they connect again.
-   2. Set `ALYR_META_ES_CONFIG_ID` (the configuration ID from step 3). `ALYR_META_APP_ID` and `ALYR_META_APP_SECRET` are the
-      app's, already set.
-   3. Set `ALYR_EMBEDDED_SIGNUP=true` on the API service. A full `infra/gcp/setup.sh apps` deploy replaces every setting, so set it
-      again after one.
-   4. Build the web app with `ALYR_EMBEDDED_SIGNUP=on` (a build setting) so the page that opens the pop-up may load Meta's SDK;
-      publish as always, with the founder's yes.
+   1. `infra/gcp/setup.sh es-on <configuration id>`, signed in as a project owner. It makes the key that seals tokens
+      (`channel-keys-key`, 32 random bytes, never shown) if there is none, lets `alyr-run` read it, and gives the API and the
+      worker `ALYR_CHANNEL_KEYS_KEY`; it sets `ALYR_EMBEDDED_SIGNUP=true`, `ALYR_META_ES_CONFIG_ID` and `ALYR_META_APP_ID` on
+      the API. Lose the key and every business's own token is unreadable: they connect again. A full `setup.sh apps` keeps
+      all of it (it asks the live API). `ALYR_META_APP_SECRET` was already set; `ALYR_META_APP_ID` was not (16 Nov 2026).
+   2. `gh variable set ALYR_EMBEDDED_SIGNUP --body on`: `deploy-gcp` passes it to the web image, so the page that opens the
+      pop-up may load Meta's SDK. Then a release, as always (`release.md`), with the founder's yes.
 6. **Try it with a test business first.** Make a business of your own, choose "I have a WhatsApp Business account" (or "move my
    number"), tick what the way needs, press **Connect with Meta**, and finish in the pop-up. While the app is in development
    mode only its admins, developers and testers can do this.
@@ -81,5 +92,5 @@ app to onboarding 10 new customers in a rolling 7 days; they raise it to 200.
 
 ## Turning it off
 
-Unset `ALYR_EMBEDDED_SIGNUP` (and rebuild the web app without `ALYR_EMBEDDED_SIGNUP=on`). Businesses already connected keep working: their
+`infra/gcp/setup.sh es-off` unsets `ALYR_EMBEDDED_SIGNUP` (and rebuild the web app without `ALYR_EMBEDDED_SIGNUP=on`). Businesses already connected keep working: their
 tokens stay sealed and are still used. Staff can detach a number from `/ops` as before.
