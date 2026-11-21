@@ -25,7 +25,7 @@ from alyr.core import jobs, team, templates
 from alyr.core.normalise import fmt_qar
 from alyr.core.outbound import Outbound
 from alyr.core.team import Actor
-from alyr.modules.bookings import words
+from alyr.modules.bookings import staff_alert, words
 
 REMINDER = "booking_reminder"
 SLOT_STEP_MINUTES = 30
@@ -924,6 +924,7 @@ async def create_booking(
          "resource": named["name"] if named else None,
          "deposit": fmt_qar(amount) if amount else None},
     )
+    await staff_alert.queue(conn, booking_id, staff_alert.NEW)
     out = {"id": str(booking_id), "number": number, "starts_at": starts_at.isoformat(),
            "service": service["name"], "resource": named["name"] if named else None,
            "resource_ar": (named["name_ar"] or named["name"]) if named else None,
@@ -1060,6 +1061,9 @@ async def cancel_booking(
          "deposit": state if row["deposit"] else None,
          "amount": fmt_qar(row["deposit"]) if row["deposit"] else None},
     )
+    if actor == team.CUSTOMER:
+        # The customer cancelled: the owner is told. A member of staff who cancels did it knowingly.
+        await staff_alert.queue(conn, booking_id, staff_alert.CANCELLED)
     told = None
     if notify:
         arabic = await conn.fetchval(
