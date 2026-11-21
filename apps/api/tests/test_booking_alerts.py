@@ -24,7 +24,8 @@ from test_consent import owner_sql, say
 from test_sign_in import sign_in
 
 DOMAIN = "booking-alerts-test.com"
-BOOKING = "booking_cancel:"
+# The customer's second tap: "Cancel booking" only asks, "Yes, cancel it" cancels (audit T10).
+BOOKING = "booking_cancel_yes:"
 
 
 def staff_id(client, phone: str) -> str:
