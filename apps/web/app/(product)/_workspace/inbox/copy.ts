@@ -85,6 +85,7 @@ const en = {
       case "window_closed": return "Not sent: more than 24 hours since their last message";
       case "opted_out": return "Not sent: they asked for no more messages";
       case "billing_paused": return "Not sent: automatic messages are paused";
+      case "template_not_approved": return "Not sent: WhatsApp has not approved this wording yet";
       case "no_consent":
       case "no_marketing_consent":
       case "no_back_in_stock_consent": return "Not sent: they have not agreed to this kind of message";
@@ -217,6 +218,7 @@ const en = {
       no_marketing_consent: "Has not agreed to offers",
       no_back_in_stock_consent: "Did not ask about this item",
       billing_paused: "Automatic messages are paused",
+      template_not_approved: "WhatsApp has not approved its wording yet",
       gave_up: "ALYR could not hand it over",
       whatsapp: "WhatsApp did not deliver it",
     },
@@ -227,6 +229,7 @@ const en = {
       no_marketing_consent: "Only to a customer who agreed to offers",
       no_back_in_stock_consent: "Only to a customer who asked about this item",
       billing_paused: "Once automatic messages are on again",
+      template_not_approved: "Once WhatsApp approves its wording, then send it again",
       file_lost: "The picture or file was not kept: send it again from the conversation",
     },
     gaveUpSaid: "It never reached WhatsApp",
@@ -372,6 +375,7 @@ const ar: typeof en = {
       case "window_closed": return "لم تُرسل: مضى أكثر من 24 ساعة على آخر رسالة منه";
       case "opted_out": return "لم تُرسل: طلب ألا تصله رسائل";
       case "billing_paused": return "لم تُرسل: الرسائل التلقائية متوقفة";
+      case "template_not_approved": return "لم تُرسل: لم تعتمد واتساب صيغتها بعد";
       case "no_consent":
       case "no_marketing_consent":
       case "no_back_in_stock_consent": return "لم تُرسل: لم يوافق على هذا النوع من الرسائل";
@@ -499,6 +503,7 @@ const ar: typeof en = {
       no_marketing_consent: "لم يوافق على العروض",
       no_back_in_stock_consent: "لم يسأل عن هذا الصنف",
       billing_paused: "الرسائل التلقائية متوقفة",
+      template_not_approved: "لم تعتمد واتساب صيغتها بعد",
       gave_up: "تعذر على ALYR تسليمها",
       whatsapp: "واتساب لم يوصلها",
     },
@@ -509,6 +514,7 @@ const ar: typeof en = {
       no_marketing_consent: "فقط لعميل وافق على العروض",
       no_back_in_stock_consent: "فقط لعميل سأل عن هذا الصنف",
       billing_paused: "عندما تعود الرسائل التلقائية",
+      template_not_approved: "عندما تعتمد واتساب صيغتها، ثم أعد الإرسال",
       file_lost: "لم تُحفظ الصورة أو الملف: أرسلها من جديد من المحادثة",
     },
     gaveUpSaid: "لم تصل إلى واتساب",
