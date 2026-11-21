@@ -9,7 +9,7 @@ as long as the slowest slice plus the fixed steps. Nothing was removed.
 
 | Job | What it does | Name that matters |
 | --- | --- | --- |
-| `api-shard 1` to `6` | `uv run pytest --shard=I/6`: a slice of whole test files, by weight | none |
+| `api-shard 1` to `6` | `uv run pytest --shard=I/6`: a slice of whole test files, by weight; files whose names start with the same word (`test_catalog_*`, `test_documents_*`) always stay together | none |
 | `api-image` | `ruff check`, the image built, started with production settings and asked for `/health`, `pip-audit` of the lock | none |
 | `api` | passes only if every slice and `api-image` passed **and** the slices' reports add up to the whole suite, once | **`api`**: the required check in branch protection (below) |
 
@@ -36,7 +36,11 @@ test file is picked up by itself (a file not in `tests/shard_durations.json` wei
   file. Do this every few weeks, or after a block of new tests; stale weights make the slices
   uneven, never wrong.
 - **A test passes alone but fails in its slice** (it relied on another file running first): that is
-  a bug in the test; fix the test. Do not move files by hand. A laptop's plain `pytest` is
+  a bug in the test; fix the test. Do not move files by hand. Why files are grouped by their first
+  word: the whole suite shares one database and some fixed demo shops, and the first sliced runs
+  found `test_catalog_demos.py` passing only because `test_catalog_cards.py` (its neighbour) ran before it and cleaned up a row it needed gone (the test now clears it itself).
+  Grouping keeps that neighbourhood intact; a dependency across groups would show as a red slice
+  that is the same on every run, and is fixed in the test. A laptop's plain `pytest` is
   unchanged and still runs everything in one process.
 - **Run one slice on a laptop:** `pytest --shard=3/6` (add `--shard-report=out.json`).
 
