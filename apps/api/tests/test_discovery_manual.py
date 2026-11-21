@@ -35,6 +35,13 @@ STAFF = "ops-discovery@alyr.example"
 TODAY = datetime.now(UTC).date()
 
 
+def shop_days(day: str) -> int:
+    """Days since a day, on the shop's own calendar (Doha), which is what the screens say."""
+    from zoneinfo import ZoneInfo
+
+    return (datetime.now(ZoneInfo("Asia/Qatar")).date() - datetime.fromisoformat(day).date()).days
+
+
 def iso(days_ago: int) -> str:
     return (TODAY - timedelta(days=days_ago)).isoformat()
 
@@ -784,12 +791,13 @@ def test_the_overview_and_the_connection_say_which_day_and_when_it_is_old(staff,
     for path in ("/api/discovery/overview", "/api/discovery/connection"):
         body = biz.owner.get(path).json()
         source = body["source"] if "source" in body else body
-        assert (source["observed_on"], source["days_old"], source["old"]) == (iso(3), 3, False)
+        assert (source["observed_on"], source["days_old"], source["old"]) == (
+            iso(3), shop_days(iso(3)), False)
     record(staff, biz, place, seen(observed_on=iso(20), reviews=None))
     run(staff, biz)
     source = biz.owner.get("/api/discovery/overview").json()["source"]
     assert (source["kind"], source["observed_on"], source["days_old"], source["old"]) == (
-        "manual", iso(20), 20, True)
+        "manual", iso(20), shop_days(iso(20)), True)
     assert biz.owner.get("/api/discovery/connection").json()["old"] is True
 
 
