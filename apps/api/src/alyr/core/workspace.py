@@ -262,6 +262,10 @@ async def home(conn: asyncpg.Connection, staff: Staff | None = None) -> list[dic
         if module.key not in modules:
             continue
         for card in module.cards:
+            # A card in riyals is the shop's money (paid by link today, owed to you): an agent
+            # is not sent it (D-035, ui-rules section 16).
+            if card.kind == "qar" and staff is not None and staff.role not in catalog.MANAGERS:
+                continue
             if card.count:
                 if worked_out is None:
                     worked_out = await counts(conn, modules, staff=staff)

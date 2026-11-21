@@ -11,13 +11,13 @@ type Closed = Partial<Record<"sold" | "booked" | "answered" | "lost" | "unsaid",
 type Person = {
   id: string; name: string; role: string; open: number; waiting: number;
   oldest_wait_minutes: number | null; replies: number; median_reply_seconds: number | null;
-  closed: Closed; closed_total: number; orders: number; sales: number; sales_text: string;
+  closed: Closed; closed_total: number; orders: number; sales?: number; sales_text?: string;
   bookings_completed: number; no_shows: number;
 };
 type Report = {
   days: number; waiting_minutes: number; can_see_everyone: boolean;
   unassigned: { open: number; waiting: number; oldest_wait_minutes: number | null };
-  totals: { waiting: number; open: number; closed: number; sold: number; sales_text: string; median_reply_seconds: number | null };
+  totals: { waiting: number; open: number; closed: number; sold: number; sales_text?: string; median_reply_seconds: number | null };
   people: Person[];
 };
 type Lang = "en" | "ar";
@@ -125,7 +125,7 @@ export function TeamReport({ lang, canManage, signer }: { lang: Lang; canManage:
   if (!report) return null;
 
   const { totals, unassigned } = report;
-  const maxSales = Math.max(1, ...report.people.map((p) => p.sales));
+  const maxSales = Math.max(1, ...report.people.map((p) => p.sales ?? 0));
   const me = report.people[0];
 
   return (
@@ -170,11 +170,14 @@ export function TeamReport({ lang, canManage, signer }: { lang: Lang; canManage:
           <b className="num">{report.can_see_everyone ? totals.closed : me?.closed_total ?? 0}</b>
           <small>{t.sold(report.can_see_everyone ? totals.sold : me?.closed.sold ?? 0)}</small>
         </div>
-        <div className="tm-stat">
-          <span>{t.sales}</span>
-          <b className="num" dir="ltr">{report.can_see_everyone ? totals.sales_text : me?.sales_text}</b>
-          <small>{t.orders(report.people.reduce((n, p) => n + p.orders, 0))}</small>
-        </div>
+        {/* An agent is never sent money (D-035): the sales figure is drawn only when it came. */}
+        {totals.sales_text !== undefined && (
+          <div className="tm-stat">
+            <span>{t.sales}</span>
+            <b className="num" dir="ltr">{totals.sales_text}</b>
+            <small>{t.orders(report.people.reduce((n, p) => n + p.orders, 0))}</small>
+          </div>
+        )}
       </div>
 
       <ul className="tm-people">
@@ -209,8 +212,10 @@ export function TeamReport({ lang, canManage, signer }: { lang: Lang; canManage:
                 ) : <small>{t.nothingClosed}</small>}
               </div>
               <div className="tm-sales">
-                <b className="num" dir="ltr">{p.sales_text}</b>
-                <div className="tm-meter" aria-hidden="true"><span style={{ width: `${(p.sales / maxSales) * 100}%` }} /></div>
+                {p.sales_text !== undefined && <>
+                  <b className="num" dir="ltr">{p.sales_text}</b>
+                  <div className="tm-meter" aria-hidden="true"><span style={{ width: `${((p.sales ?? 0) / maxSales) * 100}%` }} /></div>
+                </>}
                 <small>
                   {t.orders(p.orders)}
                   {(p.bookings_completed || p.no_shows) ? ` · ${t.visits(p.bookings_completed, p.no_shows)}` : ""}
