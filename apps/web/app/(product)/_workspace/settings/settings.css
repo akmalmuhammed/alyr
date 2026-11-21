@@ -1,0 +1,149 @@
+/* Settings (Your account, Data and privacy): placement only. Panels, fields, buttons, banners, steps,
+   dialogs and toasts are the kit (apps/web/app/_ui); this file lays them out and draws the few things
+   the kit has no part for (the theme tiles, the code boxes, the close timeline). Tokens only; every
+   class carries the set- prefix; direction by logical properties. */
+
+/* The preview route's page frame. The workspace shell supplies its own padding when it wires the section. */
+.set-preview-wrap {
+  min-block-size: 100vh;
+  background: var(--canvas);
+  padding: var(--ui-space-24) var(--ui-space-28) var(--ui-space-48);
+}
+.set-preview-wrap > .set-page { max-inline-size: var(--ui-size-page); margin-inline: auto; }
+
+.set-page { display: grid; gap: var(--ui-space-20); min-inline-size: 0; align-content: start; }
+.set-page > * { min-inline-size: 0; }
+
+/* The main column, then a side column of 400 on a laptop; one column below. */
+.set-cols { display: grid; gap: var(--ui-space-20); align-items: start; grid-template-columns: minmax(0, 1fr); }
+.set-col { display: grid; gap: var(--ui-space-20); min-inline-size: 0; align-content: start; }
+@media (min-width: 62rem) {
+  .set-cols { grid-template-columns: minmax(0, 1fr) var(--ui-size-side-column); }
+}
+
+.set-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ui-space-12); }
+.set-note { margin: 0; color: var(--text-muted); font-size: var(--u-fs-cap); }
+.set-link { color: var(--text); font-size: var(--u-fs-body); font-weight: var(--weight-medium); text-decoration: underline; text-underline-offset: var(--ui-space-2); }
+
+/* You: the avatar, then two read-only fields. */
+.set-you { display: flex; gap: var(--ui-space-20); align-items: flex-start; }
+.set-you-fields { flex: 1 1 auto; min-inline-size: 0; display: grid; gap: var(--ui-space-16); grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); }
+
+/* Sign-in email: a tile with the lock, the address, what it means. */
+.set-icon-tile {
+  flex: none; display: grid; place-items: center;
+  inline-size: var(--ui-size-control-sm); block-size: var(--ui-size-control-sm);
+  background: var(--surface-subtle); border-radius: var(--radius-sm); color: var(--text-muted);
+}
+.set-email { display: flex; gap: var(--ui-space-16); align-items: center; }
+.set-email-text { display: grid; gap: var(--ui-space-4); min-inline-size: 0; }
+.set-email-address { justify-self: start; font-size: var(--u-fs-lead); font-weight: var(--weight-medium); overflow-wrap: anywhere; }
+.set-help { margin: 0; color: var(--text-muted); font-size: var(--u-fs-cap); line-height: var(--u-lh); }
+
+/* A row inside a panel: filled edge to edge, 52 high, a hairline between rows. */
+.set-rows { margin: 0; padding: 0; border: 0; min-inline-size: 0; }
+.set-row {
+  display: flex; align-items: center; gap: var(--ui-space-14); min-block-size: var(--ui-size-row);
+  padding: var(--ui-space-8) var(--ui-space-20); border-block-end: var(--rule-hairline) solid var(--line);
+}
+.set-row:last-child { border-block-end: 0; }
+.set-row--on { background: var(--surface-subtle); }
+.set-row-text { flex: 1 1 auto; min-inline-size: 0; display: grid; gap: var(--ui-space-2); }
+.set-row-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--ui-space-8); font-weight: var(--weight-semibold); }
+.set-row-sub { color: var(--text-muted); font-size: var(--u-fs-cap); font-weight: var(--weight-regular); }
+.set-row-end { flex: none; color: var(--text-muted); font-size: var(--u-fs-cap); }
+.set-row .u-check { flex: 1 1 auto; min-inline-size: 0; }
+.set-row-name-ar { color: var(--text-muted); font-size: var(--u-fs-cap); font-weight: var(--weight-regular); }
+
+/* The appearance tiles: a small drawing of the workspace, then the radio that names it. */
+.set-themes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--ui-space-14); padding: var(--ui-space-20); margin: 0; border: 0; min-inline-size: 0; }
+.set-theme { display: grid; gap: var(--ui-space-8); min-inline-size: 0; }
+.set-theme-pic {
+  display: flex; overflow: hidden; block-size: var(--ui-space-48);
+  border: var(--rule-hairline) solid var(--control-line); border-radius: var(--radius-ui);
+}
+.set-theme--on .set-theme-pic { border-color: var(--text); }
+.set-theme-pane { flex: 1 1 0; min-inline-size: 0; display: grid; align-content: start; gap: var(--ui-space-4); padding: var(--ui-space-8); }
+.set-theme-pane--light { background: var(--surface); }
+.set-theme-pane--dark { background: var(--band); }
+.set-theme-bar { display: block; block-size: var(--ui-space-4); border-radius: var(--radius-control); background: var(--line); }
+.set-theme-pane--dark .set-theme-bar { background: var(--dark-line); }
+.set-theme-bar--head { inline-size: 40%; background: var(--text); }
+.set-theme-pane--dark .set-theme-bar--head { background: var(--on-band-quiet); }
+.set-theme-bar--volt { inline-size: 30%; background: var(--volt); }
+
+/* Your data: the list and the format on the start side, the facts on the end side. */
+.set-data { display: grid; }
+@media (min-width: 48rem) {
+  .set-data { grid-template-columns: minmax(0, 1fr) minmax(0, 18rem); }
+  .set-data-facts { border-inline-start: var(--rule-hairline) solid var(--line); }
+}
+.set-data-main { display: grid; gap: var(--ui-space-10); padding: var(--ui-space-20); align-content: start; }
+.set-data-facts { padding: var(--ui-space-8) var(--ui-space-20); }
+.set-include { display: flex; gap: var(--ui-space-10); align-items: flex-start; margin: 0; }
+.set-include .u-ico { flex: none; margin-block-start: var(--ui-space-2); }
+.set-includes { display: grid; gap: var(--ui-space-10); margin: 0; padding: 0; list-style: none; }
+
+/* A dialog's blocks. */
+.set-business {
+  display: flex; align-items: center; gap: var(--ui-space-12); padding: var(--ui-space-12) var(--ui-space-14);
+  border-radius: var(--radius-ui); background: var(--surface-subtle);
+}
+.set-business-text { display: grid; gap: var(--ui-space-2); min-inline-size: 0; }
+.set-business-name { font-weight: var(--weight-medium); }
+.set-label { margin: 0; color: var(--text-muted); font-size: var(--u-fs-cap); font-weight: var(--weight-medium); }
+.set-timeline { margin: 0; padding: 0; list-style: none; border: var(--rule-hairline) solid var(--line); border-radius: var(--radius-ui); }
+.set-step { display: grid; gap: var(--ui-space-4) var(--ui-space-14); padding: var(--ui-space-10) var(--ui-space-14); border-block-end: var(--rule-hairline) solid var(--line); }
+.set-step:last-child { border-block-end: 0; }
+@media (min-width: 48rem) {
+  .set-step { grid-template-columns: 10rem minmax(0, 1fr); }
+}
+.set-step-when { color: var(--text); font-size: var(--u-fs-cap); }
+.set-step--last .set-step-when { color: var(--bad); }
+.set-step-text { margin: 0; line-height: var(--u-lh); }
+.set-check-text { display: grid; gap: var(--ui-space-2); }
+.set-check-hint { color: var(--text-muted); font-size: var(--u-fs-cap); }
+
+/* The email compare: now, an arrow, new. */
+.set-compare {
+  display: flex; align-items: center; gap: var(--ui-space-12); padding: var(--ui-space-12) var(--ui-space-14);
+  border-radius: var(--radius-ui); background: var(--surface-subtle);
+}
+.set-compare-side { flex: 1 1 0; min-inline-size: 0; display: grid; gap: var(--ui-space-2); }
+.set-compare-tag { color: var(--text-muted); font-size: var(--u-fs-label); letter-spacing: var(--tracking-label); text-transform: uppercase; }
+.set-compare-address { font-size: var(--u-fs-body); overflow-wrap: anywhere; }
+.set-compare-side--new .set-compare-address { font-weight: var(--weight-medium); }
+
+/* The six boxes of a code. One real input sits over them, so typing, pasting and the keyboard are the browser's. */
+.set-code { position: relative; display: inline-grid; grid-template-columns: repeat(6, var(--ui-size-touch)); gap: var(--ui-space-8); max-inline-size: 100%; }
+.set-code-cell {
+  display: grid; place-items: center; block-size: var(--ui-size-row);
+  background: var(--surface); border: var(--rule-hairline) solid var(--control-line); border-radius: var(--radius-sm);
+  font-family: var(--font-ui-mono); font-size: var(--ui-heading); font-weight: var(--weight-medium);
+}
+.set-code-cell--now { border-color: var(--text); }
+.set-code-input {
+  position: absolute; inset: 0; inline-size: 100%; opacity: 0; font-size: var(--ui-input);
+  cursor: text; direction: ltr;
+}
+.set-code:focus-within .set-code-cell--now { outline: var(--ui-space-2) solid var(--focus); outline-offset: var(--ui-space-2); }
+.set-code--bad .set-code-cell { border-color: var(--bad); }
+.set-code-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--ui-space-8); }
+.set-error { margin: 0; color: var(--bad); font-size: var(--u-fs-cap); }
+.set-says { display: grid; gap: var(--ui-space-8); }
+.set-say { display: flex; gap: var(--ui-space-10); align-items: flex-start; margin: 0; line-height: var(--u-lh); }
+.set-say .u-ico { flex: none; margin-block-start: var(--ui-space-2); color: var(--text-muted); }
+
+/* Phones: the code boxes shrink to fit, and every row stacks its end under its text. */
+@media (max-width: 47.99rem) {
+  .set-preview-wrap { padding-inline: var(--ui-space-16); padding-block-start: var(--ui-space-16); }
+  .set-you { flex-direction: column; }
+  .set-code { grid-template-columns: repeat(6, minmax(0, var(--ui-size-touch))); }
+  .set-compare { flex-direction: column; align-items: stretch; }
+  .set-compare > .u-ico { display: none; }
+  .set-themes { gap: var(--ui-space-8); padding: var(--ui-space-16); }
+  .set-link { display: inline-flex; align-items: center; min-block-size: var(--ui-size-touch); }
+}
+
+/* The loading page: skeleton rows at the loaded heights. */
+.set-skel { display: grid; gap: var(--ui-space-12); padding: var(--ui-space-20); }
