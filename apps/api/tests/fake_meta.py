@@ -17,7 +17,7 @@ import httpx
 
 from alyr.channels import meta
 
-GRAPH_VERSION = "v21.0"
+GRAPH_VERSION = "v26.0"
 
 
 def error(status: int, code: int, message: str) -> httpx.Response:

@@ -156,7 +156,7 @@ class Settings(BaseSettings):
     meta_access_token: str = ""
     meta_phone_number_id: str = ""
     meta_waba_id: str = ""
-    meta_graph_version: str = "v21.0"
+    meta_graph_version: str = "v26.0"
     # The Meta app's ID. Only `templates_sync` needs it, to upload the sample image a
     # template with an image header is reviewed with (Resumable Upload API).
     meta_app_id: str = ""
