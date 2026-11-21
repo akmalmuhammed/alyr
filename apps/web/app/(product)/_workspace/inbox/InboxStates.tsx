@@ -9,6 +9,7 @@ export function InboxNoOpen({ lang, onSeeClosed, closed = false }: { lang: Lang;
   return (
     <Empty
       className="ibx-empty"
+      level={2}
       title={closed ? t.noClosedTitle : t.noOpenTitle}
       action={closed ? undefined : <Button kind="line" size="sm" onClick={onSeeClosed}>{t.seeClosed}</Button>}
     >
@@ -23,6 +24,7 @@ export function InboxFilteredEmpty({ lang, query, onClear }: { lang: Lang; query
   return (
     <Empty
       className="ibx-empty"
+      level={2}
       title={t.nothingMatches(query.trim())}
       action={<Button kind="quiet" size="sm" onClick={onClear}>{query.trim() ? t.clear : t.clearFilters}</Button>}
     >
@@ -36,14 +38,15 @@ export function InboxFirstRun({ lang }: { lang: Lang }) {
   const t = copy(lang).states;
   return (
     <div className="ibx-firstrun">
-      <DashedSlot title={t.firstRunTitle}>{t.firstRunText}</DashedSlot>
+      <h1 className="u-sr">{copy(lang).title}</h1>
+      <DashedSlot level={2} title={t.firstRunTitle}>{t.firstRunText}</DashedSlot>
     </div>
   );
 }
 
 /** The main pane when no conversation is chosen. */
 export function InboxPick({ lang }: { lang: Lang }) {
-  return <Empty className="ibx-empty ibx-empty--pane" title={copy(lang).states.pick} />;
+  return <Empty className="ibx-empty ibx-empty--pane" level={2} title={copy(lang).states.pick} />;
 }
 
 /** The connection is gone: what is on screen is kept, and nothing is promised that does not happen. */

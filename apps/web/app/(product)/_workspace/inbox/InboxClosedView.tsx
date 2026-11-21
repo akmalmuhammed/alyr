@@ -166,8 +166,7 @@ export function InboxClosedView({ lang, now, mode, role, openCount, onOpenTab, o
               {selected ? (
                 <Panel clip>
                   <PanelHeader
-                    level={3}
-                    title={<bdi>{selected.customer ?? selected.phone}</bdi>}
+                                        title={<bdi>{selected.customer ?? selected.phone}</bdi>}
                     right={
                       <Button
                         kind="quiet" size="xs"
@@ -187,7 +186,7 @@ export function InboxClosedView({ lang, now, mode, role, openCount, onOpenTab, o
               ) : null}
 
               <Panel clip>
-                <PanelHeader level={3} title={c.whyLostTitle(lostTotal)} sub={c.whyLostPeriod} />
+                <PanelHeader title={c.whyLostTitle(lostTotal)} sub={c.whyLostPeriod} />
                 <ul className="ibx-whylost">
                   {data.whyLost.map((w) => (
                     <li key={w.reason}>
@@ -201,7 +200,7 @@ export function InboxClosedView({ lang, now, mode, role, openCount, onOpenTab, o
               </Panel>
 
               <Panel clip>
-                <PanelHeader level={3} title={c.firstAnswer} />
+                <PanelHeader title={c.firstAnswer} />
                 <KVList className="ibx-kv">
                   <KV k={c.today} mono>{c.minutes(data.firstAnswer.today)}</KV>
                   <KV k={c.median} mono>{c.minutes(data.firstAnswer.median)}</KV>
