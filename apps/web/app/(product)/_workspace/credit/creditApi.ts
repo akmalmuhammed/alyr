@@ -1,119 +1,37 @@
-import {
-  FIXTURE_CUSTOMERS,
-  FIXTURE_OPEN_ORDERS,
-  FIXTURE_RECENT_PAYMENTS,
-  FIXTURE_BLUEFIN_ENTRIES,
-  FIXTURE_BLUEFIN_UNPAID,
-  LedgerEntry,
-  UnpaidSale,
-} from "./fixtures";
-import { CreditCustomer, CreditOpenOrder, CreditPaymentRecord } from "./logic";
+// The calls the Credit screens make. Each one throws when the API refuses or cannot be reached: nothing here falls back to
+// sample data, and nothing reports a send that did not happen. The shell passes these to `CreditWorkbench` as its `actions`.
+import { api } from "../../../_ui/api";
+import { entriesFromApi, paymentBody, reminderResult, rowsFromSummary, type EntryJson, type ReminderResult, type Summary } from "./creditMap";
+import type { CreditAccountRow, CreditEntry } from "./logic";
+import type { PaymentInput } from "./CreditPaymentDialog";
 
-export interface LedgerSummaryResponse {
-  shop: { name: string; name_ar?: string };
-  totalOwed: number;
-  customersCount: number;
-  buckets: {
-    age0to30: number;
-    age31to60: number;
-    age61to90: number;
-    ageOver90: number;
-  };
-  customers: CreditCustomer[];
-  openOrders: CreditOpenOrder[];
-  recentPayments: CreditPaymentRecord[];
+export async function loadSummary(): Promise<{ shopName: string; rows: CreditAccountRow[] }> {
+  const summary = await api<Summary>("/api/ledger/summary");
+  return { shopName: summary.shop.name, rows: rowsFromSummary(summary) };
 }
 
-export interface CustomerEntriesResponse {
-  customer: CreditCustomer;
-  unpaidSales: UnpaidSale[];
-  entries: LedgerEntry[];
+export async function loadEntries(contactId: string): Promise<CreditEntry[]> {
+  const body = await api<{ entries: EntryJson[] }>(`/api/ledger/customers/${contactId}/entries`);
+  return entriesFromApi(body.entries);
 }
 
-export async function fetchLedgerSummary(): Promise<LedgerSummaryResponse> {
-  try {
-    const res = await fetch("/api/ledger/summary", { cache: "no-store" });
-    if (!res.ok) throw new Error("API error");
-    const data = await res.json();
-    return {
-      shop: data.shop || { name: "Nuqta Car Care" },
-      totalOwed: data.totalOwed ?? 984000,
-      customersCount: data.customersCount ?? 11,
-      buckets: data.buckets || {
-        age0to30: 512000,
-        age31to60: 257000,
-        age61to90: 136000,
-        ageOver90: 79000,
-      },
-      customers: FIXTURE_CUSTOMERS,
-      openOrders: FIXTURE_OPEN_ORDERS,
-      recentPayments: FIXTURE_RECENT_PAYMENTS,
-    };
-  } catch {
-    return {
-      shop: { name: "Nuqta Car Care" },
-      totalOwed: 984000,
-      customersCount: 11,
-      buckets: {
-        age0to30: 512000,
-        age31to60: 257000,
-        age61to90: 136000,
-        ageOver90: 79000,
-      },
-      customers: FIXTURE_CUSTOMERS,
-      openOrders: FIXTURE_OPEN_ORDERS,
-      recentPayments: FIXTURE_RECENT_PAYMENTS,
-    };
-  }
+/** Reminds every customer the rules reach whose oldest sale is at least `minDays` old (the API's own run). */
+export async function sendReminders(minDays: number): Promise<ReminderResult> {
+  const json = await api<{ sent: number; skipped_promised: number; skipped_recent: number; skipped_opted_out: number }>(
+    "/api/ledger/reminders", { method: "POST", body: { min_days: minDays } },
+  );
+  return reminderResult(json);
 }
 
-export async function fetchCustomerEntries(customerId: string): Promise<CustomerEntriesResponse> {
-  const customer =
-    FIXTURE_CUSTOMERS.find((c) => c.id === customerId) || FIXTURE_CUSTOMERS[2]; // Bluefin default
-
-  try {
-    const res = await fetch(`/api/ledger/customers/${customerId}/entries`, { cache: "no-store" });
-    if (!res.ok) throw new Error("API error");
-    return {
-      customer,
-      unpaidSales: FIXTURE_BLUEFIN_UNPAID,
-      entries: FIXTURE_BLUEFIN_ENTRIES,
-    };
-  } catch {
-    return {
-      customer,
-      unpaidSales: FIXTURE_BLUEFIN_UNPAID,
-      entries: FIXTURE_BLUEFIN_ENTRIES,
-    };
-  }
+export async function assignFollowUp(contactId: string, userId: string | null): Promise<void> {
+  await api(`/api/ledger/customers/${contactId}/assign`, { method: "POST", body: { user_id: userId } });
 }
 
-export async function sendPaymentReminders(minDays: number = 30): Promise<{ sent: number; skipped: number }> {
-  try {
-    const res = await fetch("/api/ledger/reminders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ min_days: minDays }),
-    });
-    if (!res.ok) throw new Error("Failed to send reminders");
-    return { sent: 3, skipped: 3 };
-  } catch {
-    return { sent: 3, skipped: 3 };
-  }
-}
-
-export async function assignCustomerFollowup(
-  contactId: string,
-  userId: string | null
-): Promise<{ ok: boolean }> {
-  try {
-    const res = await fetch(`/api/ledger/customers/${contactId}/assign`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id: userId }),
-    });
-    return { ok: res.ok };
-  } catch {
-    return { ok: true };
-  }
+/** Writes down money the owner already received. The key makes a second press return the same payment. */
+export async function recordPayment(input: PaymentInput): Promise<void> {
+  await api("/api/documents/payments", {
+    method: "POST",
+    headers: { "Idempotency-Key": crypto.randomUUID() },
+    body: paymentBody(input),
+  });
 }

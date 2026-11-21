@@ -1,415 +1,180 @@
-import { CreditCustomer, CreditOpenOrder, CreditPaymentRecord } from "./logic";
+// Sample data for the Credit screens: the fictional Nuqta Car Care and its customers (all invented). It has
+// the shape of the API's answers (`GET /api/ledger/summary` and `.../customers/{id}/entries`), so the
+// same screens read real data when the shell wires them in. Every total on a screen is counted from these
+// fields; none is typed in.
+import {
+  type Buckets, type CreditAccountRow, type CreditEntry, type Lang, type Payment, emptyBuckets,
+} from "./logic.ts";
+import type { CreditData, EarlierStatement, OpenOrder, PromiseRecord, ReminderEvent } from "./types.ts";
 
-export interface LedgerEntry {
-  date: string;
-  time: string;
-  kind: string;
-  documentRef: string;
-  note: string;
-  writtenBy: string;
-  putOnAccount: number | null; // in dirhams
-  paid: number | null; // in dirhams
-  owesAfter: number; // in dirhams
+/** The moment the sample is read at: Thu 12 Nov 2026, 09:40 in Doha. */
+export const PREVIEW_NOW = "2026-11-12T09:40:00+03:00";
+
+export const SHOP = { name: "Nuqta Car Care", nameAr: "نقطة لتلميع السيارات", phone: "+974 5555 0100", address: "Street 15, Gate 4, Doha" };
+
+export const TEAM = [
+  { id: "u-bilal", name: "Bilal" },
+  { id: "u-hana", name: "Hana" },
+  { id: "u-omar", name: "Omar" },
+  { id: "u-reem", name: "Reem" },
+  { id: "u-salma", name: "Salma" },
+  { id: "u-yusuf", name: "Yusuf" },
+] as const;
+
+const who = (name: string) => TEAM.find((m) => m.name === name) ?? null;
+const qar = (riyals: number) => riyals * 100;
+
+function row(
+  id: string, name: string, phone: string, balance: number, oldestDays: number, buckets: Partial<Buckets>,
+  limit: number | null, assignee: string, rest: Partial<CreditAccountRow> = {},
+): CreditAccountRow {
+  return {
+    id, name, phone, balance: qar(balance), oldestDays,
+    buckets: Object.fromEntries(Object.entries({ ...emptyBuckets(), ...buckets }).map(([k, v]) => [k, qar(v)])) as Buckets,
+    creditLimit: limit === null ? null : qar(limit),
+    overLimit: limit !== null && limit > 0 && balance > limit,
+    promisedUntil: null, promisePassed: false, promisePassedOn: null, lastRemindedAt: null, remindersSent: null,
+    lastInboundAt: null, assigned: who(assignee), optedOut: false, optedOutAt: null, lang: "en" as Lang,
+    ...rest,
+  };
 }
 
-export interface UnpaidSale {
-  title: string;
-  itemsText: string;
-  putOnAccountDate: string;
-  ageDays: number;
-  isToday?: boolean;
-  amount: number;
-  paid: number;
-  stillOwed: number;
-}
-
-export const FIXTURE_CUSTOMERS: CreditCustomer[] = [
-  {
-    id: "gulf-courier",
-    name: "Gulf Courier W.L.L.",
-    phone: "+974 5555 0140",
-    owes: 324000,
-    limit: 600000,
-    oldestDebtDays: 25,
-    promise: null,
-    lastReminder: null,
-    followsUp: "Omar",
-    tag: { text: "Business", tone: "n" },
-    since: "Sat 1 Aug 2026",
-  },
-  {
-    id: "bayview-school",
-    name: "Bayview School",
-    phone: "+974 5555 0151",
-    owes: 136000,
-    limit: 200000,
-    oldestDebtDays: 72,
-    promise: null,
-    lastReminder: { date: "Sun 1 Nov", tone: "Firm", countText: "Firm · 2 sent" },
-    followsUp: "Omar",
-    tag: { text: "Business", tone: "n" },
-    since: "Wed 15 Jul 2026",
-  },
-  {
-    id: "bluefin",
-    name: "Bluefin Events",
-    phone: "+974 5555 0188",
-    owes: 126400,
-    limit: 150000,
-    oldestDebtDays: 41,
-    promise: { status: "Passed Mon 9 Nov", dateText: "Mon 9 Nov", tone: "warn", passed: true },
-    lastReminder: { date: "Mon 2 Nov", tone: "Gentle", countText: "Gentle · 1 sent" },
-    followsUp: "Hana",
-    tag: { text: "Business", tone: "n" },
-    since: "Sat 5 Sep 2026",
-  },
-  {
-    id: "dana-home",
-    name: "Dana Home Services",
-    phone: "+974 5555 0131",
-    owes: 115000,
-    limit: 200000,
-    oldestDebtDays: 28,
-    promise: null,
-    lastReminder: null,
-    followsUp: "Reem",
-    tag: { text: "Business", tone: "n" },
-    since: "Tue 18 Aug 2026",
-  },
-  {
-    id: "palm-court",
-    name: "Palm Court Offices",
-    phone: "+974 5555 0171",
-    owes: 108000,
-    limit: 150000,
-    oldestDebtDays: 38,
-    promise: null,
-    lastReminder: { date: "Mon 9 Nov", tone: "Gentle", countText: "Gentle · 1 sent" },
-    followsUp: "Salma",
-    tag: { text: "Business", tone: "n" },
-    since: "Thu 10 Sep 2026",
-  },
-  {
-    id: "omar-ali",
-    name: "Omar Ali",
-    phone: "+974 5555 0121",
-    owes: 48000,
-    limit: 40000,
-    oldestDebtDays: 112,
-    promise: null,
-    lastReminder: { date: "Sun 1 Nov", tone: "Final", countText: "Final · 4 sent" },
-    followsUp: "Salma",
-    tag: { text: "Over limit", tone: "bad" },
-    since: "Mon 1 Jun 2026",
-  },
-  {
-    id: "noor-abdullah",
-    name: "Noor Abdullah",
-    phone: "+974 5555 0125",
-    owes: 45000,
-    limit: 50000,
-    oldestDebtDays: 45,
-    promise: { status: "By Wed 18 Nov", dateText: "Wed 18 Nov", tone: "n", passed: false },
-    lastReminder: { date: "Mon 9 Nov", tone: "Gentle", countText: "Gentle · 1 sent" },
-    followsUp: "Salma",
-    tag: null,
-    since: "Sun 12 Jul 2026",
-  },
-  {
-    id: "sara-haddad",
-    name: "Sara Haddad",
-    phone: "+974 5555 0118",
-    owes: 31000,
-    limit: 50000,
-    oldestDebtDays: 94,
-    promise: null,
-    lastReminder: { date: "Sun 18 Oct", tone: "Firm", countText: "Firm · 2 sent" },
-    followsUp: "Bilal",
-    tag: { text: "Said stop", tone: "n" },
-    since: "Fri 1 May 2026",
-  },
-  {
-    id: "rashid-mahmoud",
-    name: "Rashid Mahmoud",
-    phone: "+974 5555 0134",
-    owes: 25000,
-    limit: 50000,
-    oldestDebtDays: 15,
-    promise: null,
-    lastReminder: null,
-    followsUp: "Hana",
-    tag: null,
-    since: "Sat 22 Aug 2026",
-  },
-  {
-    id: "layla-farouk",
-    name: "Layla Farouk",
-    phone: "+974 5555 0138",
-    owes: 13600,
-    limit: 50000,
-    oldestDebtDays: 6,
-    promise: null,
-    lastReminder: null,
-    followsUp: "Yusuf",
-    tag: null,
-    since: "Mon 5 Oct 2026",
-  },
-  {
-    id: "aisha-hamad",
-    name: "Aisha Hamad",
-    phone: "+974 5555 0112",
-    owes: 12000,
-    limit: 50000,
-    oldestDebtDays: 10,
-    promise: null,
-    lastReminder: null,
-    followsUp: "Hana",
-    tag: null,
-    since: "Thu 15 Oct 2026",
-  },
-  // Customers with credit limit who owe nothing today (3)
-  {
-    id: "mariam-saleh",
-    name: "Mariam Saleh",
-    phone: "+974 5555 0199",
-    owes: 0,
-    limit: 250000,
-    oldestDebtDays: 0,
-    promise: null,
-    lastReminder: null,
-    followsUp: "Hana",
-    tag: null,
-    since: "Mon 1 Jun 2026",
-  },
-  {
-    id: "fatima-darwish",
-    name: "Fatima Darwish",
-    phone: "+974 5555 0166",
-    owes: 0,
-    limit: 100000,
-    oldestDebtDays: 0,
-    promise: null,
-    lastReminder: null,
-    followsUp: "Omar",
-    tag: null,
-    since: "Wed 20 May 2026",
-  },
-  {
-    id: "khalid-nasser",
-    name: "Khalid Nasser",
-    phone: "+974 5555 0144",
-    owes: 0,
-    limit: 50000,
-    oldestDebtDays: 0,
-    promise: null,
-    lastReminder: null,
-    followsUp: "Salma",
-    tag: null,
-    since: "Sat 11 Jul 2026",
-  },
+/** Fourteen customers with a limit or a balance; eleven owe, three owe nothing. */
+export const ACCOUNTS: CreditAccountRow[] = [
+  row("gulf-courier", "Gulf Courier W.L.L.", "+974 5555 0140", 3240, 25, { d0_30: 3240 }, 6000, "Omar"),
+  row("bayview-school", "Bayview School", "+974 5555 0151", 1360, 72, { d61_90: 1360 }, 2000, "Omar", {
+    lastRemindedAt: "2026-11-01T11:05:00+03:00", remindersSent: 2, lastInboundAt: "2026-11-03T08:30:00+03:00",
+  }),
+  row("bluefin", "Bluefin Events", "+974 5555 0188", 1264, 41, { d0_30: 224, d31_60: 1040 }, 1500, "Hana", {
+    promisePassed: true, promisePassedOn: "2026-11-09T00:00:00+03:00", lastRemindedAt: "2026-11-02T10:05:00+03:00", remindersSent: 1,
+    lastInboundAt: "2026-11-11T17:52:00+03:00",
+  }),
+  row("dana-home", "Dana Home Services", "+974 5555 0131", 1150, 28, { d0_30: 1150 }, 2000, "Reem"),
+  row("palm-court", "Palm Court Offices", "+974 5555 0171", 1080, 38, { d31_60: 1080 }, 1500, "Salma", {
+    lastRemindedAt: "2026-11-09T16:20:00+03:00", remindersSent: 1,
+  }),
+  row("omar-ali", "Omar Ali", "+974 5555 0121", 480, 112, { d90_plus: 480 }, 400, "Salma", {
+    lastRemindedAt: "2026-11-01T10:30:00+03:00", remindersSent: 4, lastInboundAt: "2026-11-12T07:54:00+03:00",
+  }),
+  row("noor-abdullah", "Noor Abdullah", "+974 5555 0125", 450, 45, { d31_60: 450 }, 500, "Salma", {
+    promisedUntil: "2026-11-18T00:00:00+03:00", lastRemindedAt: "2026-11-09T09:15:00+03:00", remindersSent: 1,
+  }),
+  row("sara-haddad", "Sara Haddad", "+974 5555 0118", 310, 94, { d90_plus: 310 }, 500, "Bilal", {
+    optedOut: true, optedOutAt: "2026-10-21T13:10:00+03:00", lastRemindedAt: "2026-10-18T10:00:00+03:00", remindersSent: 2,
+  }),
+  row("rashid-mahmoud", "Rashid Mahmoud", "+974 5555 0134", 250, 15, { d0_30: 250 }, 500, "Hana"),
+  row("layla-farouk", "Layla Farouk", "+974 5555 0138", 136, 6, { d0_30: 136 }, 500, "Yusuf"),
+  row("aisha-hamad", "Aisha Hamad", "+974 5555 0112", 120, 10, { d0_30: 120 }, 500, "Hana"),
+  row("mariam-saleh", "Mariam Saleh", "+974 5555 0199", 0, 0, {}, 2500, "Hana"),
+  row("fatima-darwish", "Fatima Darwish", "+974 5555 0166", 0, 0, {}, 1000, "Omar"),
+  row("khalid-nasser", "Khalid Nasser", "+974 5555 0144", 0, 0, {}, 500, "Salma"),
 ];
 
-export const FIXTURE_OPEN_ORDERS: CreditOpenOrder[] = [
-  {
-    orderNumber: "Order 1040",
-    customerName: "Gulf Courier W.L.L.",
-    status: "New",
-    tone: "warn",
-    amount: 273000,
-    impactText: "With it: QAR\u00a05,970 of QAR\u00a06,000",
-  },
-  {
-    orderNumber: "Order 1031",
-    customerName: "Dana Home Services",
-    status: "Ready",
-    tone: "ok",
-    amount: 36000,
-    impactText: "With it: QAR\u00a01,510 of QAR\u00a02,000",
-  },
-  {
-    orderNumber: "Order 1035",
-    customerName: "Bayview School",
-    status: "Confirmed",
-    tone: "n",
-    amount: 23200,
-    impactText: "With it: QAR\u00a01,592 of QAR\u00a02,000",
-  },
-  {
-    orderNumber: "Order 1029",
-    customerName: "Palm Court Offices",
-    status: "Ready",
-    tone: "ok",
-    amount: 12000,
-    impactText: "With it: QAR\u00a01,200 of QAR\u00a01,500",
-  },
+/** Money taken in November that the owner wrote down (or a pay link confirmed). */
+export const PAYMENTS: Payment[] = [
+  { id: "p-1", at: "2026-11-11T14:20:00+03:00", customerId: "gulf-courier", customerName: "Gulf Courier W.L.L.", amount: qar(1500), method: "bank_transfer", by: "Omar" },
+  { id: "p-2", at: "2026-11-10T11:02:00+03:00", customerId: "dana-home", customerName: "Dana Home Services", amount: qar(400), method: "link", by: "Your provider" },
+  { id: "p-3", at: "2026-11-05T16:45:00+03:00", customerId: "palm-court", customerName: "Palm Court Offices", amount: qar(380), method: "cheque", by: "Salma" },
+  { id: "p-4", at: "2026-11-02T09:30:00+03:00", customerId: "rashid-mahmoud", customerName: "Rashid Mahmoud", amount: qar(200), method: "cash", by: "Hana" },
 ];
 
-export const FIXTURE_RECENT_PAYMENTS: CreditPaymentRecord[] = [
-  {
-    date: "Wed 11 Nov",
-    customerName: "Gulf Courier W.L.L.",
-    howText: "Bank transfer · Omar wrote it down",
-    amount: 150000,
-  },
-  {
-    date: "Tue 10 Nov",
-    customerName: "Dana Home Services",
-    howText: "Pay link · your provider confirmed it",
-    amount: 40000,
-  },
-  {
-    date: "Thu 5 Nov",
-    customerName: "Palm Court Offices",
-    howText: "Cheque · Salma wrote it down",
-    amount: 38000,
-  },
-  {
-    date: "Mon 2 Nov",
-    customerName: "Rashid Mahmoud",
-    howText: "Cash · sent from Hana's WhatsApp",
-    amount: 20000,
-  },
+/** Orders put on account that are not handed over yet, so not in the balance. */
+export const OPEN_ORDERS: OpenOrder[] = [
+  { id: "o-1040", number: 1040, customerName: "Gulf Courier W.L.L.", status: "new", amount: qar(2730), limit: qar(6000), owes: qar(3240) },
+  { id: "o-1031", number: 1031, customerName: "Dana Home Services", status: "ready", amount: qar(360), limit: qar(2000), owes: qar(1150) },
+  { id: "o-1035", number: 1035, customerName: "Bayview School", status: "confirmed", amount: qar(232), limit: qar(2000), owes: qar(1360) },
+  { id: "o-1029", number: 1029, customerName: "Palm Court Offices", status: "ready", amount: qar(120), limit: qar(1500), owes: qar(1080) },
 ];
 
-export const FIXTURE_BLUEFIN_UNPAID: UnpaidSale[] = [
-  {
-    title: "Invoice INV-2026-0358",
-    itemsText: "6 × Interior detail, 8 × Full wash, 2 × Engine bay clean",
-    putOnAccountDate: "Fri 2 Oct",
-    ageDays: 41,
-    amount: 154000,
-    paid: 50000,
-    stillOwed: 104000,
-  },
-  {
-    title: "Order 1028",
-    itemsText: "12 × Air freshener · New car, 2 × Glass cleaner",
-    putOnAccountDate: "Today 09:26",
-    ageDays: 0,
-    isToday: true,
-    amount: 22400,
-    paid: 0,
-    stillOwed: 22400,
-  },
+const entry = (
+  id: string, kind: CreditEntry["kind"], amount: number, at: string, ref: string, by: string, note: string,
+  extra: Partial<CreditEntry> = {},
+): CreditEntry => ({ id, kind, amount: qar(amount), at, ref, against: null, note, by, method: null, ...extra });
+
+/** Bluefin Events' book, newest last. */
+export const BLUEFIN_ENTRIES: CreditEntry[] = [
+  entry("e-1", "sale", 360, "2026-09-05T13:30:00+03:00", "INV-2026-0297", "Hana", "6 × Full wash · the first sale on account"),
+  entry("e-2", "payment", 360, "2026-09-21T10:12:00+03:00", "TRX-71920", "Omar", "Bank transfer · sent from Omar's WhatsApp: \"Bluefin paid 360\"", { method: "bank_transfer" }),
+  entry("e-3", "sale", 1620, "2026-10-02T09:12:00+03:00", "INV-2026-0358", "Omar", "6 × Interior detail, 8 × Full wash, 3 × Engine bay clean"),
+  entry("e-4", "reversal", 80, "2026-10-06T11:15:00+03:00", "CN-2026-0009", "Omar", "1 × Engine bay clean was not done · taken off INV-2026-0358", { against: "INV-2026-0358" }),
+  entry("e-5", "payment", 500, "2026-10-14T18:02:00+03:00", "PL-2026-100782", "Your provider", "Paid by pay link, credit card · receipt R-2026-1688", { method: "link" }),
+  entry("e-6", "sale", 224, "2026-11-12T09:26:00+03:00", "Order #1028", "Yusuf", "12 × Air freshener · New car, 2 × Glass cleaner · handed over"),
 ];
 
-export const FIXTURE_BLUEFIN_ENTRIES: LedgerEntry[] = [
-  {
-    date: "Thu 12 Nov",
-    time: "09:26",
-    kind: "Sale on account",
-    documentRef: "Order 1028",
-    note: "12 × Air freshener · New car, 2 × Glass cleaner · handed over",
-    writtenBy: "Yusuf",
-    putOnAccount: 22400,
-    paid: null,
-    owesAfter: 126400,
+export const ACCOUNT_DETAILS: Record<string, { entries: CreditEntry[]; since: string; promise: PromiseRecord | null }> = {
+  bluefin: {
+    entries: BLUEFIN_ENTRIES,
+    since: "2026-09-05T13:30:00+03:00",
+    promise: { madeAt: "2026-11-02T10:12:00+03:00", via: "button", until: "2026-11-09T00:00:00+03:00", amount: qar(1040), note: "" },
   },
-  {
-    date: "Wed 14 Oct",
-    time: "18:02",
-    kind: "Payment",
-    documentRef: "PL-2026-100782",
-    note: "Paid by pay link, credit card · receipt R-2026-1688",
-    writtenBy: "Your provider",
-    putOnAccount: null,
-    paid: 50000,
-    owesAfter: 104000,
-  },
-  {
-    date: "Tue 6 Oct",
-    time: "11:15",
-    kind: "Sale cancelled",
-    documentRef: "CN-2026-0009",
-    note: "1 × Engine bay clean was not done · taken off INV-2026-0358",
-    writtenBy: "Omar",
-    putOnAccount: -8000,
-    paid: null,
-    owesAfter: 154000,
-  },
-  {
-    date: "Fri 2 Oct",
-    time: "16:40",
-    kind: "Sale on account",
-    documentRef: "INV-2026-0358",
-    note: "6 × Interior detail, 8 × Full wash, 3 × Engine bay clean",
-    writtenBy: "Omar",
-    putOnAccount: 162000,
-    paid: null,
-    owesAfter: 162000,
-  },
-  {
-    date: "Mon 21 Sep",
-    time: "10:12",
-    kind: "Payment",
-    documentRef: "TRX-71920",
-    note: "Bank transfer · sent from Omar's WhatsApp: \"Bluefin paid 360\"",
-    writtenBy: "Omar",
-    putOnAccount: null,
-    paid: 36000,
-    owesAfter: 0,
-  },
-  {
-    date: "Sat 5 Sep",
-    time: "13:30",
-    kind: "Sale on account",
-    documentRef: "INV-2026-0297",
-    note: "6 × Full wash · the first sale on account",
-    writtenBy: "Hana",
-    putOnAccount: 36000,
-    paid: null,
-    owesAfter: 36000,
-  },
-];
-
-export const FIXTURE_REMINDERS_DATA = {
-  willRemind: [
-    {
-      id: "bayview-school",
-      name: "Bayview School",
-      sub: "QAR\u00a01,360 · 72 days",
-      tone: "Firm" as const,
-      tagTone: "warn" as const,
-      goes: "Approved template",
-      goesSub: "Window closed",
-    },
-    {
-      id: "bluefin",
-      name: "Bluefin Events",
-      sub: "QAR\u00a01,264 · 41 days",
-      tone: "Gentle" as const,
-      tagTone: "n" as const,
-      goes: "Message with buttons",
-      goesSub: "Promise passed Mon 9 Nov",
-    },
-    {
-      id: "omar-ali",
-      name: "Omar Ali",
-      sub: "QAR\u00a0480 · 112 days",
-      tone: "Final" as const,
-      tagTone: "bad" as const,
-      goes: "Message with buttons",
-      goesSub: "Wrote today 07:54",
-    },
-  ],
-  skipped: [
-    {
-      name: "Noor Abdullah",
-      sub: "QAR\u00a0450 · 45 days",
-      why: "Promised to pay by Wed 18 Nov",
-      whySub: "No reminder goes while a promise is open",
-    },
-    {
-      name: "Palm Court Offices",
-      sub: "QAR\u00a01,080 · 38 days",
-      why: "Reminded Mon 9 Nov 16:20",
-      whySub: "3 days must pass: can go from today 16:20",
-    },
-    {
-      name: "Sara Haddad",
-      sub: "QAR\u00a0310 · 94 days",
-      why: "Said STOP on Wed 21 Oct",
-      whySub: "Gets no messages. Her number is +974\u00a05555\u00a00118",
-    },
-  ],
 };
+
+/** What happened around the reminders sent to Bluefin Events, newest first. */
+export const BLUEFIN_REMINDERS: ReminderEvent[] = [
+  { id: "r-1", kind: "promise", at: "2026-11-02T10:12:00+03:00", until: "2026-11-09T00:00:00+03:00" },
+  { id: "r-2", kind: "reminder", at: "2026-11-02T10:05:00+03:00", tone: "gentle", amount: qar(1040), readAt: "2026-11-02T10:11:00+03:00", by: "Hana" },
+];
+
+export const EARLIER_STATEMENTS: EarlierStatement[] = [
+  { id: "s-6", number: "ST-2026-0006", at: "2026-11-01T10:00:00+03:00", amount: qar(1040), read: true },
+  { id: "s-3", number: "ST-2026-0003", at: "2026-10-01T10:00:00+03:00", amount: 0, read: true },
+];
+
+export const BANK = { name: "Sample Bank", account: "Nuqta Car Care W.L.L.", iban: "QA00 SMPL 0000 0000 0000 1234 5678" };
+export const PAY_LINK = "pay.alyr.qa/nuqta/s9d2-k1vb";
+
+const AGE_OF_NEWER: Record<keyof Buckets, number> = { d0_30: 3, d31_60: 35, d61_90: 65, d90_plus: 95 };
+
+/**
+ * A book for a sample customer that has no hand-written one: one sale per age bucket that holds money,
+ * the oldest as old as the account says. It reads back to the same balance, buckets and age
+ * (a test holds it to that), so the account screen and the list never disagree.
+ */
+export function sampleBook(account: CreditAccountRow): CreditEntry[] {
+  const keys = (["d90_plus", "d61_90", "d31_60", "d0_30"] as const).filter((k) => account.buckets[k] > 0);
+  return keys.map((k, i) => {
+    const days = i === 0 ? account.oldestDays : AGE_OF_NEWER[k];
+    const at = new Date(Date.parse(PREVIEW_NOW) - days * 86_400_000 - 3_600_000).toISOString();
+    return {
+      id: `${account.id}-${k}`, kind: "sale" as const, amount: account.buckets[k], at,
+      ref: `INV-2026-${String(300 + i + account.id.length).padStart(4, "0")}`, against: null,
+      note: "Put on account", by: account.assigned?.name ?? "", method: null,
+    };
+  });
+}
+
+/** An account's book: Bluefin's own, or a sample one made from its row. */
+export function bookOf(account: CreditAccountRow): CreditEntry[] {
+  return ACCOUNT_DETAILS[account.id]?.entries ?? sampleBook(account);
+}
+
+/** Everything the preview page shows: Bluefin Events has its own history, the others a book made from their row. */
+export function previewData(): CreditData {
+  const books: Record<string, CreditEntry[]> = {};
+  for (const a of ACCOUNTS) books[a.id] = bookOf(a);
+  return {
+    now: PREVIEW_NOW,
+    shop: SHOP,
+    rows: ACCOUNTS,
+    payments: PAYMENTS,
+    openOrders: OPEN_ORDERS,
+    team: TEAM,
+    books,
+    extras: {
+      bluefin: {
+        since: ACCOUNT_DETAILS.bluefin.since,
+        promise: ACCOUNT_DETAILS.bluefin.promise,
+        reminders: BLUEFIN_REMINDERS,
+        separate: { amount: qar(300), booking: 54 },
+        lastStatement: EARLIER_STATEMENTS[0],
+        email: "accounts@bluefinevents.example",
+      },
+    },
+    payLink: PAY_LINK,
+    payHow: null,
+    bank: BANK,
+    earlier: EARLIER_STATEMENTS,
+    nextStatementNumber: "ST-2026-0007",
+    lastStatementEnd: "2026-11-01T23:59:00+03:00",
+  };
+}
