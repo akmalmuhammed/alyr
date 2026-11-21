@@ -4,12 +4,8 @@
 // names stay Latin with their Arabic descriptor; "Agent" is never translated. The Arabic is a
 // careful draft until the native review (ALY-66).
 
-import { counted, isolate, type Noun } from "../../../_ui/format.ts";
-
-const SERVICE: Noun = {
-  en: ["service", "services"],
-  ar: ["خدمة واحدة", "خدمتان", "خدمات", "خدمة"]
-};
+import { counted, isolate } from "../../../_ui/format.ts";
+import { SERVICE } from "./nouns.ts";
 
 const EN = {
   brandName: "ALYR",

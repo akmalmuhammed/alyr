@@ -35,7 +35,8 @@ export const FIXTURE_BUSINESSES: BusinessChoice[] = [
 /** The device line under the code card: what the browser reported, and when (Thu 12 Nov 2026, 09:40 in Doha). */
 export const FIXTURE_SESSION = { browser: "Chrome", os: "Windows", place: "Doha", at: "2026-11-12T09:40:00+03:00" } as const;
 
-export const FIXTURE_ORDER_NUMBER = "#1042";
+/** The order the owner was working on when the sign-in ended (written with a hash in front). */
+export const FIXTURE_ORDER = 1042;
 export const FIXTURE_LAST_SAVED = "2026-11-12T09:40:00+03:00";
 
 export const FIXTURE_SERVICES: ServiceItem[] = [

@@ -3,7 +3,7 @@
 import { Banner, Button, Field, Input, Panel, SectionLabel } from "../../../_ui";
 import { formatTime, isolate } from "../../../_ui/format";
 import type { AuthCopyStrings } from "./copy";
-import { FIXTURE_CODE, FIXTURE_EMAIL, FIXTURE_ORDER_NUMBER } from "./fixtures";
+import { FIXTURE_CODE, FIXTURE_EMAIL, FIXTURE_ORDER } from "./fixtures";
 import type { LanguageChoice } from "./logic";
 
 export interface SignInStatesProps {
@@ -133,7 +133,7 @@ export function SignInStates({ t, lang }: SignInStatesProps) {
                 {t.sendCodeBtn}
               </Button>
             </div>
-            <p className="auth-state-footnote">{t.returnToOrderNote(isolate(FIXTURE_ORDER_NUMBER))}</p>
+            <p className="auth-state-footnote">{t.returnToOrderNote(isolate(`#${FIXTURE_ORDER}`))}</p>
           </Panel>
         </section>
       </div>
