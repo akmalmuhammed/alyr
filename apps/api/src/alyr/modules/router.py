@@ -16,15 +16,24 @@ from uuid import UUID
 import asyncpg
 
 from alyr.channels.base import InboundMessage, OutboundMessage
+from alyr.core import team
 from alyr.core.media import MediaService
 from alyr.core.normalise import has_arabic
 from alyr.core.outbound import Outbound
-from alyr.modules import report
+from alyr.modules import pleasantries, report
 from alyr.modules.bookings import chat as bookings_chat
-from alyr.modules.items import wa_customer, wa_order, wa_staff
+from alyr.modules.items import wa_customer, wa_order, wa_staff, wa_text
 from alyr.modules.ledger import chat as ledger_chat
 from alyr.modules.orders import chat as orders_chat
 from alyr.modules.owner import chat as owner_chat
+
+# Kinds of message no module reads: a photo, a voice note, audio, a video, a file, a sticker, a
+# place, a contact card, or something WhatsApp could not pass on. A person looks at them. (Storing
+# and showing the file is a later job; for now the inbox says what arrived.)
+UNREADABLE = frozenset({
+    "image", "audio", "voice", "video", "document", "sticker", "location", "contacts",
+    "unsupported",
+})
 
 
 async def handle(
@@ -36,6 +45,9 @@ async def handle(
     outbound: Outbound,
     media: MediaService | None = None,
 ) -> list[OutboundMessage]:
+    if message.kind == "reaction":
+        # A heart or a thumbs-up on one of our messages is not a question: no menu, no reply.
+        return []
     # A staff number asking about the shop, or anyone proving a phone with LINK (D-065).
     replies = await owner_chat.maybe_handle(conn, contact, message)
     if replies is not None:
@@ -59,6 +71,16 @@ async def handle(
         )
         if replies is not None:
             return replies
+    if contact["role"] != "staff" and message.kind in UNREADABLE:
+        # Nothing above took it (the Catalog's order chat answers its own shops). Say so once
+        # and leave it to a person, instead of answering a voice note with the welcome menu.
+        return await _hand_to_person(conn, tenant_id, contact, message)
+    if contact["role"] != "staff" and not message.reply_id and pleasantries.is_thanks(
+        message.text
+    ):
+        # "thanks", "ok": nothing asked for an answer, so no menu comes back (T10). It stays in the
+        # inbox for a person; the order chat above has already taken an "ok" that answers it.
+        return []
     if "bookings" in modules:
         replies = await bookings_chat.maybe_handle(
             conn, tenant_id, contact, message, web_url, outbound
@@ -88,6 +110,31 @@ async def handle(
         if replies is not None:
             return replies
     return _acknowledge(contact, message)
+
+
+async def _hand_to_person(
+    conn: asyncpg.Connection, tenant_id: UUID, contact: asyncpg.Record, message: InboundMessage
+) -> list[OutboundMessage]:
+    """Write on the conversation that the customer needs a person, and tell them it was
+    received: once, not for every photo of a set (ten minutes, as the order chat does)."""
+    recent = await conn.fetchval(
+        "select true from activity where subject = 'conversation' and subject_id = $1 "
+        "and action = 'asked_person' and created_at > now() - interval '10 minutes'",
+        contact["id"],
+    )
+    if recent:
+        return []
+    await team.record(
+        conn, "conversation", contact["id"], "asked_person", team.CUSTOMER, contact["id"],
+        {"why": "unreadable", "kind": message.kind},
+    )
+    lang = "ar" if contact["lang"] == "ar" or has_arabic(message.text) else "en"
+    shop = await conn.fetchrow("select name, name_ar from tenants where id = $1", tenant_id)
+    name = shop["name_ar"] if lang == "ar" and shop["name_ar"] else shop["name"]
+    body = wa_text.say("person_unreadable", lang, shop=name)
+    # An Arabic line opens with a right-to-left mark, so a Latin shop name does not turn it round.
+    return [OutboundMessage(
+        to=contact["id"], body="‏" + body if lang == "ar" else body, lang=lang)]
 
 
 def _acknowledge(contact: asyncpg.Record, message: InboundMessage) -> list[OutboundMessage]:

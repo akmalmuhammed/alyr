@@ -13,29 +13,39 @@ export type DepositTerms = {
   hold_minutes?: number;
 };
 
+/** The cancel window as Arabic counts it after «من» or «بـ», where the dual is «ساعتين»:
+ *  «ساعة واحدة», «ساعتين», «3 ساعات», «24 ساعة». `by` joins «بـ» to it. Mirrors `hours_ar` in the API. */
+export function hoursAr(hours: number, by = false): string {
+  if (hours === 1) return by ? "بساعة واحدة" : "ساعة واحدة";
+  if (hours === 2) return by ? "بساعتين" : "ساعتين";
+  const text = hours >= 3 && hours <= 10 ? `${hours} ساعات` : `${hours} ساعة`;
+  return by ? `بـ${text}` : text;
+}
+
 /** What happens to a paid deposit, in one or two sentences. */
 export function termsSentence(terms: DepositTerms, lang: Lang): string {
   const h = terms.cancel_hours;
+  const hours = h === 1 ? "1 hour" : `${h} hours`;
   const keepNoShow = terms.no_show === "keep";
   const keepLate = terms.late_cancel === "keep";
   if (lang === "ar") {
     const rule = keepNoShow && keepLate
-      ? `إذا لم تحضر، أو ألغيت قبل الموعد بأقل من ${h} ساعة، يحتفظ المحل بالعربون.`
+      ? `إذا لم تحضر، أو ألغيت قبل الموعد بأقل من ${hoursAr(h)}، يحتفظ المحل بالعربون.`
       : keepNoShow
-        ? `إذا لم تحضر يحتفظ المحل بالعربون. وإذا ألغيت قبل الموعد بأقل من ${h} ساعة يُرد إليك.`
+        ? `إذا لم تحضر يحتفظ المحل بالعربون. وإذا ألغيت قبل الموعد بأقل من ${hoursAr(h)} يُرد إليك.`
         : keepLate
-          ? `إذا ألغيت قبل الموعد بأقل من ${h} ساعة يحتفظ المحل بالعربون. وإذا لم تحضر يُرد إليك.`
+          ? `إذا ألغيت قبل الموعد بأقل من ${hoursAr(h)} يحتفظ المحل بالعربون. وإذا لم تحضر يُرد إليك.`
           : "يُرد العربون إليك إذا ألغيت أو لم تحضر.";
-    return `${rule} إذا ألغيت قبل الموعد بـ${h} ساعة أو أكثر يُرد إليك العربون.`;
+    return `${rule} إذا ألغيت قبل الموعد ${hoursAr(h, true)} أو أكثر يُرد إليك العربون.`;
   }
   const rule = keepNoShow && keepLate
-    ? `If you do not come, or cancel less than ${h} hours before, the shop keeps the deposit.`
+    ? `If you do not come, or cancel less than ${hours} before, the shop keeps the deposit.`
     : keepNoShow
-      ? `If you do not come, the shop keeps the deposit. If you cancel less than ${h} hours before, it is refunded.`
+      ? `If you do not come, the shop keeps the deposit. If you cancel less than ${hours} before, it is refunded.`
       : keepLate
-        ? `If you cancel less than ${h} hours before, the shop keeps the deposit. If you do not come, it is refunded.`
+        ? `If you cancel less than ${hours} before, the shop keeps the deposit. If you do not come, it is refunded.`
         : "The deposit is refunded if you cancel or do not come.";
-  return `${rule} Cancel ${h} hours or more before and it is refunded.`;
+  return `${rule} Cancel ${hours} or more before and it is refunded.`;
 }
 
 /** Card payments wait for the shop's own payment provider (hard rule 3, D-044). Until then a

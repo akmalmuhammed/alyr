@@ -92,6 +92,12 @@ def purge(tenant_ids) -> None:
 @pytest.fixture(scope="module")
 def shops(tmp_path_factory):
     """All the demo shops, made once. `HELD` is read before any request can sweep a hold."""
+    # Other test files switch the Catalog on for the Al Noor shop and the one test database keeps
+    # it. The test below asks that making the demo shops writes no such row, so start without one
+    # (it used to pass only because test_catalog_cards, just before this file, removed it, which
+    # fails when the suite is run in slices or this file on its own).
+    owner_sql("delete from tenant_modules where tenant_id = $1 and module_key = 'catalog'",
+              DEMO_TENANT_ID)
     made = run(make(SHOPS, folder=tmp_path_factory.mktemp("tiles")))
     for shop in SHOPS:
         [row] = owner_sql(

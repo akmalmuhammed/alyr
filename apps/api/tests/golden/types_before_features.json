@@ -1621,8 +1621,8 @@
      "sort": 0
     },
     {
-     "name": "Beard care",
-     "name_ar": "العناية باللحية",
+     "name": "Skin & nails",
+     "name_ar": "العناية بالبشرة والأظافر",
      "sort": 1
     }
    ]
@@ -1755,8 +1755,8 @@
      "name_ar": "العناية بالشعر"
     },
     {
-     "name": "Beard care",
-     "name_ar": "العناية باللحية"
+     "name": "Skin & nails",
+     "name_ar": "العناية بالبشرة والأظافر"
     }
    ],
    "type": "salon"

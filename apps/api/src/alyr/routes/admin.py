@@ -26,6 +26,7 @@ from alyr.core import (
     auth,
     backoffice,
     card_billing,
+    onboarding,
     price_notice,
     pricing,
     readiness,
@@ -346,6 +347,13 @@ async def create_business(
             await template.apply(
                 conn, target, await shop_clock.load(conn), samples_too=False, by=_by(staff)
             )
+        kind = presets.PRESET_BY_KEY.get(template_change.business_type_of(target))
+        if kind is not None and kind.way == "appointments" and "bookings" in modules:
+            # A booking business of a type that has a starting setup begins with it, as one made at
+            # /start does (D-196): its services, hours and people, for the owner to edit. Chosen by
+            # picking the type's template; with none, the business is empty as before.
+            async with request.app.state.db.tenant(tenant_id) as conn:
+                await onboarding.seed_bookings_setup(conn, kind)
     # The owner learns the workspace exists and how to sign in to it (specs/037).
     async with request.app.state.db.tenant(tenant_id) as conn:
         owner = await conn.fetchval(
