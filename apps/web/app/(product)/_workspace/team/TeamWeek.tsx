@@ -1,532 +1,195 @@
 "use client";
 
-import React, { useState } from "react";
-import { Button } from "@/app/_ui/Button";
-import { Avatar } from "@/app/_ui/Avatar";
-import { teamCopy, type Lang } from "./copy";
-import { calculateOutcomeParts, type WorkPerson } from "./logic";
+import type { ReactNode } from "react";
+import { Avatar, Banner, Button, PageTitle, Panel, PanelFooter, PanelHeader, Stack, Stat, Table, Tabs } from "@/app/_ui";
+import type { TableColumn } from "@/app/_ui";
+import { formatDate, formatTime, money, none } from "@/app/_ui/format";
+import { T } from "./copy";
+import type { Lang } from "./copy";
+import { OUTCOMES, PERIODS, answerMinutes, outcomeParts } from "./logic";
+import type { Period, Report, WorkRow } from "./logic";
 
 export type TeamWeekProps = {
-  lang?: Lang;
-  people: WorkPerson[];
-  onOpenInbox?: () => void;
+  lang: Lang;
+  report: Report;
+  /** When the numbers were read (Doha time, ISO). */
+  updatedAt: string;
+  period: Period;
+  onPeriod: (period: Period) => void;
+  /** Where "Open the inbox" goes. */
+  inboxHref: string;
+  /** A drawer or dialog is on top: the page's main button is an outline. */
+  covered: boolean;
+  /** The one banner of the page (offline or a failure); the waiting banner is drawn only when there is none. */
+  banner?: ReactNode;
+  /** The period is being read again: the old numbers stay. */
+  refreshing?: boolean;
 };
 
-export function TeamWeek({
-  lang = "en",
-  people,
-  onOpenInbox,
-}: TeamWeekProps) {
-  const t = teamCopy[lang];
-  const [period, setPeriod] = useState<"today" | "week" | "28d">("week");
+type Line = { key: string; kind: "person" | "nobody" | "all"; row: WorkRow };
+
+/** The legend of the "how they ended" bars. */
+function Key({ lang }: { lang: Lang }) {
+  const t = T[lang];
+  return (
+    <ul className="team-key">
+      {OUTCOMES.map((o) => (
+        <li key={o}><span className={`team-swatch team-swatch--${o}`} aria-hidden="true" />{t.outcomes[o]}</li>
+      ))}
+    </ul>
+  );
+}
+
+/** The managers' report: who has what open, how fast they answered, how conversations ended, A to Z. */
+export function TeamWeek(props: TeamWeekProps) {
+  const { lang, report, updatedAt, period, covered, banner, refreshing } = props;
+  const t = T[lang];
+  const { all, nobody } = report;
+  const since = formatDate(report.since, lang);
+  const answer = answerMinutes(all.firstAnswer);
+  const dash = <span className="team-sub">{none(lang)}</span>;
+
+  const lines: Line[] = [
+    ...report.rows.map((row): Line => ({ key: row.id ?? row.name, kind: "person", row })),
+    { key: "nobody", kind: "nobody", row: nobody },
+    { key: "all", kind: "all", row: all },
+  ];
+
+  const ended = (row: WorkRow) =>
+    row.closedTotal === 0 ? (
+      <span className="team-sub">{t.nothingClosed}</span>
+    ) : (
+      <span className="team-ended">
+        <Stack parts={outcomeParts(row.closed)} summary={t.outcomesSummary(row.closed)} />
+        <span className="team-sub">{t.outcomeLine(row.closed)}{row.closed.unsaid > 0 ? ` · ${t.outcomeNoOutcome(row.closed.unsaid)}` : ""}</span>
+      </span>
+    );
+
+  const first = (row: WorkRow) =>
+    row.firstAnswer !== null ? <span className="u-mono">{t.answerMinutes(answerMinutes(row.firstAnswer) ?? 0)}</span> : <span className="team-sub">{row.replies === 0 ? t.noReplies : none(lang)}</span>;
+
+  const columns: TableColumn<Line>[] = [
+    {
+      key: "who",
+      header: t.colPerson,
+      phone: "title",
+      cell: ({ kind, row }) =>
+        kind === "person" ? (
+          <span className="team-who">
+            <Avatar name={row.name} />
+            <span className="team-who-text">
+              <span className="team-name"><bdi>{row.name}</bdi></span>
+              <span className="team-sub">{row.role ? t.roles[row.role] : none(lang)}</span>
+            </span>
+          </span>
+        ) : (
+          <span className="team-who-text team-total">
+            <span>{kind === "nobody" ? t.nobodyYet : t.everyone}</span>
+            <span className="team-sub">{kind === "nobody" ? t.nobodyYetSub : t.everyoneSub(since)}</span>
+          </span>
+        ),
+    },
+    {
+      key: "open",
+      header: t.colOpen,
+      width: "7rem",
+      phone: "tag",
+      cell: ({ row }) =>
+        row.open === 0 && row.waiting === 0 ? (
+          dash
+        ) : (
+          <span className="team-cell-main">
+            <span><bdi className="u-mono">{row.open}</bdi> {t.openWord}</span>
+            {row.waiting > 0 ? <span className="team-warn">{t.waitingLine(row.waiting, row.oldestWait)}</span> : null}
+          </span>
+        ),
+    },
+    {
+      key: "replies",
+      header: t.colReplies,
+      width: "5rem",
+      align: "end",
+      mono: true,
+      phone: "foot",
+      cell: ({ kind, row }) => (kind === "nobody" ? dash : row.replies),
+      phoneCell: ({ kind, row }) => (
+        <span className="team-figs">
+          <span className="team-fig"><span className="u-label">{t.colReplies}</span><span className="u-mono">{kind === "nobody" ? none(lang) : row.replies}</span></span>
+          <span className="team-fig"><span className="u-label">{t.colAnswer}</span>{kind === "nobody" ? none(lang) : first(row)}</span>
+          <span className="team-fig"><span className="u-label">{t.colClosed}</span><span className="u-mono">{kind === "nobody" ? none(lang) : row.closedTotal}</span></span>
+          <span className="team-fig"><span className="u-label">{t.colOrders}</span><span className="u-mono">{row.orders}</span></span>
+          <span className="team-fig"><span className="u-label">{t.colSales}</span><span className="u-mono"><bdi>{row.orders === 0 ? none(lang) : money(row.sales, lang)}</bdi></span></span>
+        </span>
+      ),
+    },
+    { key: "answer", header: t.colAnswer, width: "6.5rem", cell: ({ kind, row }) => (kind === "nobody" ? dash : first(row)) },
+    { key: "closed", header: t.colClosed, width: "5rem", align: "end", mono: true, cell: ({ kind, row }) => (kind === "nobody" ? dash : row.closedTotal) },
+    { key: "ended", header: t.colEnded, width: "14rem", phone: "body", cell: ({ kind, row }) => (kind === "nobody" ? dash : ended(row)) },
+    {
+      key: "bookings",
+      header: t.colBookings,
+      width: "7rem",
+      cell: ({ kind, row }) => {
+        const marked = row.came + row.noShows;
+        if (kind === "nobody" || marked === 0) return dash;
+        return (
+          <span className="team-cell-main">
+            <span className="u-mono">{marked}</span>
+            <span className="team-sub">{row.noShows > 0 ? t.didNotCome(row.noShows) : t.allCame}</span>
+          </span>
+        );
+      },
+    },
+    { key: "orders", header: t.colOrders, width: "5rem", align: "end", mono: true, cell: ({ row }) => row.orders },
+    { key: "sales", header: t.colSales, width: "7rem", align: "end", mono: true, cell: ({ row }) => (row.orders === 0 ? dash : <bdi>{money(row.sales, lang)}</bdi>) },
+  ];
 
   return (
-    <div
-      className="team-workbench"
-      style={{ direction: lang === "ar" ? "rtl" : "ltr" }}
-    >
-      {/* ── Header ────────────────────────────────────────────────────────── */}
-      <header className="team-header">
-        <div className="team-header-main">
-          <h1 className="team-title">{t.weekTitle}</h1>
-          <p className="team-subtitle">{t.weekSubtitle}</p>
-        </div>
-        <div className="team-header-actions">
-          <div className="team-chips-wrap" role="tablist">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={period === "today"}
-              className={`team-chip ${period === "today" ? "team-chip-active" : ""}`}
-              onClick={() => setPeriod("today")}
-            >
-              {t.periodToday}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={period === "week"}
-              className={`team-chip ${period === "week" ? "team-chip-active" : ""}`}
-              onClick={() => setPeriod("week")}
-            >
-              {t.periodWeek}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={period === "28d"}
-              className={`team-chip ${period === "28d" ? "team-chip-active" : ""}`}
-              onClick={() => setPeriod("28d")}
-            >
-              {t.period28Days}
-            </button>
+    <div className="team-page" aria-busy={refreshing || undefined}>
+      <PageTitle
+        title={t.weekTitle}
+        sub={t.weekSub(period, since, formatTime(updatedAt, lang))}
+        right={
+          <div className="team-actions">
+            <Tabs
+              label={t.periodLabel}
+              value={String(period)}
+              items={PERIODS.map((p) => ({ id: String(p), label: t.periods[p] }))}
+              onChange={(id) => props.onPeriod(Number(id) as Period)}
+            />
+            <Button kind={covered ? "line" : "volt"} href={props.inboxHref}>{t.openInbox}</Button>
           </div>
-
-          <Button kind="line" size="md">
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-            {t.export}
-          </Button>
-
-          <Button
-            kind="volt"
-            size="md"
-            onClick={onOpenInbox}
-          >
-            {t.openInbox}
-          </Button>
-        </div>
-      </header>
-
-      {/* ── Warning Banner ────────────────────────────────────────────────── */}
-      <aside className="team-banner team-banner-warn" role="alert">
-        <div className="team-banner-content">
-          <span className="team-banner-dot" aria-hidden="true" />
-          <span>{t.weekBanner}</span>
-        </div>
-        <button
-          type="button"
-          className="team-banner-action"
-          onClick={onOpenInbox}
-        >
-          {t.weekBannerAction}
-        </button>
-      </aside>
-
-      {/* ── 4 Stat Cards ──────────────────────────────────────────────────── */}
-      <section className="team-stats-strip" aria-label="Work metrics">
-        <div className="team-stat-card">
-          <span className="team-stat-label">{t.statWaitingAnswer}</span>
-          <div className="team-stat-num-row">
-            <span className="team-stat-num" style={{ color: "var(--warn)" }}>
-              3
-            </span>
-            <span className="team-stat-delta team-stat-delta-warn">
-              {t.statWaitingDelta}
-            </span>
-          </div>
-          <span className="team-stat-sub">{t.statWaitingSub}</span>
-        </div>
-
-        <div className="team-stat-card">
-          <span className="team-stat-label">{t.statTypicalReply}</span>
-          <div className="team-stat-num-row">
-            <span className="team-stat-num">{t.statTypicalReplyVal}</span>
-          </div>
-          <span className="team-stat-sub">{t.statTypicalReplySub}</span>
-        </div>
-
-        <div className="team-stat-card">
-          <span className="team-stat-label">{t.statConvsClosed}</span>
-          <div className="team-stat-num-row">
-            <span className="team-stat-num">{t.statConvsClosedVal}</span>
-          </div>
-          <span className="team-stat-sub">{t.statConvsClosedSub}</span>
-        </div>
-
-        <div className="team-stat-card">
-          <span className="team-stat-label">{t.statSalesLookedAfter}</span>
-          <div className="team-stat-num-row">
-            <span className="team-stat-num">{t.statSalesVal}</span>
-          </div>
-          <span className="team-stat-sub">{t.statSalesSub}</span>
-        </div>
-      </section>
-
-      {/* ── Work by Person Table ──────────────────────────────────────────── */}
-      <section className="team-table-panel" aria-label={t.cardWorkByPerson}>
-        <div
-          style={{
-            padding: "0.75rem 1rem",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            borderBottom: "var(--rule-hairline) solid var(--line)",
-          }}
-        >
-          <span style={{ fontWeight: 600, fontSize: "var(--font-size-sm)" }}>
-            {t.cardWorkByPerson}
-          </span>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.875rem", fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem" }}>
-              <span style={{ inlineSize: "0.625rem", blockSize: "0.625rem", background: "var(--text)", borderRadius: "var(--radius-sm)" }} />
-              {t.outcomeSold}
-            </span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem" }}>
-              <span style={{ inlineSize: "0.625rem", blockSize: "0.625rem", background: "var(--text-muted)", borderRadius: "var(--radius-sm)" }} />
-              {t.outcomeBooked}
-            </span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem" }}>
-              <span style={{ inlineSize: "0.625rem", blockSize: "0.625rem", background: "var(--line)", borderRadius: "var(--radius-sm)" }} />
-              {t.outcomeAnswered}
-            </span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem" }}>
-              <span style={{ inlineSize: "0.625rem", blockSize: "0.625rem", background: "var(--bad)", borderRadius: "var(--radius-sm)" }} />
-              {t.outcomeLost}
-            </span>
-            <span>·</span>
-            <span>{t.aToZ}</span>
-          </div>
-        </div>
-
-        <div className="team-table-scroll" tabIndex={0} role="region" aria-label={t.teamReport}>
-          <table className="team-table">
-            <thead>
-              <tr>
-                <th className="team-th">{t.colPerson}</th>
-                <th className="team-th" style={{ inlineSize: "7rem" }}>{t.colOpenNow}</th>
-                <th className="team-th team-th-right" style={{ inlineSize: "3.5rem" }}>{t.colReplies}</th>
-                <th className="team-th" style={{ inlineSize: "6rem" }}>{t.colFirstAnswer}</th>
-                <th className="team-th team-th-right" style={{ inlineSize: "3.25rem" }}>{t.colClosed}</th>
-                <th className="team-th" style={{ inlineSize: "14rem" }}>{t.colHowEnded}</th>
-                <th className="team-th" style={{ inlineSize: "8rem" }}>{t.colBookingsMarked}</th>
-                <th className="team-th team-th-right" style={{ inlineSize: "3.5rem" }}>{t.colOrders}</th>
-                <th className="team-th team-th-right" style={{ inlineSize: "6.5rem" }}>{t.colSales}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {people.map((person) => {
-                const parts = calculateOutcomeParts(person.outcomes);
-                const closedCount = person.outcomes
-                  ? person.outcomes.sold +
-                    person.outcomes.booked +
-                    person.outcomes.answered +
-                    person.outcomes.lost
-                  : 0;
-
-                return (
-                  <tr key={person.name} className="team-tr">
-                    <td className="team-td">
-                      <div className="team-person-cell">
-                        <Avatar name={person.name} initials={person.initials} size={28} />
-                        <div className="team-person-meta">
-                          <span className="team-person-name">{person.name}</span>
-                          <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>
-                            {person.role}
-                          </span>
-                        </div>
-                      </div>
-                    </td>
-
-                    <td className="team-td">
-                      {person.open > 0 ? (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "0.125rem" }}>
-                          <span style={{ fontFamily: "var(--font-ui-mono)", fontWeight: 500 }}>
-                            {person.open} {t.filterAll.toLowerCase()}
-                          </span>
-                          {person.waiting && (
-                            <span style={{ fontSize: "var(--ui-micro)", fontWeight: 600, color: "var(--warn-text)" }}>
-                              {person.waiting}
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <span style={{ color: "var(--text-muted)", fontSize: "var(--font-size-xs)" }}>
-                          {t.none}
-                        </span>
-                      )}
-                    </td>
-
-                    <td className="team-td team-td-right">
-                      {person.replies > 0 ? person.replies : t.dash}
-                    </td>
-
-                    <td className="team-td">
-                      {person.firstAnswer !== "–" ? (
-                        <span style={{ fontFamily: "var(--font-ui-mono)" }}>{person.firstAnswer}</span>
-                      ) : (
-                        <span style={{ color: "var(--text-muted)", fontSize: "var(--font-size-xs)" }}>
-                          {t.noRepliesYet}
-                        </span>
-                      )}
-                    </td>
-
-                    <td className="team-td team-td-right">
-                      {closedCount > 0 ? closedCount : t.dash}
-                    </td>
-
-                    <td className="team-td">
-                      {person.outcomes && closedCount > 0 ? (
-                        <div className="team-week-stack-box">
-                          <div className="team-week-stack" aria-hidden="true">
-                            {parts.map((p) => (
-                              <span
-                                key={p.key}
-                                className={`team-week-part-${p.key}`}
-                                style={{ flexGrow: p.flex }}
-                              />
-                            ))}
-                          </div>
-                          <span className="team-week-stack-labels">
-                            {person.outcomes.sold} {t.outcomeSold.toLowerCase()} · {person.outcomes.booked} {t.outcomeBooked.toLowerCase()} · {person.outcomes.answered} {t.outcomeAnswered.toLowerCase()} · {person.outcomes.lost} {t.outcomeLost.toLowerCase()}
-                          </span>
-                        </div>
-                      ) : (
-                        <span style={{ color: "var(--text-muted)", fontSize: "var(--font-size-xs)" }}>
-                          {t.nothingClosedYet}
-                        </span>
-                      )}
-                    </td>
-
-                    <td className="team-td">
-                      {person.bookings ? (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "0.125rem" }}>
-                          <span style={{ fontFamily: "var(--font-ui-mono)" }}>
-                            {person.bookings.marked}
-                          </span>
-                          <span style={{ fontSize: "var(--ui-micro)", color: "var(--text-muted)" }}>
-                            {person.bookings.noShow > 0 ? t.didNotCome(person.bookings.noShow) : t.allCame}
-                          </span>
-                        </div>
-                      ) : (
-                        <span style={{ color: "var(--text-muted)" }}>{t.dash}</span>
-                      )}
-                    </td>
-
-                    <td className="team-td team-td-right">
-                      {person.orders > 0 ? person.orders : t.dash}
-                    </td>
-
-                    <td className="team-td team-td-right">
-                      {person.sales}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-
-            {/* ── Table Footers ─────────────────────────────────────────── */}
-            <tfoot>
-              {/* Row 1: Nobody yet */}
-              <tr style={{ background: "var(--surface-subtle)", borderTop: "var(--rule-hairline) solid var(--line)" }}>
-                <td className="team-td">
-                  <div style={{ display: "flex", flexDirection: "column" }}>
-                    <span style={{ fontWeight: 600 }}>{t.rowNobodyYet}</span>
-                    <span style={{ fontSize: "var(--ui-micro)", color: "var(--text-muted)" }}>
-                      {t.rowNobodySub}
-                    </span>
-                  </div>
-                </td>
-                <td className="team-td">
-                  <div style={{ display: "flex", flexDirection: "column" }}>
-                    <span style={{ fontFamily: "var(--font-ui-mono)" }}>1 open</span>
-                    <span style={{ fontSize: "var(--ui-micro)", color: "var(--warn)", fontWeight: 600 }}>
-                      1 waiting · 12 min
-                    </span>
-                  </div>
-                </td>
-                <td className="team-td team-td-right">{t.dash}</td>
-                <td className="team-td" style={{ color: "var(--text-muted)" }}>{t.dash}</td>
-                <td className="team-td team-td-right">{t.dash}</td>
-                <td className="team-td" style={{ color: "var(--text-muted)", fontSize: "var(--font-size-xs)" }}>
-                  {t.rowNobodyNote}
-                </td>
-                <td className="team-td" style={{ color: "var(--text-muted)" }}>{t.dash}</td>
-                <td className="team-td team-td-right">3</td>
-                <td className="team-td team-td-right">QAR 2,912</td>
-              </tr>
-
-              {/* Row 2: Everyone */}
-              <tr style={{ background: "var(--surface-subtle)", borderTop: "var(--rule-hairline) solid var(--line)", fontWeight: 600 }}>
-                <td className="team-td">
-                  <div style={{ display: "flex", flexDirection: "column" }}>
-                    <span>{t.rowEveryone}</span>
-                    <span style={{ fontSize: "var(--ui-micro)", color: "var(--text-muted)", fontWeight: 400 }}>
-                      {t.rowEveryoneSub}
-                    </span>
-                  </div>
-                </td>
-                <td className="team-td">
-                  <span style={{ fontFamily: "var(--font-ui-mono)" }}>15 open</span>
-                </td>
-                <td className="team-td team-td-right">320</td>
-                <td className="team-td">
-                  <span style={{ fontFamily: "var(--font-ui-mono)" }}>2 min</span>
-                </td>
-                <td className="team-td team-td-right">117</td>
-                <td className="team-td">
-                  <div className="team-week-stack-box">
-                    <div className="team-week-stack" aria-hidden="true">
-                      <span className="team-week-part-sold" style={{ flexGrow: 36 }} />
-                      <span className="team-week-part-booked" style={{ flexGrow: 47 }} />
-                      <span className="team-week-part-answered" style={{ flexGrow: 29 }} />
-                      <span className="team-week-part-lost" style={{ flexGrow: 5 }} />
-                    </div>
-                    <span className="team-week-stack-labels" style={{ fontWeight: 400 }}>
-                      36 sold · 47 booked · 29 answered · 5 lost
-                    </span>
-                  </div>
-                </td>
-                <td className="team-td">
-                  <div style={{ display: "flex", flexDirection: "column" }}>
-                    <span style={{ fontFamily: "var(--font-ui-mono)" }}>110</span>
-                    <span style={{ fontSize: "var(--ui-micro)", color: "var(--text-muted)", fontWeight: 400 }}>
-                      6 did not come
-                    </span>
-                  </div>
-                </td>
-                <td className="team-td team-td-right">52</td>
-                <td className="team-td team-td-right">QAR 21,480</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-        <footer className="team-table-footer">
-          {t.weekFooterRule}
-        </footer>
-      </section>
-
-      {/* ── Three Bottom Panels ───────────────────────────────────────────── */}
-      <div className="team-panels-row">
-        {/* Panel 1: Why lost */}
-        <section className="team-panel" aria-label={t.whyLostTitle}>
-          <header className="team-panel-head">
-            <span>{t.whyLostTitle}</span>
-            <span style={{ fontSize: "var(--ui-micro)", color: "var(--text-muted)", fontWeight: 400 }}>
-              {t.whyLostCount}
-            </span>
-          </header>
-          <div className="team-panel-body">
-            <div className="team-meter-row">
-              <span style={{ inlineSize: "9rem" }}>{t.whyLostPrice}</span>
-              <div className="team-meter-track" aria-hidden="true">
-                <div className="team-meter-fill" style={{ inlineSize: "100%" }} />
-              </div>
-              <span style={{ fontFamily: "var(--font-ui-mono)" }}>2</span>
-            </div>
-
-            <div className="team-meter-row">
-              <span style={{ inlineSize: "9rem" }}>{t.whyLostNotAvailable}</span>
-              <div className="team-meter-track" aria-hidden="true">
-                <div className="team-meter-fill" style={{ inlineSize: "50%" }} />
-              </div>
-              <span style={{ fontFamily: "var(--font-ui-mono)" }}>1</span>
-            </div>
-
-            <div className="team-meter-row">
-              <span style={{ inlineSize: "9rem" }}>{t.whyLostNoReply}</span>
-              <div className="team-meter-track" aria-hidden="true">
-                <div className="team-meter-fill" style={{ inlineSize: "50%" }} />
-              </div>
-              <span style={{ fontFamily: "var(--font-ui-mono)" }}>1</span>
-            </div>
-
-            <div className="team-meter-row">
-              <span style={{ inlineSize: "9rem" }}>{t.whyLostWentElsewhere}</span>
-              <div className="team-meter-track" aria-hidden="true">
-                <div className="team-meter-fill" style={{ inlineSize: "50%" }} />
-              </div>
-              <span style={{ fontFamily: "var(--font-ui-mono)" }}>1</span>
-            </div>
-
-            <div className="team-meter-row">
-              <span style={{ inlineSize: "9rem" }}>{t.whyLostOther}</span>
-              <div className="team-meter-track" aria-hidden="true">
-                <div className="team-meter-fill" style={{ inlineSize: "0%" }} />
-              </div>
-              <span style={{ fontFamily: "var(--font-ui-mono)" }}>0</span>
-            </div>
-          </div>
-          <footer className="team-panel-footer">
-            {t.whyLostFootnote}
-          </footer>
-        </section>
-
-        {/* Panel 2: First answer by day */}
-        <section className="team-panel" aria-label={t.firstAnswerTitle}>
-          <header className="team-panel-head">
-            <span>{t.firstAnswerTitle}</span>
-            <span style={{ fontSize: "var(--ui-micro)", color: "var(--text-muted)", fontWeight: 400 }}>
-              {t.firstAnswerSubtitle}
-            </span>
-          </header>
-          <div className="team-panel-body">
-            <div className="team-day-bars-row">
-              <div className="team-day-bar-col">
-                <span className="team-day-bar-val">3 min</span>
-                <div className="team-day-bar-pillar" style={{ blockSize: "2.625rem" }} />
-                <span className="team-day-bar-label">Sun</span>
-              </div>
-              <div className="team-day-bar-col">
-                <span className="team-day-bar-val">2 min</span>
-                <div className="team-day-bar-pillar" style={{ blockSize: "1.75rem" }} />
-                <span className="team-day-bar-label">Mon</span>
-              </div>
-              <div className="team-day-bar-col">
-                <span className="team-day-bar-val">2 min</span>
-                <div className="team-day-bar-pillar" style={{ blockSize: "1.75rem" }} />
-                <span className="team-day-bar-label">Tue</span>
-              </div>
-              <div className="team-day-bar-col">
-                <span className="team-day-bar-val">4 min</span>
-                <div className="team-day-bar-pillar" style={{ blockSize: "3.5rem" }} />
-                <span className="team-day-bar-label">Wed</span>
-              </div>
-              <div className="team-day-bar-col">
-                <span className="team-day-bar-val" style={{ fontWeight: 600, color: "var(--text)" }}>2 min</span>
-                <div className="team-day-bar-pillar team-day-bar-pillar-active" style={{ blockSize: "1.75rem" }} />
-                <span className="team-day-bar-label" style={{ fontWeight: 600, color: "var(--text)" }}>Thu</span>
-              </div>
-            </div>
-
-            <p style={{ margin: 0, fontSize: "var(--font-size-xs)", color: "var(--text-muted)", lineHeight: 1.4 }}>
-              {t.firstAnswerSlowestNote}
-            </p>
-          </div>
-          <footer className="team-panel-footer">
-            {t.firstAnswerFootnote}
-          </footer>
-        </section>
-
-        {/* Panel 3: How each number is counted */}
-        <section className="team-panel" aria-label={t.howCountedTitle}>
-          <header className="team-panel-head">
-            <span>{t.howCountedTitle}</span>
-          </header>
-          <div className="team-panel-body">
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem", paddingBottom: "0.5rem", borderBottom: "var(--rule-hairline) solid var(--line-subtle)" }}>
-              <span style={{ fontSize: "var(--font-size-xs)", fontWeight: 600 }}>{t.defWaitingTitle}</span>
-              <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)", lineHeight: 1.4 }}>
-                {t.defWaitingText}
-              </span>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem", paddingBottom: "0.5rem", borderBottom: "var(--rule-hairline) solid var(--line-subtle)" }}>
-              <span style={{ fontSize: "var(--font-size-xs)", fontWeight: 600 }}>{t.defRepliesTitle}</span>
-              <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)", lineHeight: 1.4 }}>
-                {t.defRepliesText}
-              </span>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem", paddingBottom: "0.5rem", borderBottom: "var(--rule-hairline) solid var(--line-subtle)" }}>
-              <span style={{ fontSize: "var(--font-size-xs)", fontWeight: 600 }}>{t.defClosedTitle}</span>
-              <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)", lineHeight: 1.4 }}>
-                {t.defClosedText}
-              </span>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-              <span style={{ fontSize: "var(--font-size-xs)", fontWeight: 600 }}>{t.defBookingsTitle}</span>
-              <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)", lineHeight: 1.4 }}>
-                {t.defBookingsText}
-              </span>
-            </div>
-          </div>
-        </section>
+        }
+      />
+      {banner ?? (all.waiting > 0 ? <Banner tone="warn">{t.waitingBanner(all.waiting, all.oldestWait, nobody.waiting)}</Banner> : null)}
+      <div className="team-stats">
+        <Stat
+          label={t.statWaiting}
+          value={all.waiting}
+          delta={all.waiting > 0 && all.oldestWait !== null ? t.statWaitingDelta(all.oldestWait) : undefined}
+          tone={all.waiting > 0 ? "warn" : "n"}
+          sub={t.statWaitingSub(report.waitingMinutes)}
+        />
+        <Stat label={t.statAnswer} value={answer === null ? none(lang) : t.answerMinutes(answer)} sub={t.statAnswerSub(all.replies)} />
+        <Stat label={t.statClosed} value={all.closedTotal} sub={t.statClosedSub(all.closed)} />
+        <Stat label={t.statSales} value={<bdi>{money(all.sales, lang)}</bdi>} sub={t.statSalesSub(all.orders, nobody.sales)} />
       </div>
+      <Panel clip>
+        <PanelHeader title={t.workTitle} sub={t.aToZ} right={<Key lang={lang} />} />
+        <Table caption={t.workCaption} columns={columns} rows={lines} rowKey={(l) => l.key} />
+        <PanelFooter>{t.weekRule}</PanelFooter>
+      </Panel>
+      <Panel clip>
+        <PanelHeader title={t.countedTitle} />
+        <dl className="team-defs team-defs-grid">
+          {t.defs(report.waitingMinutes).map(([term, text]) => (
+            <div key={term}>
+              <dt>{term}</dt>
+              <dd>{text}</dd>
+            </div>
+          ))}
+        </dl>
+      </Panel>
     </div>
   );
 }
