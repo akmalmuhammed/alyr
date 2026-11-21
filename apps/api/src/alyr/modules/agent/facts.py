@@ -16,7 +16,8 @@ from zoneinfo import ZoneInfo
 import asyncpg
 
 from alyr import catalog
-from alyr.core import not_sent, team
+from alyr.config import get_settings
+from alyr.core import not_sent, team, template_approval
 from alyr.core.auth import Staff
 from alyr.modules import report
 from alyr.modules.ledger import service as ledger
@@ -59,6 +60,12 @@ class Facts:
     first_name: str = ""
     money: bool = True
     has_records: bool = True
+    # Where the numbers come from when it is not ALYR's own chat, orders or bookings: None for
+    # a shop whose records ALYR made itself. The hook for "from your <system> export, up to
+    # <date>" (task I5, docs/lanes/product.md): the importer's reader sets
+    # {"name": <system>, "as_of": <date>} in `gather`, `view.render` says it, and nothing else
+    # about a rule changes. Nothing sets it yet.
+    data_source: dict | None = None
     # Messages that did not reach a customer in the last 48 hours (specs/036), any module
     not_sent: list = field(default_factory=list)
     # Discovery (spec 066): proposed changes waiting for approval, for owners and admins only
@@ -134,6 +141,13 @@ class Facts:
     team: dict | None = None
     report_on: bool = True
     report_numbers: int = 0
+    # Owners' email addresses the emailed copy goes to; 0 when ALYR's mail is not set up
+    report_emails: int = 0
+    # Whether any product the report covers is switched on (without one it is not sent)
+    report_covers: bool = True
+    # Meta has not approved the report's template on this shop's account, so outside a number's
+    # 24-hour window the WhatsApp copy is refused (D-194): the numbers are not a sure destination
+    report_whatsapp_held: bool = False
     report_at: datetime | None = None
     # Busiest hours: (Sunday-first day, hour) -> count over 28 days
     hours_grid: dict = field(default_factory=dict)
@@ -197,6 +211,30 @@ def _rows(records, label: str = "name", **detail_keys) -> list[Row]:
     ]
 
 
+async def holds_records(conn: asyncpg.Connection, modules: frozenset, now: datetime) -> bool:
+    """Whether ALYR holds anything it could count for this shop, in the products the shop
+    uses: an order that is not a test, a visit, a ledger entry, or a customer's message in the
+    chat. A table whose product is off does not count (a Discovery-only shop has nothing to
+    count here, and a bookings shop whose chat is not in ALYR has no chat to read), and the
+    weekly report is not sent for a shop with nothing (`report.WeeklyReports`)."""
+    parts = []
+    if "orders" in modules:
+        parts.append("exists (select 1 from orders where not is_test and created_at <= $1)")
+    if "bookings" in modules:
+        parts.append("exists (select 1 from bookings where created_at <= $1)")
+    if "ledger" in modules:
+        parts.append("exists (select 1 from ledger_entries where created_at <= $1)")
+    if "inbox" in modules:
+        parts.append(
+            "exists (select 1 from messages m join contacts c on c.id = m.contact_id "
+            "where c.role = 'customer' and c.wa_user_id not like 'TEST.%' "
+            "and m.direction = 'in' and m.created_at <= $1)"
+        )
+    if not parts:
+        return False
+    return bool(await conn.fetchval("select " + " or ".join(parts), now))
+
+
 async def gather(conn: asyncpg.Connection, staff: Staff, now: datetime | None = None) -> Facts:
     now = now or datetime.now(UTC)
     shop = await conn.fetchrow(
@@ -224,15 +262,7 @@ async def gather(conn: asyncpg.Connection, staff: Staff, now: datetime | None = 
     last = (ws - timedelta(days=7), now - timedelta(days=7))
     chart = (ws - timedelta(days=7), now)  # last week and this week, by day
 
-    f.has_records = bool(await conn.fetchval(
-        "select exists (select 1 from orders where not is_test and created_at <= $1) "
-        "or exists (select 1 from bookings where created_at <= $1) "
-        "or exists (select 1 from ledger_entries where created_at <= $1) "
-        "or exists (select 1 from messages m join contacts c on c.id = m.contact_id "
-        "           where c.role = 'customer' and c.wa_user_id not like 'TEST.%' and m.direction "
-        "= 'in' and m.created_at <= $1)",
-        now,
-    ))
+    f.has_records = await holds_records(conn, modules, now)
     f.not_sent = [
         Row(str(r["id"]), r["name"] or "",
             {"minutes": int((now - r["created_at"]).total_seconds() // 60)})
@@ -769,12 +799,14 @@ async def _hours(conn, f: Facts) -> None:
             "select starts_at as at from bookings "
             "where status in ('completed', 'booked', 'no_show')"
         )
-    else:
+    elif "inbox" in f.modules:
         source = (
             "select m.created_at as at from messages m join contacts c on c.id = m.contact_id "
             "where c.role = 'customer' and c.wa_user_id not like 'TEST.%' and m.direction = 'in'"
         )
-    f.hours_grid = {
+    else:
+        source = None  # no product that counts: chats are read only for a shop that has the inbox
+    f.hours_grid = {} if source is None else {
         (r["dow"], r["hour"]): r["n"]
         for r in await conn.fetch(
             f"select extract(dow from at at time zone $3::text)::int as dow, "
@@ -794,7 +826,15 @@ async def _hours(conn, f: Facts) -> None:
 
 async def _report(conn, f: Facts) -> None:
     f.report_on = await report.enabled(conn)
-    f.report_numbers = len(await report.recipients(conn))
+    people = await report.recipients(conn)
+    f.report_numbers = len(people)
+    f.report_emails = len(await report.email_recipients(conn))
+    if people:
+        template = "weekly_report_card" if get_settings().report_card_template else "weekly_report"
+        for lang in {"ar" if p["lang"] == "ar" else "en" for p in people}:
+            if await template_approval.refusal(conn, None, template, lang):
+                f.report_whatsapp_held = True
+    f.report_covers = bool(f.modules & report.PARTS.keys())
     _, f.report_at = report.next_send(f.now, f.tz)
 
 

@@ -14,6 +14,11 @@ MESSAGES: Noun = (("message", "messages"), ("رسالة واحدة", "رسالت
 REMINDERS: Noun = (("reminder", "reminders"), ("تذكير واحد", "تذكيران", "تذكيرات", "تذكيراً"))
 REQUESTS: Noun = (("request", "requests"), ("طلب واحد", "طلبان", "طلبات", "طلباً"))
 NUMBERS: Noun = (("number", "numbers"), ("رقم واحد", "رقمان", "أرقام", "رقماً"))
+EMAIL_ADDRESSES: Noun = (
+    ("email address", "email addresses"),
+    ("عنوان بريد إلكتروني واحد", "عنوانا بريد إلكتروني", "عناوين بريد إلكتروني",
+     "عنوان بريد إلكتروني"),
+)
 DAYS: Noun = (("day", "days"), ("يوم واحد", "يومان", "أيام", "يوماً"))
 HOURS: Noun = (("hour", "hours"), ("ساعة واحدة", "ساعتان", "ساعات", "ساعة"))
 MINUTES: Noun = (("minute", "minutes"), ("دقيقة واحدة", "دقيقتان", "دقائق", "دقيقة"))

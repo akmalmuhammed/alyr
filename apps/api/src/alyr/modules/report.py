@@ -261,6 +261,31 @@ async def _owner_emails(conn: asyncpg.Connection) -> list[str]:
     return [r["email"] for r in rows if _deliverable(r["email"])]
 
 
+async def email_recipients(conn: asyncpg.Connection) -> list[str]:
+    """The owners' addresses the emailed copy goes to: none while ALYR's mail is not set up,
+    so the Agent says "email" only when an email goes (`WeeklyReports.send`)."""
+    return await _owner_emails(conn) if mail.configured() else []
+
+
+async def holds_records(conn: asyncpg.Connection) -> bool:
+    """Whether ALYR holds an order, a visit, a chat or a ledger entry for this shop, in the
+    products it has on. A shop whose business happens somewhere else has none: its report
+    would be a page of zeros, and "0 visits" would read as a fact about the shop."""
+    from alyr.modules.agent import facts  # the Agent's engine reads this module
+
+    modules = frozenset(
+        r["module_key"]
+        for r in await conn.fetch("select module_key from tenant_modules where enabled")
+    )
+    return await facts.holds_records(conn, modules, datetime.now(UTC))
+
+
+async def has_something_to_say(conn: asyncpg.Connection, report: dict) -> bool:
+    """Records to report on and at least one section with a line to show. Without them
+    nothing is sent, and nothing is recorded as sent."""
+    return await holds_records(conn) and bool(render(report, await _shop(conn), "en")["sections"])
+
+
 # ------------------------------------------------------------------ sending it
 
 async def _draw(read, lang: str) -> tuple[bytes, dict]:
@@ -423,17 +448,21 @@ class WeeklyReports:
             if done is not None or not await enabled(conn):
                 return
             report = await build(conn, week_start)
-            if not report["sections"]:
+            if not report["sections"] or not await has_something_to_say(conn, report):
                 return
+            queued = await deliver(conn, self._outbound, report)
+            addresses = await email_recipients(conn)
+            if addresses:
+                letter = (addresses, email(report, await _shop(conn)))
+            # `sent_at` says the report reached somebody: a WhatsApp message was queued or an
+            # email is about to go. A report nobody could receive is kept, and not called sent.
             await conn.execute(
-                "insert into weekly_reports (week_start, sections, sent_at) values ($1, $2, now()) "
+                "insert into weekly_reports (week_start, sections, sent_at) "
+                "values ($1, $2, case when $3 then now() end) "
                 "on conflict (tenant_id, week_start) do update "
                 "set sections = excluded.sections, sent_at = excluded.sent_at",
-                week_start, report["sections"],
+                week_start, report["sections"], bool(queued or addresses),
             )
-            await deliver(conn, self._outbound, report)
-            if mail.configured():
-                letter = (await _owner_emails(conn), email(report, await _shop(conn)))
         if letter:
             # After the commit, and never retried: a failed email must not resend WhatsApp.
             addresses, (subject, text, html) = letter
@@ -468,6 +497,14 @@ async def on_staff_message(
         body = (
             "لم يُفعَّل بعد أي منتج يغطيه التقرير، فلا يوجد ما نرسله." if arabic
             else "Nothing the report covers is switched on yet, so there is nothing to report."
+        )
+        return [OutboundMessage(to=staff["id"], body=body)]
+    if not await holds_records(conn):
+        body = (
+            "لا شيء يُرسَل في التقرير بعد: ليس لدى ALYR أي طلبات أو زيارات أو محادثات أو "
+            "مبالغ مسجَّلة لهذا المحل." if arabic
+            else "There is nothing to report yet: ALYR holds no orders, visits, chats or money "
+            "records for this shop."
         )
         return [OutboundMessage(to=staff["id"], body=body)]
     image, text = (await card_and_text(conn, await last_week(conn), (lang,)))[lang]

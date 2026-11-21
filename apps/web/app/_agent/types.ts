@@ -39,7 +39,7 @@ export type AgentView = {
   now: string;
   state: "empty" | "first_week" | "quiet" | "normal";
   money: boolean;
-  lead: "orders" | "bookings" | "ledger" | "inbox";
+  lead: "orders" | "bookings" | "ledger" | "inbox" | "none";
   header: {
     greeting: string;
     date: string;
