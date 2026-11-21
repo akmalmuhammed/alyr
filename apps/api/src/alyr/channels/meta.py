@@ -15,6 +15,7 @@ from urllib.parse import urlsplit
 import httpx
 
 from alyr.channels.base import Address, InboundMessage, OutboundMessage
+from alyr.core.templates import has_buttons
 
 
 def verify_signature(app_secret: str, raw_body: bytes, header: str | None) -> bool:
@@ -23,6 +24,10 @@ def verify_signature(app_secret: str, raw_body: bytes, header: str | None) -> bo
         return False
     expected = hmac.new(app_secret.encode(), raw_body, hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, header.removeprefix("sha256="))
+
+
+# The kinds of message that carry a file Meta holds for us, by Meta's own type name.
+MEDIA_KINDS = ("image", "audio", "video", "document", "sticker")
 
 
 def parse_webhook(payload: dict) -> list[InboundMessage]:
@@ -47,15 +52,31 @@ def parse_webhook(payload: dict) -> list[InboundMessage]:
                 text, reply_id, media_id, mime_type = "", "", "", ""
                 if kind == "text":
                     text = msg.get("text", {}).get("body", "")
-                elif kind == "image":
-                    # A photo: its caption is the text, and the file is fetched by its ID.
-                    image = msg.get("image", {})
-                    text, media_id = image.get("caption", ""), image.get("id", "")
-                    mime_type = image.get("mime_type", "")
+                elif kind in MEDIA_KINDS:
+                    # A photo, a voice note or audio, a video, a file or a sticker: its caption,
+                    # if it has one, is the text, and the file is fetched by its ID. Nothing here
+                    # downloads it (storing media is a later job); the kind is kept so the inbox
+                    # can say what arrived. A voice note is Meta's audio type with `voice: true`
+                    # (webhook reference for incoming messages, checked 21 Nov 2026).
+                    item = msg.get(kind, {})
+                    text, media_id = item.get("caption", ""), item.get("id", "")
+                    mime_type = item.get("mime_type", "")
+                    if kind == "audio" and item.get("voice"):
+                        kind = "voice"
+                elif kind == "reaction":
+                    # A heart or a thumbs-up on one of our messages: the emoji is the text. It is
+                    # not a question, so nothing answers it (modules/router.py).
+                    text = msg.get("reaction", {}).get("emoji", "")
                 elif kind == "interactive":
                     inter = msg.get("interactive", {})
                     reply = inter.get("button_reply") or inter.get("list_reply") or {}
                     reply_id, text = reply.get("id", ""), reply.get("title", "")
+                elif kind == "button":
+                    # A tap on a template's quick-reply button arrives as `type: "button"` with
+                    # the payload ALYR set at send time and the button's own text (Meta's webhook
+                    # reference for button messages, checked 9 Nov 2026).
+                    tapped = msg.get("button", {})
+                    reply_id, text = tapped.get("payload", ""), tapped.get("text", "")
                 phone, user_id = msg.get("from", ""), msg.get("from_user_id", "")
                 if not (phone or user_id):
                     continue
@@ -247,6 +268,13 @@ def to_graph_payload(message: OutboundMessage, address: Address) -> dict:
     if message.template_params:
         values = [{"type": "text", "text": value} for value in message.template_params]
         components.append({"type": "body", "parameters": values})
+    # Quick-reply buttons (spec 066): one component per button, `index` its position in the
+    # template, the choice's id as the payload that comes back when it is tapped.
+    for index, choice in enumerate(message.choices if has_buttons(message.template_name) else ()):
+        components.append({
+            "type": "button", "sub_type": "quick_reply", "index": str(index),
+            "parameters": [{"type": "payload", "payload": choice.id}],
+        })
     if components:
         template["components"] = components
     return base | {"type": "template", "template": template}

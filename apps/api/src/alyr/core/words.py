@@ -16,6 +16,7 @@ REQUESTS: Noun = (("request", "requests"), ("طلب واحد", "طلبان", "ط
 NUMBERS: Noun = (("number", "numbers"), ("رقم واحد", "رقمان", "أرقام", "رقماً"))
 DAYS: Noun = (("day", "days"), ("يوم واحد", "يومان", "أيام", "يوماً"))
 HOURS: Noun = (("hour", "hours"), ("ساعة واحدة", "ساعتان", "ساعات", "ساعة"))
+MINUTES: Noun = (("minute", "minutes"), ("دقيقة واحدة", "دقيقتان", "دقائق", "دقيقة"))
 ITEMS: Noun = (("item", "items"), ("صنف واحد", "صنفان", "أصناف", "صنفاً"))
 DISCOUNTS: Noun = (("discount", "discounts"), ("خصم واحد", "خصمان", "خصومات", "خصماً"))
 ZONES: Noun = (
@@ -30,6 +31,7 @@ WRONG_CODES: Noun = (
     ("wrong sign-in code", "wrong sign-in codes"),
     ("رمز دخول خاطئ واحد", "رمزا دخول خاطئان", "رموز دخول خاطئة", "رمز دخول خاطئ"),
 )
+CHANGES: Noun = (("change", "changes"), ("تعديل واحد", "تعديلان", "تعديلات", "تعديلاً"))
 STEPS: Noun = (("setup step", "setup steps"), ("خطوة واحدة", "خطوتان", "خطوات", "خطوة"))
 
 

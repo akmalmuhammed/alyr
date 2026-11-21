@@ -13,6 +13,8 @@ import { call } from "./api";
 import { identifyFromSession } from "../../_analytics/ProductAnalytics";
 import { track } from "../../_analytics/posthog";
 import { Chat, initialsOf, type ChatMessage, type Choice } from "./Chat";
+import { mainKey, nameChange } from "./names";
+import { OtherName, People } from "./People";
 import WhatsappConnect from "./WhatsappConnect";
 import { codeDigits } from "../login/code";
 import { COPY, type Lang } from "./copy";
@@ -42,6 +44,8 @@ type State = {
   lang?: string;
   services: Service[];
   hours: Period[];
+  // The people (or chairs) who serve at the same time; none is one customer at a time.
+  people?: { id: string; name: string; name_ar: string }[];
   quote: Quote;
   areas: string[];
   catalog: CatalogReview | null;
@@ -216,6 +220,12 @@ export default function Start() {
     setQuote(answer.data.quote);
     quoteSeen.current = JSON.stringify(answer.data.quote);
     return answer.data;
+  }, []);
+
+  // The people alone, so an hour the owner has changed and not yet saved is not put back.
+  const loadPeople = useCallback(async () => {
+    const answer = await call<State>("/api/onboarding/state");
+    if (answer.ok) setState((now) => (now ? { ...now, people: answer.data.people } : now));
   }, []);
 
   // Where to begin: a signed-in owner resumes at their saved step; anyone else starts
@@ -615,7 +625,7 @@ export default function Start() {
       return [
         { direction: "in", body: ar ? "أبي أحجز" : "I want to book" },
         { direction: "out", body: ar ? "اختر الخدمة والوقت المناسب من هنا: app.alyr.qa/b/…" : "Pick a service and a time that suits you: app.alyr.qa/b/…" },
-        { direction: "out", body: ar ? "تم الحجز: حلاقة، الخميس 7:30 مساءً. سنذكّرك قبل ساعتين." : "Booked: haircut, Thursday 7:30 pm. We'll remind you 2 hours before." },
+        { direction: "out", body: ar ? "تم الحجز: قص شعر، الخميس 7:30 مساءً. سنذكّرك قبل ساعتين." : "Booked: haircut, Thursday 7:30 pm. We'll remind you 2 hours before." },
       ];
     }
     return [greeting];
@@ -762,14 +772,15 @@ export default function Start() {
           <div className="ob-tr ob-th" role="row"><span role="columnheader">{t.services.name}</span><span role="columnheader">{t.services.minutes}</span><span role="columnheader">{t.services.price}</span><span /></div>
           {rows.map((s) => (
             <div className="ob-tr" role="row" key={s.id}>
-              <input aria-label={t.services.name} defaultValue={lang === "ar" && s.name_ar ? s.name_ar : s.name} dir="auto"
-                onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== s.name && v !== s.name_ar) saveService(s.id, lang === "ar" ? { name_ar: v } : { name: v }); }} />
+              <input aria-label={t.services.name} key={`${s.id}:${lang}:${lang === "ar" ? s.name_ar : s.name}`} defaultValue={lang === "ar" ? s.name_ar : s.name} placeholder={lang === "ar" ? s.name : ""} dir="auto"
+                onBlur={(e) => { const change = nameChange(mainKey(lang), s, e.target.value); if (change) saveService(s.id, change); }} />
               <select aria-label={t.services.minutes} value={s.duration_minutes} onChange={(e) => saveService(s.id, { duration_minutes: Number(e.target.value) })}>
                 {[...new Set([...MINUTES, s.duration_minutes])].sort((a, b) => a - b).map((m) => <option key={m} value={m}>{m} {t.services.min}</option>)}
               </select>
               <input aria-label={t.services.price} inputMode="decimal" defaultValue={s.price ? qar(s.price) : ""} placeholder={t.services.noPrice} dir="ltr"
                 onBlur={(e) => { const v = Math.round(Number(e.target.value || 0) * 100); if (!Number.isNaN(v) && v !== s.price && v >= 0) saveService(s.id, { price: v }); }} />
               <button type="button" className="ob-x" aria-label={`${t.services.remove}: ${s.name}`} onClick={() => removeService(s.id)}>×</button>
+              <OtherName row={s} lang={lang} label={t.services.other} save={(change) => saveService(s.id, change)} />
             </div>
           ))}
           <form className="ob-tr ob-add" onSubmit={(e) => { e.preventDefault(); addService(); }}>
@@ -816,9 +827,10 @@ export default function Start() {
               <input type="checkbox" role="switch" className="ob-switch" checked={state?.business.reminders ?? true} onChange={(e) => setReminders(e.target.checked)} />
             </label>
             <div className="ob-rule"><span><b>{t.hours.cancel}</b><small>{t.hours.cancelSub}</small></span><em>{t.hours.always}</em></div>
-            <div className="ob-rule"><span><b>{t.hours.capacity}</b><small>{t.hours.capacitySub}</small></span><em>{t.hours.always}</em></div>
+            <div className="ob-rule"><span><b>{(state?.people?.length ?? 0) > 1 ? t.hours.capacityMany : t.hours.capacity}</b><small>{(state?.people?.length ?? 0) > 1 ? t.hours.capacityManySub : t.hours.capacitySub}</small></span><em>{t.hours.always}</em></div>
           </section>
         </div>
+        <People people={state?.people ?? []} lang={lang} t={t} onChange={loadPeople} />
       </>
     );
     actions = (

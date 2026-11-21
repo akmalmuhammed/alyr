@@ -207,6 +207,8 @@ export type StaffNumber = {
   id: string; name: string; phone: string; lang: "en" | "ar"; manager: boolean; weekly_report: boolean;
   /** Told on WhatsApp about every new order (D-079). */
   order_alerts: boolean;
+  /** Told about each booking a customer makes or cancels (D-192). */
+  booking_alerts: boolean;
 };
 export type Change = {
   id: string; name: string; name_ar: string; before: Record<string, unknown>; after: Record<string, unknown>;

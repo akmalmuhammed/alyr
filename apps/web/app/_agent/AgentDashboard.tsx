@@ -644,10 +644,10 @@ function Week({ week, wide, id, level, t }: {
   const max = Math.max(week.max, ...week.days.map((d) => (d.value ?? 0) + (d.booked ?? 0)), 1);
   const pct = (v: number | null) => `${Math.max(0, Math.min(100, ((v ?? 0) / max) * 100))}%`;
   const said = (day: Day) => {
-    const name = day.state === "today" ? `${t.today}, ${day.label}` : day.label;
+    const name = day.state === "today" ? `${t.today}${t.comma}${day.label}` : day.label;
     if (day.state === "closed") return `${name}: ${week.legend.closed}`;
     if (day.state === "before") return "";
-    const parts = [day.value_text != null ? `${name}: ${day.value_text}` : `${name}:`];
+    const parts = [day.value_text != null ? `${name}: ${day.value_text}` : `${name}: ${t.notYet}`];
     if (day.booked_text) parts.push(day.booked_text);
     if (day.state === "today" && day.last_by_now_text) parts.push(`${week.legend.by_now}: ${day.last_by_now_text}`);
     if (day.last_text) parts.push(`${week.legend.last}: ${day.last_text}`);

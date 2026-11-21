@@ -147,9 +147,25 @@ export function SiteMotion() {
     if (still) words.forEach((word) => word.setAttribute("data-on", ""));
     update();
     window.addEventListener("scroll", onScroll, { passive: true });
+    // The footer's drawing (D-162) is an image of 112 or 304 KB. It is fetched when the visitor
+    // is within about a screen and a half of it, so it never competes with the opening for the
+    // connection. Without scripts (no `al-js`) it loads as the page does (site.css).
+    const art = document.querySelector<HTMLElement>(".foot-art");
+    let nearArt: IntersectionObserver | null = null;
+    if (art) {
+      nearArt = new IntersectionObserver((entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          art.setAttribute("data-near", "");
+          nearArt?.disconnect();
+        }
+      }, { rootMargin: "1200px 0px" });
+      nearArt.observe(art);
+    }
+
     window.addEventListener("resize", onScroll);
     window.addEventListener("resize", watchDark);
     return () => {
+      nearArt?.disconnect();
       document.removeEventListener("click", onLanguage, true);
       window.removeEventListener("hashchange", openQuestion);
       seen.disconnect();

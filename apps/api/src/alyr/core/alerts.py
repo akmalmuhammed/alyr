@@ -36,6 +36,9 @@ CHECK_EVERY_SECONDS = 60
 SEND_FAIL_SHARE = 0.05
 SEND_MIN_TRIED = 20
 WEBHOOK_QUIET_AFTER_SECONDS = 15 * 60
+# The connector (spec 067): changes in ten minutes that make a business's burst, and how recent a
+# new place must be to be told.
+MCP_WRITE_BURST = 25
 # The hours a shop's customers are writing (Doha). Outside them a quiet webhook is normal.
 BUSY_HOURS = range(9, 22)
 
@@ -83,6 +86,15 @@ async def evaluate(db: Database, now: datetime | None = None) -> dict[str, Alert
         real_numbers = await conn.fetchval(
             "select count(*) from channel_numbers where channel = 'meta'"
         )
+        # A business whose connected app confirmed many changes in a few minutes, and apps connected
+        # from an address a person had not used before (spec 067): counts, from rows that hold only
+        # a kind, a business's ID and a time.
+        mcp = await conn.fetchrow(
+            "select (select count(*) from (select shop from mcp_signals where kind = 'write' "
+            "and at > now() - interval '10 minutes' group by shop having count(*) >= $1) b) "
+            "as bursts, (select count(*) from mcp_signals where kind = 'new_place' "
+            "and at > now() - interval '15 minutes') as places", MCP_WRITE_BURST,
+        )
         # Counts of lines and accounts Meta says are flagged, restricted or removed (spec 062).
         trouble = await conn.fetchrow("select * from whatsapp_health_alert_counts()")
         # The webhook only queues a customer's message (routes/whatsapp_webhook.py), so the
@@ -93,6 +105,22 @@ async def evaluate(db: Database, now: datetime | None = None) -> dict[str, Alert
             "(select tenant_id from channel_numbers where channel = 'meta')",
             INBOUND,
         )
+
+    results["mcp_write_burst"] = Alert(
+        "mcp_write_burst", "A connected app is changing a lot",
+        f"{mcp['bursts']} business(es) had {MCP_WRITE_BURST} or more changes through a connected "
+        "app in the last 10 minutes.",
+        "Look at the activity record (channel mcp) of the business in /ops; set "
+        "ALYR_MCP_ENABLED off to stop every connection at once (specs/067).",
+    ) if mcp["bursts"] else None
+    results["mcp_new_place"] = Alert(
+        "mcp_new_place", "An app was connected from a new place",
+        f"{mcp['places']} connection(s) in the last 15 minutes came from an address the person "
+        "had not connected from before.",
+        "If the owner did not do it, end the connection from the workspace and pause the "
+        "business's connector (specs/067).",
+        urgent=False,
+    ) if mcp["places"] else None
 
     lines_bad, accounts_bad = trouble["lines_critical"], trouble["accounts_critical"]
     results["line_health"] = Alert(

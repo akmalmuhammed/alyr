@@ -212,14 +212,14 @@ def _compare(f: Facts, main: str, lang: str) -> list:
         p = _pct(cur, last)
         label = label if i == 0 or lang == "ar" else label.lower()
         if lang == "ar":
-            text = (f"{label} أكثر بـ{p}%" if p > 0 else f"{label} أقل بـ{-p}%" if p < 0
+            text = (f"{label} أعلى بنسبة {p}%" if p > 0 else f"{label} أقل بنسبة {-p}%" if p < 0
                     else f"{label} بلا تغيير")
             parts.append(text if i == 0 else f"و{text}")
         else:
             parts.append(f"{label} up {p}%" if p > 0 else f"{label} down {-p}%" if p < 0
                          else f"{label} level")
     if lang == "ar":
-        return rich("، ".join(parts) + " عن الأيام نفسها من الأسبوع الماضي.")
+        return rich("، ".join(parts) + " مقارنةً بالأيام نفسها من الأسبوع الماضي.")
     return rich(", ".join(parts) + " on the same days last week.")
 
 
@@ -424,10 +424,10 @@ def _change(state: str, cur: int, last: int, base_cur: int, base_last: int, fmt,
         pct = _pct(cur, last)
         if pct > 0:
             return {"dir": "up", "text": rich("▲ {p}", p=B(f"{pct}%")),
-                    "said": T(lang, f"up {pct}%", f"أكثر بـ{pct}%")}
+                    "said": T(lang, f"up {pct}%", f"بزيادة {pct}%")}
         if pct < 0:
             return {"dir": "down", "text": rich("▼ {p}", p=B(f"{-pct}%")),
-                    "said": T(lang, f"down {-pct}%", f"أقل بـ{-pct}%")}
+                    "said": T(lang, f"down {-pct}%", f"بنقص {-pct}%")}
         return {"dir": "level", "text": rich(T(lang, "Level", "بلا تغيير")), "said": None}
     return {"dir": None, "text": rich(T(lang, "Last week {v}", "الأسبوع الماضي {v}"),
                                       v=B(fmt(last))), "said": None}
@@ -836,7 +836,7 @@ def _top(f: Facts, main: str, lang: str) -> dict | None:
         })
     return {
         "title": title,
-        "change_label": (T(lang, "Rank vs previous 28 days", "الترتيب مقابل الـ28 يوماً السابقة")
+        "change_label": (T(lang, "Rank vs previous 28 days", "الترتيب مقارنةً بالأيام الـ28 السابقة")
                          if history else None),
         "rows": rows,
     }
@@ -863,10 +863,10 @@ def _owed(f: Facts, lang: str) -> dict | None:
     oldest = max(f.accounts, key=lambda a: a.oldest_days, default=None)
     delta = f.owed - f.owed_last
     if delta > 0:
-        change = rich(T(lang, "{v} more than a week ago", "أكثر بـ{v} من قبل أسبوع"),
+        change = rich(T(lang, "{v} more than a week ago", "بزيادة {v} عمّا كان قبل أسبوع"),
                       v=B(money(delta, lang)))
     elif delta < 0:
-        change = rich(T(lang, "{v} less than a week ago", "أقل بـ{v} من قبل أسبوع"),
+        change = rich(T(lang, "{v} less than a week ago", "بنقص {v} عمّا كان قبل أسبوع"),
                       v=B(money(-delta, lang)))
     else:
         change = rich(T(lang, "The same as a week ago", "كما كان قبل أسبوع"))

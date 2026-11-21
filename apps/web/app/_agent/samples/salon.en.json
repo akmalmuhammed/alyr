@@ -133,6 +133,8 @@
   }
  ],
  "kpi_caption": "Against Sunday to 16:20 last week",
+ "catalog": null,
+ "documents": null,
  "placeholders": [],
  "suggestions": [
   {
@@ -146,7 +148,11 @@
     {
      "b": "Mona E."
     },
-    " is booked Saturday at 10:00."
+    " is booked Saturday at 10:00 with ",
+    {
+     "b": "Noor"
+    },
+    "."
    ],
    "rule": "RULE · 2+ no-shows in 90 days, booked in the next 7 · 2 customers",
    "rows": [

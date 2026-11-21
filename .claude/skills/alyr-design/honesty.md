@@ -41,6 +41,13 @@ description use the founder's AI wording. Nothing else takes it from them.
   "what it counted" or "what it compares" instead. A sentence that truly needs the word about
   something else may keep it («قاعدة البيانات», the database), and WhatsApp's 24-hour rule is
   "the 24-hour window".
+- **In the redesigned product screens a panel footer writes the rule as a sentence,** "By
+  rule: owed for 30 days or more, no reminder in 7 days · 4 customers", in English and Arabic
+  (D-180). The ALYR Agent dashboard keeps its RULE line until it is restyled.
+- **Phrases ruled out in the product** (13 Nov 2026): "Ask ALYR" (it reads as an assistant;
+  say what happens), "At risk" and "Churned" as a label (it predicts; name the counted
+  signal), "Free replies" (see the claims table), "Powered by ALYR" (say "Set up by ALYR"),
+  "SKU" (say "Code"). The replacement wording is in [format.md](format.md).
 - **"Agent" never carries a sentence alone.** Wherever "agent" appears, the same screen,
   card or post says what it counted or compared (in the product, its rule line). ALYR (the
   company) is the agent; ALYR Agent is its screen and report. ALYR Chat and ALYR Bookings send
@@ -59,9 +66,9 @@ description use the founder's AI wording. Nothing else takes it from them.
 | "Keep your number", "the app stays on your phone", "the number you already use", "in the chat you already use", "as she always has" | A shop cannot connect its own number (ALY-39) | "Which number your customers message is agreed with you at setup." |
 | Card payments live; "paid straight to your account"; provider names or logos (SADAD, SkipCash, Dibsy, NAPS, Apple Pay); "licensed payment partner"; "paid through ALYR links" in a sample | No provider integrated (ALY-17); the pay page is a stand-in | "Payment links are built and tested on a test page; card payments start once a payment provider is connected. ALYR is built never to hold your money." |
 | Payment reminders that go by themselves | They go when someone presses Send reminders | "One press sends reminders…" |
-| "Free messages", "free replies for 24 hours", "ALYR adds nothing" without the condition | Meta bills some messages at its own rates | "Meta charges for some WhatsApp messages at its own rates, and bills you directly." |
+| "Free messages", "free replies for 24 hours", "ALYR adds nothing" without the condition | Meta bills some messages at its own rates | "Meta charges for some WhatsApp messages at its own rates, and bills you directly." In a product screen about the window: "Typed replies allowed for 23 more hours" or "Window open until Fri 09:27" |
 | The Sunday report as running ("every Sunday on your phone", "weekly on WhatsApp") | Built, never sent to an owner; templates need Meta's approval | Frame it: "The first reports go out once WhatsApp approves the report's wording." |
-| "Live in 48 hours", a go-live date, "free pilot", "free trial", a free plan | Not offered (D-025, D-034). Nothing is paid before go-live (D-053) and there is no setup fee (D-092), but there is no trial period and no free plan | "We agree your go-live date at the visit." The one allowed use of "free" is the self-serve button's own pair, "Try it free" with "Free to try. You pay only when you go live." (`copy.ts` `tryFree`, D-119), and only while `NEXT_PUBLIC_ALYR_TRY_FREE=on`; `banned-words.mjs` refuses the three phrases |
+| "Live in 48 hours", a go-live date, "free pilot", "free trial", a free plan | Not offered (D-025, D-034). Nothing is paid before go-live (D-053) and there is no setup fee (D-092), but there is no trial period and no free plan | "We agree your go-live date with you." The one allowed use of "free" is the self-serve button's own pair, "Try it free" with "Free to try. You pay only when you go live." (`copy.ts` `tryFree`, D-119), and only while `NEXT_PUBLIC_ALYR_TRY_FREE=on`; `banned-words.mjs` refuses the three phrases |
 | Any price, the money-back first month, "no commission" as a price point, outside the offer switch | The homepage's prepared offer copy still names a setup fee (D-092) | Behind `NEXT_PUBLIC_ALYR_OFFER=on` only. **The one exception is `/pricing`** (ALY-301, D-124): its prices, from the back office's price list, sit in `copyPricing.ts` and are allowed there by `allow/banned.json` "pricePages", and nowhere else. The CR was issued on 26 Oct 2026 |
 | "Your money back" without its limit | The refund is the first month's subscription, not the setup fee | "…you get that month's subscription back." |
 | "Sign up", "get started in minutes", "log in", self-serve setup | Sign-up is closed outside a local machine until the founder opens it (`ALYR_SIGNUP_OPEN`, D-031); ALYR sets up each shop until then | "Talk to us and we set it up for you." The self-serve button "Try it free" (D-119) is the exception, built and off, and shown only after sign-up is open (go-live checklist, "Opening self-serve sign-up"); it says nothing about minutes or speed |
@@ -69,12 +76,12 @@ description use the founder's AI wording. Nothing else takes it from them.
 | "A local team", "our experts", a founder name or photo | One founder working with agents; no founder on the page (D-034) | "A person from ALYR replies." |
 | A response time ("within the hour"), 24/7, support hours, "whenever you message", written Arabic replies | Not agreed | "A person from ALYR reads every message." |
 | "Licensed"; a legal name or CR number that differs from the registration | The CR was issued on 26 Oct 2026 (255539, alyr software W.L.L.); the footer, `/company`, `/privacy`, `/terms`, `/refund` and `/pricing` state it, and the name must read the same everywhere (Paddle compares it) | "alyr software W.L.L." in English and «alyr software ذ.م.م. (الير للبرمجيات)» in Arabic; never "alyr software" alone or "Alyr Tech". The old row ("ALYR. Built in Qatar." and no CR until it is issued) ended with the trust section on 25 Oct 2026 |
-| "Official WhatsApp partner", "Meta Business Partner", "Tech Provider", the WhatsApp logo, WhatsApp green on ALYR's own surfaces | Not a partner | Footer: "ALYR uses the WhatsApp Business Platform. ALYR is not affiliated with, or endorsed by, WhatsApp or Meta." |
+| "Official WhatsApp partner", "Meta Business Partner", "Tech Provider", the WhatsApp logo, WhatsApp green on ALYR's own surfaces | Not a partner | The footer used to say "ALYR uses the WhatsApp Business Platform. ALYR is not affiliated with, or endorsed by, WhatsApp or Meta." The founder removed that line on 9 Nov 2026 (D-164); the page still never says or implies a partnership. |
 | Clinics, patients, health data, "appointments, not medical records" | Health data needs the lawyer (ALY-51) | Leave clinics out |
 | Parallel bookings, chairs, tables, party sizes, per-stylist calendars | One booking at a time per business (until ALY-27) | "Two customers can never take the same slot." |
 | One message becoming a booking, an order and a payment; free questions answered | Keyword and button matching | "It answers the everyday requests: order, book, balance, pay. Everything else goes to your team." |
 | Delivery tracking, drivers, maps | Tracking ends at ready for collection and complete | "Confirmed, ready for collection, complete." |
-| Staff see no money, beyond the Agent screen | Orders, Credit accounts and the API still show amounts | Only on `/agent`, about that screen |
+| Staff see no money, beyond the Agent screen | Orders, Credit accounts and the API still show amounts until the redesigned screens replace them. The rule (D-180): staff with the agent role see per-order totals only; aggregates and margin are owner and admin only, enforced on the server | Only on `/agent`, about that screen. In a redesigned screen, never say staff see no money |
 | Statements of account; ALYR Docs as available to a shop | Statements have no flow; Docs is built and off for every shop | Statements under "Not yet"; Docs as "set up with you" |
 | "Tax invoice" as something ALYR Docs issues, VAT, e-invoicing or the tax authority's system as connected, a retention period, compliance with Qatar's Arabic invoice rule, invoices without a CR, a named POS | Tax is off; ALY-51 open; no POS tried | Quote the no-CR note exactly; "ALYR never deletes an issued document"; "Arabic first, and Arabic always on documents for consumers" |
 | A document sent on WhatsApp at any time | Outside the 24-hour window it needs three templates not yet submitted | "In the chat as a PDF, when the customer has written in the last 24 hours" |
@@ -154,7 +161,7 @@ Al-Naimi as sample family names.
   the hero price, the money-back lines, the price question, the Price link, prices in meta
   descriptions, social cards and alt text. Use `factsNoOffer` and `descriptionNoOffer`.
 - Behind the switch: from QAR 449 a month for the first product, QAR 150 for each added
-  product, ALYR Agent included (D-035); setup from QAR 1,500, quoted at the visit; month to
+  product, ALYR Agent included (D-035); setup from QAR 1,500, quoted after we first talk; month to
   month, stop at the end of any month with 7 days' notice; the first month's subscription
   back if the agreed result is missed. Open: setup QAR 1,500 on the site against 2,500 in the
   back office (D-032).

@@ -36,6 +36,10 @@ layouts. Neither sees the other's file before writing. Prompts in [prompts.md](p
 ## The review standard
 
 A review reads the work as it runs, not the code alone:
+- **for a product screen (workspace, back office, sign-in, sign-up, customer pages),** the
+  rules are `alyr-product-screen/ui-rules.md` and the builder's list is
+  `alyr-product-screen/screen-checklist.md`: the critics check the screen against both, and
+  the pull request carries the checklist block with its "Not checked" list (D-180);
 - the matrix in `alyr-design/verify.md` (both languages, 1440, 390, 320, both themes, reduced
   motion, no scripts, every menu and state);
 - the claims, line by line, against the claims table and `docs/status.md` **today**, including

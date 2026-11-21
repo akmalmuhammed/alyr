@@ -272,6 +272,16 @@ MODULES: tuple[Module, ...] = (
             ),
         ),
     ),
+    # Discovery: how customers find the business, checked by rules (spec 065, D-160, ALY-316). Off
+    # for every shop and every template until the back office switches it on for one shop
+    # (`SWITCHABLE_MODULES`); it is in no product, so it has no price and no setup step. One
+    # section in the workspace; its four views (Home, To do, Reviews, Reports) are carried in the
+    # address, like Documents'. Its numbers are not on the home dashboard.
+    Module(
+        "discovery",
+        Text("Discovery", "الاكتشاف"),
+        screens=(Screen("discovery", Text("Discovery", "الاكتشاف"), "search"),),
+    ),
     Module(
         "payments",
         Text("Payment links", "روابط الدفع"),
@@ -298,7 +308,7 @@ MODULES: tuple[Module, ...] = (
     Module(
         "ledger",
         Text("Credit accounts", "الحسابات الآجلة"),
-        screens=(Screen("ledger", Text("Credit accounts", "الحسابات الآجلة"), "book"),),
+        screens=(Screen("ledger", Text("Credit accounts", "الحسابات الآجلة"), "book", MANAGERS),),
         cards=(
             Card(
                 "outstanding",
@@ -431,6 +441,9 @@ CORE_SCREENS: tuple[Screen, ...] = (Screen("home", Text("Home", "الرئيسي�
 ACCOUNT_SCREENS: tuple[Screen, ...] = (
     Screen("products", Text("Products", "المنتجات"), "apps", MANAGERS),
     Screen("connections", Text("Connections", "الاتصالات"), "plug", MANAGERS),
+    # The messages that did not reach a customer, and why (specs/036; D-194). Every member of
+    # staff may read it: the shop is told on the day a reminder or a review request could not go.
+    Screen("unsent", Text("Not sent", "لم تُرسل"), "send"),
     Screen("team", Text("Team", "الفريق"), "users"),
     # The person's own: their businesses, sign-in email and the data download (specs/040).
     Screen("account", Text("Your account", "حسابك"), "user"),

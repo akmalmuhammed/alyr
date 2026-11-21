@@ -443,7 +443,7 @@ export const docsEn: DocsPage = {
       {
         id: "setup",
         q: "How long does setup take?",
-        a: "We agree the date you start at the visit, and set your numbers, branches and documents with you.",
+        a: "We agree the date you start with you, and set your numbers, branches and documents with you.",
       },
       {
         id: "no-cr",
@@ -474,7 +474,7 @@ export const docsEn: DocsPage = {
   },
   cta: {
     title: "Tell us how you give customers their receipts.",
-    body: "Send us a message. A person from ALYR replies, then comes to your shop to set your numbers and documents with you.",
+    body: "Send us a message, and we set up a call or a meeting to set your numbers and documents with you.",
   },
 };
 
@@ -884,6 +884,6 @@ export const docsAr: DocsPage = {
   },
   cta: {
     title: "أخبرنا كيف تسلّم عملاءك إيصالاتهم.",
-    body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يزور محلك ليضبط معك الترقيم وشكل المستند.",
+    body: "أرسل لنا رسالة، ونرتّب معك اتصالاً أو لقاءً نضبط فيه معك الترقيم وشكل المستند.",
   },
 };

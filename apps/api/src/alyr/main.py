@@ -31,8 +31,14 @@ from alyr.db import Database, PoolBusy
 from alyr.gateways import registry as payment_gateways
 from alyr.modules import report
 from alyr.modules.bookings import deposits as booking_deposits
+from alyr.modules.bookings import staff_alert as booking_alert
 from alyr.modules.bookings.service import REMINDER, Reminders
 from alyr.modules.connect import webhooks as connect_webhooks
+from alyr.modules.discovery import apply as discovery_apply
+from alyr.modules.discovery import asks as discovery_asks
+from alyr.modules.discovery import engine as discovery_engine
+from alyr.modules.discovery import sweep as discovery_sweep
+from alyr.modules.discovery.errors import DiscoveryError
 from alyr.modules.documents.delivery import JOB as DELIVERY_JOB
 from alyr.modules.documents.delivery import DocumentSender
 from alyr.modules.documents.errors import DocumentError
@@ -42,6 +48,7 @@ from alyr.modules.items.import_alert import ImportAlert
 from alyr.modules.items.import_photos import JOB as IMPORT_PHOTOS
 from alyr.modules.items.import_photos import ImportPhotos
 from alyr.modules.items.service import count_active
+from alyr.modules.mcp.server import McpServer
 from alyr.modules.orders import holds as order_holds
 from alyr.modules.orders import staff_alert
 from alyr.modules.orders.service import EXPIRE_JOB
@@ -62,6 +69,7 @@ from alyr.routes import costs as cost_routes
 from alyr.routes import custom_fields as custom_field_routes
 from alyr.routes import delivery as delivery_routes
 from alyr.routes import discounts as discount_routes
+from alyr.routes import discovery as discovery_routes
 from alyr.routes import (
     document_page,
     inbox,
@@ -77,6 +85,9 @@ from alyr.routes import documents as documents_routes
 from alyr.routes import features as feature_routes
 from alyr.routes import items_import as items_import_routes
 from alyr.routes import jobs as jobs_routes
+from alyr.routes import mcp as mcp_routes
+from alyr.routes import mcp_manage as mcp_manage_routes
+from alyr.routes import mcp_oauth as mcp_oauth_routes
 from alyr.routes import media as media_routes
 from alyr.routes import onboarding as onboarding_routes
 from alyr.routes import owner as owner_routes
@@ -180,6 +191,9 @@ def create_app() -> FastAPI:
     # What Meta says about a WhatsApp account, not a message: templates, limits, restrictions.
     app.state.account_events = AccountEvents(app.state.db)
 
+    # The owner's own app calls the same actions through this (spec 067); off unless switched on.
+    app.state.mcp = McpServer(app.state.db, settings)
+
     app.state.jobs = JobRunner(
         app.state.db, settings.jobs_backoff_seconds, settings.jobs_concurrency
     )
@@ -207,11 +221,36 @@ def create_app() -> FastAPI:
         booking_deposits.EXPIRE_JOB,
         booking_deposits.DepositExpiry(app.state.db, app.state.outbound).run,
     )
+    # A Discovery check-up (spec 065): background work, so a customer's job goes first (D-078).
+    # When one has finished, the owners it prepared changes for are asked (spec 066): through the
+    # outbound layer, to linked staff numbers only, and never to a customer.
+    app.state.discovery_asks = discovery_asks.Sender(app.state.outbound)
+    app.state.jobs.register(
+        discovery_engine.JOB,
+        discovery_engine.DiscoveryRuns(
+            app.state.db,
+            after_done=discovery_sweep.after_run(app.state.db, app.state.discovery_asks),
+        ).run,
+        background=True,
+    )
+    # An approved change is applied by a job of its own, not background work: the owner is waiting.
+    # It tells the person who approved on WhatsApp how it went, in their window only.
+    applier = discovery_apply.DiscoveryApply(
+        app.state.db, discovery_asks.Notifier(app.state.outbound)
+    )
+    app.state.jobs.register(discovery_apply.JOB, applier.run, applier.gave_up)
     # The staff numbers marked for new orders are told about each one (D-079).
     app.state.jobs.register(
         staff_alert.JOB,
         staff_alert.StaffAlerts(app.state.db, app.state.outbound, settings.public_web_url).run,
     )
+    # The staff numbers marked for bookings are told about each new booking and cancellation, and
+    # each owner who wants it is emailed (D-192).
+    app.state.jobs.register(
+        booking_alert.JOB,
+        booking_alert.StaffAlerts(app.state.db, app.state.outbound, settings.public_web_url).run,
+    )
+    app.state.jobs.register(booking_alert.EMAIL_JOB, booking_alert.OwnerEmails(app.state.db).run)
     # Documents sent to the customer (ALY-139): WhatsApp through the outbound layer, email with
     # the PDF attached. A delivery that fails every try shows the owner "not delivered".
     document_sender = DocumentSender(app.state.db, app.state.outbound)
@@ -268,6 +307,7 @@ def create_app() -> FastAPI:
     app.add_exception_handler(asyncpg.exceptions.IdleInTransactionSessionTimeoutError, busy)
     app.add_exception_handler(PhotoRefused, media_routes.refused)
     app.add_exception_handler(DocumentError, documents_routes.refused)
+    app.add_exception_handler(DiscoveryError, discovery_routes.refused)
     app.add_exception_handler(connect_routes.Invalid, connect_routes.invalid)
     # A quantity is a JSON number everywhere (spec 013); FastAPI would write a Decimal as text.
     qty.install_json(app)
@@ -356,6 +396,11 @@ def create_app() -> FastAPI:
     app.include_router(
         documents_routes.router, dependencies=[Depends(require_module("documents"))]
     )
+    # Discovery (spec 065): how customers find the business, checked by rules. Off for every shop
+    # until switched on; off answers 404 `module_off`.
+    app.include_router(
+        discovery_routes.router, dependencies=[Depends(discovery_routes.module_on)]
+    )
     # Connected mode (ALY-142): the machine's door (it answers to an API key, never a session,
     # and checks the shop has Documents on itself) and the person's setup of it.
     app.include_router(connect_routes.router)
@@ -394,6 +439,11 @@ def create_app() -> FastAPI:
     app.include_router(media_routes.router)
     app.include_router(media_routes.public)
     app.include_router(onboarding_routes.router)
+    # The connector (spec 067, D-170): the endpoint and its metadata, the sign-in, and the
+    # workspace's side. Every path answers 404 until ALYR_MCP_ENABLED says otherwise.
+    app.include_router(mcp_routes.router)
+    app.include_router(mcp_oauth_routes.router)
+    app.include_router(mcp_manage_routes.router)
     if local:
         app.include_router(simulator.router)
     return app

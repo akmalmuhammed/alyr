@@ -38,8 +38,11 @@ function aiWords() {
 }
 
 const startCopy = strings(read(join(HERE, "copy.ts")));
-const screens = read(join(HERE, "../_workspace/Screens.tsx"));
-const inboxCopy = strings(screens.slice(screens.indexOf("const T = {"), screens.indexOf("\n};\n", screens.indexOf("const T = {"))));
+// The working screens' words. Screens.tsx was split into one file per screen (_workspace/screens)
+// and its copy moved to _workspace/screensCopy.ts, which is read whole: the `T` block and the
+// reasons a message was not sent. A copy file added for a screen goes in this list.
+const WORKSPACE = join(HERE, "../_workspace");
+const inboxCopy = ["screensCopy.ts"].flatMap((file) => strings(read(join(WORKSPACE, file))));
 // "Assistant" is the name the activity record keeps for automatic replies (core/team.py); the
 // screens compare against it and show "Auto-reply" instead.
 const everything = [...startCopy, ...inboxCopy].filter((text) => text !== "Assistant");

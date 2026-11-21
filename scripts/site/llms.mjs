@@ -112,7 +112,6 @@ function footer(doc, locale, path) {
   doc.lines.push("---", "");
   doc.p(fill(words[locale].copyOf, { url: `${SITE}${path === "/" ? "" : path}` }));
   if (other) doc.p(fill(words[locale].languages, { en: `${SITE}${twinPath(other.en)}`, ar: `${SITE}${twinPath(other.ar)}` }));
-  doc.p(t.footer?.disclaimer);
   doc.p(t.footer?.rights);
 }
 
@@ -416,7 +415,6 @@ function llmsTxt() {
     types && fill(w.for, { types }),
     steps && fill(w.how, { steps }),
     w.noApp,
-    t.footer?.disclaimer,
     w.money,
     fill(offer ? w.pricesOn : w.pricesOff, { pricing: `${SITE}${twinPath(site.PATHS.pricing.en)}` }),
     contactLine("en"),

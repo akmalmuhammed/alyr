@@ -1,6 +1,7 @@
 /* "How we work with you" (HowCards.tsx) is part of this stylesheet, so the homepage asks for
    no extra render-blocking file (ALY-226). */
 @import "./how.css";
+@import "./funnel.css";
 
 /* ALYR homepage: the suite, led by ALYR Agent (docs/agent-dashboard/07-site-brief.md).
    Still a working drawing of an owner's business: Paper, hairline rules, real ALYR screens in
@@ -37,25 +38,26 @@ main[data-page="home"] .link:hover { text-decoration-thickness: 2px; }
 .hero { position: relative; padding-block: clamp(1.5rem, 4vw, 3rem) clamp(3.5rem, 7vw, 6rem); }
 /* The text on the start side: the headline, the promise, the check-up and who replies (since
    7 Nov 2026 with nothing beside it: the founder took the film out). */
-.hero-text { display: grid; justify-items: start; padding-top: clamp(.5rem, 2vw, 1.5rem); }
-.hero .hero-title { font-size: var(--display); line-height: 1; letter-spacing: -.045em; font-weight: 650; }
+.hero-text { display: grid; justify-items: center; text-align: center; padding-top: clamp(1.5rem, 4vw, 3.5rem); }
+.hero .hero-title { font-size: var(--display); line-height: 1; letter-spacing: -.04em; font-weight: var(--weight-hero); }
 [lang="ar"] .hero .hero-title { line-height: 1.25; letter-spacing: 0; font-weight: 600; }
 .hl { display: block; overflow-x: visible; overflow-y: clip; padding-block-end: .1em; margin-block-end: -.1em; }
 .hl > span { display: inline-block; }
 .hl + .hl > span { color: var(--text); }
 .hero-text > .hero-flip { margin-top: clamp(1.5rem, 2.5vw, 2rem); }
-.hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1.5rem; margin-top: 1.75rem; }
+.hero-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .75rem 1.5rem; margin-top: 1.75rem; }
 .hero-note { margin-top: .875rem; max-width: 28rem; }
 /* the line under the headline */
-.hero-lead { max-width: 34rem; color: var(--text); font-size: clamp(1.1875rem, 1.05rem + .45vw, 1.375rem); font-weight: 600; line-height: 1.35; letter-spacing: -.012em; text-wrap: pretty; }
+.hero-lead { max-width: 46rem; color: var(--text); font-size: clamp(1.375rem, 1rem + 1.4vw, 2.125rem); font-weight: 600; line-height: 1.25; letter-spacing: -.025em; text-wrap: pretty; }
 [lang="ar"] .hero-lead { letter-spacing: 0; line-height: 1.65; }
 /* one word of it takes turns (ALY-314): the words stack in one cell, so the line keeps the
    widest word's width; the pale Volt block stays and the words pass through it */
-.flip { display: inline-grid; justify-items: center; overflow: clip; padding-inline: .3em; background: var(--volt-wash); }
+.flip { display: inline-grid; justify-items: center; overflow: clip; padding-inline: .45em; padding-block: .02em .06em; border-radius: var(--radius-pill); background: var(--volt-wash); }
 .flip-word { grid-area: 1 / 1; visibility: hidden; }
 .flip-word[data-rest] { visibility: visible; }
 /* the hero's line has its own Pause at its end, as the Office line has (loopStyle.ts) */
-.hero-flip { max-width: 38rem; }
+.hero-flip { max-width: 46rem; }
+@media (min-width: 40rem) { .hero-lead { white-space: nowrap; } }
 /* the statement before the products, and its Pause at the end of the line */
 .of { position: relative; max-width: 42rem; }
 .of-line { color: var(--text); font-weight: 600; }
@@ -231,11 +233,10 @@ main[data-page="home"] .see-panel::before { content: none; }
 @media (max-width: 30rem) {
   main[data-page="home"] { --col-gap: 1rem; }
   .hero { padding-top: 1.5rem; }
-  .hero-text { justify-items: stretch; }
   .hero-text > .hero-lead { margin-top: 1.25rem; }
   .hero-actions { display: grid; width: 100%; margin-top: 1.25rem; }
   .hero-actions .btn { width: 100%; }
-  .hero-more { justify-self: start; }
+  .hero-more { justify-self: center; }
   .hero-note { margin-top: .75rem; font-size: .875rem; }
   .agr-fields > div { grid-template-columns: minmax(0, 1fr); gap: .25rem; }
   .ledger > div { grid-template-columns: minmax(0, 1fr); gap: .25rem; }
@@ -315,7 +316,7 @@ main[data-page="home"] .see-panel::before { content: none; }
 }
 /* wide screens: the headline's two lines never wrap */
 @media (min-width: 62rem) {
-  .hero .hero-title { font-size: min(var(--display), 5.4vw); }
+  .hero .hero-title { font-size: min(var(--display), 6.2vw); }
   .hero .hero-title .hl { white-space: nowrap; }
 }
 

@@ -18,6 +18,8 @@ export type AgentLabels = {
   team: string;
   report: string;
   owedBy: string;
+  comma: string;
+  notYet: string;
 };
 
 export const AGENT_LABELS: Record<"en" | "ar", AgentLabels> = {
@@ -38,6 +40,8 @@ export const AGENT_LABELS: Record<"en" | "ar", AgentLabels> = {
     team: "Team, last 7 days",
     report: "Sunday report",
     owedBy: "owed by",
+    comma: ", ",
+    notYet: "Not started yet",
   },
   ar: {
     needs: "يحتاجك الآن",
@@ -51,10 +55,12 @@ export const AGENT_LABELS: Record<"en" | "ar", AgentLabels> = {
     open: "اعرض هذا الاقتراح",
     closeCard: "اطوِ هذا الاقتراح",
     today: "اليوم",
-    allHours: "كل الساعات",
+    allHours: "اعرض كل الساعات",
     busiest: "الأكثر ازدحاماً",
     team: "الفريق، آخر 7 أيام",
     report: "تقرير الأحد",
     owedBy: "على",
+    comma: "، ",
+    notYet: "لم يبدأ بعد",
   },
 };

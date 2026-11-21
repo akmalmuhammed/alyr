@@ -54,6 +54,17 @@
 .sh-link.on::before { content: ""; position: absolute; inset-inline-start: -12px; top: 9px; bottom: 9px; width: 5px; background: var(--volt); clip-path: polygon(0 0, 100% 22%, 100% 78%, 0 100%); }
 .sh[dir="rtl"] .sh-link.on::before { clip-path: polygon(0 22%, 100% 0, 100% 100%, 0 78%); }
 .sh-link .sh-count { margin-inline-start: auto; font-family: var(--font-ui-mono); font-size: var(--ui-micro); min-width: 20px; height: 18px; padding: 0 6px; display: grid; place-items: center; border-radius: 9px; background: var(--ink); color: var(--sheet); }
+/* Views beneath a menu item (Discovery, ALY-322): indented under their item with a hairline down
+   their start edge, the current view marked on that line by a sliver of the Command Fold. Only the
+   item that has views draws any of this; every other entry is unchanged. */
+.sh-link.open { color: var(--ink); }
+.sh-sub { list-style: none; margin: 1px 0 4px; margin-inline-start: 19px; padding: 0; padding-inline-start: 19px; border-inline-start: 1px solid var(--hair-2); display: flex; flex-direction: column; gap: 1px; }
+.sh-sublink { position: relative; display: flex; align-items: center; min-height: 32px; padding: 0 10px; border-radius: 8px; color: var(--ink-2); text-decoration: none; font-size: var(--ui-body-sm); font-weight: 500; transition: background 0.18s var(--ease-product), color 0.18s var(--ease-product); }
+.sh-sublink:hover { color: var(--ink); background: var(--hair); }
+.sh-sublink.on { color: var(--ink); background: var(--sheet); box-shadow: var(--lift); }
+.sh-sublink.on::before { content: ""; position: absolute; inset-inline-start: -21px; top: 7px; bottom: 7px; width: 3px; background: var(--volt); clip-path: polygon(0 0, 100% 22%, 100% 78%, 0 100%); }
+.sh[dir="rtl"] .sh-sublink.on::before { clip-path: polygon(0 22%, 100% 0, 100% 100%, 0 78%); }
+@media (pointer: coarse) { .sh-sublink { min-height: 44px; } }
 .sh-add { color: var(--ink-2); }
 .sh-add .sh-ico { padding: 1px; border-radius: 5px; box-shadow: 0 0 0 1px var(--hair-2); }
 .sh-ico { width: 18px; height: 18px; flex: none; }
@@ -274,6 +285,10 @@
 .sh-palette li button[aria-selected="true"] { background: var(--hair); color: var(--ink); }
 .sh-palette li button[aria-selected="true"] .ret { opacity: 1; }
 .sh-palette .ret { margin-inline-start: auto; opacity: 0; }
+/* The current view of a section that has views (Discovery): marked on the row's start edge. */
+.sh-palette li button.cur { position: relative; color: var(--ink); font-weight: 600; }
+.sh-palette li button.cur::before { content: ""; position: absolute; inset-inline-start: 0; top: 10px; bottom: 10px; width: 3px; background: var(--volt); clip-path: polygon(0 0, 100% 22%, 100% 78%, 0 100%); }
+.sh[dir="rtl"] .sh-palette li button.cur::before { clip-path: polygon(0 22%, 100% 0, 100% 100%, 0 78%); }
 .sh-palette-foot { display: flex; gap: 14px; padding: 9px 16px; border-top: 1px solid var(--hair); font-size: var(--ui-caption); color: var(--ink-3); }
 .sh-palette-foot span { display: inline-flex; align-items: center; gap: 6px; }
 .sh-palette .none { padding: 26px 10px; text-align: center; color: var(--ink-3); font-size: var(--ui-body-sm); }

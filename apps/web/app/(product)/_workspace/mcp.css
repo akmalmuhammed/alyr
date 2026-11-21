@@ -1,0 +1,85 @@
+/* The connected-apps screen (ALY-292, specs/067-mcp-connector). It takes the shell's tokens
+   (shell.css) and the Catalog's patterns (catalog.css: the sheet, the toasts, the fold, the check),
+   and adds only what this screen needs: the status card, the rows of connections and of the record,
+   the address, the filter of the record. Every colour, size, radius and space is a token
+   (design/tokens.json), so light, dark and right to left come for free; every position is logical.
+   Volt appears twice and means one thing each: the pill "On" (the current state) and the one main
+   button of the moment (Turn on while it is off, Resume while it is paused). Built at 375 px first:
+   targets are 44 px or more, long names and addresses break instead of widening the page, and
+   nothing scrolls sideways at 320. */
+
+.mc { gap: var(--space-4); }
+.mc .sh-eyebrow { color: var(--text-muted); }
+.mc-quiet { margin: 0; color: var(--text-muted); font-size: var(--ui-body-sm); }
+.mc-hint { margin: 0; color: var(--text-muted); font-size: var(--ui-small); line-height: 1.45; }
+.mc-problem { display: grid; gap: var(--space-2); justify-items: start; }
+
+/* ── cards ── */
+.mc-card { display: flex; flex-direction: column; gap: var(--space-3); min-inline-size: 0; padding: var(--space-4); border-radius: var(--radius-lg); background: var(--surface); box-shadow: 0 0 0 1px var(--hair) inset; }
+.mc-card h2 { margin: 0; font-size: var(--ui-body); font-weight: var(--weight-semibold); line-height: 1.3; }
+.mc-plain p { margin: 0; max-inline-size: 62ch; font-size: var(--ui-body-sm); line-height: 1.55; color: var(--text-muted); }
+.mc-section-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); }
+.mc-count { font-size: var(--ui-small); font-weight: var(--weight-medium); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.mc-intro { margin: 0; max-inline-size: 62ch; font-size: var(--ui-small); line-height: 1.5; color: var(--text-muted); }
+.mc-sheet-text { margin: 0; font-size: var(--ui-body-sm); line-height: 1.55; }
+
+/* ── status ── */
+.mc-status-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.mc-status.paused { background: var(--warn-soft); }
+.mc-lead { margin: 0; max-inline-size: 62ch; font-size: var(--ui-body); line-height: 1.55; }
+.mc-lead:focus { outline: none; }
+.mc-note { margin: 0; max-inline-size: 62ch; font-size: var(--ui-body-sm); line-height: 1.5; color: var(--text-muted); }
+.mc-warn { padding-inline-start: var(--space-3); border-inline-start: 3px solid var(--warn); color: var(--text); font-weight: var(--weight-medium); }
+.mc-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+
+/* ── what an app is given ── */
+.mc-points { margin: 0; padding-inline-start: var(--space-5); display: grid; gap: var(--space-2); max-inline-size: 62ch; font-size: var(--ui-body-sm); line-height: 1.55; }
+.mc-points li::marker { color: var(--text-muted); }
+.mc-tick { align-items: flex-start; padding-block: var(--space-2); line-height: 1.5; }
+.mc-tick input { margin-block-start: 1px; }
+
+/* ── rows: a connection, a request, a change ── */
+.mc-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border-radius: var(--radius-md); box-shadow: 0 0 0 1px var(--hair) inset; overflow: hidden; }
+.mc-row { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--space-2) var(--space-3); min-inline-size: 0; padding: var(--space-3); }
+.mc-row + .mc-row { border-block-start: 1px solid var(--hair); }
+.mc-row-main { display: grid; gap: var(--space-1); flex: 1 1 14rem; min-inline-size: 0; }
+.mc-row-main p { margin: 0; }
+.mc-app { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); font-size: var(--ui-body-sm); font-weight: var(--weight-semibold); line-height: 1.4; overflow-wrap: anywhere; }
+.mc-event { font-weight: var(--weight-medium); }
+.mc-meta { font-size: var(--ui-small); line-height: 1.45; color: var(--text-muted); overflow-wrap: anywhere; }
+.mc-ended .mc-app { color: var(--text-muted); }
+.mc-tags { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.mc-tag { display: inline-flex; align-items: center; min-block-size: 22px; max-inline-size: 100%; padding: 2px var(--space-2); border-radius: var(--radius-pill); font-size: var(--ui-caption); font-weight: var(--weight-medium); color: var(--text-muted); box-shadow: 0 0 0 1px var(--line-strong) inset; overflow-wrap: anywhere; }
+.mc-row > .btn { flex: none; }
+
+/* an empty list is the shape of what will appear */
+.mc-slot { display: grid; gap: var(--space-1); padding: var(--space-4); border: var(--rule-dashed) var(--line-strong); border-radius: var(--radius-md); color: var(--text-muted); font-size: var(--ui-body-sm); line-height: 1.5; }
+.mc-slot b { color: var(--text); font-weight: var(--weight-semibold); }
+
+/* ── the address an owner adds in their own app ── */
+.mc-address { display: grid; gap: var(--space-2); }
+.mc-label { margin: 0; font-size: var(--ui-small); font-weight: var(--weight-medium); color: var(--text-muted); }
+.mc-address-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.mc-code { flex: 1 1 14rem; min-inline-size: 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--surface-subtle); box-shadow: 0 0 0 1px var(--hair) inset; font-family: var(--font-ui-mono); font-size: var(--ui-caption); line-height: 1.5; overflow-wrap: anywhere; word-break: break-all; unicode-bidi: isolate; text-align: start; }
+
+/* ── the record ── */
+.mc-tabs { display: flex; gap: var(--space-1); padding: 3px; border-radius: var(--radius-lg); background: var(--surface-subtle); box-shadow: 0 0 0 1px var(--hair) inset; }
+.mc-tabs button { flex: 1 1 0; min-inline-size: 0; min-block-size: 44px; padding: var(--space-1) var(--space-2); border: 0; border-radius: var(--radius-md); background: transparent; color: var(--text-muted); font: inherit; font-size: var(--ui-body-sm); font-weight: var(--weight-medium); text-align: center; overflow-wrap: anywhere; }
+.mc-tabs button:hover { color: var(--text); }
+.mc-tabs button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow-lift); font-weight: var(--weight-semibold); }
+.mc-tool { font-family: var(--font-ui-mono); font-size: var(--ui-small); font-weight: var(--weight-medium); overflow-wrap: anywhere; unicode-bidi: isolate; }
+.mc-phase { font-size: var(--ui-small); font-weight: var(--weight-regular); color: var(--text-muted); }
+.mc-args { min-inline-size: 0; }
+.mc-args summary { display: flex; align-items: center; min-block-size: 44px; cursor: pointer; font-size: var(--ui-small); font-weight: var(--weight-medium); color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+.mc-args pre { margin: 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--surface-subtle); box-shadow: 0 0 0 1px var(--hair) inset; font-family: var(--font-ui-mono); font-size: var(--ui-caption); line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; unicode-bidi: plaintext; text-align: start; }
+
+/* ── the entry from the Connections screen ── */
+.mc-link { display: flex; align-items: center; gap: var(--space-3); min-block-size: 64px; margin-block-start: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); background: var(--surface); color: var(--text); text-decoration: none; box-shadow: 0 0 0 1px var(--hair) inset; }
+.mc-link:hover { box-shadow: 0 0 0 1px var(--line-strong) inset; }
+/* the glyph marks a place, not a state: the connection rows' quiet one, not the Volt one */
+.mc-link .sh-glyph { inline-size: 44px; block-size: 44px; border-radius: var(--radius-lg); background: var(--surface-subtle); color: var(--text); box-shadow: 0 0 0 1px var(--hair) inset; }
+.mc-link-text { display: flex; flex-direction: column; gap: 2px; min-inline-size: 0; flex: 1; }
+.mc-link-text b { font-size: var(--ui-body-sm); font-weight: var(--weight-semibold); }
+.mc-link-text small { font-size: var(--ui-caption); line-height: 1.45; color: var(--text-muted); }
+.mc-link-arrow { display: inline-flex; flex: none; color: var(--text-muted); }
+.sh[dir="rtl"] .mc-link-arrow { transform: scaleX(-1); }

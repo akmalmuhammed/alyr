@@ -10,6 +10,8 @@ git -C "$root" config core.hooksPath scripts/hooks
 
 echo "== design: tokens and drift"
 node "$root/scripts/design-check.mjs"
+echo "== design: product UI ratchet (type, radius and gap scales, one button system, banned words)"
+node "$root/scripts/ui-check.mjs"
 echo "== api: lint"
 (cd "$root/apps/api" && uv run ruff check .)
 echo "== api: tests"

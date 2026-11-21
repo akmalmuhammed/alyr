@@ -21,11 +21,12 @@ from uuid import UUID
 
 import asyncpg
 
+from alyr import presets
 from alyr.core import jobs, team, templates
 from alyr.core.normalise import fmt_qar
 from alyr.core.outbound import Outbound
 from alyr.core.team import Actor
-from alyr.modules.bookings import words
+from alyr.modules.bookings import staff_alert, words
 
 REMINDER = "booking_reminder"
 SLOT_STEP_MINUTES = 30
@@ -51,6 +52,13 @@ class BookingError(Exception):
         self.code = code
         # What the screen needs to say it well (for example the services left with nobody).
         self.data = data or {}
+
+
+# What a customer is told when a service asks a deposit the shop cannot take online (D-190).
+DEPOSIT_UNAVAILABLE = (
+    "This service needs a deposit, and the shop cannot take it online yet. "
+    "Please message the shop to book it."
+)
 
 
 def deposit_amount(kind: str, value: int, price: int) -> int:
@@ -171,11 +179,15 @@ async def update_service(
     The deposit is checked against the price the service will have, so a price cannot be
     lowered under a fixed deposit."""
     current = await conn.fetchrow(
-        "select price, deposit_kind, deposit_value from services where id = $1 for update",
+        "select name, name_ar, price, deposit_kind, deposit_value from services "
+        "where id = $1 for update",
         service_id,
     )
     if current is None:
         return False
+    if name is not None and name_ar is None:
+        # Renamed without an Arabic name: a sample's Arabic would now describe another service.
+        name_ar = presets.kept_arabic(current["name"], current["name_ar"], name)
     final_price = price if price is not None else current["price"]
     kind = deposit_kind if deposit_kind is not None else current["deposit_kind"]
     value = _check_deposit(
@@ -605,6 +617,12 @@ async def update_resource(
     conn: asyncpg.Connection, resource_id: UUID, name: str | None, name_ar: str | None,
     kind: str | None = None,
 ) -> bool:
+    if name is not None and name_ar is None:
+        before = await conn.fetchrow(
+            "select name, name_ar from booking_resources where id = $1", resource_id
+        )
+        if before is not None:
+            name_ar = presets.kept_arabic(before["name"], before["name_ar"], name)
     updated = await conn.execute(
         "update booking_resources set name = coalesce(nullif(btrim($2), ''), name), "
         "name_ar = coalesce($3, name_ar), kind = coalesce($4, kind) where id = $1",
@@ -730,11 +748,26 @@ async def resource(conn: asyncpg.Connection, resource_id: UUID | None) -> dict |
 # ----------------------------------------------------------------------- wording
 
 async def when_text(conn: asyncpg.Connection, starts_at: datetime, arabic: bool) -> str:
-    """The time as the shop's customers read it, in the shop's time zone."""
-    pattern = "DD/MM HH24:MI" if arabic else "FMDy FMDD Mon, FMHH12:MI AM"
-    return await conn.fetchval(
-        f"select to_char($1::timestamptz at time zone {_TZ}, $2)", starts_at, pattern
-    )
+    """The time as the shop's customers read it, in the shop's time zone: "Tue 13 Oct, 8:30 AM",
+    «الثلاثاء 13 أكتوبر، 8:30 م». The weekday is the real one in both languages."""
+    if not arabic:
+        return await conn.fetchval(
+            f"select to_char($1::timestamptz at time zone {_TZ}, $2)", starts_at,
+            "FMDy FMDD Mon, FMHH12:MI AM",
+        )
+    local = await conn.fetchval(f"select $1::timestamptz at time zone {_TZ}", starts_at)
+    return arabic_when(local)
+
+
+def arabic_when(local: datetime) -> str:
+    """A time on the shop's wall clock as an Arabic message writes it: the weekday, the day and
+    month in words, then the hour with «ص» or «م». Western digits. The names are the ones the
+    Catalog's messages use (`items/text.py`), so a shop's customers read one spelling."""
+    from alyr.modules.items.text import MONTHS, WEEKDAYS
+
+    weekday = WEEKDAYS["ar"][(local.weekday() + 1) % 7]  # the list starts on Sunday
+    clock = f"{local.hour % 12 or 12}:{local.minute:02d} " + ("ص" if local.hour < 12 else "م")
+    return f"{weekday} {local.day} {MONTHS['ar'][local.month - 1]}، {clock}"
 
 
 _when_text = when_text  # the older name, still used by the chat
@@ -862,7 +895,7 @@ async def _customer(conn: asyncpg.Connection, contact_id: UUID) -> asyncpg.Recor
     return contact
 
 
-async def _told(conn: asyncpg.Connection, contact_id: UUID, result) -> dict:
+async def customer_told(conn: asyncpg.Connection, contact_id: UUID, result) -> dict:
     """What staff need to know about a message to a customer: whether the outbound layer took it,
     and when it did not (the customer said stop, never agreed to messages, ALYR's sending for the
     shop is paused), why and where to reach them, so staff tell them themselves."""
@@ -880,7 +913,7 @@ async def _confirm(
     contact: asyncpg.Record, starts_at: datetime,
 ) -> tuple[str, dict]:
     """Tell the customer the booking is confirmed and queue the reminder. Returns the time
-    as the customer reads it, and whether the customer was told (`_told`)."""
+    as the customer reads it, and whether the customer was told (`customer_told`)."""
     arabic = contact["lang"] == "ar"
     when = await when_text(conn, starts_at, arabic)
     shop = await shop_name(conn, arabic)
@@ -895,7 +928,7 @@ async def _confirm(
         contact["id"], "booking_confirmed", contact["lang"], body, number, shop, what, when,
     ))
     await schedule_reminder(conn, booking_id, starts_at)
-    return when, await _told(conn, contact["id"], sent)
+    return when, await customer_told(conn, contact["id"], sent)
 
 
 async def create_booking(
@@ -904,13 +937,18 @@ async def create_booking(
     web_url: str = "",
 ) -> dict:
     """A customer books from their link. A service that asks a deposit holds the time until
-    the deposit is paid by link (`deposits.py`); otherwise the booking is confirmed now."""
+    the deposit is paid by link (`deposits.py`); otherwise the booking is confirmed now. A
+    service that asks a deposit the shop cannot take online is refused, not held (D-190)."""
     from alyr.modules.bookings import deposits
 
     contact = await _customer(conn, contact_id)
     await lock(conn, tenant_id)
     service, chosen = await _place(conn, service_id, starts_at, resource_id)
     amount = deposit_amount(service["deposit_kind"], service["deposit_value"], service["price"])
+    if amount and not await deposits.can_take(conn):
+        # Nothing is held, sent or written: a customer is never given a pay link that cannot
+        # be paid (D-190). The booking page says the same before they get this far.
+        raise BookingError("deposit_unavailable", DEPOSIT_UNAVAILABLE)
     terms = await deposits.shop_terms(conn) if amount else None
     hold_until = await deposits.hold_end(conn) if amount else None
     booking_id, number = await _insert(
@@ -924,6 +962,7 @@ async def create_booking(
          "resource": named["name"] if named else None,
          "deposit": fmt_qar(amount) if amount else None},
     )
+    await staff_alert.queue(conn, booking_id, staff_alert.NEW)
     out = {"id": str(booking_id), "number": number, "starts_at": starts_at.isoformat(),
            "service": service["name"], "resource": named["name"] if named else None,
            "resource_ar": (named["name_ar"] or named["name"]) if named else None,
@@ -1060,6 +1099,9 @@ async def cancel_booking(
          "deposit": state if row["deposit"] else None,
          "amount": fmt_qar(row["deposit"]) if row["deposit"] else None},
     )
+    if actor == team.CUSTOMER:
+        # The customer cancelled: the owner is told. A member of staff who cancels did it knowingly.
+        await staff_alert.queue(conn, booking_id, staff_alert.CANCELLED)
     told = None
     if notify:
         arabic = await conn.fetchval(
@@ -1085,7 +1127,7 @@ async def cancel_booking(
             sent = await outbound.send(conn, templates.notice(
                 row["contact_id"], "booking_cancelled", lang, body, row["number"], when,
             ))
-        told = await _told(conn, row["contact_id"], sent)
+        told = await customer_told(conn, row["contact_id"], sent)
     return {"deposit_state": state, "told": told}
 
 
@@ -1146,7 +1188,7 @@ async def reschedule(
         await schedule_reminder(conn, booking_id, starts_at)
     return {"id": str(booking_id), "when_text": when, "starts_at": starts_at.isoformat(),
             "resource": named["name"] if named else None,
-            "told": await _told(conn, current["contact_id"], sent)}
+            "told": await customer_told(conn, current["contact_id"], sent)}
 
 
 async def set_outcome(
@@ -1192,7 +1234,7 @@ async def list_bookings(
     rows = await conn.fetch(
         f"""
         select b.id, b.number, b.service_id, b.service_name, b.starts_at, b.ends_at, b.status,
-               b.note, b.walk_in, b.deposit, b.deposit_state, b.hold_until,
+               b.note, b.walk_in, b.deposit, b.deposit_state, b.hold_until, b.deposit_method,
                b.price, s.name_ar as service_name_ar,
                c.id as contact_id, c.name as customer, c.phone, c.consent_service as consent,
                b.assigned_to, u.name as assignee,
@@ -1244,6 +1286,8 @@ async def list_bookings(
             "walk_in": r["walk_in"],
             # The deposit, where it stands, and what is left of the price after what was paid.
             "deposit": r["deposit"], "deposit_state": r["deposit_state"],
+            # "link" or "transfer": how a paid deposit came (D-191).
+            "deposit_method": r["deposit_method"],
             "hold_until": r["hold_until"].isoformat() if r["hold_until"] else None,
             "price": r["price"] or 0, "paid": paid,
             "left_to_pay": max((r["price"] or 0) - paid, 0),
@@ -1284,12 +1328,29 @@ async def day_view(conn: asyncpg.Connection, day: date) -> dict:
             "resources": resources, "bookings": bookings}
 
 
+_BOOKING_FIELDS = (
+    "id, number, service_name, starts_at, resource_id, deposit, deposit_state, deposit_terms"
+)
+
+
 async def next_booking(conn: asyncpg.Connection, contact_id: UUID) -> asyncpg.Record | None:
     return await conn.fetchrow(
-        "select id, number, service_name, starts_at, resource_id from bookings "
+        f"select {_BOOKING_FIELDS} from bookings "
         "where contact_id = $1 and status = 'booked' and starts_at > now() "
         "order by starts_at limit 1",
         contact_id,
+    )
+
+
+async def booking_of(
+    conn: asyncpg.Connection, contact_id: UUID, booking_id: UUID
+) -> asyncpg.Record | None:
+    """One booking of this customer that is still to come, or None (someone else's, cancelled,
+    done, or in the past)."""
+    return await conn.fetchrow(
+        f"select {_BOOKING_FIELDS} from bookings "
+        "where id = $1 and contact_id = $2 and status = 'booked' and starts_at > now()",
+        booking_id, contact_id,
     )
 
 
@@ -1308,7 +1369,7 @@ class Reminders:
                 "where id = $1 and status = 'booked' and reminded_at is null "
                 "  and deposit_state in ('none', 'paid') "
                 "  and starts_at = $2::timestamptz and starts_at > now() "
-                "returning number, contact_id, service_name, starts_at, resource_id",
+                "returning id, number, contact_id, service_name, starts_at, resource_id",
                 UUID(payload["booking_id"]), datetime.fromisoformat(payload["starts_at"]),
             )
             if row is None:
@@ -1323,7 +1384,13 @@ class Reminders:
                 f"تذكير: حجزك رقم {row['number']} لدى {shop}، {when_with}." if arabic
                 else f"Reminder: booking {row['number']} at {shop}, {when_with}."
             )
-            await self._outbound.send(conn, templates.notice(
+            sent = await self._outbound.send(conn, templates.notice(
                 row["contact_id"], "booking_reminder", "ar" if arabic else "en", body,
                 row["number"], shop, when_with,
             ))
+            if sent.blocked:
+                # Refused (no template approved on the shop's account, no consent, stopped): the
+                # customer was not reminded, so the booking is not marked as reminded. The
+                # refusal is on the "Not sent" screen with its reason (D-194).
+                await conn.execute(
+                    "update bookings set reminded_at = null where id = $1", row["id"])

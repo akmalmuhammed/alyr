@@ -6,8 +6,22 @@ and run `node scripts/tokens-build.mjs`. design/README.md says how to use these.
 
 # The primitives. Prefer the semantic names (LIGHT, DARK) or a component's own.
 COLOR = {
+    "channel": {
+        "ig-a": "#fcaf45",
+        "ig-b": "#e1306c",
+        "ig-c": "#833ab4",
+        "ig-d": "#5851db",
+        "tt-black": "#010101",
+        "tt-cyan": "#25f4ee",
+        "tt-red": "#fe2c55",
+        "g-red": "#ea4335",
+        "g-yellow": "#fbbc05",
+        "g-blue": "#4285f4",
+        "g-green": "#34a853",
+    },
     "brand": {
         "carbon": "#15171a",
+        "film-ink": "#141819",
         "volt": "#b7f34a",
         "volt-hover": "#a5e238",
         "volt-pressed": "#8fc42d",
@@ -68,6 +82,8 @@ COLOR = {
         "carbon-08": "rgb(21 23 26 / .08)",
         "carbon-10": "rgb(21 23 26 / .1)",
         "carbon-14": "rgb(21 23 26 / .14)",
+        "carbon-50": "rgb(21 23 26 / .5)",
+        "black-60": "rgb(0 0 0 / .6)",
         "white-07": "rgb(255 255 255 / .07)",
         "white-09": "rgb(255 255 255 / .09)",
         "white-13": "rgb(255 255 255 / .13)",
@@ -83,10 +99,12 @@ COLOR = {
         "green-300": "#7fd09a",
         "green-100": "#e4f1e7",
         "green-900": "#173424",
+        "green-800": "#2a7541",
         "amber-700": "#a96400",
         "amber-300": "#e5bb6c",
         "amber-100": "#f7ecd9",
         "amber-900": "#3a2c12",
+        "amber-800": "#9a5b00",
         "red-700": "#b42318",
         "red-300": "#f09a86",
         "red-100": "#fbe5e2",
@@ -155,6 +173,7 @@ LIGHT = {
     "hair": "rgb(21 23 26 / .08)",
     "hair-strong": "rgb(21 23 26 / .14)",
     "focus": "#6a9320",
+    "footer-art": "#6a9320",
     "on-volt": "#151a0f",
     "volt-ink": "#3f6a0b",
     "volt-wash": "rgb(183 243 74 / .18)",
@@ -167,6 +186,10 @@ LIGHT = {
     "warn-soft": "#f7ecd9",
     "bad": "#b42318",
     "bad-soft": "#fbe5e2",
+    "ok-text": "#2a7541",
+    "warn-text": "#9a5b00",
+    "control-line": "#d5d9dd",
+    "scrim": "rgb(21 23 26 / .5)",
 }
 
 # The semantic colours in the dark theme.
@@ -183,6 +206,7 @@ DARK = {
     "hair": "rgb(255 255 255 / .07)",
     "hair-strong": "rgb(255 255 255 / .13)",
     "focus": "#b7f34a",
+    "footer-art": "#b7f34a",
     "on-volt": "#151a0f",
     "volt-ink": "#b7f34a",
     "volt-wash": "rgb(183 243 74 / .12)",
@@ -195,6 +219,10 @@ DARK = {
     "warn-soft": "#3a2c12",
     "bad": "#f09a86",
     "bad-soft": "#3d1f18",
+    "ok-text": "#7fd09a",
+    "warn-text": "#e5bb6c",
+    "control-line": "#3a3f45",
+    "scrim": "rgb(0 0 0 / .6)",
 }
 
 # The Sunday report card's two themes (modules/agent/card.py).
@@ -294,6 +322,7 @@ SIZE = {
         "title": "20px",
         "heading": "24px",
         "heading-lg": "28px",
+        "figure": "32px",
         "display-sm": "36px",
         "display": "56px",
     },

@@ -193,3 +193,41 @@ async def post(
                     if len(data) >= MAX_ANSWER_BYTES:
                         break
                 return Answer(response.status_code, _snippet(bytes(data[:MAX_ANSWER_BYTES])))
+
+
+async def get(
+    url: str, *, max_bytes: int, allow_local: bool = False,
+    transport: httpx.AsyncBaseTransport | None = None,
+) -> tuple[int, bytes, dict[str, str]]:
+    """GET a document from an address a stranger gave us (an app's client-ID metadata document,
+    spec 067), with every rule above: https only, a public address vetted and then connected to,
+    no redirect followed, three seconds to connect and ten in all. At most `max_bytes` are read;
+    more is `Blocked("too_large")`. Returns the status, the body and the headers worth keeping
+    (`content-type`, `cache-control`). Every way the outside can fail, a timeout included, is a
+    `Blocked`, so the caller needs no HTTP client of its own."""
+    target, ip = await vet(url, allow_local=allow_local)
+    literal = f"[{ip}]" if ":" in ip else ip
+    connect_to = f"{target.scheme}://{literal}:{target.port}{target.path}"
+    host_header = target.host if target.port in (80, 443) else f"{target.host}:{target.port}"
+    try:
+        async with asyncio.timeout(TOTAL_SECONDS):
+            async with httpx.AsyncClient(
+                transport=transport, follow_redirects=False, trust_env=False,
+                timeout=httpx.Timeout(CONNECT_SECONDS, read=5.0, write=5.0, pool=CONNECT_SECONDS),
+            ) as client:
+                async with client.stream(
+                    "GET", connect_to,
+                    headers={"Host": host_header, "Accept": "application/json"},
+                    extensions={"sni_hostname": target.host},
+                ) as response:
+                    data = bytearray()
+                    async for chunk in response.aiter_bytes():
+                        data.extend(chunk)
+                        if len(data) > max_bytes:
+                            raise Blocked("too_large")
+                    kept = {
+                        k: response.headers.get(k, "") for k in ("content-type", "cache-control")
+                    }
+                    return response.status_code, bytes(data), kept
+    except (httpx.HTTPError, TimeoutError) as error:
+        raise Blocked("unreachable") from error

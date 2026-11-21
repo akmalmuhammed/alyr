@@ -85,6 +85,20 @@ Text sizes moved by up to half a pixel (most) or two pixels (22, 26, 34 and 40 p
 - API in Docker, `ruff check .` clean; **383 tests pass**, and **563 pass (2 skipped)** after merging `main` (the Catalog, ALY-102 and ALY-103), whose new code also passes the drift check (189 files) (`alyr_agent_test`, through `ALYR_TEST_OWNER_DSN` and `ALYR_TEST_APP_DSN`). Disclosed: a first run without those two variables began on the shared `alyr_test`, which the suite drops and recreates; it was stopped and rerun on `alyr_agent_test`.
 - axe-core 4.14 on the built `/` and `/agent`, 1440 and 390, light and dark: 0 violations of any impact.
 
+## Stage 7 · the product UI foundation (13 Nov 2026)
+
+The product's redesign (hairline panels, 13 px body, mono for identifiers, one notched Volt button) needed values the file did not have, so no screen would write a literal. **Add-only: no existing token's value changed**, so the site, the emails and the report card are byte-for-byte what they were; the generated files only gained lines.
+
+- **Colour, semantic:** `--control-line` (the border of a button or chip: #d5d9dd light, #3a3f45 dark; 1.42:1 and 1.69:1, deliberately below 3:1 because the button's words identify it; fields use `--line-strong`); `--scrim` (Carbon at .5 light, black at .6 dark; the drawings used six values); `--ok-text` and `--warn-text` (text on the soft fills: 4.85:1 and 4.64:1 where `--ok` was 4.36:1 and `--warn` 3.98:1; dark reuses the 300 steps at 7.33:1 and 7.53:1).
+- **Colour, band:** `--on-band-ok`, `--on-band-warn`, `--on-band-bad` for status on Carbon (8.3 to 10:1 on the band in light, 7.5 to 9.1:1 on its dark lift), replacing the drawings' `theme('dark')` trick.
+- **Primitives:** `green-800`, `amber-800`, `carbon-50`, `black-60`.
+- **Type:** `--ui-figure` 32 px; `--leading-ui-title` 1.25 and `--leading-ui-figure` 1.15; `--tracking-ui-title` -.015em and `--tracking-ui-figure` -.02em. The drawings' 10, 9 and 8 px labels round up to `--ui-micro` (11), as stage 3 did for the old screens; Arabic steps up one `--ui-*` size inside the component, with no token.
+- **Space and size:** `space.ui` (`--ui-space-2` to `-48`, a 2 px grid named by its value, so 3, 5, 7, 9, 18 and 22 are off the scale; 28 and 48 are the page's side and bottom padding) and the `ui-size` group (control heights 28, 32, 36 and 44 as `--ui-size-touch`, rows 44, 52 and 60, bar 52, sidebar 15rem, page 1144, drawer 440, dialog 520, side column 400, icons 12, 16 and 22).
+- **Shape:** `--radius-ui` 6, `--radius-dialog` 10 (panel stays `--radius-md`, field and button `--radius-sm`); `--cut-band` 28 px for the band's corner.
+- **Not here:** the notch size (the existing `--cut-notch` 12 and `--cut-notch-sm` 9 cover 44 and 28 to 36 px buttons; the drawings' 10 px goes), control states (components derive them from existing tokens), the icon stroke and the mark's polygons (open).
+- **The ratchet:** `scripts/ui-check.mjs` (CI and `scripts/check.sh`) counts, per file, the literal font sizes, radii and gaps off these scales, the CSS rules of the four button systems and the banned phrases ("Ask ALYR", "free replies", the AI words, a `.00` amount, an em dash as an empty value) in `(product)` and `_ui`, and stores today's counts in `design/ui-ratchet.json`; they can only go down. Inside `_ui` a hex, rgb(), px or rem literal or a banned phrase fails outright.
+- **Proof:** `node scripts/tokens-build.mjs --check` and `node scripts/design-check.mjs` clean; the three generated files only gained lines (the only removed lines are commas moved to a new last entry), so no existing value changed; `pnpm site:check` clean. Contrast was computed from the hex values (WCAG relative luminance) and is written in each token's description.
+
 ## Next step (a follow-up pull request)
 
 1. **The workspace's four button systems** (`globals.css .btn`, `.sh .btn`, `.cx-btn`, `.ob-btn`): one button, and whether product buttons take the 45° notch (the founder's call). Radii (up to 999 px) come with it.

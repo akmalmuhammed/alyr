@@ -96,7 +96,9 @@ function faq(locale: Locale, page: PageKey, items: Question[]): Json | null {
 function questionsOf(locale: Locale, page: PageKey): Question[] {
   const t = copy[locale];
   const kind = pageKind(page);
-  if (kind.kind === "home") return t.home.faq.items;
+  // The homepage has no questions section (D-157), so it publishes no FAQPage: structured data must
+  // match what the page shows, and the old answers described a shop visit.
+  if (kind.kind === "home") return [];
   if (kind.kind === "sector") return t.sectors.items[kind.key].faq.items;
   if (kind.kind !== "product" || kind.key === "chat") return [];
   return t.pages[kind.key].faq.items;

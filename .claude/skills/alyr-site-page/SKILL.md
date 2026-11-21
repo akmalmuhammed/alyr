@@ -30,6 +30,17 @@ The homepage presents ALYR as the small business's tech team (D-048, ALY-210, af
 folded on 24 Oct 2026, D-048's update, ALY-223). In order (`_site/HomePage.tsx`, `home.css`,
 words under `home` in `copy.ts`):
 
+**Since 8 Nov 2026 (D-156, ALY-330) the order is:** the header; the hero with the headline, the
+line under it and `FunnelFigure.tsx` (one enquiry through four stations, a dashed card where
+our team does the step); `FiveNumbers.tsx` (Found, Chosen, Answered, Paid, Return, as a
+sample); `Stages.tsx` (Discover, Convert, Manage, Scale, one panel each with `StageIndex.tsx`
+beside it; each lists "Runs today" on a solid rule and "Our team does" on a dashed one);
+Your business; the products; How we work; the price; the questions; the closing call. Words
+are in `copyHome.ts`, styles in `funnel.css` and `stages.css`. The Agent spotlight, the
+Office statement and "One order" are gone as sections (the order's flow is Convert's visual,
+the Agent's screen is Manage's). The list below is the earlier order, kept for the sections
+that remain.
+
 1. **Header** with the Products menu (a state only on ALYR Agent and ALYR Shelf, "With every
    product"), By business, How we work, Questions, the language link, the theme switch and
    the button "Book a check-up" (`home.final.action`; its `short`, "Check-up", below 62rem so

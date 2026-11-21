@@ -22,6 +22,8 @@ LOST_REASONS = ("price", "not_available", "no_reply", "went_elsewhere", "other")
 # A customer whose last message has had no answer for this long is waiting.
 WAITING_MINUTES = 10
 PERIODS = (1, 7, 30)
+# What an agent is never sent: sales and what was settled, a person's and the shop's.
+MONEY = frozenset({"sales", "sales_text", "settled"})
 
 
 class TeamError(Exception):
@@ -41,6 +43,9 @@ class Actor:
 
 CUSTOMER = Actor(None, "Customer")
 ASSISTANT = Actor(None, "Assistant")
+# ALYR itself, for work it does by itself (a proposal that expired, a change it applied). Not
+# ASSISTANT, whose name is not to be shown to owners (spec 066).
+ALYR = Actor(None, "ALYR")
 
 
 def actor_of(staff: Staff) -> Actor:
@@ -320,16 +325,18 @@ async def performance(
         b["sales_text"] = fmt_qar(b["sales"])
 
     everyone = staff.role != "agent" or staff.user_id is None
+    # An agent is sent their own counts and no money at all, whatever the screen draws
+    # (D-035, ui-rules section 16): the totals are worked out from their own row, and sales
+    # are left out of the answer rather than hidden by the screen.
     rows = (
         list(people.values())
         if everyone
         else [p for p in people.values() if p["id"] == str(staff.user_id)]
     )
-    medians = [
-        p["median_reply_seconds"] for p in people.values() if p["median_reply_seconds"] is not None
-    ]
-    total_sales = sum(p["sales"] for p in people.values()) + unassigned["sales"]
-    return {
+    rest = [unassigned] if everyone else []
+    medians = [p["median_reply_seconds"] for p in rows if p["median_reply_seconds"] is not None]
+    total_sales = sum(p["sales"] for p in [*rows, *rest])
+    answer = {
         "days": days,
         "since": since.isoformat(),
         "waiting_minutes": WAITING_MINUTES,
@@ -343,10 +350,10 @@ async def performance(
             "sales_text": unassigned["sales_text"],
         },
         "totals": {
-            "waiting": sum(p["waiting"] for p in people.values()) + unassigned["waiting"],
-            "open": sum(p["open"] for p in people.values()) + unassigned["open"],
-            "closed": sum(p["closed_total"] for p in people.values()) + unassigned["closed_total"],
-            "sold": sum(p["closed"].get("sold", 0) for p in people.values()),
+            "waiting": sum(p["waiting"] for p in [*rows, *rest]),
+            "open": sum(p["open"] for p in [*rows, *rest]),
+            "closed": sum(p["closed_total"] for p in [*rows, *rest]),
+            "sold": sum(p["closed"].get("sold", 0) for p in rows),
             "sales": total_sales,
             "sales_text": fmt_qar(total_sales),
             # The middle of the people's middles is a fair headline without weighting
@@ -355,6 +362,12 @@ async def performance(
         },
         "people": rows,
     }
+    if not everyone:
+        answer["people"] = [{k: v for k, v in p.items() if k not in MONEY} for p in rows]
+        for part in ("unassigned", "totals"):
+            for key in ("sales", "sales_text"):
+                del answer[part][key]
+    return answer
 
 
 def _blank(user_id, name: str, role: str) -> dict:

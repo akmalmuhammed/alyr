@@ -24,6 +24,7 @@ from alyr.config import get_settings
 from alyr.core import links
 from alyr.core.normalise import fmt_qar, shown_name
 from alyr.modules.ledger import service
+from alyr.modules.orders import pay_ways
 from alyr.routes import customer_link
 
 router = APIRouter(prefix="/api/pay", tags=["payments"])
@@ -95,6 +96,11 @@ async def details(
     stuck = gateway_status in ("no_account", "checkout_failed") or (
         account_id is not None and account_status == "disconnected"
     )
+    # No account of the shop's own and no stand-in (production today): nothing here can take the
+    # money, so the page never draws a Pay button for it (D-190). Such a link comes from before
+    # the shop's deposits and orders were held back until it could be paid (ALY-271).
+    stand_in = account_id is None and pay_ways.stand_in()
+    stuck = stuck or (account_id is None and not stand_in)
     return {
         **found, "customer": shown_name(row["customer"]).split(" ")[0],
         "amount_text": fmt_qar(row["amount"]),
@@ -103,7 +109,7 @@ async def details(
         "track_path": links.track_url("", slug, shop["id"], row["order_id"])
         if row["order_id"] else None,
         "booking": dict(booking) if booking else None,
-        "stand_in": account_id is None,
+        "stand_in": stand_in,
         "preparing": account_id is not None and not row["checkout_url"] and not stuck,
         "unavailable": row["status"] == "pending" and stuck,
         "link": customer_link.view(state, links.PAY),
@@ -118,8 +124,9 @@ async def complete(
 ) -> dict:
     """Stand-in for a gateway's "payment succeeded" callback. A real gateway (ALY-17)
     calls a signed webhook instead; this route does not exist in production."""
-    # Allowed only where we say so explicitly, never by default (ALY-114).
-    if get_settings().env != "local":
+    # Allowed only where we say so explicitly, never by default (ALY-114): a developer machine,
+    # with the stand-in on. The page draws no button anywhere else (`stand_in` above).
+    if get_settings().env != "local" or not pay_ways.stand_in():
         raise HTTPException(status_code=404)
     shop = await _shop(request, slug)
     link = customer_link.require(x_order_link or t, shop["id"], links.PAY, required=True)

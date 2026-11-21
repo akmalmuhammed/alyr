@@ -4,6 +4,7 @@
 // `bookingsDesk.test.mjs` runs it under Node. Words come from `bookingsCopy.ts`.
 
 import type { BookingsCopy, Lang } from "./bookingsCopy";
+import { parseQar } from "./bookingsServiceForm.ts";
 
 export type Period = { weekday: number; opens: string; closes: string };
 export type Person = { id: string; name: string; name_ar: string };
@@ -17,6 +18,8 @@ export type DayBooking = {
   starts_local: string; ends_local: string; day: string; status: string; note: string;
   customer: string; walk_in: boolean; resource: Person | null;
   deposit: number; deposit_state: string; hold_until: string | null; price: number;
+  /** How a paid deposit came: "link" (a pay link) or "transfer" (staff wrote it down, D-191). */
+  deposit_method: string;
   paid: number; left_to_pay: number;
   /** The customer's phone and where their consent to be messaged stands. */
   phone: string | null; consent: string;
@@ -27,6 +30,20 @@ export type Told = { sent: boolean; reason: string | null; phone: string | null 
 export function resourceName(r: { name: string; name_ar: string } | null, lang: Lang): string {
   if (!r) return "";
   return lang === "ar" && r.name_ar ? r.name_ar : r.name;
+}
+
+/** The amount staff typed for a deposit received by transfer, as dirhams: at least QAR 1 and, for
+ * a service with a price, no more than the price. The API checks it again (D-191). */
+export function checkReceived(text: string, price: number): { error: "bad_received" } | { amount: number } {
+  const amount = parseQar(text);
+  if (amount === null || amount < 100 || (price > 0 && amount > price)) return { error: "bad_received" };
+  return { amount };
+}
+
+/** Whether staff may write a deposit down on this booking: it is still to come and no deposit has
+ * been dealt with yet (none, or a link still waiting). */
+export function canWriteDeposit(b: { status: string; deposit_state: string }): boolean {
+  return b.status === "booked" && (b.deposit_state === "none" || b.deposit_state === "due");
 }
 
 /** The time on the shop's clock, 24-hour: "14:30". */

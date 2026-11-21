@@ -458,7 +458,7 @@ export const shelfEn: ShelfPage = {
       {
         id: "setup",
         q: "How long does setup take?",
-        a: "We agree the date you start at the visit, and load your items, photos and prices with you, or from your own sheet.",
+        a: "We agree the date you start with you, and load your items, photos and prices with you, or from your own sheet.",
       },
       {
         id: "last-one",
@@ -479,7 +479,7 @@ export const shelfEn: ShelfPage = {
   },
   cta: {
     title: "Tell us what you sell, and how you keep count today.",
-    body: "Send us a message. A person from ALYR replies, then comes to load your items and stock with you.",
+    body: "Send us a message, and we set up a call or a meeting to load your items and stock with you.",
   },
 };
 
@@ -900,6 +900,6 @@ export const shelfAr: ShelfPage = {
   },
   cta: {
     title: "أخبرنا ماذا تبيع، وكيف تعدّ مخزونك اليوم.",
-    body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يزورك ليضيف معك أصنافك ومخزونك.",
+    body: "أرسل لنا رسالة، ونرتّب معك اتصالاً أو لقاءً نضيف فيه معك أصنافك ومخزونك.",
   },
 };

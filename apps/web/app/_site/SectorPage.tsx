@@ -71,7 +71,7 @@ export function SectorPage({ locale, sector }: { locale: Locale; sector: SectorK
     <Shell locale={locale} page={sectorPage(sector)} cta={s.cta}>
       <section className="sp-open" id="answer" aria-labelledby="answer-title">
         <div className="wrap sp-open-in">
-          <Crumbs label={w.crumbs.label} items={[[w.crumbs.home, home], [w.crumbs.business, `${home}#business`], [s.name]]} />
+          <Crumbs label={w.crumbs.label} items={[[w.crumbs.home, home], [w.crumbs.business, `${home}#stages`], [s.name]]} />
           <h1 className="sp-title" id="answer-title">{rich(s.title)}</h1>
           <p className="sp-answer">{rich(s.answer)}</p>
           <div className="sp-act">

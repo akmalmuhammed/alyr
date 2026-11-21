@@ -52,6 +52,7 @@ def test_the_shell_shows_what_the_demo_shop_has(client):
         "ledger",
         "products",
         "connections",
+        "unsent",
         "team",
         "account",
     ]

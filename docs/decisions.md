@@ -6,6 +6,8 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 
 | # | Decision | Status |
 |---|---|---|
+| D-194 | A message that cannot go fails where the shop can see it: a template Meta has not approved is refused when queued, a message Meta refuses is failed at once in Meta's words, and a refused reminder or review request is not counted as sent | Accepted, 21 Nov 2026 |
+| D-195 | A customer's voice note, photo or other message that is not text is labelled in the inbox, left to a person and acknowledged once; a reaction is shown and never answered | Accepted, 21 Nov 2026 |
 | D-001 | One deployable service (modular monolith) | Accepted |
 | D-002 | PostgreSQL with forced row-level security for tenant separation | Accepted |
 | D-003 | Plain SQL migrations, never edited after they are applied | Accepted |
@@ -107,9 +109,21 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-132 | A process holds few database connections (4 for an API instance, 8 for the worker), gives up after 3 seconds and answers 503 with Retry-After; only so many documents are drawn at once; the worker keeps places for customers; the Sunday report can be spread but stays at nine | Accepted |
 | D-131 | What the workspace and the order page ask for again and again is kept three seconds and shared between tabs, thrown away by the shop's own writes; who is signed in and a shop's modules the same | Accepted |
 | D-130 | The inbox and the Orders screen read the newest rows off an index (a customer carries the times of their latest messages, kept by the database; the inbox lists 300 conversations, Orders the last 30 days and everything open), so a refresh costs the same in a shop's first week and its second year | Accepted |
+| D-157 | The homepage, version 3: a centred hero, a window for the film, the four stages as a switch, how we work as stacked panels, one workspace as a mosaic; the numbers band, business tabs, price and questions leave the page; rounded panel and pill tokens | Proposed, 8 Nov 2026 |
+| D-171 | The connector's first tools: nineteen on the action layer (nine reads, four stock changes with undo, six for Discovery), a `discovery` scope, an app can never approve anything, nothing sent by the tools themselves | Accepted as built, 9 Nov 2026 |
+| D-162 | The Doha Corniche in line under every page's footer, edge to edge (an exception to "no skylines, no dhows") | Proposed, 9 Nov 2026 |
+| D-164 | The footer no longer carries the WhatsApp and Meta disclaimer (founder's instruction) | Accepted, 9 Nov 2026 |
+| D-161 | The Convert scene: WhatsApp, the real channel marks in colour (exception, this scene only), "every channel, every enquiry, one inbox"; "Runs today" removed | Proposed, 8 Nov 2026 |
+| D-159 | The home film plays in the window (web copy, 18.6 MB, on its own background); the homepage stops saying a person replies | Proposed, 8 Nov 2026 |
+| D-158 | The homepage window at Notion's size (960 x 600), and two animated scenes in the stage switch: a check-up score that moves after one fix (Discover) and five places drawn into one ALYR Chat inbox (Convert) | Proposed, 8 Nov 2026 |
+| D-156 | The homepage is rebuilt around the four stages (discover, convert, manage, scale), with one drawn funnel figure, the five numbers of a check-up and one panel per stage; where software is not built, our team does the step and the page says so | Proposed |
+| D-160 | Discovery is one module with one agent and two doors: ALYR Agent in the workspace and WhatsApp, the owner's own AI through the MCP connector, both calling the same actions; Phase 1 is read-only and rule-based, no model | Accepted |
+| D-166 | Discovery Phase 2: every public change is a proposal made by rule from a confirmed fact, applied only after a person's tap on that exact change (workspace or WhatsApp), through a connector write interface; asks go to linked staff numbers through the outbound layer; Google Business Profile writes are an interface only | Proposed, 9 Nov 2026 |
 | D-155 | The light page is pure white, with cool Carbon-family greys for wells and lines, instead of the yellow-green off-white Paper | Accepted |
 | D-153 | The homepage's headline and sub line use the founder's AI wording, with one word taking turns on a pale Volt block, and a statement before the products keeps the plain line | Accepted |
 | D-154 | The homepage is trimmed: no film beside the headline (ends D-062), the sub line's word takes turns between discover, manage and scale with its own Pause, and How we work's lead, "What we need from you" and the order flow's tally go | Accepted |
+| D-192 | The owner is told about bookings: a new booking and a customer's cancellation reach the staff numbers marked for them on WhatsApp (inside the 24-hour window; the two templates are written and held, so nothing goes outside it) and each owner by email, with no customer details | Accepted, 21 Nov 2026 |
+| D-193 | The weekly report reaches the owner (linking an owner's or admin's phone and registering a number on purpose switch it on, with switches on the Team screen) and stops when a person leaves the team or becomes an agent; the day stays Sunday until the founder decides | Accepted, 21 Nov 2026 |
 
 ---
 
@@ -2557,3 +2571,369 @@ The page's light colour was Paper, #F6F7F3: a yellow-green tint (hue 118°) agai
 
 **Checked.** axe finds nothing on /, /ar and /chat in either theme at 1440 and 390; the drift check and the tokens' generated files agree.
 
+## D-156 · The homepage rebuilt around the four stages
+
+**Date** 8 Nov 2026 · **Status** Proposed (the founder asked for the rebuild on 8 Nov; the page is in a pull request and not published) · Linear ALY-330, under ALY-302 · Follows the plan of 8 Nov (ALY-302) · Replaces the section order of D-048 and removes the sections D-150 and D-153 added
+
+The founder, 8 Nov 2026: rebuild the homepage with a modern approach, in the same design system, with new sections, content, animations and components, studying clay.com; focused explanations, more visual treats, very minimalist, easy to understand and optimised, and show the new product.
+
+**Decision.**
+- The spine is Discover, Convert, Manage, Scale. One panel for each, with a chapter index beside them on wide screens.
+- The hero keeps the headline and sub line (D-153, D-154) and adds one drawn figure: an enquiry through four stations for the fictional Qirfa Bakery. A dashed card is a step our team does by hand; a solid card is a screen that runs today.
+- The proof is what we measure, not what we claim: the five numbers a check-up records, as counts, drawn once as a captioned sample. No customer quotes, logos or results, because there are none.
+- Each panel says what runs today (the product's name, a solid rule) and what our team does (a dashed rule). Discover has no software yet, so it is all "our team".
+- Cut as sections: the Agent spotlight (its screen is Manage's visual), the Office statement, and "One order" (its flow is Convert's visual). Kept: By business, the products, How we work, the price, the questions, the closing call.
+
+**What was taken from Clay, and what was not.** Taken: one positioning idea proved in order, one full panel per idea with a label, a headline, one sentence and one visual, proof straight under the first screen, and few repeated calls. Not taken: its illustration, customer logos, quotes and numbers (we have none), and any gradient, glow, bento icon grid or counter (the design system).
+
+**Scope.** No new dependency, no new font, no change to the tokens. The Arabic is a draft until the native review (ALY-66). D-153's exception is unchanged: no other public line says "agentic" or AI.
+
+**Revisit when.** The founder has seen the preview, the Discover tools exist (then Discover gets a "Runs today" list), or the plan's rules change (ALY-302, questions A to E).
+
+## D-157 · The homepage, version 3: centred, a window for the film, a switch, a stack, a mosaic
+
+**Date** 8 Nov 2026 · **Status** Proposed (the founder's brief; in PR #270, not published) · Linear ALY-330 · Follows D-156 and replaces its section order
+
+- The page is, in order: a centred hero with a thick headline and the sub line's changing word in a chip; a window under it for the home film; the four stages as a segmented switch (Discover, Convert, Manage, Scale); how we work with you as four panels that stack as you scroll; one workspace for every kind of business as a mosaic of every product and what our team does; the footer and closing call.
+- Off the page: the five numbers band, the business tabs with the day split, the price and the questions. The price stays on /pricing. The header's "Questions" link goes; it gains "Workspace".
+- The window shows the drawn funnel figure until the film is switched on (`NEXT_PUBLIC_ALYR_HOME_VIDEO=on`, with `home.mp4`, `home-poster.jpg` and `home.vtt` in `apps/web/site-media/`). The film never starts by itself.
+- New tokens: `radius.panel`, `radius.pill`, `weight.hero`. This is the first rounded panel and pill on the site; the founder asked for it with Apple, Notion and Clay as the references. The cut corner stays on buttons and drawn windows.
+- The closing call no longer says someone comes to the shop (the check-up is remote, 5 Nov).
+- The Arabic is a draft until ALY-66.
+
+## D-158 · The homepage window at Notion's size, and animated scenes in the stage switch
+
+**Date** 8 Nov 2026 · **Status** Proposed (the founder's brief; in a pull request, not published) · Linear ALY-330 · Follows D-157
+
+- The window under the headline is the size and shape of the product window on notion.com, measured there at 1440 x 900 on 8 Nov 2026: 960 x 600 (16:10), centred, an 8 px radius, a hairline and six soft shadow layers, no title bar. New token `shadow.stage`. The film should be made at 1920 x 1200 so it is sharp at that size; until it is switched on the window shows the drawn figure.
+- Discover shows a sample check-up of the fictional Qirfa Bakery: the score as a ring, four measured parts as bars (Google listing, website, WhatsApp, reviews: the parts Discovery measures, spec 065), one recommendation. A pointer presses "I did this" and then "Run check-up", the score counts from 58 to 71 and the two parts that changed fill in Volt. Instagram and TikTok are not parts of the score: Discovery does not measure them.
+- Convert shows five places customers come from (Instagram and TikTok link in bio, a Google profile link, the order page's button, the counter QR card) drawn into one ALYR Chat inbox, the chats arriving one by one. Each chat is the customer's own words naming where they came from, so nothing says that ALYR tags or reads the source. Instagram and TikTok direct messages are not connected to Chat and the scene does not show them. No brand logos are used: the icons are generic.
+- Scale shows the same fictional bakery's week: 50 orders against 45 on the same days last week (Sunday to Thursday, 8, 11, 10, 12 and 9 against 9, 8, 10, 9 and 9), the busiest day in Volt, then the three actions of the monthly review agreed one by one. It replaces the old Carbon plate, so no tab keeps the old look. The three actions are the words already on the page.
+- All three scenes play once when the tab is opened, are complete in the HTML, and show only the end state with reduced motion or without scripts. Every time is a multiple of `--play-3`. The number counters animate a registered integer property (paint, not transform), a deliberate exception to "animate transform and opacity only", kept to these two scenes.
+- The panels still share one height (the tallest, Manage), so the page below never moves when a tab changes.
+- The Arabic is a draft until ALY-66.
+
+## D-159 · The home film plays in the window; the homepage stops saying a person replies
+
+**Date** 8 Nov 2026 · **Status** Accepted, 8 Nov 2026 (the founder said to publish the film as it is) · Linear ALY-330 · Follows D-158
+
+- The window under the headline now plays the home film, `ALYR-your-business-1080.mp4` from the video studio (2:06, music and words on screen, no narration), as a web copy (1280 x 720, 30 fps, 18.6 MB, under Cloudflare's 25 MiB file limit; the studio's 1080p master is 48 MB) with a poster taken from its logo card. The film is on by default; `NEXT_PUBLIC_ALYR_HOME_VIDEO=off` brings the drawn figure back. It never starts by itself and has the browser's own controls. The film is 16:9 in a 16:10 window, so it is shown whole on its own background (new token `film`, #141819), never cropped.
+- Cloudflare's static files answer a byte-range request with the whole file, so a browser could not jump to another minute of the film (checked on the PR preview: seeking to 1:10 went back to the start). `site-worker.js` now answers `/media/` range requests with a 206 and `Accept-Ranges: bytes`.
+- The film has no captions file, because it has no speech. Add `home.vtt` and `captions` in `site.ts` if it ever does.
+- The film is the founder's. It shows things that are not built today, all marked as sample figures: the "Agentic Workspace" title card; Instagram and Facebook rows and an "AI answers" row in the check-up score; an inbox with Instagram and Facebook chats; "Ask your workspace on WhatsApp"; the offers and reminders screens. The founder was told this and said on 8 Nov 2026 to publish the film as it is. The rest of it was not checked line by line against `honesty.md`.
+- The homepage no longer says "A person from ALYR replies": the note under the hero buttons is gone and the closing call reads "Send us a message, and we show you what we would change first." The line stays on the other pages, in the pricing list and in the questions.
+## D-161 · The Convert scene: WhatsApp, the real channel marks in colour, "every channel, every enquiry, one inbox"
+
+**Date** 8 Nov 2026 · **Status** Proposed (the founder's brief; in a pull request, not published) · Linear ALY-330 · Follows D-158
+
+- Convert now draws six places customers come from into one ALYR Chat inbox: Instagram, TikTok, WhatsApp, Google, the order page and the counter QR card. WhatsApp was missing; it is the channel Chat is built on. The headline reads "Every channel, every enquiry, one inbox." ("paid" is gone).
+- The founder asked for the real marks in their own colours instead of black line icons. This is a recorded exception to the design system's "no WhatsApp logo, no WhatsApp green on ALYR's own surfaces", "no logo walls" and "no second accent", limited to this scene: Instagram, TikTok, WhatsApp and Google's G are drawn on their own colours (Simple Icons, CC0 1.0, and Devicon, MIT; the marks stay their owners' trademarks), the order page and the counter card on a Volt tile. The colours are tokens (`--ch-*`), the same in both themes. The footer disclaimer that ALYR is not affiliated with WhatsApp or Meta, which this exception relied on, was removed by the founder later the same day (D-164), and no message says a channel is "connected": each place is a link or a card that opens the same chat.
+- Instagram and TikTok direct messages are still not connected to Chat. The scene shows links in a bio, a profile link, a button and a QR card opening the chat, and each chat is the customer's own words.
+- "Runs today" is gone from the four stage panels (the founder: it does not sound professional). The solid and dashed rules still tell what runs from what our team does by hand; "Our team does" stays.
+- The Arabic is a draft until ALY-66.
+
+## D-162 · The Doha Corniche in line under every page's footer
+
+**Date** 9 Nov 2026 · **Status** Accepted, 9 Nov 2026 (the founder chose it over the dusk footer after seeing both previews) · Follows D-157
+
+- Every public page ends with a line drawing of the Doha Corniche (skyline, a dhow, the seawall) under the footer's last row, edge to edge, with nothing fading and no text on it. The founder chose the line style (moss on light, Volt on dark) from the Image Studio's concepts and said to remove the transition and update the footer with it.
+- It is the design system's "no skylines, no dhows" rule (principle 6) set aside by the founder, for this one drawing. Everything else in that rule stands, and there is no gradient.
+- The drawing is ALYR's own render (Qwen-Image-Edit of an engraving made with Qwen-Image on the laptop, Apache 2.0; no third-party photo). It is a transparent alpha mask (white lines), so one file serves both themes and the colour is the token `--footer-art` (moss, the focus colour, on light; Volt on dark). Two sizes: 1440 x 664 (112 KB) and 2880 x 1328 (304 KB) for screens of 1.5x and up.
+- Decoration only: hidden from screen readers, no alt text, no link. It is a real place, so it is not mirrored in Arabic. On a phone it is cropped to the towers. No motion.
+- The existing footer words and links are unchanged. The line "Built in Doha, for the businesses along this coast" from the concept is not used: the founder has not approved it.
+
+## D-167 · The footer is four columns; the ALYR Agent's Arabic is corrected in the engine
+
+**Date** 9 Nov 2026 · **Status** Accepted (the founder's instruction: "fix the Agent screens and Arabic"; "in the footer the details are written horizontally, make it vertical and organized like top tech landing pages") · Linear ALY-330
+
+- **Footer.** The sign-off line stays on top; under it four columns, each with its own heading: Products, For your business, Company (Pricing, Guides, Company details, Staff sign-in), Legal (Terms, Refund policy, Privacy). Two across on a phone, four from 48 rem; mirrored in Arabic. The language link moves to the bottom bar beside the registration line. The Corniche line rises behind the foot of the footer (the founder: overlapping the image is fine), with the legal text kept clear of the drawing. New words: `footer.company` and `footer.legalTitle`, both languages.
+- **Agent Arabic, fixed where it is made** (`apps/api/.../agent/insights.py`, `view.py`, `words.py`; `_agent/labels.ts`, `AgentDashboard.tsx`), then the six sample files regenerated with `python -m alyr.agent_samples` so the site and the workspace say the same: «أعلى/أقل بنسبة» and «بزيادة/بنقص» instead of «أكثر بـ», «مقارنةً بـ» instead of the calqued «عن»; «مستحقة على» and «أقدم مستحق» instead of «يدين بها» and «أقدم دين» (the term list steers away from «دين»); the longest wait reads «هو الأطول انتظاراً»; «اثنين» is spelled right; «الترتيب مقارنةً بالأيام الـ28 السابقة»; a no-break space between «و» and «ALYR»; "See all hours" has its verb back; the chart's spoken line uses the Arabic comma and says «لم يبدأ بعد» for a day with no figure yet.
+- **Not touched:** the Sunday report card's caption and its Meta template example (`agent/week.py`, `core/templates.py`) say «أكثر بـ» too; changing that wording is a template change and goes through the WhatsApp message process. The sample data's own words (e.g. «خبز الهيل») are the native reviewer's call (ALY-66).
+
+## D-165 · Onboarding starts with a call or a meeting; nobody visits the shop; the homepage's side labels go
+
+**Date** 9 Nov 2026 · **Status** Accepted (the founder's instruction: "we will not go to their shop, we changed it, focusing on more autonomous onboarding or we first discuss on a call or set up a meeting"; "remove what's built, what runs today and other unwanted labels"; "fix Arabic"; "implement and publish") · Linear ALY-330 · Follows the 5 Nov decision that the check-up is a remote audit; updates D-048
+
+- **How a business starts.** A call or a meeting first, to understand what is best for it; then ALYR sets the products up with the owner. No page, meta description, share card, structured-data line, mailto template or `llms` file says that ALYR comes to the shop or visits. Every product, sector, guide, Docs and Shelf closing call now reads "Send us a message, and we set up a call or a meeting to …". The first-message template asks for "Best time for a call". Prices and go-live dates are "quoted"/"agreed" after we first talk.
+- **Labels removed from the homepage:** "Done by our team", "Our team does", the "runs today" / "built" product tags on the Products menu and workspace grid, "Set up for you" and "With every product". The stage header now reads "Choose a stage to see what ALYR does at each one."
+- **Claims made to agree with each other:** the Convert scene's order is #1441 in both languages; the agent actions in the three drawings are the same three actions; "within the hour" and "within 30 minutes" became "the same day" (no response-time promise, `honesty.md`); step 3's time matches the screen it shows.
+- **Structured data:** the homepage no longer carries a FAQPage block (its answers are on the page and in the sector and pricing pages).
+- **Arabic fixes from the independent review** that live in the site's own copy (hero, footer, consent text, scale actions, the tab and aria names). The Arabic inside the Agent's drawn screens is generated by the API from captured samples and is left to the product lane. Arabic stays a draft until the native reviewer (ALY-66).
+- **Still the founder's call:** the AI wording on the homepage (D-153 keeps it in the headline, sub-line, title and description only).
+
+## D-164 · The footer no longer carries the WhatsApp and Meta disclaimer
+
+**Date** 9 Nov 2026 · **Status** Accepted (the founder's instruction) · Linear ALY-330
+
+- The footer's line "ALYR uses the WhatsApp Business Platform. ALYR is not affiliated with, or endorsed by, WhatsApp or Meta." (and its Arabic) is removed from every public page, and from the `llms.txt` files that repeated it.
+- The design system had made that line the answer to "never imply WhatsApp or Meta affiliation" (`honesty.md`). The rule stands: the site still never says "partner", "official" or "Tech Provider", and nothing implies a partnership. The line was also what D-161 relied on for showing the WhatsApp mark in the Convert scene; D-161 now says so.
+- The founder was told that Meta's brand rules ask a business that shows the WhatsApp mark not to suggest endorsement, and that the line was the plainest way to do that.
+
+## D-160 · Discovery: one module, one agent, two doors
+
+**Date** 7 Nov 2026 · **Status** Accepted (the founder, 7 Nov 2026: "yes agree, go ahead and start building it") · ALY-316, spec 065 · Builds on D-035 (the Agent), D-065 (the action layer), D-012 (no model required), D-152 (the agentic path)
+
+Customers lose a business when its listing, hours, number, website and reviews disagree. Discovery checks that and turns it into a short list of fixes the owner can understand.
+
+**Decision.**
+- **One agent, two doors.** ALYR owns the layer: the tools (actions), the rules, the approval queue and the audit trail. Door one is ALYR Agent, in the workspace and on WhatsApp, which also runs scheduled work. Door two is the MCP connector (ALY-286): the owner's own Claude or ChatGPT calls the same actions. There is never a second agent and never a second copy of the logic. The model, where one is used, is replaceable and sits behind the actions.
+- **Phase 1 is read-only and rule-based.** It reads through a connector (a fictional sample first, public listing data later), applies rules anyone can read, scores only what it measured, and explains with evidence. It changes nothing outside ALYR, sends nothing and calls no model with personal data (hard rule 2). A part that was not measured says so and is left out of the score.
+- **Every public change is a proposal the owner approves** (Phase 2). Nothing is published without a yes, and the next run checks that it worked.
+- **Off for every shop** until switched on, like Documents. The words keep the Agent's voice: by rule, with the evidence, no AI words until the product says it honestly.
+
+**Why.** The founder's rule of 7 Nov (show the best product, build after signing) was overtaken by a go to build it now. The module reuses what exists (module switches, the Agent's registry, the action layer, the jobs worker), so Phase 1 is a module and four screens, not a platform. A model is the one part that needs a legal decision (ALY-329, ALY-51), so it is kept out of Phase 1 and the product does not wait for it.
+
+**Reserved.** Migrations 0120 to 0129 and decisions D-160 to D-169 belong to Discovery.
+
+## D-170 · The MCP connector: an owner's own Claude or ChatGPT calls ALYR, off by default, minimum data, in every plan
+
+**Date** 9 Nov 2026 · **Status** Accepted (the founder said "build" on 9 Nov 2026, taken as accepting the recommended defaults of ALY-287) · ALY-286 (epic), ALY-287, ALY-288, ALY-289, ALY-293, spec 067 · Builds on D-160 (one agent, two doors), D-065 (the action layer), D-012 (no model in ALYR), D-001 (one deployable), D-073 (alert rules), D-083 (per-address limits) · The legal question is `docs/company/legal-opinion/mcp-connector-questions.md` (ALY-51)
+
+An owner adds ALYR as a connector in their own Claude or ChatGPT account, signs in with the email code they already use, chooses the business, and their own app can then call a short list of ALYR actions for that one business. The workspace, WhatsApp and this connector are three doors onto one set of actions; there is no second copy of the logic.
+
+**Decisions (the five answers of ALY-287).**
+1. **Off by default; the owner opts in, per business.** Only an owner can switch it on, and only after confirming, in words, that what ALYR sends to their app leaves ALYR and is handled by the provider they use there, under their own account. The wording's version, who and when are kept and on the activity record. An owner or an admin can pause it at once (the kill switch) or end any connection; a setting (`ALYR_MCP_ENABLED`) switches it off for the whole installation and is **off in production until the founder switches it on**.
+2. **What the app may see about a customer: a first name and the last three digits of the phone. Never a message body, an ID, a salary or an identity document.** The first name is itself written by the customer, so it is marked as untrusted data. An agent sees no amounts of money (D-035), here as everywhere. Fuller detail would be a setting of the business, later, and its own decision.
+3. **Included in every plan for Phase 1.** It is not a product and has no price. Revisit for the later modules.
+4. **Claude and ChatGPT both, one standard.** Both speak MCP. They differ in how they register (Claude by Dynamic Client Registration, ChatGPT by a client-ID metadata document) and in the revision they follow (the 2025 revisions; the current specification is 2026-07-28), so the server supports both registrations and both eras of the protocol on one endpoint (spec 067, "What the standards say today").
+5. **It lives in the API, as a module, one deployable (D-001), served as `mcp.alyr.qa` through the edge Worker to the same Cloud Run service in Doha.** The specification does not force a separate service: it is HTTP and JSON, the load is a person asking questions, and it needs the same database login, limits and action layer. Revisit if its load ever needs its own scaling.
+
+**How it is kept safe (ALY-293).** A changing tool does nothing on its first call; it returns a preview and a short-lived, single-use confirm token bound to the person's permission, the tool and the exact arguments, and changes only when called again with it. Text a customer wrote reaches the app only as cleaned, cut, marked data and no tool turns it into an action. Changes and customer sends have a daily cap per business, counted in the change's own transaction. Every call is on the activity record (channel `mcp`: person, app, tool, arguments, result; never the answer). Tokens are random and kept only as hashes; access tokens last 30 minutes, refresh tokens are rotated on every use and a reused one ends the permission; the person's membership, role and the business's switches are read again on every call. An unusual burst of changes, or an app connected from a new place, reaches the founder's phone with counts only.
+
+**Why.** An owner who already lives in an assistant app should be able to ask it about their shop. The hard part (who may do what, the record, tenant isolation) already exists in the action layer. The cost is the sign-in, the transport and the safety rules, and those are the same for every tool that follows.
+
+**What it does not do.** ALYR calls no model and holds no model key. The foundation has no tool that sends a message to a customer. A real person-in-the-loop prompt (elicitation) is not used: the preview, and the client's own confirmation for tools marked as changing, are the owner's yes.
+
+**Rejected.** *Default on* (the data leaves Doha on the owner's ask, so the owner opts in). *Full customer detail by default* (not needed for the owner's questions). *A separate service now* (the same login, limits and actions would be copied). *A machine key instead of a person's sign-in* (it would not know the role or the person; a machine-key variant for a POS is separate). *Using an MCP SDK* (the server is small, the specification changed shape in July, and the dependency would carry a framework for a handful of methods).
+
+**Not decided.** Whose responsibility the owner's own transfer is, and what the terms must say (ALY-51). Until the answer is in, production stays off.
+
+**Revisit when** the lawyer answers; the first real tools land (ALY-290, ALY-291, ALY-327); a client needs a person-in-the-loop prompt; the connector's load matters.
+
+**Reserved.** Migrations 0130 to 0139 and decisions D-170 to D-179 belong to the connector.
+
+## D-171 · The connector's first tools: nineteen, all on the action layer, a scope for Discovery, an undo for stock
+
+**Date** 9 Nov 2026 · **Status** Accepted as built (a decision of the product lane inside D-170's frame; the founder reviews it with the pull request) · ALY-290, ALY-291, ALY-327, spec 067 ("The tools") · Builds on D-170, D-160, D-065, D-035, D-039 (the Catalog's stock rules), D-012
+
+**What was decided.**
+1. **The tools are the owner's questions, not the database's.** Nine read tools (`hello`, `today`, `bookings`, `orders`, `owed`, `low_stock`, `sales_summary`, `insights`, `shop_info`), four stock tools (`mark_sold_out`, `mark_back_in_stock`, `set_stock`, `undo_stock_change`) and six Discovery tools (`discovery_overview`, `discovery_findings`, `discovery_reviews`, `discovery_report`, `discovery_mark_done`, `discovery_skip`). Each is an action of `core/actions.py`; the tool adds words, a schema and what an app may see. No number is worked out twice: sales and tips come from the dashboard's own facts and view, a closed week from the weekly report's reading, stock lists from the Catalog list's filters.
+2. **A new scope, `discovery`, for the two Discovery changes.** The five scopes of the foundation had no honest word for "mark a finding done or skipped" (it is not stock, bookings or orders). The consent page says it in words: mark items on your Discovery list done or skipped, after you say yes. **An app can set a finding to "I did this" or "Skip" and nothing else, and can never approve anything**: the status is fixed in the door (`modules/mcp/discovery_actions.py`), not an argument, and no tool named or described as approving exists (a test fails if one does). Phase 2's approvals are decided in ALYR by the owner.
+3. **Stock changes are small, logged and reversible, by the Catalog's own code.** An item is found by the Catalog's matching (the same as a staff member's WhatsApp message) or by its code; two that fit give a "did you mean" list and change nothing. The switch is `service.set_available`, a count is `service.record_stock`, so the stock log says who and `mcp`, and the activity record says `mcp` (one new optional argument, `channel`, on `set_available`). Each change is remembered in `mcp_stock_changes` (migration 0131) so `undo_stock_change` can put it back, only while nothing changed it again, only for the person who made it or an owner or admin. An undo is itself a changing tool: preview, confirm, cap. Anyone on the team may change stock through the connector, as in the workspace (D-039's permission table).
+4. **The connector sends no customer a message of its own, and says when the Catalog will.** Bringing an item back (a switch, or a count that rises) lets the Catalog's existing "tell me when it is back" reaction run, as it does from the workspace and from WhatsApp: customers who asked and agreed get one message through the outbound layer. The preview says how many customers that is and that the message cannot be taken back. A count that falls may raise the managers' usual low-stock alert; the preview says that too. Sending pay links and reminders is ALY-295, not this.
+5. **What an app is told about a customer is cut in the tool, in one place per tool (`present`).** First name (marked), last three digits; never a message, an ID or a full number; the tips' own sentences, which name customers, are left out and the tip's title, its rule and the first names it counts are given instead. What the Discovery check-up read from outside ALYR (a listing, a review, a reviewer's name, a place's name) is marked as data too.
+6. **Agents see no money and are not offered the money tools.** `owed` and `sales_summary` are for owners and admins; `orders` and `today` leave amounts out for an agent, so there is nothing to hide afterwards.
+
+**Why.** An owner asks "how is today", "who owes me", "I have no more pancake". Each question has one answer on the dashboard, in the weekly report or on the Catalog list; the connector says the same thing. A change made by a sentence to an app needs a way back as simple as the change.
+
+**Rejected.** *A tool per table or a generic query tool* (a model would pick wrongly and the data minimum would be impossible to keep). *Reusing `staff_changes` for the undo* (it belongs to a staff phone number; a person signed in through the connector has no contact row). *Suppressing the Catalog's back-in-stock message when the change comes through the connector* (the owner asked for the item to be back; the message is what the customers asked for; it would make the connector different from the workspace; but see "Not decided"). *Using the `stock` scope for Discovery changes* (the consent page would say the wrong thing). *Giving an app the tip's own sentence* (it names customers in full).
+
+**Not decided.** Whether the back-in-stock message should be held back for changes that arrive through the connector until a person reads it (the founder). Whether an agent should be able to undo a colleague's change (today: no).
+
+**Revisit when** the founder reviews the tool words in a real client; Phase 2 of Discovery lands (its approvals do not come here); bookings and orders changes (ALY-294) and sends (ALY-295) arrive and need scopes of their own.
+
+## D-166 · Discovery Phase 2: proposals, approvals and owner asks
+
+**Date** 9 Nov 2026 · **Status** Proposed (the spec is written, nothing is built; the founder's yes starts the build) · ALY-324, ALY-325, spec 066 · Builds on D-160 (one agent, two doors; "every public change is a proposal the owner approves"), D-065 (the action layer), D-004 and D-020 (one outbound layer, consent and the 24-hour window), D-012 (no model required)
+
+D-160 said Phase 2 would turn findings into proposals the owner approves. This fixes how, so backend and screens can be built in parallel.
+
+**Decision.**
+- **A proposal is one exact change to one place**, made by a rule from a finding, with its before and after stored and immutable. Its "after" comes only from a **fact** a person confirmed (the real hours, phone, category, name, WhatsApp number), the place's own WhatsApp number, or a fixed reply template. No model, no free text, no value copied from Google, a website or a review.
+- **Approval is a person's tap on that exact change**, by an owner, an admin, or a branch manager for their own place; never by the engine, by ALYR Agent, by the owner's own AI through the MCP door, or by staff. The state lives in one row; WhatsApp and the workspace read and write it through the same action. A proposal expires after 14 days; a refused one is not asked again for 14 days.
+- **Apply goes through a connector write interface** that checks the live value first, writes, and keeps a receipt. The `sample` connector changes the fictional business so a re-run shows the score going up; undo works for 7 days while the live value is still what ALYR wrote. A `google_business_profile` connector is specified as an interface and **not built**: it needs Google's API access (an application, a verified profile of 60 days or more, an OAuth consent screen), which is the founder's.
+- **Asks on WhatsApp** go only to staff numbers linked to a login and marked by the owner, through the outbound layer (consent, the 24-hour window), outside quiet hours, at most 3 a day (adjustable 1 to 5), one at a time, one per proposal per person, never repeated. Inside the window they are buttons (Approve, Not now, See details); outside it a template that is written and **held until the founder submits it to Meta**. "Not now" leaves the proposal waiting. Nothing is ever sent to a customer.
+- **The morning brief gets one line,** "N changes waiting for your approval", from `brief_line`, which the Agent's "Needs you now" uses now. The brief itself (ALY-134) is not built and is not part of this.
+
+**Why.** An owner will not log in to fix a phone number, but will tap a button on a message that shows the exact before and after. Deriving every change from something the owner confirmed keeps the product rule-based and honest (D-012, D-035), and the guarantee "nothing is applied without your tap" is what makes it safe to let ALYR touch a public listing.
+
+**Rejected.** Letting the owner approve by typing a word (it does not say which change). Letting a model draft review replies or hours (hard rule 2 and ALY-329 are unresolved). Inferring hours from Bookings (a good next step, but a person must still confirm). Building the Google connector now (no API access).
+
+**Revisit when** Meta approves or refuses the ask template, Google grants API access, ALY-134 is built, or the Arabic review (ALY-66) changes the words.
+
+**Taken from the reserved range:** D-166 (D-165 is taken by the homepage work, PR #281) and migrations 0121 to 0123.
+
+## D-168 · Discovery Phase 3: counting whether a business is named in answers, on public questions only, rule-based, sample first
+
+**Date** 10 Nov 2026 · **Status** Accepted for the build (the founder's brief of 10 Nov: "write the spec first, sample connector first, real engines only behind keys and a flag, off") · ALY-326, spec 068 · Builds on D-160 (one agent, two doors), D-166 (Phase 2), D-012 (no model required), D-035 (the honest voice), hard rule 2
+
+**Decision.**
+- **Only generic public questions leave ALYR, and nobody types them.** A question is built from a closed list of trades and cities and three fixed templates ("best car care in Doha"). It holds no business name, person, number or digit. The request an engine receives has exactly two fields, `text` and `lang`; a test fails if a field is added.
+- **Counting is by rule.** Whether the business is named, where in the answer's list, and which other businesses are named, are text matching in ALYR. No model reads an answer, no personal data goes to any model, and an answer is third-party text stored and shown as quoted data.
+- **The sample engine is the only engine built.** It is fictional (Nuqta Car Care and five made-up competitors), deterministic, marked as a sample everywhere, and has three improvement stages like the sample connector. Real engines are a contract (`LiveEngine`) and a gate (the flag `ALYR_DISCOVERY_AI_LIVE`, off; a key per engine; no key in the repository) with **no provider code**: nothing stands in for them. Tests trip every outside call.
+- **The `ai` part of the score is measured only from four counted answers or more**, otherwise it stays "Not measured yet" and out of the total. It is shown as "Answers": "named in 4 of 6 answers", with the caution that answers change each time and a few points is not a trend.
+- **Words.** Owner-facing text says "answer tools" and "answers", never "AI" or "assistant" (docs/honesty.md bans them for ALYR's own voice), never a product's name, and never says ALYR asked a model. The founder can change this in one file.
+- **No findings and no proposals come from answers.** A count does not say what to fix; ALYR does not invent advice it cannot support.
+
+**Why.** Owners will ask whether the chat tools name them. Measuring it without sending anything about the business, without a model and without a claim ALYR cannot back is possible now, on a fictional business, and leaves the real engines to the legal and provider decisions (ALY-51, ALY-329) that are the founder's.
+
+**Rejected.** Sending the business's name in a question (it would put the business in a provider's logs and bias the answer). Letting an owner type their own questions (free text could carry a customer's name or number; it would need review). A model to find competitors in free text (hard rule 2 and ALY-329 are open; a list parser is enough and its limits are written on the screen). Findings such as "get more reviews so tools name you" (no evidence of cause).
+
+**Revisit when** the founder picks providers and ALY-51 answers, when a real engine is added (its terms and region go in `docs/data-residency.md` first), or when the Arabic review (ALY-66) changes the words.
+
+**Taken from the reserved range:** D-168 (D-167 is the footer's) and migration 0124.
+
+## D-180 · The product UI follows the redesign's language
+
+**Date** 13 Nov 2026 · **Status** Accepted (the founder's decision on the redesign of the product screens) · Amends D-150 for the product only; builds on D-040 (Carbon and Volt), D-092 (no setup fee), D-155 (the light page is white), D-039 (what is not ready stays hidden) · The work is `docs/design-system/02-product-ui.md`
+
+The product's screens (the workspace, the back office, sign-in, sign-up and the customer pages) were redesigned as about 190 drawn screens. The written design rules, made for the public site, contradicted the drawings in 39 places. This records what the product now follows; the public site keeps its own system and is not touched.
+
+**Decision.**
+1. **The redesign's language is the product's,** with the resolution recorded for each of the 39 conflicts in `02-product-ui.md`. In short: hybrid numerals (mono for identifiers, times, phone numbers and money in tables and key-value rows; Instrument Sans tabular figures from 24 px and for amounts inside sentences); the Volt button's notch on the top inline-end corner as on the site, mirrored in Arabic, and every other button a 4 px rectangle; icons allowed on outlined and icon-only buttons and never on a Volt button (this amends D-150 for the product; the site keeps "a button is its words"); icons redrawn in the brand's geometry (24 px grid, square ends, mitred corners) and shown at 16 px; panels at 8 px with a hairline, dialogs at 10, no shadows except a menu and a dialog; 13 px body, 12 px captions, 11 px mono labels, 24 px page titles, Arabic one step up; a dashed slot for a first-run object and an empty state for a filtered list; the primary button on a shop's customer page in the shop's colour, with the footer "Set up by ALYR"; "Ask ALYR" renamed to what actually happens.
+2. **One workspace is one place.** No place switch and no per-place column or filter in anything built, and no place model is invented.
+3. **Staff with the agent role see per-order totals only.** Aggregates (the open-orders total, spent, owes, the band's figures) and margin are for owners and admins, enforced on the server.
+4. **The pay-ALYR screens are drawn but not built.** There is no setup fee anywhere (D-092), and a price on any screen comes from the real price list, never typed in.
+
+**Why.** The drawings are what the owner asked for, and are denser and calmer than the product's four button systems and five icon sets (`00-audit.md`, `components.md`). Rules that contradict the screens would make ten agents each "fix" the drawings back, or each choose a side. One set of rules, with the old ones edited where they conflicted, lets the parts be built once and the screens in parallel.
+
+**What changed in the written rules.** `alyr-product-screen/ui-rules.md` (new), a "Product UI" section in `alyr-design/components.md`, `alyr-product-screen/screen-checklist.md` (new), `alyr-design/format.md` (new, linked from `voice.md`), and the old lines they contradicted in `alyr-design/SKILL.md`, `tokens.md`, `honesty.md`, `voice.md`, `alyr-product-screen/SKILL.md`, `design/README.md` and `docs/brand.md`. New tokens are added by the foundation change, add-only: none of an existing value changes.
+
+**Not decided.** Sample-name checks, which price figures the drawings show, the pay-ALYR screens, a 12-hour clock, how many minutes an unpaid booking's slot is kept, marketing consent, merge rules for two records of one customer. The rules do not rely on any of them.
+
+**Rejected.** *Editing the drawings to match the old rules* (the drawings are the intended product). *Two systems inside the product* (the old and the new, screen by screen, forever). *Restyling the public site to match* (it has its own look and its checks).
+
+**Revisit when** a screen needs something the rules do not cover (a one-line request, then a rule), when the clock question is answered, or when the pay-ALYR screens are built.
+
+**Reserved.** Decisions D-180 to D-199 belong to the product UI redesign (rules, kit, tokens, areas). Migrations: none.
+
+
+---
+
+## D-190 · A service that asks a deposit is bookable only where the shop can take it
+
+**Date** 21 Nov 2026 · **Status** Accepted by the founder's instruction of 21 Nov 2026 (the first client's readiness work; the audit of the same day found the defect) · Linear: none given · Builds on D-084 (deposits), D-044 (each shop's own payment account), ALY-271 (a payment link only where it can take money); spec 043 "Stage 5"
+
+**The defect.** In production a service with a deposit held the customer's time for 30 minutes and sent a pay link to ALYR's stand-in page. The stand-in's Pay button calls a route that answers 404 outside a developer machine, so the customer saw "failed" and the time was given back, with nobody told. No payment provider is connected anywhere yet, and the founder has the pay-ALYR and bank path on hold, so no shop could take a deposit by link. Every deposit test ran as a developer machine, so CI could not see it.
+
+**Decision.**
+1. **One rule, `deposits.can_take`,** the rule every payment link already follows (`pay_ways.online_possible`): the shop's own connected account, or the stand-in on a developer machine. Where it is false, a service that asks a deposit is **not bookable by a customer**: the API refuses it (409 `deposit_unavailable`) before anything is held, queued, sent or written, and the booking page shows the service with "Deposit needed: message the shop", does not let it be chosen, and offers the shop's WhatsApp button. It never draws a Pay button that cannot work.
+2. **The pay page and its route** follow the same rule: no Pay button unless the stand-in exists, and `POST /api/pay/{slug}/complete` answers 404 unless it does.
+3. **The owner is told** in the Services list, on the service and in its form that customers cannot book a service that asks a deposit until it is removed (or until the shop can take deposits). Saving a deposit is still allowed.
+4. **Staff bookings are unchanged** (the desk writes a visit down with no deposit).
+
+**Chosen over** booking such a service **without** its deposit (the shop asked for one for a reason, usually no-shows, and a booking that silently drops the rule is the opposite of what the owner set); hiding the service from the page (the customer would not know why a service they saw on the shop's menu is missing); refusing to save a deposit (an owner may prepare one before the shop can take it); building a real gateway or the pay-ALYR path (on hold, and not ours to start).
+
+**Open for the founder.** Whether a salon that wants deposits before a provider is connected should take them by bank transfer **outside ALYR** and write them down (D-191), which is what the first client can do today, or wait for a provider. Also: when the first real provider lands, `deposits.ask` must make its link through `payments.request` (as orders do) so the link goes to the provider; today it makes the stand-in's, which is why `can_take` can only say yes on a developer machine.
+
+**Revisit when** the first payment provider is connected for a shop (`catalog.py` gives the payments connection its `connected` rule and `deposits.ask` uses `payments.request`).
+
+---
+
+## D-191 · Staff write down a deposit paid by bank transfer; it is the shop's record, never ALYR's money
+
+**Date** 21 Nov 2026 · **Status** Accepted by the founder's instruction of 21 Nov 2026 · Linear: none given · Builds on D-084, D-190, hard rule 3 (non-custodial payments); migration 0140; spec 043 "Stage 5"
+
+**Decision.**
+1. **An owner or admin can write down, on a booking still to come, a deposit the customer paid the shop by bank transfer** (`POST /api/bookings/{id}/deposit-received`: the amount, an optional reference). The booking's deposit becomes paid, with `deposit_method` `transfer`, the reference and when it was written down (three columns on `bookings`, migration 0140; no new table).
+2. **It behaves as a deposit paid by link:** it counts against what is left to pay, the shop's rule for a no-show or a late cancel applies to it (the rule as it stands that moment, copied onto a booking that had none), a deposit receipt is made where Documents is on, the customer gets the same "we received the deposit" notice through the outbound layer, and a booking whose link was still waiting takes the transfer instead (the link expires).
+3. **ALYR holds and moves no money.** The screen says so; the record is the shop's note that it received the money in its own account.
+
+**Chosen over** recording it as a payment by hand in Documents' payments (it would not set the deposit's state, so the shop's no-show rule and the day view's deposit line would not know about it, and it needs Documents on); sending the customer the shop's bank details (not stored anywhere ALYR sends them, and the bank path is on hold); letting every member of staff do it (money: like marking a refund, it is for an owner or admin until the founder says otherwise).
+
+**Not decided.** Correcting or voiding a deposit written down wrongly (today a refund marked by hand); a stylist-role member of staff writing one down (Documents has a setting for payments by hand, `agents_may_record_payments`, that this does not read); a QAR 30 deposit on a QAR 100 service for the first client is the owner's own setting under Services.
+
+**Revisit when** the pay-ALYR or bank path resumes, or the first salon asks to take the deposit through the page.
+
+**Reserved.** D-190 and D-191 were taken from the product UI redesign's range (D-180 to D-199) at the founder's instruction of 21 Nov 2026; migration 0140 from the range 0140 to 0141.
+
+---
+
+## D-194 · A message that cannot go fails where the shop can see it
+
+**Date** 21 Nov 2026 · **Status** Accepted (a decision of the product lane for the first client; the founder reviews it with the pull request) · T6 of the first client's product audit · Builds on D-077 (jobs), spec 036 (the "Not sent" screen), spec 061 (templates per business), CLAUDE.md hard rule 5
+
+**Problem.** A message ALYR starts outside the customer's 24-hour window can go only as a template Meta has approved on the shop's account. Nothing checked that when the message was queued. It was tried six times in about two and a half minutes and then marked failed, while the booking was already stamped as reminded and the customer had already used up their 30 days of the review request. The only place the failure showed was `/app/unsent`, which no menu linked to. For a salon, whose customers book days ahead, most reminders and every review request go outside the window.
+
+**What was decided.**
+1. **The outbound layer asks first.** When a message must go as a template, `core/template_approval.py` looks at what Meta said about that template on the account of the number the customer talks to (`whatsapp_templates`, spec 061). A template with a status other than `approved`, or one the account does not have after its list was read in full, is recorded as blocked with the reason `template_not_approved` and is never queued. When nothing is known (a number with no account ID saved, or an account whose list was never read), the message goes as before: refusing on a guess would stop every message of a shop whose templates nobody has read. The simulator is never checked.
+2. **A refusal is not a send.** A booking whose reminder was refused is not marked as reminded. A review request whose message was refused, or failed after it was queued, does not count toward the customer's 30 days.
+3. **A message Meta refuses is failed at once.** A 4xx answer about the message itself (a template Meta does not have, a number it will not write to) is marked failed on the first try with Meta's own words; a rate limit, a busy Meta and a wrong or expired access token are still tried again.
+4. **"Not sent" is in the menu**, under the account group, for every member of staff, and says the new reason in both languages (the Arabic a draft until ALY-66). The reason can be sent again once Meta has approved the template.
+
+**Rejected.** *Refusing whenever a template is not listed as approved* (a shop whose templates were never read would send nothing). *Checking again when the job runs* (the queue time is where the reason can be shown against the message). *Putting "Not sent" among the products or the core group* (the phone's tab bar shows the first four and a salon's Bookings would drop off it).
+
+**Revisit when** templates are read automatically after a number is attached (T19), so that "nothing is known" stops being a normal state; or when an approved template can be sent from the inbox (T7).
+
+**Not covered.** A reminder that was let through and then failed at Meta after being queued still has its time stamped; the message is on the "Not sent" screen and can be sent again. A reminder refused for lack of consent (a booking made by staff for a customer who never wrote) is now unstamped and shown as not sent, but the consent question (D-142) is the founder's.
+## D-192 · The owner is told about bookings
+
+**Date** 21 Nov 2026 · **Status** Accepted (the founder asked for the product to be ready for the first client, a Qatar salon; audit task T5) · Builds on D-079 (new-order alerts), D-065 (linking a staff number), D-064 (the owner's own test) · Spec `specs/069-owner-alerts` · Migration 0142
+
+A salon's owner learned of a booking only by opening the Bookings tab, typing BOOKINGS or reading Sunday's report. Alerts existed for orders only.
+
+**Decision.**
+1. **A new booking a customer makes, and one a customer cancels, is told** to the staff numbers marked for it (`contacts.booking_alerts`) and to each owner who wants it by email (`memberships.booking_emails`, on for owners, switched off by the owner). Not for a booking made by staff, a cancellation by staff, a deposit hold running out, or the owner's own test booking.
+2. **WhatsApp goes only inside the number's 24-hour window until Meta has approved the wording.** The templates `booking_new_staff` and `booking_cancelled_staff` are written in English and Arabic and **held** (`held=HELD`): not submitted. While held, a number whose window is closed is sent nothing, so there is no late failure in the Not sent list. The hold is the founder's to lift, as for every held template.
+3. **The email carries the booking's number, the service with who does it and the time, never the customer's name or phone number.** Resend is in the EU (hard rule 2); the email is an interim door so an owner learns of a booking with no WhatsApp at all.
+4. **Nobody is marked until an owner or admin links their phone** (which marks it) or marks a number: a busy shop is never sent a message per booking it did not ask for (as D-079).
+
+**Why.** "Did anyone book?" is the signal a salon owner wants most, and at 11 pm nothing reached any phone. An email needs no Meta approval and no 24-hour window; the WhatsApp message is better where the window is open and costs nothing there.
+
+**Rejected.** *Submitting the templates now* (the founder's go). *Sending outside the window and letting it fail* (a failure shows late, quietly, and in a list not in the navigation: audit risk 5). *A customer's name and phone in the email* (not listed for that in the data-residency register; the owner has the workspace for it). *Alerts for staff-made bookings* (the person making it knows).
+
+**Not decided.** Whether an admin is emailed, a per-shop (rather than per-owner) email switch, a daily summary instead of one per booking for a very busy shop.
+
+**Revisit when** Meta has approved the templates, a shop is busy enough that an email per booking is noise, or an owner asks for the customer's name in the email.
+
+**Taken from the reserved range:** D-192 and migration 0142.
+
+## D-193 · The weekly report reaches the owner, and stops when a person leaves
+
+**Date** 21 Nov 2026 · **Status** Accepted (audit tasks T3 and T27 of the first client's readiness audit; the day is T4 and stays Sunday) · Builds on D-030 (the weekly report), D-065 (linking a staff number), D-035 (agents see no money)
+
+`contacts.weekly_report` defaults to false and nothing set it, so no real owner was ever sent the WhatsApp report (the emailed copy worked). A person taken off the team kept their linked number as a staff number, still on the report's list and the alerts.
+
+**Decision.**
+1. **Linking a number that was a customer's, as an owner or an admin, switches the weekly report and the booking alerts on** for it and records the agreement to the shop's messages; a number that said STOP stays stopped, a number the shop already listed as staff keeps the owner's settings, and **an agent is never given the report** (it holds the shop's money).
+2. **Registering a staff number takes the report and booking switches**; not said means off for a new number and unchanged for a number registered again.
+3. **The owner switches them on the Team screen** ("What ALYR sends you": Weekly report for owners and admins, New bookings and Booking emails where Bookings is on) and per number in the staff numbers list.
+4. **A person taken off the team, or a number taken off the staff list, stops being staff's** (`staff_link.stand_down`: customer role, login unlinked, report and every alert off, history kept), and an admin made an agent stops receiving the report.
+5. **The report's day stays Sunday, 9:00, shop time.** The words (card, text, the home's line, the switches) say Sunday; a test fails if the places that name the day say Monday. Moving the day is the founder's decision and touches the places listed in the pull request.
+
+**Why.** The report is the one message every owner is promised. Switching it on where the person proves their own phone, and letting them switch it off, is the honest default; leaving it to a column nobody could reach was the bug. An ex-colleague's phone receiving the shop's figures is a leak.
+
+**Rejected.** *Switching it on for every registered staff number* (the registration form is also how a stylist's number is added; revenue is not hers). *Moving the report to Monday here* (the proposal says Monday, the code says Sunday: the founder decides which is true).
+
+**Revisit when** the founder chooses a different report day, or a shop wants the report on a second phone by default.
+
+**Taken from the reserved range:** D-193.
+## D-195 · What the chat does with a message it cannot read
+
+**Date** 21 Nov 2026 · **Status** Accepted (a decision of the product lane for the first client; the founder reviews it with the pull request) · T8 of the first client's product audit · Builds on D-065, D-084, ALY-272 (the order chat's `_hand_to_person`), CLAUDE.md hard rule 5
+
+**Problem.** Meta's webhook says what kind of message a customer sent. ALYR kept the text and the caption of a photo and dropped everything else. A voice note became an empty message; the booking router answered it, and a "thumbs-up" reaction, with the welcome menu; the owner saw an empty bubble and no sign that a customer had asked something. A salon's customers send inspiration photos and voice notes every day.
+
+**What was decided.**
+1. **The parser keeps the kind.** Photos, audio, videos, files and stickers keep their caption and Meta's file ID (nothing downloads the file); a voice note is Meta's audio type with `voice: true` and is kept as `voice`; a reaction keeps its emoji as its text; a place, a contact card and a message Meta marks unsupported keep their kind.
+2. **A message no module reads is left to a person.** In `modules/router.py`, after the Catalog's order chat (which already did this for its own shops) and before the booking chat, a customer's photo, voice note, audio, video, file, sticker, place, contact card or unsupported message writes "asked for a person" on the conversation and answers once with the Catalog's words ("Thank you, we received it. A person from {shop} will look at it and reply here."). A second one within ten minutes writes and says nothing. While a person is already handling the customer the assistant stays quiet, as before.
+3. **A reaction is not answered.** It is stored and shown ("Reaction: a thumbs-up"), and it does not bring back the welcome menu.
+4. **The inbox says what arrived**, in both languages and in both the classic and the redesigned screens, in the conversation and in the list's preview: "Voice note (not shown here yet)", "Photo (not shown here yet) · the caption". It says plainly that the file is not shown, so the person knows to ask the customer to write it down.
+
+**Rejected.** *Downloading and storing the file now* (a store, a size limit, a retention rule and a privacy line for the lawyer; a later job). *Transcribing a voice note* (no model is in the product; D-012). *Acknowledging every photo* (a set of five photos would get five replies). *Answering a reaction with "thanks"* (a customer who reacts to a confirmation is not asking anything).
+
+**Revisit when** media is stored and shown (the "not shown here yet" words go with it), or when a salon asks for a different first reply to a photo.
+
+**Not checked.** A real voice note or photo from a real phone (the payloads are Meta's documented shapes); the Arabic by a native speaker (ALY-66).
+
+## D-196 · A salon starts as a salon
+
+**Date** 21 Nov 2026 · **Status** Accepted by the Product lane for the first client's preparation (the founder reviews it in the pull request) · Builds on D-031 (starting setups), D-069 (people and chairs), D-039 (the Catalog's types).
+
+The "Salon & barber" starting setup began a new owner with five barber services and one chair, `/start` never asked for the people who work there, renaming a starting service left its old Arabic name on the Arabic booking page, and a business made in the back office had no test line.
+
+**Decision.**
+1. **The `salon` type is a beauty salon** ("Salon & beauty", «صالون وتجميل»), generic and not any one salon's: eleven bilingual services with example prices, the week's opening hours, three people, and retail samples for hair, skin and nails. The key stays `salon`, so no type, template or price setting moves. A pure barber deletes what he does not offer; there is no separate barber type.
+2. **A salon starts with three people**, named "Team member 1" to "3" («عضو الفريق 1» to «3»), and the hours step of `/start` asks the owner to name them, add more and remove the rest. The placeholders are on the booking page until renamed.
+3. **Arabic follows the English name.** Renaming a starting service or person without writing an Arabic name drops the Arabic of the old sample; one the owner wrote is kept. `/start` shows both names for every row.
+4. **A business made in the back office has a test line** (migration 0148), and choosing a type's template for a business with Bookings seeds the type's starting services, hours and people.
+
+**Why.** A three-stylist salon on one chair ran at a third of its capacity until the owner found Set up bookings, and customers on the Arabic page saw the wrong service name or the English one. An owner could not try a business ALYR set up for them.
+
+**Not decided.** Whether three placeholders or none is the right start (three can overbook an owner who never renames; none repeats the one-chair start); Arabic names (a draft until ALY-66); deposits (still off, the pay page is a stand-in); businesses made in the back office before 0148 (left as they are).
+
+**Rejected.** *A new `beauty` type* (it touches the price list, templates, the dashboard and the golden tests for a list that fits `salon`). *Clearing every Arabic name on any rename* (it would erase one the owner wrote).
+
+**Revisit when** a real salon has signed up and shows whether the three placeholders get renamed.
+
+**Migrations.** 0148 (`admin_create_business` adds the test line).

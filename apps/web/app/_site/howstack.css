@@ -1,0 +1,108 @@
+/* "How we work with you" as a deck (HowStack.tsx, ALY-330). Four large soft panels, each
+   `position: sticky` a little lower than the one before, so the next slides up and covers the
+   last. Light panels (--surface-subtle) alternate with Carbon ones (--band); each holds a chip,
+   a headline whose second line is set apart, two lines, and one drawn scene of the product in
+   a rounded inset at the inline end. The scenes are HowCards.tsx's, styled by how.css; this
+   file only places them (it undoes their 45° cut for a rounded inset).
+   The stack is plain sticky. Where scroll-driven animation exists and motion is wanted, the
+   panel being covered settles back (scale, then fades toward the page); without it, or with
+   reduced motion, the stack is the same and nothing moves. On a phone the panels are plain
+   stacked cards, so nothing holds the scroll. */
+
+.hk { --hk-step: var(--space-3); }
+
+.hk-head { display: grid; justify-items: center; gap: var(--space-3); margin-bottom: var(--space-6); text-align: center; text-wrap: balance; }
+.hk-head .lead { margin-inline: auto; }
+
+.hk-stack { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-6); }
+
+.hk-card {
+  position: sticky; top: calc(var(--header) + var(--space-3) + var(--i, 0) * var(--hk-step));
+  display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: var(--space-5); align-items: center;
+  padding: var(--space-5); border: 1px solid var(--line); border-radius: var(--radius-panel);
+  background: var(--surface-subtle); color: var(--text); transform-origin: 50% 0;
+}
+/* the dark panels: Carbon, with the band's hairline where it meets the page in dark */
+.hk-carbon { background: var(--band); color: var(--on-band); border-color: var(--band-edge); }
+
+/* what the next panel covers recedes toward the page */
+.hk-card::after {
+  content: ""; position: absolute; inset: 0; z-index: var(--z-raised); border-radius: inherit;
+  background: var(--canvas); opacity: 0; pointer-events: none;
+}
+.hk-carbon::after { background: var(--band); }
+
+/* ------------------------------------------------------------------ the words */
+.hk-text { display: grid; justify-items: start; align-content: center; gap: var(--space-3); min-width: 0; padding-inline-start: var(--space-3); }
+.hk-tag {
+  display: inline-flex; align-items: center; min-height: var(--space-5); padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--line-strong); border-radius: var(--radius-pill);
+  color: var(--text-muted); font-size: var(--fs-caption); font-weight: var(--weight-medium); line-height: 1.3;
+}
+.hk-carbon .hk-tag { border-color: var(--on-band-faint); color: var(--on-band-soft); }
+.hk-title {
+  font-size: calc(var(--h2) * .72); font-weight: var(--weight-heading); line-height: var(--leading-heading);
+  letter-spacing: var(--tracking-heading); text-wrap: balance;
+}
+[lang="ar"] .hk-title { line-height: var(--leading-arabic-heading); letter-spacing: 0; }
+.hk-l1, .hk-l2 { display: block; }
+.hk-l1 { color: var(--text-muted); font-weight: var(--weight-regular); }
+.hk-l2 { color: var(--text); }
+.hk-carbon .hk-l1 { color: var(--on-band-quiet); }
+.hk-carbon .hk-l2 { color: var(--on-band); }
+.hk-body { max-width: 28rem; color: var(--text-muted); font-size: var(--fs-body); line-height: var(--leading-body); text-wrap: pretty; }
+[lang="ar"] .hk-body { line-height: var(--leading-arabic-body); }
+.hk-carbon .hk-body { color: var(--on-band-soft); }
+.hk-note { max-width: 36rem; margin: var(--space-5) auto 0; color: var(--text-muted); text-align: center; text-wrap: pretty; }
+
+/* ------------------------------------------------------------------ the inset */
+.hk .hk-vis { margin: 0; inline-size: 100%; min-width: 0; }
+/* rounded, not cut at 45°: the cut and its hairline go (RTL has its own cut in how.css) */
+.hk .hk-card .hw-canvas { clip-path: none; border-radius: var(--radius-lg); }
+[dir="rtl"] .hk .hk-card .hw-canvas { clip-path: none; }
+.hk .hw-canvas::before { content: none; }
+/* on a Carbon panel the inset is the light one, so the drawn window keeps its contrast */
+.hk-carbon .hw-canvas { background: var(--surface-subtle); color: var(--text); }
+.hk-carbon .hw-canvas::after { box-shadow: inset 0 0 0 1px var(--hair-strong); }
+.hk .hw-play { border-radius: var(--radius-lg); }
+/* a press plays the scene again; there is nothing to play without motion or without scripts */
+html:not(.motion) .hk .hw-play { display: none; }
+@media (prefers-reduced-motion: reduce) { .hk .hw-play { display: none; } }
+
+/* ------------------------------------------------------------------ narrower */
+/* a laptop's height: the panels stay inside the screen they stick to */
+@media (min-width: 48rem) and (max-height: 40rem) {
+  .hk-card { position: relative; top: auto; }
+}
+/* a phone: plain stacked cards, one column, the scene under its words */
+@media (max-width: 47.99rem) {
+  .hk-stack { gap: var(--space-4); }
+  .hk-card { position: static; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); padding: var(--space-3); }
+  .hk-text { padding-inline-start: var(--space-2); padding-top: var(--space-2); }
+  .hk-title { font-size: calc(var(--h2) * .8); }
+  .hk-head { margin-bottom: var(--space-5); }
+}
+
+/* ------------------------------------------------------------------ the shutter */
+/* The panel under the next one settles back as the next rises over it: its scale and a veil
+   of the page's colour, both driven by the NEXT panel's own progress through the screen. */
+@keyframes hk-recede { to { transform: scale(.97); } }
+@keyframes hk-veil { to { opacity: .55; } }
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) and (min-width: 48rem) {
+    .hk-stack { timeline-scope: --hk-2, --hk-3, --hk-4; }
+    .hk-card:nth-child(2) { view-timeline: --hk-2 block; }
+    .hk-card:nth-child(3) { view-timeline: --hk-3 block; }
+    .hk-card:nth-child(4) { view-timeline: --hk-4 block; }
+    .hk-card:nth-child(-n + 3), .hk-card:nth-child(-n + 3)::after {
+      animation-timing-function: linear; animation-fill-mode: both; animation-range: entry 50% contain 50%;
+    }
+    .hk-card:nth-child(-n + 3) { animation-name: hk-recede; }
+    .hk-card:nth-child(-n + 3)::after { animation-name: hk-veil; }
+    .hk-card:nth-child(1), .hk-card:nth-child(1)::after { animation-timeline: --hk-2; }
+    .hk-card:nth-child(2), .hk-card:nth-child(2)::after { animation-timeline: --hk-3; }
+    .hk-card:nth-child(3), .hk-card:nth-child(3)::after { animation-timeline: --hk-4; }
+    /* a Carbon panel keeps its colour; it only scales */
+    .hk-card.hk-carbon::after { animation-name: none; }
+  }
+}

@@ -92,7 +92,7 @@ export const guidesEn: GuidesCopy = {
   card: "ALYR: an owner guide by the ALYR team, with its title and date",
   cta: {
     title: "Tell us which of these costs you the most.",
-    body: "Send us a message. A person from ALYR replies, then comes to look at it with you at your shop.",
+    body: "Send us a message, and we set up a call or a meeting to look at it with you.",
   },
   items: {
     // ------------------------------------------------------------ orders
@@ -144,7 +144,7 @@ export const guidesEn: GuidesCopy = {
       ],
       alyr: {
         title: "With ALYR",
-        body: "We set these steps up with you, at your shop.",
+        body: "We set these steps up with you.",
         items: [
           "Customers order from a page that opens from the chat, by the piece or by weight, so every order arrives in one shape.",
           "Every order lands on one screen your team shares, with its status and one person responsible.",
@@ -157,7 +157,7 @@ export const guidesEn: GuidesCopy = {
       sectors: ["bakeries", "restaurants", "fashion"],
       cta: {
         title: "Tell us how your busiest day goes.",
-        body: "Send us a message. A person from ALYR replies, then comes to look at your rush with you.",
+        body: "Send us a message, and we set up a call or a meeting to look at your rush with you.",
       },
     },
 
@@ -226,7 +226,7 @@ export const guidesEn: GuidesCopy = {
       sectors: ["salons", "home-services"],
       cta: {
         title: "Tell us about the bookings you lost last month.",
-        body: "Send us a message. A person from ALYR replies, then comes to show you a booking and its reminder on your own phone.",
+        body: "Send us a message, and we set up a call or a meeting to show you a booking and its reminder.",
       },
     },
 
@@ -299,7 +299,7 @@ export const guidesEn: GuidesCopy = {
       sectors: ["groceries", "bakeries", "home-services"],
       cta: {
         title: "Tell us who owes you, and since when.",
-        body: "Send us a message. A person from ALYR replies, then comes to go through your book with you.",
+        body: "Send us a message, and we set up a call or a meeting to go through your book with you.",
       },
     },
   },
@@ -315,7 +315,7 @@ export const guidesAr: GuidesCopy = {
   },
   title: "أدلة لأصحاب المحلات",
   lead: "خطوات عملية للمنشآت التي يديرها أصحابها في قطر، كتبها فريق ALYR. كل دليل يعمل بالأدوات التي لديك اليوم، ويذكر في آخره ما تفعله ALYR في ذلك.",
-  crumb: "الأدلة",
+  crumb: "أدلة الاستخدام",
   kind: "دليل",
   by: "فريق ALYR",
   published: "نُشر في",
@@ -323,11 +323,11 @@ export const guidesAr: GuidesCopy = {
   related: "لنوع نشاطك",
   see: "اطّلع على {name}",
   read: "اقرأ الدليل",
-  footer: "الأدلة",
+  footer: "أدلة الاستخدام",
   card: "ALYR: دليل لأصحاب المحلات من فريق ALYR، بعنوانه وتاريخه",
   cta: {
     title: "أخبرنا أيّ هذه الأمور يكلّفك أكثر.",
-    body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يأتي ليراه معك في محلك.",
+    body: "أرسل لنا رسالة، ونرتّب معك اتصالاً أو لقاءً نراه فيه معك.",
   },
   items: {
     "stop-losing-whatsapp-orders": {
@@ -391,7 +391,7 @@ export const guidesAr: GuidesCopy = {
       sectors: ["bakeries", "restaurants", "fashion"],
       cta: {
         title: "أخبرنا كيف يمرّ أكثر أيامك ازدحاماً.",
-        body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يأتي ليرى الزحمة معك.",
+        body: "أرسل لنا رسالة، ونرتّب معك اتصالاً أو لقاءً نرى فيه الزحمة معك.",
       },
     },
 
@@ -459,7 +459,7 @@ export const guidesAr: GuidesCopy = {
       sectors: ["salons", "home-services"],
       cta: {
         title: "أخبرنا عن الحجوزات التي خسرتها الشهر الماضي.",
-        body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يأتي ليريك حجزاً وتذكيره على هاتفك.",
+        body: "أرسل لنا رسالة، ونرتّب معك اتصالاً أو لقاءً نُريك فيه حجزاً وتذكيره.",
       },
     },
 
@@ -531,7 +531,7 @@ export const guidesAr: GuidesCopy = {
       sectors: ["groceries", "bakeries", "home-services"],
       cta: {
         title: "أخبرنا من عليه مستحقات لك ومنذ متى.",
-        body: "أرسل لنا رسالة. يردّ عليك شخص من ALYR، ثم يأتي ليراجع دفترك معك.",
+        body: "أرسل لنا رسالة، ونرتّب معك اتصالاً أو لقاءً نراجع فيه دفترك معك.",
       },
     },
   },

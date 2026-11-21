@@ -56,6 +56,8 @@ for page in $pages; do
   done
 done
 cp -r .next/static out-site/_next/static
+# The homepage film and its poster and captions (HOME_VIDEO in _site/site.ts), when they exist.
+[ -d site-media ] && cp -r site-media out-site/media
 
 # The pages are drawn first and the framework's scripts start after the first paint
 # (scripts/site-defer-scripts.mjs says why). It fails the build if Next's markup changes.

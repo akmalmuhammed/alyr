@@ -33,6 +33,8 @@ export function BookingsSetup({ lang, start = "services", onChanged, onClose }: 
   const t = BOOKINGS[lang];
   const [resources, setResources] = useState<Resource[] | null>(null);
   const [services, setServices] = useState<ServiceRow[]>([]);
+  // Whether a deposit can be paid online at this shop (D-190); false until it has its own payment account.
+  const [depositsOpen, setDepositsOpen] = useState(false);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [shopHours, setShopHours] = useState<Period[]>([]);
   const [part, setPart] = useState<Part>(start);
@@ -46,7 +48,7 @@ export function BookingsSetup({ lang, start = "services", onChanged, onClose }: 
       fetch("/api/hours", { cache: "no-store" }).then((x) => x.json()),
     ]).catch(() => [null, null, null, null]);
     if (r) setResources(r.resources);
-    if (s) setServices(s.services);
+    if (s) { setServices(s.services); setDepositsOpen(Boolean(s.deposits_open)); }
     if (g) setSettings(g);
     if (h) setShopHours(h.periods);
   }, []);
@@ -85,7 +87,7 @@ export function BookingsSetup({ lang, start = "services", onChanged, onClose }: 
       <p className="bk-said" role="status" aria-live="polite">{said}</p>
 
       {part === "services" && (
-        <BookingsServices t={t} lang={lang} services={services} people={resources} save={save} />
+        <BookingsServices t={t} lang={lang} services={services} people={resources} save={save} depositsOpen={depositsOpen} />
       )}
 
       {part === "hours" && (
@@ -111,6 +113,7 @@ export function BookingsSetup({ lang, start = "services", onChanged, onClose }: 
       {part === "rules" && (
         <>
           <p className="bk-quiet">{t.depositsMoved}</p>
+          {!depositsOpen && <p className="bk-warn" role="status">{t.depositsClosedRules}</p>}
           <RuleForm t={t} lang={lang} settings={settings} save={save} />
           <ReviewForm t={t} settings={settings} save={save} />
         </>

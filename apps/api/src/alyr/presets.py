@@ -38,6 +38,16 @@ class Service:
 
 
 @dataclass(frozen=True)
+class Person:
+    """A person (or chair) a type starts with, so a shop with several does not begin with one
+    lane. The names are placeholders the owner replaces on the People card of /start."""
+
+    name: str
+    name_ar: str
+    kind: str = "person"  # person | place
+
+
+@dataclass(frozen=True)
 class Preset:
     key: str
     name: Text
@@ -47,6 +57,7 @@ class Preset:
     modules: tuple[str, ...]
     services: tuple[Service, ...] = ()
     hours: tuple[tuple[int, str, str], ...] = ()
+    people: tuple[Person, ...] = ()
     catalog: CatalogSetup | None = None
     requires_catalog: bool = False
     # Modules the type also gets when it has the Catalog, because its catalog needs them: a
@@ -79,17 +90,32 @@ ORDERS = ("inbox", "orders", "payments")
 
 PRESETS: tuple[Preset, ...] = (
     Preset(
-        "salon", Text("Salon & barber", "صالون وحلاقة"),
-        Text("Bookings, reminders", "حجوزات وتذكيرات"),
+        "salon", Text("Salon & beauty", "صالون وتجميل"),
+        Text("Bookings, team, reminders", "حجوزات وفريق وتذكيرات"),
         "scissors", "appointments", APPOINTMENTS,
+        # A beauty salon's usual list, generic and not any one salon's. Prices are examples in
+        # dirhams (the screens say so, D-031); the owner sets their own.
         services=(
-            Service("Haircut", "قص شعر", 45, 6000),
-            Service("Beard trim & shape", "تهذيب اللحية", 20, 3000),
-            Service("Haircut + beard", "قص شعر ولحية", 60, 8000),
-            Service("Kids' haircut", "قص شعر للأطفال", 30, 4000),
-            Service("Hair colour", "صبغ الشعر", 90, 18000),
+            Service("Haircut & blow-dry", "قص وتصفيف الشعر", 60, 12000),
+            Service("Blow-dry", "تصفيف الشعر", 40, 7000),
+            Service("Hair colour", "صبغ الشعر", 120, 30000),
+            Service("Manicure", "مانيكير", 40, 6000),
+            Service("Pedicure", "باديكير", 50, 8000),
+            Service("Gel polish", "طلاء الأظافر بالجل", 45, 9000),
+            Service("Facial", "جلسة عناية بالبشرة", 60, 15000),
+            Service("Eyelash extensions", "تركيب الرموش", 120, 28000),
+            Service("Eyebrow shaping", "تشكيل الحواجب", 20, 3000),
+            Service("Makeup", "مكياج", 60, 25000),
+            Service("Men's haircut", "قص شعر رجالي", 30, 5000),
         ),
         hours=_week("10:00", "22:00", ("14:00", "22:00")),
+        # A salon has several people working at once. Three to start from, so a salon with a
+        # team does not begin at a third of its capacity; /start asks the owner to name them.
+        people=(
+            Person("Team member 1", "عضو الفريق 1"),
+            Person("Team member 2", "عضو الفريق 2"),
+            Person("Team member 3", "عضو الفريق 3"),
+        ),
         catalog=SETUPS["salon"],
     ),
     Preset(
@@ -171,6 +197,25 @@ PRESETS: tuple[Preset, ...] = (
 )
 
 PRESET_BY_KEY = {p.key: p for p in PRESETS}
+
+# The Arabic of every sample name, by its English: what a starting service or person is called
+# until the owner writes their own.
+_SAMPLE_AR: dict[str, set[str]] = {}
+for _preset in PRESETS:
+    for _sample in (*_preset.services, *_preset.people):
+        _SAMPLE_AR.setdefault(_sample.name, set()).add(_sample.name_ar)
+
+
+def kept_arabic(old_name: str, old_name_ar: str, new_name: str) -> str | None:
+    """What the Arabic name should become when the English name is changed and the owner did not
+    write an Arabic one with it: nothing (`None`) to leave it, or "" to clear it. The Arabic of a
+    sample (`قص شعر` beside "Haircut") describes the sample, so on a rename it would now say the
+    wrong thing on the Arabic booking page; the page shows the English until an Arabic name is
+    written. An Arabic name the owner wrote, or one for an English name that was not a sample,
+    is left exactly as it is."""
+    if not new_name.strip() or new_name.strip() == old_name or not old_name_ar:
+        return None
+    return "" if old_name_ar in _SAMPLE_AR.get(old_name, ()) else None
 
 # The onboarding steps after the business exists, per way of working. Nothing is paid
 # first (ALY-242, D-053): the owner sets up and tries their business, then sees the plan,

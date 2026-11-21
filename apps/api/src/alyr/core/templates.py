@@ -16,7 +16,7 @@ The Arabic has not been reviewed by a native speaker (ALY-66).
 from dataclasses import dataclass
 from uuid import UUID
 
-from alyr.channels.base import OutboundMessage
+from alyr.channels.base import Choice, OutboundMessage
 
 
 @dataclass(frozen=True)
@@ -45,6 +45,11 @@ class Template:
     # it (`core/whatsapp_templates.py`); `templates_sync --create` still would, so it is not run
     # for these. Taking the hold off is the founder's go, written as deleting `held=HELD`.
     held: str = ""
+    # Quick-reply buttons (spec 066), at most three, each at most 25 characters (Meta's rule), in
+    # each language. A message sent with `choices` carries each choice's id as the payload of the
+    # button at its position, so the order here is the order of the choices.
+    buttons: tuple[str, ...] = ()
+    buttons_ar: tuple[str, ...] = ()
 
 
 HELD = "written, not submitted: waiting for the founder's go"
@@ -359,6 +364,31 @@ CATALOGUE: dict[str, Template] = {
         samples_ar=("النور للكهربائيات", "1001", "179 ر.ق",
                     "2 x قاطع 16 أمبير، 1 x كابل 1.5 مم. استلام من المتجر · لم يُدفع بعد"),
     ),
+    # A new booking and a cancellation by the customer, to the staff numbers marked for them
+    # (D-192, `modules/bookings/staff_alert.py`). WRITTEN, NOT SUBMITTED to Meta: that is the
+    # founder's go, and `templates_sync --create` skips them (`held`). While they are held, a
+    # number whose 24-hour window is closed is sent nothing over WhatsApp (the owner's email is
+    # the way to learn of a booking then). {{3}} is the service and who does it ("Blow-dry with
+    # Reem") and {{4}} the time as the shop prints it. The Arabic is a draft until ALY-66.
+    "booking_new_staff": Template(
+        "utility",
+        "New booking at {{1}}: booking {{2}} for {{3}}, {{4}}. Open ALYR to see it in your "
+        "bookings.",
+        "حجز جديد في {{1}}: الحجز رقم {{2}} لخدمة {{3}}، موعده {{4}}. افتح ALYR لتراه في حجوزاتك.",
+        ("Sky Studio", "104", "Blow-dry with Reem", "Sat 22 Nov, 4:30 PM"),
+        samples_ar=("استوديو سكاي", "104", "سشوار مع ريم", "22/11 16:30"),
+        held=HELD,
+    ),
+    "booking_cancelled_staff": Template(
+        "utility",
+        "Booking cancelled at {{1}}: the customer cancelled booking {{2}} for {{3}}, {{4}}. "
+        "The time is free again.",
+        "إلغاء حجز في {{1}}: ألغى العميل الحجز رقم {{2}} لخدمة {{3}}، موعده {{4}}. "
+        "أصبح الوقت متاحاً من جديد.",
+        ("Sky Studio", "104", "Blow-dry with Reem", "Sat 22 Nov, 4:30 PM"),
+        samples_ar=("استوديو سكاي", "104", "سشوار مع ريم", "22/11 16:30"),
+        held=HELD,
+    ),
     "draft_added": Template(
         "utility",
         "New item draft at {{1}}: {{2}} sent a photo for {{3}}. Open the Catalog to check "
@@ -428,7 +458,38 @@ CATALOGUE: dict[str, Template] = {
         samples_ar=("CN-0003", "مخبز قرفة", "127.00 ر.ق", "https://app.alyr.online/d/qirfa?t=a"),
         held=HELD,
     ),
+    # Discovery Phase 2 (spec 066, D-166): the owner is asked about one proposed change, with three
+    # quick-reply buttons. It is sent only outside the owner's 24-hour window (inside it the same
+    # words go as an ordinary message with buttons, `modules/discovery/asks.py`), only to a linked
+    # staff number marked to receive asks, and only while ALYR_DISCOVERY_ASK_TEMPLATE_APPROVED
+    # is on.
+    # WRITTEN, NOT SUBMITTED to Meta: that is the founder's go, and `templates_sync --create` skips
+    # it (`held`). Meta may file it as marketing, in which case it is not used and asks stay inside
+    # the window. The blanks are one line each and at most 240 characters. The Arabic is a draft
+    # until ALY-66.
+    "discovery_ask": Template(
+        "utility",
+        "Change waiting at {{1}}: {{2}} for {{3}} would go from {{4}} to {{5}}. Nothing changes "
+        "until you tap Approve. Send PROPOSALS OFF to stop these messages.",
+        "تعديل بانتظارك في {{1}}: {{2}} لـ{{3}} سيتغير من {{4}} إلى {{5}}. لا يتغير شيء قبل أن "
+        "تضغط «موافقة». أرسل «إيقاف التعديلات» لإيقاف هذه الرسائل.",
+        ("Nuqta Car Care", "Opening hours", "Nuqta Car Care - Al Sadd", "none",
+         "Sat to Thu 07:00 to 22:00; Fri 13:00 to 22:00"),
+        samples_ar=("نقطة لعناية السيارات", "ساعات العمل", "نقطة لعناية السيارات - السد",
+                    "لا شيء", "السبت إلى الخميس 07:00 إلى 22:00؛ الجمعة 13:00 إلى 22:00"),
+        buttons=("Approve", "Not now", "See details"),
+        buttons_ar=("موافقة", "ليس الآن", "التفاصيل"),
+        held=HELD,
+    ),
 }
+
+
+def has_buttons(name: str) -> bool:
+    """Whether a template declares quick-reply buttons (spec 066). Only then are the choices a
+    message carries sent as buttons, in the window and outside it; for every other template they
+    are recorded and not sent, as they always were."""
+    template = CATALOGUE.get(name)
+    return template is not None and bool(template.buttons)
 
 
 def clean(value: object) -> str:
@@ -451,6 +512,7 @@ def render(name: str, lang: str, params: list[str] | tuple[str, ...]) -> str | N
 def notice(
     to: UUID, name: str, lang: str, body: str, *params: object, image: bytes = b"",
     document: bytes = b"", filename: str = "", document_id: UUID | None = None,
+    choices: tuple[Choice, ...] = (),
 ) -> OutboundMessage:
     """A notice to a customer who may have last written more than 24 hours ago.
 
@@ -460,7 +522,9 @@ def notice(
     template's image header, and is left out if the template has none. A `document` (a PDF
     with its `filename`) goes the same way: a document message with `body` as its caption
     inside the window, the template's document header outside it. `document_id` names the
-    issued document the PDF is, so it is not stored a second time."""
+    issued document the PDF is, so it is not stored a second time. `choices` are the template's
+    quick-reply buttons (spec 066): inside the window the notice goes as `body` with these
+    buttons, outside it as the template with each choice's id as its button's payload."""
     template = CATALOGUE[name]
     if len(params) != len(template.samples):
         raise ValueError(f"{name} takes {len(template.samples)} values, got {len(params)}")
@@ -469,5 +533,5 @@ def notice(
         template_category=template.category,  # type: ignore[arg-type]
         template_params=tuple(clean(value) for value in params),
         lang="ar" if lang == "ar" else "en", image=image, document=document, filename=filename,
-        document_id=document_id,
+        document_id=document_id, choices=choices,
     )

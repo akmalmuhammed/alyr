@@ -22,7 +22,7 @@ MONTHS = {
 # Sunday first, as the shop's week runs. Index with (weekday() + 1) % 7.
 DAY_SHORT = {
     "en": ("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"),
-    "ar": ("أحد", "إثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"),
+    "ar": ("أحد", "اثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"),
 }
 DAY_LONG = {
     "en": ("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"),
