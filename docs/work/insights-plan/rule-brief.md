@@ -64,18 +64,14 @@ does, say why and update it only if the change is right.
 
 ## Running things (Windows blocks the database driver, so use containers of your own)
 
-```
-SCRIPT="C:/Users/akmal/AppData/Local/Claude-Data/claude_pzs8sxrjxfjjc/side-session-notes/local_f5782c3e-baff-4ba2-8113-ff273b9bcdf0/insights-test.sh"
-"$SCRIPT" <prefix> up                                  # your own Postgres and network, once
-"$SCRIPT" <prefix> run uv run pytest tests/test_agent_rule_<key>.py -q
-"$SCRIPT" <prefix> run uv run ruff check src tests
-"$SCRIPT" <prefix> down                                # when done: removes only <prefix>-* things
-```
-
-Run it from inside your own worktree. Use the prefix your task gives you. Other sessions' stacks
-are running on this machine: never stop, remove or use a container whose name does not start with
-your prefix. Run long commands with a generous timeout. The first run installs the environment
-(a minute or two).
+Run PostgreSQL 16 in a container of your own on a port of your own, point the tests at it with
+`ALYR_TEST_DB_HOST=localhost:<port>`, and run `uv run python -m pytest tests/test_agent_rule_<key>.py -q`
+from `apps/api` inside your own worktree (on Windows `uv run pytest` is blocked by the
+application-control policy, `python -m pytest` is not). `scripts/api-in-docker.sh` is the repo's
+way where the driver cannot load at all. Other sessions' containers are running on the same
+machine: never stop, remove or use one that is not yours, and give yours a name of its own.
+A test database is dropped and rebuilt when a pytest run starts, so two runs must not share a
+container.
 
 ## Finishing
 
