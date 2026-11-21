@@ -250,7 +250,7 @@ def test_a_customer_who_writes_in_arabic_gets_the_confirmation_in_arabic(client)
     assert greeting["body"].startswith("أهلاً بك في حلاق السد")
     assert book_from_test_line(client, slug).status_code == 200
     last = client.get(f"{BASE}/test-chat").json()["messages"][-1]
-    assert last["body"].startswith("تم تأكيد حجزك") and "قص شعر" in last["body"]
+    assert last["body"].startswith("تم تأكيد حجزك") and "قص وتصفيف الشعر" in last["body"]
 
 
 def test_finishing_clears_the_test_so_the_workspace_starts_clean(client):
