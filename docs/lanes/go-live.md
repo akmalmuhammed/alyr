@@ -25,6 +25,11 @@ Anything else belongs to another lane. If a task needs it, keep the change small
 
 Last updated 31 Oct 2026 (Meta App Review submitted, ALY-262), on top of 30 Oct 2026 (Cloudflare edge and DNS hardening, ALY-116 first layer, branch `claude/cf-edge-dns-hardening-ae84c8`; and the production database's backups, restore and secrets audited, ALY-34, branch `claude/aly-34-backups-restore-2b913c`), on top of 29 Oct 2026 (the visitor's address for the rate limits, ALY-265, branch `aly-ratelimit-trusted-client-ip`) and 24 Oct 2026 (site tooling, branch `aly-site-tooling`, `docs/site-audit/05-tooling-log.md`).
 
+- **`ci` runs the API tests as six slices at once, 21 Nov 2026 (release speed, audit `go-live.md` section 6, proposal 1), in a
+  pull request.** Jobs `api-shard 1..6` (whole test files by weight, each on its own runner and PostgreSQL), `api-image`
+  (ruff, image build and `/health`, `pip-audit`) and `api`, still the required check, which fails unless every slice
+  passed and together they ran every test once. The release gate is unchanged (it reads the whole `ci` run). Measured
+  timings and how to rebalance: `docs/runbooks/ci-shards.md`. Not applied until merged.
 - **A shop's WhatsApp line is checked, tested, watched and, if it wants, connected by the shop itself (ALY-166 specs 060, 062,
   D-145, D-147; ALY-172 spec 061, D-146; ALY-39 spec 063, D-148, D-149), in pull requests.** `/ops` → WhatsApp lines (English and
   Arabic) lists every line, lets staff Check it against Meta (reads only) and send one test message to the shop's own staff,
