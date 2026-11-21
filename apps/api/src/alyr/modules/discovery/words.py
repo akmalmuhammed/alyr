@@ -377,6 +377,14 @@ ERRORS: dict[str, tuple[str, str]] = {
         "أحد الفروع ليس في قائمة هذه المنشأة.",
     ),
     "bad_connector": ("That source is not available.", "هذا المصدر غير متاح."),
+    # The sample is a made-up business. A shop that is not a marked demo shop never gets it
+    # (D-169): the Home button, the route and the check-up all refuse.
+    "sample_not_allowed": (
+        "The sample business is only for demo shops. ALYR sets Discovery up with you, "
+        "from your own listing and website.",
+        "النشاط التوضيحي للمحلات التجريبية فقط. تجهّز ALYR الاكتشاف معك، "
+        "من قائمتك وموقعك الفعليين.",
+    ),
     "bad_month": (
         "A month is written as year-month, for example 2026-11.",
         "يُكتب الشهر هكذا: السنة-الشهر، مثل 2026-11.",
