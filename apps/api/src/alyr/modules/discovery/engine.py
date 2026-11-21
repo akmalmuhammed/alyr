@@ -31,10 +31,11 @@ import asyncpg
 from alyr.config import get_settings
 from alyr.core import jobs
 from alyr.db import Database
-from alyr.modules.discovery import answer_words, connectors, proposals, rules, scoring
+from alyr.modules.discovery import answer_words, connectors, observations, proposals, rules, scoring
 from alyr.modules.discovery.answers import service as answers
 from alyr.modules.discovery.apply import load_overrides
 from alyr.modules.discovery.connectors import ConnectorError, Location, RunContext, Snapshot
+from alyr.modules.discovery.connectors.manual import STALE_AFTER_DAYS
 from alyr.modules.discovery.errors import DiscoveryError
 from alyr.modules.discovery.words import ERRORS, STEP_SUMMARIES
 
@@ -80,10 +81,17 @@ async def is_demo(conn: asyncpg.Connection) -> bool:
 
 
 async def start_run(
-    conn: asyncpg.Connection, user_id: UUID | None, trigger: str = "manual"
+    conn: asyncpg.Connection, user_id: UUID | None, trigger: str = "manual",
+    by_staff: bool = False,
 ) -> tuple[asyncpg.Record, bool]:
     """The run to watch, and whether this call made it. Raises `no_connection`, `no_locations`
-    and `run_too_soon` (429, with `retry_after` in seconds)."""
+    and `run_too_soon` (429, with `retry_after` in seconds).
+
+    **A hand-recorded source is run by ALYR staff, from the back office, and only then**
+    (`by_staff`, D-169): the owner's button, a schedule and every other door would only read the
+    same observation again and call it a check-up. Staff record, run, find a slip and record again,
+    so the ten-minute gap between manual runs does not apply to them (one run at a time still
+    holds)."""
     settings = get_settings()
     # A run whose process died would block every later start: end it.
     await conn.execute(
@@ -110,7 +118,12 @@ async def start_run(
         raise DiscoveryError("sample_not_allowed", 409)
     if not await conn.fetchval("select exists (select 1 from discovery_locations)"):
         raise DiscoveryError("no_locations", 409)
-    if trigger == "manual":
+    if kind == "manual":
+        if not by_staff:
+            raise DiscoveryError("manual_staff_runs", 409)
+        if not await conn.fetchval("select exists (select 1 from discovery_observations)"):
+            raise DiscoveryError("nothing_recorded", 409)
+    if trigger == "manual" and not by_staff:
         waited = await conn.fetchval(
             "select extract(epoch from now() - max(created_at)) from discovery_runs "
             "where trigger = 'manual'"
@@ -300,6 +313,9 @@ async def _carry_out(db, tenant_id, run, log_, get_connector) -> None:
         # What the sample business's owner changed by approving proposals: loaded here, so the
         # connector still does no I/O. A real source has none.
         overrides = await load_overrides(conn) if run["connector_kind"] == "sample" else {}
+        # What ALYR staff recorded, for the `manual` source: loaded here, so the connector does no
+        # I/O.
+        seen = await observations.latest(conn) if run["connector_kind"] == "manual" else {}
         demo = await is_demo(conn)
     if not connected:
         raise RunFailed("no_connection")
@@ -328,18 +344,15 @@ async def _carry_out(db, tenant_id, run, log_, get_connector) -> None:
     connector = get_connector(run["connector_kind"])
     ctx = RunContext(
         now=started, prior_done_runs=prior, cost_budget=run["cost_budget"] - log_.cost,
-        overrides=overrides,
+        overrides=overrides, observations=seen,
     )
     snapshot: Snapshot = await connector.snapshot(locations, ctx)
     # What the source can change: a finding's kind is `agent` only while it can change that.
     writes = frozenset(getattr(connector, "writes", None) or ())
+    by_hand = bool(getattr(connector, "by_hand", False))
     await log_.note(
         "connector.snapshot",
-        _summary(
-            "connector.snapshot",
-            places=_count_places(len(snapshot.places)),
-            source=_source_name(snapshot.source),
-        ),
+        _snapshot_sentence(snapshot, len(locations), started),
         started,
         cost=ctx.spent,
     )
@@ -370,7 +383,7 @@ async def _carry_out(db, tenant_id, run, log_, get_connector) -> None:
     started = clock()
     async with db.tenant(tenant_id) as conn:
         new, kept, closed = await _save_findings(
-            conn, run["id"], outcomes, snapshot, locations, writes
+            conn, run["id"], outcomes, snapshot, locations, writes, by_hand
         )
         await log_.add(
             conn,
@@ -383,7 +396,7 @@ async def _carry_out(db, tenant_id, run, log_, get_connector) -> None:
     log_.guard("reviews.save")
     started = clock()
     async with db.tenant(tenant_id) as conn:
-        saved = await _save_reviews(conn, run["id"], snapshot)
+        saved = await _save_reviews(conn, run["id"], snapshot, by_hand)
         await log_.add(conn, "reviews.save", _summary("reviews.save", n=saved), started)
 
     # 5. Proposals: prepare what the findings call for, from the facts the owner confirmed. A
@@ -471,8 +484,36 @@ def _source_name(source: str) -> str:
     return "the sample business" if source == "sample" else source
 
 
+def _snapshot_sentence(snapshot: Snapshot, asked: int, now: datetime) -> str:
+    """The log's sentence for the first step. A hand-recorded source says so, and which day it was
+    looked at, and says plainly when that is old: it never reads as if ALYR looked today."""
+    if snapshot.source != "manual":
+        return _summary(
+            "connector.snapshot",
+            places=_count_places(len(snapshot.places)),
+            source=_source_name(snapshot.source),
+        )
+    day = snapshot.taken_at.date()
+    age = (now.date() - day).days
+    sentence = _summary(
+        "connector.snapshot.manual",
+        places=_count_places(len(snapshot.places)),
+        day=f"{day.day} {day.strftime('%b')} {day.year}",
+    )
+    if len(snapshot.places) < asked:
+        sentence += " " + _summary(
+            "connector.snapshot.manual.missing", others=_count_places(asked - len(snapshot.places))
+        )
+    if age > STALE_AFTER_DAYS:
+        sentence += " " + _summary("connector.snapshot.manual.old", days=age)
+    return sentence
+
+
 def _evidence(outcome: rules.Outcome, snapshot: Snapshot) -> list[dict]:
-    seen = snapshot.taken_at.isoformat()
+    # The day it was seen: a hand-recorded place carries its own, so an old observation is never
+    # dated by the check-up that read it.
+    place = snapshot.of(outcome.location_id) if outcome.location_id else None
+    seen = (place.observed_at if place and place.observed_at else snapshot.taken_at).isoformat()
     return [
         {
             "label": e.label,
@@ -485,17 +526,32 @@ def _evidence(outcome: rules.Outcome, snapshot: Snapshot) -> list[dict]:
     ]
 
 
+def _recorded_after(snapshot: Snapshot, location_id: UUID | None) -> datetime | None:
+    """When staff last recorded what this finding is about: its place's observation, or for a
+    finding about the whole business the newest of any place."""
+    if location_id is not None:
+        place = snapshot.of(location_id)
+        return place.recorded_at if place else None
+    times = [p.recorded_at for p in snapshot.places if p.recorded_at]
+    return max(times) if times else None
+
+
 async def _save_findings(
     conn: asyncpg.Connection, run_id: UUID, outcomes: list[rules.Outcome], snapshot: Snapshot,
-    locations: list[Location] | None = None, writes=frozenset(),
+    locations: list[Location] | None = None, writes=frozenset(), by_hand: bool = False,
 ) -> tuple[int, int, int]:
     """Upsert by fingerprint. A rule that stops being true closes its finding (`gone`, or
     `verified` if the owner had marked it done); one that is true again opens it. A finding whose
-    rule could not be measured this time is left exactly as it was."""
+    rule could not be measured this time is left exactly as it was.
+
+    **A hand-recorded source (`by_hand`) cannot look again by itself.** A finding the owner marked
+    done stays marked, waiting, until staff record an observation after that; the check-up that
+    only re-reads the old observation does not reopen it, and one that reads a newer observation
+    either verifies it (the rule now passes) or reopens it (it still fails)."""
     rows = {
         r["fingerprint"]: r
         for r in await conn.fetch(
-            "select id, fingerprint, status from discovery_findings for update"
+            "select id, fingerprint, status, updated_at from discovery_findings for update"
         )
     }
     new = kept = closed = 0
@@ -506,7 +562,7 @@ async def _save_findings(
         rule = rules.RULE_BY_ID[outcome.rule_id]
         fired.add(outcome.fingerprint)
         evidence = _evidence(outcome, snapshot)
-        kind = rules.effective_kind(rule, writes)
+        kind = rules.effective_kind(rule, writes, by_hand)
         observed = proposals.observed_for(rule.id, outcome.location_id, snapshot, locations or [])
         before = rows.get(outcome.fingerprint)
         if before is None:
@@ -529,6 +585,10 @@ async def _save_findings(
         kept += 1
         # Skipped stays skipped; anything the owner or an earlier run closed is open again.
         status = "skipped" if before["status"] == "skipped" else "open"
+        if by_hand and before["status"] == "owner_done":
+            recorded = _recorded_after(snapshot, outcome.location_id)
+            if recorded is not None and recorded <= before["updated_at"]:
+                status = "owner_done"  # no newer observation: nothing has looked again
         await conn.execute(
             "update discovery_findings set status = $2, evidence = $3, kind = $4, severity = $5, "
             "last_run_id = $6, last_seen_at = now(), observed = $7, "
@@ -560,7 +620,9 @@ async def _save_findings(
     return new, kept, closed
 
 
-async def _save_reviews(conn: asyncpg.Connection, run_id: UUID, snapshot: Snapshot) -> int:
+async def _save_reviews(
+    conn: asyncpg.Connection, run_id: UUID, snapshot: Snapshot, by_hand: bool = False
+) -> int:
     saved = 0
     for place in snapshot.places:
         for review in place.reviews or []:
@@ -571,6 +633,8 @@ async def _save_reviews(conn: asyncpg.Connection, run_id: UUID, snapshot: Snapsh
                 "values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) "
                 "on conflict (tenant_id, source, source_ref) do update "
                 "set rating = excluded.rating, "
+                "posted_at = case when discovery_reviews.source = 'manual' "
+                "then excluded.posted_at else discovery_reviews.posted_at end, "
                 "author_name = excluded.author_name, body = excluded.body, "
                 "language = excluded.language, replied = excluded.replied, "
                 "reply_text = excluded.reply_text, fetched_run_id = excluded.fetched_run_id",
@@ -587,4 +651,12 @@ async def _save_reviews(conn: asyncpg.Connection, run_id: UUID, snapshot: Snapsh
                 run_id,
             )
             saved += 1
+    if by_hand:
+        # A recorded round is the whole picture of a place's reviews: ones from an earlier round
+        # that this one does not hold (a correction, or "reviews not checked") are not kept.
+        await conn.execute(
+            "delete from discovery_reviews where source = $1 and fetched_run_id is distinct "
+            "from $2",
+            snapshot.source, run_id,
+        )
     return saved

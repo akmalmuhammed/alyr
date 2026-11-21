@@ -294,7 +294,7 @@ approvals, the MCP tools, the admin console, the web screens (another session), 
 
 The first client wants only Discovery and Insights, and Google's Business Profile access has no
 published timeframe. The audit found a trap and a gap; this section is what changed. Branch
-`aly-fc-disc-guard` is the first half.
+`aly-fc-disc-guard` is the guard (1 to 6 below), `aly-fc-disc-manual` the recorded source (7 to 17).
 
 1. **The sample is only for demo shops.** `tenants.demo_data_allowed` (set by ALYR staff in `/ops`,
    audited, never by the shop) is the one flag. `engine.is_demo(conn)` reads it.
@@ -310,4 +310,51 @@ published timeframe. The audit found a trap and a gap; this section is what chan
      up; any other shop reads "Discovery is not connected to your business yet. ALYR sets this up
      with you." and has nothing to press, whatever its role.
    - `python -m alyr.discovery_demo` (local only) marks the demo shop as the back office does.
+7. **The recorded source, `manual`** (migration 0126). ALYR staff record what a remote audit saw, a
+   place and a day at a time; a `ManualConnector` turns the last thing recorded for each place into the
+   same `Snapshot` and the same twelve rules, score, findings, reviews, reports and matrix read it.
+   `connectors.STAFF_ONLY = ("manual",)`: no owner, admin or app door offers it (`AVAILABLE` and the
+   owner's `PUT /connection` still know only the sample, and `PUT /connection {manual}` is a 422).
+8. **What is stored** (`discovery_observations`, `modules/discovery/observations.py`): one row per place
+   per round: `observed_on` (the day it was seen), `recorded_at`, `recorded_by`, `seen_where`, and four
+   optional blocks, each null when it was not recorded. `listing` (found, claimed, name, phone, address,
+   hours, categories, photo count, rating, review count, url), `website` (url, reachable, lists the
+   place, has a page of its own, hours, phone, WhatsApp link), `reviews` (a list of `{rating, posted_on,
+   replied}`) and `social` (instagram, facebook, tiktok, snapchat, x, youtube: a link and whether the
+   site links to it; kept and shown back to staff, no rule reads it). **Never a review's words or its
+   author:** `observations.clean` refuses any other key in a review by name, and a test makes the whole
+   door refuse a pasted review. The table is **append-only for the app role** (`select`, `insert`); a
+   correction is a new row and the connector reads the last thing staff recorded. Forced row-level
+   security, a tenant-first index, in `core/erase_rules.py` (deleted with the business, and with a place).
+9. **Not recorded is not measured.** A block left out is `None` and the rule that needs it says "not
+   measured"; `Listing.found` became `bool | None` so "no listing facts" is not "no listing"
+   (`listing_missing` answers not measured). Looked and found nothing is said out loud: `hours: {}`,
+   `categories: []`, `whatsapp_link: ""`, `{found: false}`. A place with no observation is left out of
+   the snapshot. A listing WhatsApp link is never recorded (Google has no field for it).
+10. **Dates.** `Snapshot.taken_at` is the newest observation's day (noon UTC), so "older than 7 days" counts
+    from when it was looked at; each `PlaceSnapshot` has `observed_at` (the day) and `recorded_at`; a
+    finding's evidence `seen_at` is the place's `observed_at`, never the check-up's date. The log says
+    "Read 1 place as recorded by ALYR staff, seen on 20 Nov 2026." and, when it is true, "Nothing is
+    recorded yet for 1 place." and "The newest observation is 20 days old." (`STALE_AFTER_DAYS` 14).
+11. **"I did this" is confirmed by a later observation only** (`engine._save_findings`, `by_hand`): a finding
+    marked done stays marked while no observation was recorded after it was marked; the next one verifies it
+    (the rule passes) or reopens it (it still fails). A recorded round replaces the earlier round's reviews.
+12. **No writes.** The connector declares none, so no proposal exists, nothing can be approved, applied or
+    asked on WhatsApp, and the rules whose Phase 1 kind is `agent` give an `owner` finding for it
+    (`rules.effective_kind(..., by_hand)`): "ALYR can change this after you approve" is never said of it.
+13. **Only ALYR staff run it** (`engine.start_run(..., by_staff=True)`): the owner's button, a schedule and
+    every other door answer 409 `manual_staff_runs`, and a run with nothing recorded 409 `nothing_recorded`.
+    Staff skip the ten-minute gap.
+14. **The back office's door** (`routes/admin_discovery.py`, all `platform_admin`, each opens exactly one
+    business, 404 if it does not exist, 409 if its Discovery module is off):
+    `GET /api/admin/businesses/{id}/discovery`, `PUT .../places`, `PUT .../source {on}`,
+    `POST .../places/{id}/observations`, `POST .../run`. Each write is audited on the back-office record
+    (`discovery.places`, `.source_on`, `.source_off`, `.observation`, `.run`) before either transaction
+    commits, so a write that cannot be audited is not kept, and is on the business's own activity record as
+    "<name> (ALYR)". The audit says what was recorded, never the values.
+15. **The form** is `/ops/discovery?business=<id>` (`ops/Discovery.tsx`, rules in `discoveryOpsLogic.ts`,
+    words in `discoveryOpsCopy.ts`), linked from the business's row under Clients; English, like the console.
+16. **Tests:** `tests/test_discovery_manual.py` (55), `ops/discoveryOps.test.mjs` (10).
+17. **Not built:** the owner's own entering of observations, the screens' banner and wording for a recorded
+    source (the next pull request), hand-fed answers, Google Business Profile.
 

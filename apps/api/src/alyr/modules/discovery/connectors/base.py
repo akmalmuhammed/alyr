@@ -77,7 +77,9 @@ class Location:
 
 @dataclass(frozen=True)
 class Listing:
-    found: bool
+    # None: the source did not say whether there is a listing (a hand-recorded round with no
+    # listing facts); `listing_missing` then answers not measured, and so does every listing rule.
+    found: bool | None
     claimed: bool | None = None
     name: str | None = None
     phone: str | None = None
@@ -124,6 +126,12 @@ class PlaceSnapshot:
     website: Website | None = None
     # None: reviews were not read. A list, possibly empty: they were.
     reviews: list[Review] | None = None
+    # A hand-recorded place only. `observed_at` is the day it was seen, if that is not when the
+    # snapshot was taken (its evidence says so, `engine._evidence`); `recorded_at` is when staff
+    # recorded it: a finding the owner marked done is confirmed only by an observation recorded
+    # after that (`engine._save_findings`).
+    observed_at: datetime | None = None
+    recorded_at: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -170,6 +178,9 @@ class RunContext:
     cost_budget: int = 100
     spent: int = 0
     overrides: Mapping[tuple, object] = field(default_factory=dict)
+    # What ALYR staff recorded, for the `manual` source: location id to its last observation,
+    # loaded by the engine for the same reason. Every other source has none.
+    observations: Mapping[UUID, object] = field(default_factory=dict)
 
     def spend(self, units: int) -> None:
         if self.spent + units > self.cost_budget:

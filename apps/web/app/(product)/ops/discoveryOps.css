@@ -1,0 +1,17 @@
+/* The back office's Discovery form (D-169). Tokens only; the base looks (fields, buttons, pills,
+   errors) are the console's own in ops.css and shell.css. */
+.ops-dsc { display: grid; gap: var(--ui-space-24); max-inline-size: 64rem; }
+.ops-dsc-card { display: grid; gap: var(--ui-space-12); padding: var(--ui-space-20); border-radius: var(--ui-radius-12, 12px); background: var(--sheet); box-shadow: 0 0 0 1px var(--hair) inset; }
+.ops-dsc-card h2, .ops-dsc-card h3 { margin: 0; }
+.ops-dsc-quiet { margin: 0; color: var(--ink-3); font-size: var(--ui-small); }
+.ops-dsc-form { display: grid; gap: var(--ui-space-16); }
+.ops-dsc-set { display: grid; gap: var(--ui-space-12); min-inline-size: 0; margin: 0; padding: var(--ui-space-12) var(--ui-space-16); border: 0; border-radius: 8px; box-shadow: 0 0 0 1px var(--hair) inset; }
+.ops-dsc-set > legend { padding-inline: var(--ui-space-4); font-weight: 600; }
+.ops-dsc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr)); gap: var(--ui-space-12); align-items: end; }
+.ops-dsc-wide { grid-column: 1 / -1; }
+.ops-dsc-pair { display: grid; gap: var(--ui-space-8); min-inline-size: 0; }
+.ops-dsc-hours { display: grid; gap: var(--ui-space-8); }
+.ops-dsc-days { display: grid; gap: var(--ui-space-8); margin: 0; padding: 0; list-style: none; }
+.ops-dsc-days li { display: grid; grid-template-columns: minmax(6rem, 8rem) auto repeat(2, minmax(0, 9rem)); align-items: end; gap: var(--ui-space-12); }
+.ops-dsc textarea { inline-size: 100%; min-inline-size: 0; font-family: var(--font-ui-mono); font-size: var(--ui-input); }
+@media (max-width: 40rem) { .ops-dsc-days li { grid-template-columns: 1fr 1fr; } .ops-dsc-days li > span { grid-column: 1 / -1; } }

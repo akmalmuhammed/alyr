@@ -385,6 +385,15 @@ ERRORS: dict[str, tuple[str, str]] = {
         "النشاط التوضيحي للمحلات التجريبية فقط. تجهّز ALYR الاكتشاف معك، "
         "من قائمتك وموقعك الفعليين.",
     ),
+    # The manual source (D-169): ALYR staff record what they saw and run the check-up.
+    "manual_staff_runs": (
+        "ALYR runs this check-up after recording a new look at your business.",
+        "تُجري ALYR هذا الفحص بعد تسجيل نظرة جديدة على منشأتك.",
+    ),
+    "nothing_recorded": (
+        "Nothing has been recorded for these places yet.",
+        "لم يُسجَّل شيء عن هذه الفروع بعد.",
+    ),
     "bad_month": (
         "A month is written as year-month, for example 2026-11.",
         "يُكتب الشهر هكذا: السنة-الشهر، مثل 2026-11.",
@@ -459,6 +468,10 @@ _TALLY = "{passed} passed, {failed} found, {unmeasured} not measured."
 STEP_SUMMARIES = {
     "run.start": "Started the check-up.",
     "connector.snapshot": "Got {places} from {source}.",
+    # A hand-recorded source (D-169): who recorded it and which day, never "got from".
+    "connector.snapshot.manual": "Read {places} as recorded by ALYR staff, seen on {day}.",
+    "connector.snapshot.manual.missing": "Nothing is recorded yet for {others}.",
+    "connector.snapshot.manual.old": "The newest observation is {days} days old.",
     "rules.presence": "Checked the listings: " + _TALLY,
     "rules.reviews": "Checked the reviews: " + _TALLY,
     "rules.website": "Checked the website: " + _TALLY,

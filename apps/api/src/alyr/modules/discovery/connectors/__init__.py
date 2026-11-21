@@ -1,9 +1,12 @@
 """Where Discovery's facts come from, and where a change goes. One interface, so a real source is a
 drop-in (spec 065, spec 066).
 
-`sample` is the only connector there is: a fictional business, no network. It reads and, since
-Phase 2, writes (`WritableConnector`: the owner's approval changes the made-up listing inside ALYR).
-See `specs/065-discovery/spec.md`, "As built", for why `places` is not here.
+Two connectors exist. `sample` is a fictional business, no network: it reads and, since Phase 2,
+writes (`WritableConnector`: the owner's approval changes the made-up listing inside ALYR), and
+only a demo shop may turn it on. `manual` (D-169) is what ALYR staff recorded on a remote audit of a
+real business: it reads only, makes no proposal, and only ALYR staff switch it on, from the back
+office, for one business. See `specs/065-discovery/spec.md`, "As built", for why `places` is not
+here.
 
 **`google_business_profile` (kind `gbp`) is an interface and nothing more.** It will implement
 `WritableConnector` against Google's Business Profile APIs once ALYR has Google's access (ALY-325,
@@ -32,10 +35,15 @@ from alyr.modules.discovery.connectors.base import (
     WriteContext,
     WriteError,
 )
+from alyr.modules.discovery.connectors.manual import ManualConnector
 from alyr.modules.discovery.connectors.sample import SampleConnector
 
 # What a shop may turn on, in the order the screen offers them.
 AVAILABLE: tuple[str, ...] = ("sample",)
+# What only ALYR staff turn on, from the back office (`routes/admin_discovery.py`), for one
+# business.
+# No owner, admin or app door offers it.
+STAFF_ONLY: tuple[str, ...] = ("manual",)
 
 
 def available_for(demo: bool) -> tuple[str, ...]:
@@ -50,6 +58,8 @@ def get(kind: str) -> Connector:
     """The connector for a kind a shop has switched on."""
     if kind == "sample":
         return SampleConnector()
+    if kind == "manual":
+        return ManualConnector()
     raise ConnectorError(
         "connector_unavailable",
         "That source is not available.",
@@ -59,6 +69,7 @@ def get(kind: str) -> Connector:
 
 __all__ = [
     "AVAILABLE",
+    "STAFF_ONLY",
     "available_for",
     "BudgetExceeded",
     "Change",
@@ -67,6 +78,7 @@ __all__ = [
     "Hours",
     "Listing",
     "Location",
+    "ManualConnector",
     "PlaceSnapshot",
     "Receipt",
     "Review",

@@ -164,6 +164,14 @@ async def _record(
     )
 
 
+async def record_change(
+    conn: asyncpg.Connection, caller: Caller, subject_id: UUID, action: str, detail: dict
+) -> None:
+    """A change made outside the registered actions (the back office's recording of what staff
+    saw, D-169) on the shop's activity record, with who did it."""
+    await _record(conn, caller, subject_id, action, detail)
+
+
 async def _counts(conn: asyncpg.Connection, location_id: UUID | None = None) -> dict:
     rows = await conn.fetch(
         "select status, count(*) as n from discovery_findings "
@@ -722,13 +730,23 @@ async def _ensure_places(conn: asyncpg.Connection, kind: str) -> None:
 @register("discovery.set_connection", CHANGERS, MODULE)
 async def set_connection(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
     """Turn a connector on or off. One is on at a time: turning one on turns the others off. The
-    sample (a made-up business) is turned on only in a shop ALYR marked as a demo (D-169); turning
-    anything off is always allowed."""
+    sample (a made-up business) is turned on only in a shop ALYR marked as a demo (D-169); the
+    manual source is ALYR staff's, from the back office, and is not here; turning anything off is
+    always allowed."""
     kind, on = args["kind"], bool(args["on"])
     if kind not in connectors.AVAILABLE:
         raise DiscoveryError("bad_connector")
     if on and kind not in connectors.available_for(await engine.is_demo(conn)):
         raise DiscoveryError("sample_not_allowed", 409)
+    await switch_connection(conn, caller, kind, on)
+    return await get_connection(conn, caller, {})
+
+
+async def switch_connection(
+    conn: asyncpg.Connection, caller: Caller, kind: str, on: bool
+) -> None:
+    """The one place a connection is switched, after whoever may do it has been checked: the owner's
+    action above for the sample, the back office's route for the manual source (D-169)."""
     if on:
         await conn.execute(
             "update discovery_connections set status = 'off', updated_at = now() "
@@ -764,7 +782,6 @@ async def set_connection(conn: asyncpg.Connection, caller: Caller, args: dict) -
         await _record(
             conn, caller, row_id, "connection.on" if on else "connection.off", {"kind": kind}
         )
-    return await get_connection(conn, caller, {})
 
 
 # ── Phase 2: proposals, facts, managers, settings (spec 066, D-166) ──────────────────────
