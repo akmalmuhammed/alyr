@@ -138,6 +138,7 @@ a.ag-ledger-row:hover .ag-ledger-label { color: var(--ag-ink); }
 .ag-kpi-change { font-size: 13px; color: var(--ag-ink-2); }
 a.ag-kpi-link:hover .ag-figure { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 6px; }
 .ag-kpis-block .ag-caption { margin-top: 8px; }
+.ag-head .ag-source { margin-top: 8px; }
 
 /* The Catalog's two cards (ALY-109): items sold out, items low on stock. Each is a link to the
    Catalog list with that filter; with nothing to show it is a number and no link. */

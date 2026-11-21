@@ -247,6 +247,82 @@ def test_the_states_empty_first_week_and_quiet():
     )
 
 
+REPORT_LINES = [
+    # (facts, English, Arabic): the Sunday report line says only what `WeeklyReports.send` does.
+    ({"report_on": False}, "The Sunday report is off.", "تقرير الأحد متوقف."),
+    ({"report_covers": False},
+     "The Sunday report has nothing to cover yet: none of the products it reports on is "
+     "switched on.",
+     "ليس في تقرير الأحد ما يغطيه بعد: لم يُفعَّل أي من المنتجات التي يغطيها."),
+    ({"has_records": False, "report_numbers": 1, "report_emails": 1},
+     "The Sunday report starts once ALYR holds orders, visits, chats or money records for you.",
+     "يبدأ تقرير الأحد حين تصبح لدى ALYR طلبات أو زيارات أو محادثات أو مبالغ مسجَّلة لك."),
+    ({}, "No number or email address receives the Sunday report yet.",
+     "لا يصل تقرير الأحد إلى أي رقم أو بريد إلكتروني بعد."),
+    ({"report_numbers": 1}, "Your report goes to 1 number on Sunday at 9:00.",
+     "يصل تقريرك إلى رقم واحد يوم الأحد الساعة 9:00."),
+    ({"report_numbers": 3}, "Your report goes to 3 numbers on Sunday at 9:00.",
+     "يصل تقريرك إلى 3 أرقام يوم الأحد الساعة 9:00."),
+    ({"report_emails": 1}, "Your report goes to 1 email address on Sunday at 9:00.",
+     "يصل تقريرك إلى عنوان بريد إلكتروني واحد يوم الأحد الساعة 9:00."),
+    ({"report_emails": 2}, "Your report goes to 2 email addresses on Sunday at 9:00.",
+     "يصل تقريرك إلى عنواني بريد إلكتروني يوم الأحد الساعة 9:00."),
+    ({"report_numbers": 2}, "Your report goes to 2 numbers on Sunday at 9:00.",
+     "يصل تقريرك إلى رقمين يوم الأحد الساعة 9:00."),
+    ({"report_numbers": 1, "report_whatsapp_held": True},
+     "The Sunday report is set for 9:00. On WhatsApp it reaches a number only if that number "
+     "has written to ALYR in the last 24 hours: Meta has not approved the report's wording.",
+     "موعد تقرير الأحد الساعة 9:00. وعلى واتساب لا يصل إلى أي رقم إلا إذا راسل هذا الرقم ALYR "
+     "خلال آخر 24 ساعة: لم تعتمد Meta صياغة التقرير."),
+    ({"report_numbers": 1, "report_emails": 1, "report_whatsapp_held": True},
+     "Your report goes to 1 email address on Sunday at 9:00. On WhatsApp it reaches a number "
+     "only if that number has written to ALYR in the last 24 hours: Meta has not approved the "
+     "report's wording.",
+     "يصل تقريرك إلى عنوان بريد إلكتروني واحد يوم الأحد الساعة 9:00. وعلى واتساب لا يصل إلى أي "
+     "رقم إلا إذا راسل هذا الرقم ALYR خلال آخر 24 ساعة: لم تعتمد Meta صياغة التقرير."),
+    ({"report_emails": 1, "report_whatsapp_held": True},
+     "Your report goes to 1 email address on Sunday at 9:00.",
+     "يصل تقريرك إلى عنوان بريد إلكتروني واحد يوم الأحد الساعة 9:00."),
+    ({"report_numbers": 1, "report_emails": 1},
+     "Your report goes to 1 number and 1 email address on Sunday at 9:00.",
+     "يصل تقريرك إلى رقم واحد وإلى عنوان بريد إلكتروني واحد يوم الأحد الساعة 9:00."),
+]
+
+
+@pytest.mark.parametrize("values,en,ar", REPORT_LINES)
+def test_the_sunday_report_line_says_where_it_really_goes(values, en, ar):
+    """Never "no number" while an email goes, never "goes to" while nothing does (task I5)."""
+    assert plain(view.render(facts(**values), "en")["report"]) == en
+    assert plain(view.render(facts(**values), "ar")["report"]) == ar
+
+
+def test_the_sunday_report_line_is_for_the_people_who_see_money():
+    assert view.render(facts(money=False, report_emails=1), "en")["report"] is None
+
+
+def test_a_shop_with_no_product_to_count_does_not_promise_chats():
+    """A Discovery-only shop is not told "this page fills in as customers write" (task I5)."""
+    only = facts(modules=frozenset({"discovery"}), has_records=False)
+    for lang in ("en", "ar"):
+        v = view.render(only, lang)
+        assert v["lead"] == "none" and v["state"] == "empty"
+        assert v["kpis"] == [] and v["placeholders"] == [] and v["suggestions"] == []
+        assert v["week"] is None and v["hours"] is None and v["top"] is None
+    en = plain(view.render(only, "en")["header"]["summary"][0]["text"])
+    assert en == ("Nothing to count here yet. This page counts the orders, visits, chats and "
+                  "money owed that happen in ALYR.")
+    ar = plain(view.render(only, "ar")["header"]["summary"][0]["text"])
+    assert ARABIC.search(ar) and "يراسلك" not in ar
+    # Stray records do not turn it into a dashboard of zeros either.
+    assert view.render(facts(modules=frozenset({"discovery"})), "en")["state"] == "empty"
+    # A shop with the inbox keeps its own line.
+    chat = view.render(facts(modules=frozenset({"inbox"}), has_records=False), "en")
+    assert chat["lead"] == "inbox"
+    assert plain(chat["header"]["summary"][0]["text"]) == (
+        "Nothing yet. This page fills in as customers write."
+    )
+
+
 def test_setup_left_folds_into_needs_you_now():
     steps = [{"key": "whatsapp", "label": {"en": "Connect your WhatsApp number",
                                            "ar": "اربط رقم واتساب"},
