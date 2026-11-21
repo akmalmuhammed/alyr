@@ -229,9 +229,13 @@ def test_each_shop_has_its_items_in_two_languages_with_a_tile_and_the_catalog_on
                       shop.tenant_id) >= 3
 
 
-def test_the_demo_shops_have_the_catalog_and_the_old_demo_shop_is_left_as_it_is(shops):
+def test_the_demo_shops_have_the_catalog_and_the_old_demo_shop_is_left_as_it_is(shops, client):
     # New shops start with it (the setting is on since ALY-113); the seeding of the Al Noor demo
     # shop itself writes no catalog row (the live databases got it from migration 0032).
+    # `client` is here for what it does first: reset the Al Noor shop to its seeded state. Other
+    # tests switch the Catalog on for it and the shared test database keeps that; this test used
+    # to pass only because the test file before it (test_catalog_cards) happened to remove it,
+    # which fails when the suite is cut into slices that do not put that file first.
     assert get_settings().catalog_for_new_shops is True
     assert scalar("select count(*) as n from tenant_modules where tenant_id = $1 "
                   "and module_key = 'catalog'", DEMO_TENANT_ID) == 0
