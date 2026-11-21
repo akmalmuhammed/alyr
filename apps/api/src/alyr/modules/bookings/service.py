@@ -1284,12 +1284,29 @@ async def day_view(conn: asyncpg.Connection, day: date) -> dict:
             "resources": resources, "bookings": bookings}
 
 
+_BOOKING_FIELDS = (
+    "id, number, service_name, starts_at, resource_id, deposit, deposit_state, deposit_terms"
+)
+
+
 async def next_booking(conn: asyncpg.Connection, contact_id: UUID) -> asyncpg.Record | None:
     return await conn.fetchrow(
-        "select id, number, service_name, starts_at, resource_id from bookings "
+        f"select {_BOOKING_FIELDS} from bookings "
         "where contact_id = $1 and status = 'booked' and starts_at > now() "
         "order by starts_at limit 1",
         contact_id,
+    )
+
+
+async def booking_of(
+    conn: asyncpg.Connection, contact_id: UUID, booking_id: UUID
+) -> asyncpg.Record | None:
+    """One booking of this customer that is still to come, or None (someone else's, cancelled,
+    done, or in the past)."""
+    return await conn.fetchrow(
+        f"select {_BOOKING_FIELDS} from bookings "
+        "where id = $1 and contact_id = $2 and status = 'booked' and starts_at > now()",
+        booking_id, contact_id,
     )
 
 
