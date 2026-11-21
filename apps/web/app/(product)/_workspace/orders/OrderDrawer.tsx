@@ -1,318 +1,124 @@
 "use client";
 
-import React, { useState } from "react";
-import {
-  Avatar,
-  Button,
-  Drawer,
-  KV,
-  KVList,
-  Section,
-  Select,
-  Tag,
-  Thumb,
-  Timeline,
-  type TimelineItem,
-} from "../../../_ui";
+import React from "react";
+import { Button, Drawer, Icon, Section, SkeletonText } from "../../../_ui";
 import { copy, type Lang } from "./copy";
+import { minutesSince, nextStep, ago } from "./logic";
 import {
-  formatAgeOrDate,
-  formatPhone,
-  formatTime,
-  money,
-  nextStep,
-  timelineSentence,
-} from "./logic";
-import type { OrderDetailFixture } from "./fixtures";
-import type { TeamMember } from "./ordersApi";
+  ActivityTimeline,
+  CustomerLine,
+  HandOverRows,
+  ItemRow,
+  PaymentRows,
+  StatusTag,
+  SumRows,
+  stepNote,
+} from "./OrderPanels";
+import type { OrderDetail, TeamMember } from "./types";
 
 export interface OrderDrawerProps {
-  orderDetail: OrderDetailFixture | null;
-  open: boolean;
+  detail: OrderDetail | null;
   lang: Lang;
   team: TeamMember[];
+  now: number;
+  /** The number to show in the title while the detail is still loading. */
+  number: number;
+  /** Nothing can be saved: the step, Mark paid and Cancel are drawn but cannot be pressed. */
+  offline: boolean;
+  /** A step is in flight. */
+  busy: boolean;
   onClose: () => void;
-  onOpenDetail: (num: number) => void;
-  onOpenMarkPaid: (order: OrderDetailFixture["order"]) => void;
-  onOpenCancel: (order: OrderDetailFixture["order"]) => void;
-  onStep: (orderId: string, nextStatus: string) => Promise<void>;
-  onAssign: (orderId: string, userId: string | null) => Promise<void>;
+  onOpenFull: () => void;
+  onMarkPaid: () => void;
+  onCancel: () => void;
+  onStep: (to: "confirmed" | "ready" | "done") => void;
+  onAssign: (userId: string | null) => void;
 }
 
-export function OrderDrawer({
-  orderDetail,
-  open,
-  lang,
-  team,
-  onClose,
-  onOpenDetail,
-  onOpenMarkPaid,
-  onOpenCancel,
-  onStep,
-  onAssign,
-}: OrderDrawerProps) {
+/** The order beside the list: who, what, where it goes, how it is paid, what happened, and the next step. */
+export function OrderDrawer({ detail, lang, team, now, number, offline, busy, onClose, onOpenFull, onMarkPaid, onCancel, onStep, onAssign }: OrderDrawerProps) {
   const t = copy(lang);
-  const [submittingStep, setSubmittingStep] = useState(false);
-
-  if (!open || !orderDetail) return null;
-
-  const { order, lines, customer, payment, activity, access } = orderDetail;
-  const firstName = customer.name.split(" ")[0];
-  const step = nextStep(order.status);
-
-  // Status tag tone
-  const statusTone = order.status === "new"
-    ? "ink"
-    : order.status === "confirmed"
-    ? "n"
-    : order.status === "ready"
-    ? "ok"
-    : order.status === "done"
-    ? "ok"
-    : "n";
-
-  const statusLabel = order.status === "new"
-    ? t.stNew
-    : order.status === "confirmed"
-    ? t.stConfirmed
-    : order.status === "ready"
-    ? t.stReady
-    : order.status === "done"
-    ? t.stDone
-    : t.stCancelled;
-
-  const handleStepClick = async () => {
-    if (!step || submittingStep) return;
-    setSubmittingStep(true);
-    try {
-      await onStep(order.id, step.nextStatus);
-    } finally {
-      setSubmittingStep(false);
-    }
-  };
-
-  // Timeline items
-  const timelineItems: TimelineItem[] = [...activity].reverse().map((a, idx) => ({
-    text: timelineSentence(a, customer.name, lang),
-    meta: a.created_at ? formatTime(a.created_at) : "",
-    tone: a.action === "paid" ? "ok" : a.action === "refund_due" || a.action === "late_payment" ? "warn" : idx === 0 ? "volt" : "n",
-  }));
-
-  // Note box sentence
-  const noteSentence = order.status === "new"
-    ? t.noteConfirming(firstName, order.number)
-    : order.status === "ready"
-    ? t.noteDone(firstName, order.number)
-    : order.fulfilment?.mode === "delivery"
-    ? t.noteReadyDelivery(firstName, order.number)
-    : t.noteReadyPickup(firstName, order.number);
+  const order = detail?.order;
+  const step = order ? nextStep(order.status) : null;
+  const access = detail?.access;
+  const note = detail ? stepNote(detail, lang) : null;
+  const canMarkPaid = Boolean(detail && access?.can_record_payments && order && order.payment === "unpaid" && order.status !== "cancelled" && !order.test);
+  const canCancel = Boolean(access?.can_cancel && order && order.status !== "cancelled");
 
   return (
     <Drawer
-      open={open}
-      onClose={onClose}
+      open
       mode="docked"
-      title={`${t.drawerTitle(order.number)}`}
-      closeLabel={t.btnCancel}
+      onClose={onClose}
+      title={t.orderTitle(order?.number ?? number)}
+      headerExtra={order ? <StatusTag status={order.status} lang={lang} /> : undefined}
+      subtitle={order && order.status !== "done" && order.status !== "cancelled" && minutesSince(order.created_at, now) < 1440 ? <bdi className="u-mono">{ago(order.created_at, lang, now)}</bdi> : undefined}
+      closeLabel={t.closeDrawer}
+      className="ord-drawer"
       footer={
-        <div className="ord-drawer-footer">
-          {access.can_cancel && order.status !== "cancelled" ? (
-            <Button kind="bad" size="sm" onClick={() => onOpenCancel(order)}>
-              {t.btnCancelOrder}
-            </Button>
-          ) : (
-            <div />
-          )}
-
-          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-            <Button kind="line" size="sm" onClick={() => onOpenDetail(order.number)}>
-              {t.openFullPage}
-            </Button>
-            {step && (
-              <Button kind="volt" size="sm" disabled={submittingStep} onClick={handleStepClick}>
-                {submittingStep ? t.btnSaving : lang === "ar" ? step.labelAr : step.labelEn}
-              </Button>
+        detail && order ? (
+          <div className="ord-foot">
+            {canCancel ? (
+              <Button kind="bad" size="sm" disabled={offline} onClick={onCancel}>{t.btnCancelOrder}</Button>
+            ) : (
+              <span />
             )}
+            <div className="ord-foot-end">
+              <Button kind="line" size="sm" icon={<Icon name="ext" />} onClick={onOpenFull}>{t.openFullPage}</Button>
+              {step ? (
+                offline ? (
+                  <Button kind="line" size="sm" disabled>{t[step.label]}</Button>
+                ) : (
+                  <Button kind="volt" size="sm" loading={busy} loadingLabel={t.btnSaving} onClick={() => onStep(step.to)}>{t[step.label]}</Button>
+                )
+              ) : null}
+            </div>
           </div>
-        </div>
+        ) : undefined
       }
     >
-      <div className="ord-drawer-body">
-        {/* Header meta */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <Tag tone={statusTone}>{statusLabel}</Tag>
-          <span className="ord-cell-age ord-cell-mono">
-            {formatAgeOrDate(order.created_at, lang)}
-          </span>
+      {!detail || !order ? (
+        <div className="ord-drawer-body" aria-busy="true" aria-label={t.loadingOrders}>
+          <SkeletonText lines={5} />
         </div>
-
-        {/* 1. Customer row */}
-        <div className="ord-drawer-customer">
-          <div className="ord-customer-info">
-            <Avatar name={customer.name} size={36} />
-            <div>
-              <div style={{ fontWeight: 500 }}>{customer.name}</div>
-              <div className="ord-customer-phone">{formatPhone(customer.phone)}</div>
-            </div>
-          </div>
-          <Button
-            kind="line"
-            size="sm"
-            href={`/app/inbox?c=${customer.id}`}
-          >
-            {t.conversationBtn}
-          </Button>
-        </div>
-
-        {/* 2. Items Section */}
-        <Section label={t.sectionItems(lines.length)}>
-          <div className="ord-items-list">
-            {lines.map((it, idx) => {
-              const name = lang === "ar" && it.name_ar ? it.name_ar : it.name;
-              const variant = lang === "ar" && it.variant_ar ? it.variant_ar : it.variant;
-              const code = it.sku;
-              return (
-                <div key={idx} className="ord-item-row">
-                  <div className="ord-item-meta">
-                    <Thumb seed={name} initials={name.slice(0, 2)} size={32} />
-                    <div className="ord-item-text">
-                      <span className="ord-item-name">{name}</span>
-                      <span className="ord-item-sub">
-                        {variant ? `${variant} · ` : ""}
-                        {code ? `${t.codeLabel} ${code}` : ""}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="ord-item-price">
-                    <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginInlineEnd: "0.5rem" }}>
-                      {it.quantity} × {it.price ? money(it.price, lang) : ""}
-                    </span>
-                    <strong>{it.line_total ? money(it.line_total, lang) : ""}</strong>
-                  </div>
-                </div>
-              );
-            })}
+      ) : (
+        <div className="ord-drawer-body">
+          <div className="ord-customer-row">
+            <CustomerLine detail={detail} />
+            <Button kind="line" size="sm" icon={<Icon name="chat" />} href={`/app/inbox?c=${encodeURIComponent(detail.customer.id)}`}>{t.conversationBtn}</Button>
           </div>
 
-          <div className="ord-sum-block">
-            <div className="ord-sum-row">
-              <span>{t.sumItems}</span>
-              <span className="ord-cell-mono">{money(order.subtotal || order.total, lang)}</span>
-            </div>
-            {order.fulfilment?.mode === "delivery" ? (
-              <div className="ord-sum-row">
-                <span>{order.fulfilment.zone ? (lang === "ar" ? `التوصيل إلى ${order.fulfilment.zone}` : `Delivery to ${order.fulfilment.zone}`) : t.sumDelivery}</span>
-                <span className="ord-cell-mono">
-                  {order.fulfilment.fee > 0 ? money(order.fulfilment.fee, lang) : t.noFee}
-                </span>
-              </div>
-            ) : (
-              <div className="ord-sum-row">
-                <span>{t.sumPickupFree}</span>
-                <span className="ord-cell-mono">{t.noFee}</span>
-              </div>
-            )}
-            <div className="ord-sum-row ord-sum-total">
-              <span>{t.sumTotal}</span>
-              <span className="ord-cell-mono">{money(order.total, lang)}</span>
-            </div>
-          </div>
-        </Section>
-
-        {/* 3. Hand-over Section */}
-        <Section label={t.sectionHandOver}>
-          <KVList>
-            {order.fulfilment?.mode === "delivery" ? (
-              <>
-                <KV k={lang === "ar" ? "المنطقة" : "Area"}>
-                  {`${order.fulfilment.zone || ""} · ${order.fulfilment.fee > 0 ? money(order.fulfilment.fee, lang) : t.noFee}`}
-                </KV>
-                {order.fulfilment.deliver_on && (
-                  <KV k={lang === "ar" ? "اليوم" : "Day"}>{t.todayWord}</KV>
-                )}
-                {order.fulfilment.address && (
-                  <KV k={lang === "ar" ? "العنوان" : "Address"}>{order.fulfilment.address}</KV>
-                )}
-                {order.fulfilment.note && (
-                  <KV k={lang === "ar" ? "ملاحظة العميل" : "Note from customer"}>{order.fulfilment.note}</KV>
-                )}
-              </>
-            ) : (
-              <KV k={t.pickupAtShop}>{lang === "ar" ? "في المتجر" : "At the shop"}</KV>
-            )}
-            <KV k={t.handledByLabel}>
-              <Select
-                value={order.assigned?.id || ""}
-                onChange={(e) => onAssign(order.id, e.target.value || null)}
-              >
-                <option value="">{t.nobodyYet}</option>
-                {team.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}
-                  </option>
+          <Section label={t.sectionItems(detail.lines.length)} level={3}>
+            <div className="ord-block">
+              <ul className="ord-items">
+                {detail.lines.map((line, i) => (
+                  <ItemRow key={i} line={line} lang={lang} />
                 ))}
-              </Select>
-            </KV>
-          </KVList>
-        </Section>
-
-        {/* 4. Payment Section */}
-        <Section label={t.sectionPayment}>
-          <KVList>
-            {payment.state === "unpaid" && payment.link === "open" ? (
-              <KV k={lang === "ar" ? "رابط الدفع" : "Pay link"}>
-                <span style={{ color: "var(--warn)" }}>
-                  {lang === "ar" ? `مفتوح · أرسل ${payment.link_sent_at ? formatTime(payment.link_sent_at) : ""}، لم يُدفع بعد` : `Open · sent ${payment.link_sent_at ? formatTime(payment.link_sent_at) : ""}, not paid yet`}
-                </span>
-              </KV>
-            ) : null}
-
-            {payment.state === "paid" ? (
-              <>
-                <KV k={lang === "ar" ? "تاريخ الدفع" : "Paid"}>
-                  {payment.paid_at ? formatTime(payment.paid_at) : t.payPaid}
-                </KV>
-                <KV k={lang === "ar" ? "طريقة الدفع" : "How"}>
-                  {payment.method === "cash"
-                    ? t.methodCash
-                    : payment.method === "bank_transfer"
-                    ? t.methodBankTransfer
-                    : payment.method === "card_terminal"
-                    ? t.methodCardTerminal
-                    : payment.method === "cheque"
-                    ? t.methodCheque
-                    : lang === "ar" ? "رابط الدفع" : "Payment link"}
-                </KV>
-                {payment.reference && (
-                  <KV k={lang === "ar" ? "المرجع" : "Reference"}>
-                    <span className="ord-cell-mono">{payment.reference}</span>
-                  </KV>
-                )}
-              </>
-            ) : null}
-          </KVList>
-
-          {access.can_record_payments && payment.state === "unpaid" && order.status !== "cancelled" && !order.test && (
-            <div style={{ marginTop: "0.5rem" }}>
-              <Button kind="line" size="sm" onClick={() => onOpenMarkPaid(order)}>
-                {t.btnMarkPaid}
-              </Button>
+              </ul>
+              <SumRows order={order} lines={detail.lines} lang={lang} />
             </div>
-          )}
-        </Section>
+          </Section>
 
-        {/* 5. Timeline Section */}
-        <Section label={t.sectionTimeline}>
-          <Timeline items={timelineItems} />
-        </Section>
+          <Section label={t.sectionHandOver} level={3}>
+            <HandOverRows order={order} team={team} lang={lang} now={now} onAssign={onAssign} offline={offline} />
+          </Section>
 
-        {/* 6. Note Box */}
-        {step && (
-          <div className="ord-note-box">
-            {noteSentence}
-          </div>
-        )}
-      </div>
+          <Section label={t.sectionPayment} level={3}>
+            <PaymentRows detail={detail} lang={lang} />
+            {canMarkPaid ? (
+              <div className="ord-actions">
+                <Button kind="line" size="sm" disabled={offline} onClick={onMarkPaid}>{t.btnMarkPaid}</Button>
+              </div>
+            ) : null}
+          </Section>
+
+          <Section label={t.sectionTimeline} level={3}>
+            <ActivityTimeline detail={detail} lang={lang} now={now} />
+          </Section>
+
+          {note ? <p className="ord-note">{note}</p> : null}
+        </div>
+      )}
     </Drawer>
   );
 }

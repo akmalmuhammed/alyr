@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import {
-  Avatar,
   Button,
+  Icon,
   IconButton,
   KV,
   KVList,
@@ -12,506 +12,367 @@ import {
   PanelBody,
   PanelFooter,
   PanelHeader,
-  Select,
+  SectionLabel,
+  Status,
   Steps,
   Table,
   type TableColumn,
   Tag,
   Thumb,
   Timeline,
-  type TimelineItem,
-  UiIcon,
+  initials,
+  useIsPhone,
 } from "../../../_ui";
 import { copy, type Lang } from "./copy";
 import {
-  formatPhone,
+  firstName,
   formatTime,
+  itemName,
+  itemQty,
+  itemSub,
   money,
   nextStep,
-  type OrderItemLine,
-  orderNo,
-  timelineSentence,
+  none,
+  stepFacts,
+  stepIndex,
+  minutesSince,
+  ago,
+  placedParts,
 } from "./logic";
-import type { OrderDetailFixture } from "./fixtures";
-import type { TeamMember } from "./ordersApi";
+import {
+  ActivityTimeline,
+  CustomerLine,
+  HandOverRows,
+  ItemRow,
+  PayTag,
+  PaymentRows,
+  StatusTag,
+  SumRows,
+  stepNote,
+  windowSentence,
+} from "./OrderPanels";
+import type { Margin, OrderDetail as Detail, OrderLine, TeamMember } from "./types";
 
 export interface OrderDetailProps {
-  orderDetail: OrderDetailFixture;
+  detail: Detail;
   lang: Lang;
   team: TeamMember[];
-  role?: string;
+  now: number;
+  /** What the order earns, for owners and admins of a shop that keeps costs; absent otherwise (never drawn for an agent). */
+  margin?: Margin | null;
+  offline: boolean;
+  busy: boolean;
+  /** Previous and next order in the list the person came from, when there is one. */
+  hasPrev: boolean;
+  hasNext: boolean;
   onBack: () => void;
-  onPrevOrder?: () => void;
-  onNextOrder?: () => void;
-  onOpenCancel: () => void;
-  onOpenMarkPaid: () => void;
-  onStep: (orderId: string, nextStatus: string) => Promise<void>;
-  onAssign: (orderId: string, userId: string | null) => Promise<void>;
-  onCopyTrackLink: (url: string) => void;
+  onPrev: () => void;
+  onNext: () => void;
+  onMarkPaid: () => void;
+  onCancel: () => void;
+  onStep: (to: "confirmed" | "ready" | "done") => void;
+  onAssign: (userId: string | null) => void;
+  onCopyLink: (url: string) => void;
 }
 
-export function OrderDetail({
-  orderDetail,
-  lang,
-  team,
-  role = "owner",
-  onBack,
-  onPrevOrder,
-  onNextOrder,
-  onOpenCancel,
-  onOpenMarkPaid,
-  onStep,
-  onAssign,
-  onCopyTrackLink,
-}: OrderDetailProps) {
+/** The margin block: what the order earns, how it was counted, and a plain note when the costs are incomplete. */
+function MarginBlock({ margin, lang }: { margin: Margin; lang: Lang }) {
   const t = copy(lang);
-  const [submittingStep, setSubmittingStep] = useState(false);
+  return (
+    <div className="ord-margin">
+      <SectionLabel>{t.marginTitle}</SectionLabel>
+      <div className="ord-margin-figure">
+        <bdi className="ord-fig u-fig">{money(margin.amount, lang)}</bdi>
+        <bdi className="ord-margin-pct u-mono">{margin.amount < 0 ? t.marginBelowCost : t.marginPct(margin.pct, money(margin.revenue, lang))}</bdi>
+      </div>
+      <p className="ord-rule u-mono">{t.marginRule(money(margin.revenue, lang), money(margin.cost, lang))}{margin.complete ? "" : ` ${t.marginIncomplete}`}</p>
+    </div>
+  );
+}
 
-  const { order, lines, customer, payment, activity, document, track_url, access } = orderDetail;
-  const isManager = role !== "agent" && access.can_manage;
-  const firstName = customer.name.split(" ")[0];
-  const step = nextStep(order.status);
-
-  // Status tag tone & label
-  const statusTone = order.status === "new"
-    ? "ink"
-    : order.status === "confirmed"
-    ? "n"
-    : order.status === "ready"
-    ? "ok"
-    : order.status === "done"
-    ? "ok"
-    : "n";
-
-  const statusLabel = order.status === "new"
-    ? t.stNew
-    : order.status === "confirmed"
-    ? t.stConfirmed
-    : order.status === "ready"
-    ? t.stReady
-    : order.status === "done"
-    ? t.stDone
-    : t.stCancelled;
-
-  const paymentTone = order.payment === "paid" ? "ok" : order.payment === "unpaid" ? "warn" : "n";
-  const paymentLabel = order.payment === "paid" ? t.payPaid : order.payment === "unpaid" ? t.payNotPaid : t.payOnAccount;
-
-  // Progression steps for Steps rail
-  const stepIndex = order.status === "new" ? 0 : order.status === "confirmed" ? 1 : order.status === "ready" ? 2 : 3;
-  const stepsList = [
-    <span key="new">{t.stNew} · {formatTime(order.created_at)}</span>,
-    <span key="confirmed">{t.stConfirmed} · {order.status !== "new" ? (lang === "ar" ? "09:20 · سلمى" : "09:20 · Salma") : (lang === "ar" ? "لاحقاً" : "To do")}</span>,
-    <span key="ready">{order.fulfilment?.mode === "delivery" ? (lang === "ar" ? "جاهز للتوصيل" : "Ready for delivery") : (lang === "ar" ? "جاهز للاستلام" : "Ready for collection")} · {stepIndex >= 2 ? t.stReady : stepIndex === 1 ? (lang === "ar" ? "التالي" : "Next") : (lang === "ar" ? "لاحقاً" : "To do")}</span>,
-    <span key="done">{t.stDone} · {order.status === "done" ? t.stDone : (lang === "ar" ? "عند التسليم" : "When handed over")}</span>,
+/** The four steps of an order, each with when it happened and who took it, read from the timeline. */
+function StepsRail({ detail, lang }: { detail: Detail; lang: Lang }) {
+  const t = copy(lang);
+  const { order } = detail;
+  const facts = stepFacts(detail.activity, order.created_at);
+  const current = stepIndex(order.status);
+  const name = firstName(order.customer);
+  const delivery = order.fulfilment?.mode === "delivery";
+  const entries: Array<{ title: string; meta: string }> = [
+    { title: t.stepPlaced, meta: formatTime(facts.placed.at, lang) },
+    { title: t.stepConfirmed, meta: "" },
+    { title: delivery ? t.stepReadyDelivery : t.stepReadyPickup, meta: "" },
+    { title: t.stepDone, meta: "" },
   ];
+  (["confirmed", "ready", "done"] as const).forEach((key, i) => {
+    const f = facts[key];
+    const idx = i + 1;
+    entries[idx].meta =
+      idx < current && f.at
+        ? [formatTime(f.at, lang), f.by].filter(Boolean).join(" · ")
+        : idx === current
+          ? detail.customer.opted_out || order.status === "cancelled"
+            ? t.stepNext
+            : `${t.stepNext} · ${t.toldOnWhatsApp(name)}`
+          : idx === 3
+            ? t.stepWhenHandedOver
+            : t.stepToDo;
+  });
+  return (
+    <Panel className="ord-rail">
+      <Steps
+        label={t.stepsLabel}
+        current={order.status === "cancelled" ? 0 : current}
+        stateLabels={{ done: t.stepStateDone, current: t.stepStateCurrent, todo: t.stepStateTodo }}
+        steps={entries.map((e) => (
+          <span key={e.title} className="ord-step">
+            <span className="ord-step-title">{e.title}</span>
+            <span className="ord-step-meta u-mono">{e.meta}</span>
+          </span>
+        ))}
+      />
+    </Panel>
+  );
+}
 
-  const handleStepClick = async () => {
-    if (!step || submittingStep) return;
-    setSubmittingStep(true);
-    try {
-      await onStep(order.id, step.nextStatus);
-    } finally {
-      setSubmittingStep(false);
-    }
-  };
+export function OrderDetail(props: OrderDetailProps) {
+  const { detail, lang, team, now, margin, offline, busy, hasPrev, hasNext, onBack, onPrev, onNext, onMarkPaid, onCancel, onStep, onAssign, onCopyLink } = props;
+  const t = copy(lang);
+  const phone = useIsPhone();
+  const { order, lines, customer, payment, document, access } = detail;
+  const step = nextStep(order.status);
+  const canCancel = access.can_cancel && order.status !== "cancelled";
+  const canMarkPaid = access.can_record_payments && order.payment === "unpaid" && order.status !== "cancelled" && !order.test;
+  const delivery = order.fulfilment?.mode === "delivery";
+  const placed = placedParts(order.created_at, lang, now);
+  const late = order.status === "new" && minutesSince(order.created_at, now) > 15;
+  const note = stepNote(detail, lang);
+  const window = windowSentence(detail, lang, now);
+  const staffFirst = order.assigned ? firstName(order.assigned.name) : "";
 
-  // Items table columns
-  const itemColumns: TableColumn<OrderItemLine>[] = [
+  const voltButton = step ? (
+    offline ? (
+      <Button kind="line" disabled size={phone ? "touch" : "md"}>{t[step.label]}</Button>
+    ) : (
+      <Button kind="volt" size={phone ? "touch" : "md"} className={phone ? "ord-grow" : undefined} loading={busy} loadingLabel={t.btnSaving} onClick={() => onStep(step.to)}>{t[step.label]}</Button>
+    )
+  ) : null;
+
+  const itemColumns: TableColumn<OrderLine>[] = [
     {
       key: "item",
-      header: t.colItems,
-      cell: (it) => {
-        const name = lang === "ar" && it.name_ar ? it.name_ar : it.name;
-        const variant = lang === "ar" && it.variant_ar ? it.variant_ar : it.variant;
-        return (
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <Thumb seed={name} initials={name.slice(0, 2)} size={36} />
-            <div>
-              <div style={{ fontWeight: 500 }}>{name}</div>
-              {variant && <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{variant}</div>}
-            </div>
-          </div>
-        );
-      },
-    },
-    {
-      key: "code",
-      header: t.codeLabel,
-      cell: (it) => (
-        <span className="ord-cell-mono" style={{ color: "var(--text-muted)", fontSize: "0.8125rem" }}>
-          {it.sku || ""}
+      header: t.colItem,
+      cell: (l) => (
+        <span className="ord-itemcell">
+          <Thumb size={36} seed={itemName(l, lang)} initials={initials(itemName(l, lang))} />
+          <span className="ord-item-text">
+            <span className="ord-item-name">{itemName(l, lang)}</span>
+            {itemSub(l, lang) ? <span className="ord-item-sub">{itemSub(l, lang)}</span> : null}
+          </span>
         </span>
       ),
     },
-    {
-      key: "qty",
-      header: lang === "ar" ? "الكمية" : "Qty",
-      align: "end",
-      cell: (it) => <span className="ord-cell-mono">{it.quantity}</span>,
-    },
-    {
-      key: "price",
-      header: lang === "ar" ? "السعر" : "Price",
-      align: "end",
-      cell: (it) => (
-        <span className="ord-cell-mono">{it.price ? money(it.price, lang) : ""}</span>
-      ),
-    },
-    {
-      key: "line",
-      header: lang === "ar" ? "المجموع" : "Line",
-      align: "end",
-      cell: (it) => (
-        <span className="ord-cell-mono" style={{ fontWeight: 600 }}>
-          {it.line_total ? money(it.line_total, lang) : ""}
-        </span>
-      ),
-    },
+    { key: "code", header: t.colCode, mono: true, width: "var(--ord-w-code)", cell: (l) => <span className="ord-faint">{l.code || none(lang)}</span> },
+    { key: "qty", header: t.colQty, mono: true, align: "end", width: "var(--ord-w-qty)", cell: (l) => <bdi>{itemQty(l, lang)}</bdi> },
+    { key: "price", header: t.colPrice, mono: lang === "en", align: "end", width: "var(--ord-w-money)", cell: (l) => <bdi>{money(l.unit_price, lang)}</bdi> },
+    { key: "line", header: t.colLine, mono: lang === "en", align: "end", width: "var(--ord-w-money)", cell: (l) => <bdi>{money(l.line_total, lang)}</bdi> },
   ];
 
-  // Activity timeline items
-  const timelineItems: TimelineItem[] = [...activity].reverse().map((a, idx) => ({
-    text: timelineSentence(a, customer.name, lang),
-    meta: a.created_at ? formatTime(a.created_at) : "",
-    tone: a.action === "paid" ? "ok" : a.action === "refund_due" || a.action === "late_payment" ? "warn" : idx === 0 ? "volt" : "n",
-  }));
+  const customerPanel = (
+    <Panel>
+      <PanelHeader title={t.customerPanel} level={2} />
+      <PanelBody>
+        <CustomerLine detail={detail} size={40} />
+        {order.price_group ? (
+          <KVList>
+            <KV k={t.priceGroup}>{order.price_group.is_default ? t.priceGroupStandard : lang === "ar" && order.price_group.name_ar ? order.price_group.name_ar : order.price_group.name}</KV>
+          </KVList>
+        ) : null}
+      </PanelBody>
+      <div className="ord-panel-foot">
+        <Button kind="line" size="sm" icon={<Icon name="chat" />} href={`/app/inbox?c=${encodeURIComponent(customer.id)}`}>{t.openConversation}</Button>
+        {window ? <p className="ord-hint">{window}</p> : null}
+      </div>
+    </Panel>
+  );
+
+  const handOverPanel = (
+    <Panel>
+      <PanelHeader title={t.sectionHandOver} right={<Tag tone="n" dot={false}>{delivery ? t.modeDelivery : t.modePickup}</Tag>} />
+      <PanelBody>
+        <HandOverRows order={order} team={team} lang={lang} now={now} onAssign={onAssign} offline={offline} />
+      </PanelBody>
+    </Panel>
+  );
+
+  const documentPanel =
+    access.can_manage && document ? (
+      <Panel>
+        <PanelHeader title={t.documentTitle} right={<a className="ord-link" href={`/app/documents?d=${encodeURIComponent(document.id)}`}>{t.openInDocuments}</a>} />
+        <PanelBody>
+          <div className="ord-doc">
+            <span className="ord-doc-icon" aria-hidden="true"><Icon name="doc" size="lg" /></span>
+            <div className="ord-doc-text">
+              <span className="ord-doc-name">{(document.kind === "receipt" ? t.docKindReceipt : document.kind === "invoice" ? t.docKindInvoice : t.docKindQuote)} <bdi className="u-mono">{document.number}</bdi></span>
+              <Status tone={document.status === "issued" ? "ok" : "n"}>{document.status === "issued" ? t.docIssued : document.status === "cancelled" ? t.docCancelled : t.docDraft}</Status>
+            </div>
+          </div>
+        </PanelBody>
+        <PanelFooter>{t.docImmutable}</PanelFooter>
+      </Panel>
+    ) : null;
+
+  const trackPanel = (
+    <Panel>
+      <PanelHeader title={t.customerSeesTitle(firstName(order.customer))} right={<a className="ord-link" href={detail.track_url} target="_blank" rel="noopener noreferrer">{t.openPage}</a>} />
+      <PanelBody>
+        <p className="ord-text">{t.trackingBody(firstName(order.customer), staffFirst)}</p>
+        <div className="ord-row">
+          <Button kind="line" size="sm" icon={<Icon name="copy" />} onClick={() => onCopyLink(detail.track_url)}>{t.copyLink}</Button>
+          <Status tone="n">{t.nowShowing(t.trackStage(order.status, delivery))}</Status>
+        </div>
+      </PanelBody>
+    </Panel>
+  );
+
+  // ── the phone: one column, the actions fixed at the bottom ──
+  if (phone) {
+    return (
+      <div className="ord-detail ord-detail--phone">
+        <h1 className="u-sr">{t.orderTitle(order.number)}</h1>
+        <Button kind="quiet" size="sm" icon={<Icon name="left" />} onClick={onBack}>{t.backToOrders}</Button>
+        <div className="ord-phone-head">
+          <StatusTag status={order.status} lang={lang} />
+          <span className={`ord-sub${late ? " ord-late" : ""}`}>
+            <bdi>{t.placedPhone(placed.time, placed.today ? ago(order.created_at, lang, now) : placed.sub)}</bdi>
+          </span>
+          <bdi className="ord-phone-total u-mono">{money(order.total, lang)}</bdi>
+        </div>
+        <Panel>
+          <PanelBody>
+            <div className="ord-customer-row">
+              <CustomerLine detail={detail} size={40} />
+              <Button kind="line" size="touch" icon={<Icon name="chat" />} href={`/app/inbox?c=${encodeURIComponent(customer.id)}`}><span className="u-sr">{t.openConversation}</span></Button>
+            </div>
+          </PanelBody>
+        </Panel>
+        <Panel>
+          <PanelBody>
+            <ul className="ord-items">
+              {lines.map((l, i) => (
+                <ItemRow key={i} line={l} lang={lang} />
+              ))}
+            </ul>
+            <SumRows order={order} lines={lines} lang={lang} />
+          </PanelBody>
+        </Panel>
+        {margin ? (
+          <Panel>
+            <PanelBody>
+              <MarginBlock margin={margin} lang={lang} />
+            </PanelBody>
+          </Panel>
+        ) : null}
+        <Panel>
+          <PanelBody>
+            <HandOverRows order={order} team={team} lang={lang} now={now} onAssign={onAssign} offline={offline} />
+            <PaymentRows detail={detail} lang={lang} />
+            {order.payment !== "paid" ? (
+              <KVList>
+                <KV k={t.sectionPayment}><PayTag order={order} lang={lang} /></KV>
+              </KVList>
+            ) : null}
+          </PanelBody>
+        </Panel>
+        <SectionLabel>{t.sectionTimeline}</SectionLabel>
+        <ActivityTimeline detail={detail} lang={lang} now={now} />
+        {note ? <p className="ord-note">{note}</p> : null}
+        <div className="ord-phone-actions">
+          {canCancel ? <Button kind="bad" size="touch" disabled={offline} onClick={onCancel}>{t.btnCancelShort}</Button> : null}
+          {canMarkPaid ? <Button kind="line" size="touch" disabled={offline} onClick={onMarkPaid}>{t.btnMarkPaid}</Button> : null}
+          {voltButton}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="ord-detail-view">
-      {/* Back button & Title */}
-      <div>
-        <Button kind="quiet" size="sm" onClick={onBack} style={{ marginBlockEnd: "0.5rem" }}>
-          ← {t.backToOrders}
-        </Button>
-        <PageTitle
-          title={
-            <span style={{ display: "inline-flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
-              <span>{orderNo(order.number)}</span>
-              <Tag tone={statusTone}>{statusLabel}</Tag>
-              <Tag tone={paymentTone}>{paymentLabel}</Tag>
-            </span>
-          }
-          sub={`${lang === "ar" ? `تم الطلب اليوم عند ${formatTime(order.created_at)}` : `Placed today at ${formatTime(order.created_at)}`}${
-            order.fulfilment?.mode === "delivery" ? ` · ${lang === "ar" ? "للتوصيل اليوم" : "for delivery today"}` : ""
-          }`}
-          right={
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              {onPrevOrder && (
-                <IconButton
-                  icon={<UiIcon name="start" />}
-                  label={t.previousOrder}
-                  onClick={onPrevOrder}
-                />
-              )}
-              {onNextOrder && (
-                <IconButton
-                  icon={<UiIcon name="end" />}
-                  label={t.nextOrder}
-                  onClick={onNextOrder}
-                />
-              )}
-              {isManager && order.status !== "cancelled" && (
-                <Button kind="bad" size="sm" onClick={onOpenCancel}>
-                  {t.btnCancelOrder}
-                </Button>
-              )}
-              {step && (
-                <Button kind="volt" size="sm" disabled={submittingStep} onClick={handleStepClick}>
-                  {submittingStep ? t.btnSaving : lang === "ar" ? step.labelAr : step.labelEn}
-                </Button>
-              )}
-            </div>
-          }
-        />
+    <div className="ord-detail">
+      <div className="ord-back">
+        <Button kind="quiet" size="sm" icon={<Icon name="left" />} onClick={onBack}>{t.backToOrders}</Button>
       </div>
-
-      {/* Steps rail */}
-      <Panel>
-        <PanelBody>
-          <Steps
-            steps={stepsList}
-            current={stepIndex}
-          />
-        </PanelBody>
-      </Panel>
-
-      {/* Grid: Wide column + 400px Side column */}
-      <div className="ord-detail-grid">
-        {/* WIDE COLUMN */}
-        <div className="ord-detail-wide">
-          {/* Items Panel */}
-          <Panel>
-            <PanelHeader title={t.sectionItems(lines.length)} />
-            <Table
-              columns={itemColumns}
-              rows={lines}
-              rowKey={(r) => r.name}
-              caption={t.colItems}
-              density="compact"
-            />
-            <div style={{ padding: "var(--space-3)", borderTop: "var(--rule-hairline) solid var(--line)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%", flexWrap: "wrap", gap: "var(--space-4)" }}>
-                {/* Left: Margin block (owners/admins only) */}
-                {isManager ? (
-                  <div className="ord-margin-block" style={{ maxWidth: "20rem" }}>
-                    <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)" }}>
-                      {t.marginTitle}
-                    </div>
-                    <div className="ord-margin-val">QAR 78</div>
-                    <div className="ord-margin-pct">46% of QAR 170</div>
-                    <div className="ord-margin-rule">
-                      {t.marginRule("QAR 170", "QAR 92")}
-                    </div>
-                  </div>
-                ) : <div />}
-
-                {/* Right: Sum block */}
-                <div style={{ minWidth: "14rem" }}>
-                  <div className="ord-sum-row">
-                    <span>{t.sumItems}</span>
-                    <span className="ord-cell-mono">{money(order.subtotal || order.total, lang)}</span>
-                  </div>
-                  {order.fulfilment?.mode === "delivery" ? (
-                    <div className="ord-sum-row">
-                      <span>{order.fulfilment.zone ? (lang === "ar" ? `التوصيل إلى ${order.fulfilment.zone}` : `Delivery to ${order.fulfilment.zone}`) : t.sumDelivery}</span>
-                      <span className="ord-cell-mono">
-                        {order.fulfilment.fee > 0 ? money(order.fulfilment.fee, lang) : t.noFee}
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="ord-sum-row">
-                      <span>{t.sumPickupFree}</span>
-                      <span className="ord-cell-mono">{t.noFee}</span>
-                    </div>
-                  )}
-                  <div className="ord-sum-row ord-sum-total">
-                    <span>{t.sumTotal}</span>
-                    <span className="ord-cell-mono">{money(order.total, lang)}</span>
-                  </div>
-                </div>
-              </div>
+      <PageTitle
+        title={
+          <span className="ord-title-row">
+            <span>{t.orderTitle(order.number)}</span>
+            <StatusTag status={order.status} lang={lang} />
+            <PayTag order={order} lang={lang} />
+          </span>
+        }
+        sub={t.placedAt(placed.time, delivery ? "delivery" : null, placed.today ? t.dayToday : placed.sub)}
+        right={
+          <div className="ord-title-actions">
+            {hasPrev || hasNext ? (
+              <>
+                <IconButton icon={<Icon name="left" />} label={t.previousOrder} onClick={onPrev} disabled={!hasPrev} />
+                <IconButton icon={<Icon name="right" />} label={t.nextOrder} onClick={onNext} disabled={!hasNext} />
+              </>
+            ) : null}
+            {canCancel ? <Button kind="bad" disabled={offline} onClick={onCancel}>{t.btnCancelOrder}</Button> : null}
+            {voltButton}
+          </div>
+        }
+      />
+      {order.status !== "cancelled" ? <StepsRail detail={detail} lang={lang} /> : null}
+      <div className="ord-cols">
+        <div className="ord-wide">
+          <Panel clip>
+            <PanelHeader title={t.sectionItems(lines.length)} sub={t.itemsInLines(lines.reduce((n, l) => n + l.quantity, 0), lines.length)} />
+            <Table columns={itemColumns} rows={lines} rowKey={(l) => `${l.name}-${l.code ?? ""}-${l.unit_price}`} caption={t.colItems} cards="never" scrollX={false} />
+            <div className="ord-itemsfoot">
+              {margin ? <MarginBlock margin={margin} lang={lang} /> : <span />}
+              <SumRows order={order} lines={lines} lang={lang} />
             </div>
           </Panel>
 
-          {/* Payment Panel */}
           <Panel>
-            <PanelHeader
-              title={t.sectionPayment}
-              right={<Tag tone={paymentTone}>{paymentLabel}</Tag>}
-            />
+            <PanelHeader title={t.sectionPayment} right={<PayTag order={order} lang={lang} />} />
             <PanelBody>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
-                {/* Left KV */}
-                <KVList>
-                  <KV k={lang === "ar" ? "المبلغ" : "Amount"}>
-                    <span className="ord-cell-mono">{money(order.total, lang)}</span>
-                  </KV>
-                  {payment.state === "paid" && (
-                    <>
-                      <KV k={lang === "ar" ? "طريقة الدفع" : "How"}>
-                        {payment.method === "cash"
-                          ? t.methodCash
-                          : payment.method === "bank_transfer"
-                          ? t.methodBankTransfer
-                          : payment.method === "card_terminal"
-                          ? t.methodCardTerminal
-                          : payment.method === "cheque"
-                          ? t.methodCheque
-                          : lang === "ar" ? "رابط الدفع" : "Payment link"}
-                      </KV>
-                      <KV k={lang === "ar" ? "تاريخ الدفع" : "Paid"}>
-                        {payment.paid_at ? formatTime(payment.paid_at) : t.payPaid}
-                      </KV>
-                      {payment.reference && (
-                        <KV k={lang === "ar" ? "المرجع" : "Reference"}>
-                          <span className="ord-cell-mono">{payment.reference}</span>
-                        </KV>
-                      )}
-                    </>
-                  )}
-                </KVList>
-
-                {/* Right Pay Link timeline */}
-                <div>
-                  <div style={{ fontSize: "0.8125rem", fontWeight: 600, marginBottom: "0.5rem" }}>
-                    {lang === "ar" ? "رابط الدفع" : "Payment link"}
-                  </div>
-                  {payment.link_sent_at ? (
+              <div className="ord-paygrid">
+                <PaymentRows detail={detail} lang={lang} amount={money(payment.amount_minor ?? order.total, lang)} link={false} />
+                {payment.link_sent_at ? (
+                  <div className="ord-paylink">
+                    <SectionLabel>{t.payLinkTitle}</SectionLabel>
                     <Timeline
                       items={[
-                        {
-                          text: lang === "ar" ? `أرسل الرابط إلى ${firstName} عبر واتساب` : `Link sent to ${firstName} on WhatsApp`,
-                          meta: formatTime(payment.link_sent_at),
-                          tone: "n",
-                        },
-                        ...(payment.paid_at
-                          ? [
-                              {
-                                text: t.payPaid,
-                                meta: formatTime(payment.paid_at),
-                                tone: "ok" as const,
-                              },
-                            ]
-                          : []),
+                        ...(payment.paid_at ? [{ text: t.payLinkPaid, meta: formatTime(payment.paid_at, lang), tone: "ok" as const }] : []),
+                        { text: t.payLinkSentTo(firstName(order.customer)), meta: formatTime(payment.link_sent_at, lang), tone: "n" as const },
                       ]}
                     />
-                  ) : (
-                    <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>
-                      {lang === "ar" ? "لم يُرسل رابط دفع" : "No payment link sent"}
-                    </div>
-                  )}
-
-                  {access.can_record_payments && payment.state === "unpaid" && order.status !== "cancelled" && (
-                    <div style={{ marginTop: "1rem" }}>
-                      <Button kind="line" size="sm" onClick={onOpenMarkPaid}>
-                        {t.btnMarkPaid}
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                  </div>
+                ) : null}
               </div>
+              {canMarkPaid ? (
+                <div className="ord-actions">
+                  <Button kind="line" size="sm" disabled={offline} onClick={onMarkPaid}>{t.btnMarkPaid}</Button>
+                </div>
+              ) : null}
             </PanelBody>
-            {order.status === "cancelled" && payment.state === "paid" && (
-              <PanelFooter>
-                {t.refundBanner(money(order.total, lang))}
-              </PanelFooter>
-            )}
+            {order.status === "cancelled" && order.payment === "paid" && !order.test ? <PanelFooter>{t.refundDueNote(money(order.total, lang))}</PanelFooter> : null}
           </Panel>
 
-          {/* Timeline Panel */}
           <Panel>
-            <PanelHeader title={`${t.sectionTimeline} · ${t.timelineSteps(activity.length)}`} />
+            <PanelHeader title={t.sectionTimeline} sub={t.timelineSteps(detail.activity.length)} right={<span className="ord-faint">{t.newestFirst}</span>} />
             <PanelBody>
-              <Timeline items={timelineItems} />
+              <ActivityTimeline detail={detail} lang={lang} now={now} />
             </PanelBody>
           </Panel>
         </div>
-
-        {/* SIDE COLUMN (400px) */}
-        <div className="ord-detail-side">
-          {/* Customer Card */}
-          <Panel>
-            <PanelHeader title={t.colCustomer} />
-            <PanelBody>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
-                <Avatar name={customer.name} size={40} />
-                <div>
-                  <div style={{ fontWeight: 600 }}>{customer.name}</div>
-                  <div className="ord-cell-mono" style={{ fontSize: "0.875rem", color: "var(--text-muted)" }}>
-                    {formatPhone(customer.phone)}
-                  </div>
-                </div>
-              </div>
-              <KVList>
-                <KV k={lang === "ar" ? "مجموعة الأسعار" : "Price group"}>
-                  {order.price_group?.name || (lang === "ar" ? "الافتراضية" : "Standard")}
-                </KV>
-              </KVList>
-            </PanelBody>
-            <div style={{ padding: "var(--space-3)", borderTop: "var(--rule-hairline) solid var(--line)", display: "flex", flexDirection: "column", gap: "var(--space-2)", width: "100%" }}>
-              <Button kind="line" size="sm" href={`/app/inbox?c=${customer.id}`}>
-                {t.openConversation}
-              </Button>
-              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                {customer.window_until ? t.replyWindowHours(23) : t.replyWindowClosed}
-              </div>
-            </div>
-          </Panel>
-
-          {/* Hand-over Card */}
-          <Panel>
-            <PanelHeader
-              title={t.sectionHandOver}
-              right={<Tag tone="n">{order.fulfilment?.mode === "delivery" ? t.deliveryMode : t.pickupAtShop}</Tag>}
-            />
-            <PanelBody>
-              <KVList>
-                {order.fulfilment?.mode === "delivery" ? (
-                  <>
-                    <KV k={lang === "ar" ? "المنطقة" : "Area"}>
-                      {`${order.fulfilment.zone || ""} · ${order.fulfilment.fee > 0 ? money(order.fulfilment.fee, lang) : t.noFee}`}
-                    </KV>
-                    <KV k={lang === "ar" ? "اليوم" : "Day"}>{t.todayWord}</KV>
-                    {order.fulfilment.address && (
-                      <KV k={lang === "ar" ? "العنوان بالتفصيل" : "Address in words"}>
-                        {order.fulfilment.address}
-                      </KV>
-                    )}
-                    {order.fulfilment.note && (
-                      <KV k={lang === "ar" ? "ملاحظة العميل" : "Note from customer"}>
-                        {order.fulfilment.note}
-                      </KV>
-                    )}
-                  </>
-                ) : (
-                  <KV k={t.pickupAtShop}>{lang === "ar" ? "في المتجر" : "At the shop"}</KV>
-                )}
-                <KV k={t.handledByLabel}>
-                  <Select
-                    value={order.assigned?.id || ""}
-                    onChange={(e) => onAssign(order.id, e.target.value || null)}
-                  >
-                    <option value="">{t.nobodyYet}</option>
-                    {team.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name}
-                      </option>
-                    ))}
-                  </Select>
-                </KV>
-              </KVList>
-            </PanelBody>
-          </Panel>
-
-          {/* Document Card (managers only) */}
-          {isManager && document && (
-            <Panel>
-              <PanelHeader
-                title={t.documentTitle}
-                right={
-                  <Button kind="quiet" size="sm" href={`/app/documents?d=${document.id}`}>
-                    {t.openInDocuments}
-                  </Button>
-                }
-              />
-              <PanelBody>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <div style={{ fontWeight: 600 }}>
-                    {document.kind === "receipt" ? "Receipt" : "Invoice"} {document.number}
-                  </div>
-                  <Tag tone={document.status === "issued" ? "ok" : "n"}>{document.status}</Tag>
-                </div>
-              </PanelBody>
-              <PanelFooter>
-                {t.docImmutableNote}
-              </PanelFooter>
-            </Panel>
-          )}
-
-          {/* What Customer Sees (Tracking page card) */}
-          <Panel>
-            <PanelHeader
-              title={t.whatCustomerSeesTitle(firstName)}
-              right={
-                <a className="u-btn u-btn--quiet u-btn--sm" href={track_url} target="_blank" rel="noopener noreferrer">
-                  {t.openPage}
-                </a>
-              }
-            />
-            <PanelBody>
-              <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)", lineHeight: 1.4, margin: "0 0 0.75rem 0" }}>
-                {t.trackingDesc}
-              </p>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <Button kind="line" size="sm" onClick={() => onCopyTrackLink(track_url)}>
-                  {t.copyLink}
-                </Button>
-                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                  {t.nowShowing(statusLabel)}
-                </span>
-              </div>
-            </PanelBody>
-          </Panel>
+        <div className="ord-side">
+          {customerPanel}
+          {handOverPanel}
+          {documentPanel}
+          {trackPanel}
         </div>
       </div>
     </div>

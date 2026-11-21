@@ -1,61 +1,30 @@
 import { notFound } from "next/navigation";
-import { ToastProvider, UiRoot, type UiLang } from "@/app/_ui";
-import "@/app/_ui/ui.css";
-import { OrdersView } from "@/app/(product)/_workspace/orders/OrdersView";
 import { queryToFilters } from "@/app/(product)/_workspace/orders/logic";
+import { PreviewFrame } from "./PreviewFrame";
 
-export const metadata = {
-  title: "ALYR Orders Preview",
-  robots: { index: false, follow: false },
-};
+// The Orders screens on their own, for the people who build and review them: every frame and state
+// is one address (see the job file, section 4). It exists in development and is a 404 in a production
+// build, the same pattern as the kit gallery.
+export const metadata = { title: "ALYR Orders preview", robots: { index: false, follow: false } };
 
-export default async function OrdersPreviewPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-}) {
-  if (process.env.NODE_ENV === "production") {
-    notFound();
-  }
+export default async function OrdersPreviewPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
+  if (process.env.NODE_ENV === "production") notFound();
 
   const query = await searchParams;
   const one = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
+  const params: Record<string, string | undefined> = {};
+  for (const [key, value] of Object.entries(query)) params[key] = one(value);
 
-  const rawLang = one(query.lang);
-  const lang: UiLang = rawLang === "ar" ? "ar" : "en";
-  const theme = one(query.theme) === "dark" ? "dark" : "light";
-  const role = one(query.role) || "owner";
-  const live = one(query.live) === "1" || one(query.live) === "true";
-  const stateOverride = one(query.state) || null;
-
-  // Flatten search params into string map
-  const paramMap: Record<string, string | undefined> = {};
-  for (const [k, v] of Object.entries(query)) {
-    paramMap[k] = one(v);
-  }
-
-  const initialFilters = queryToFilters(paramMap);
-
+  const role = params.role === "agent" ? "agent" : params.role === "admin" ? "admin" : "owner";
   return (
-    <>
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `document.documentElement.setAttribute('data-theme', ${JSON.stringify(theme)});`,
-        }}
-      />
-      <UiRoot lang={lang} data-theme={theme} style={{ inlineSize: "100%", maxInlineSize: "100%", overflowX: "hidden" }}>
-        <ToastProvider labels={{ dismiss: lang === "ar" ? "إغلاق" : "Dismiss", undo: lang === "ar" ? "تراجع" : "Undo" }}>
-          <div style={{ maxWidth: "80rem", margin: "0 auto", padding: "1.5rem", width: "100%", boxSizing: "border-box" }}>
-            <OrdersView
-              initialFilters={initialFilters}
-              lang={lang}
-              role={role}
-              live={live}
-              stateOverride={stateOverride}
-            />
-          </div>
-        </ToastProvider>
-      </UiRoot>
-    </>
+    <PreviewFrame
+      lang={params.lang === "ar" ? "ar" : "en"}
+      theme={params.theme === "dark" ? "dark" : "light"}
+      role={role}
+      live={params.live === "1" || params.live === "true"}
+      stateOverride={params.state ?? null}
+      cancelledPreview={params.cancelled === "1"}
+      initialFilters={queryToFilters(params)}
+    />
   );
 }

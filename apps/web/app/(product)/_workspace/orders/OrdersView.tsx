@@ -1,415 +1,336 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
-import { useToast } from "../../../_ui";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useIsPhone, useToast } from "../../../_ui";
+import { usePolling } from "../poll";
+import { CancelDialog } from "./CancelDialog";
 import { copy, type Lang } from "./copy";
-import type { OrderDetailFixture, OrderRowFixture } from "./fixtures";
 import {
   type OrderFilters,
+  effectiveFilters,
+  filtersToQuery,
+  queryToFilters,
+  firstName,
   formatTime,
+  methodWord,
   money,
+  stillKey,
 } from "./logic";
 import { MarkPaidDialog } from "./MarkPaidDialog";
-import { CancelDialog } from "./CancelDialog";
-import { OrderDrawer } from "./OrderDrawer";
 import { OrderDetail } from "./OrderDetail";
-import {
-  OrdersEmptyFirstRun,
-  OrdersErrorBanner,
-  OrdersFilteredEmpty,
-  OrdersOfflineBanner,
-  OrdersSkeleton,
-} from "./OrdersStates";
+import { OrderDrawer } from "./OrderDrawer";
+import { OrderDetailSkeleton, OrderMissing, OrdersErrorBanner, OrdersOfflineBanner } from "./OrdersStates";
 import { OrdersTable } from "./OrdersTable";
-import { ordersApi, type OrdersListResponse, type TeamMember } from "./ordersApi";
+import { ApiError, type OrdersApi, createFixtureApi, liveApi } from "./ordersApi";
+import type { Margin, Order, OrderDetail as Detail, OrdersList, PayMethod, TeamMember } from "./types";
 import "./orders.css";
 
 export interface OrdersViewProps {
+  /** What the address says (`?show=`, `?open=`, `?detail=`, `?dialog=`...): the starting point; the view keeps its own state after. */
   initialFilters?: OrderFilters;
   lang?: Lang;
+  /** "owner", "admin" or "agent". The server enforces it; the screens hide what the role may not see. */
   role?: string;
+  /** Read the real API (same origin) instead of the sample shop. */
   live?: boolean;
+  /** Preview only: show one state of the screen (`loading`, `empty`, `filtered`, `error`, `offline`). */
   stateOverride?: string | null;
+  /** Preview only: show the opened order as a cancelled one. */
+  cancelledPreview?: boolean;
+  /** Called with the new filters whenever the person changes them, so the page can keep the address in step. */
   onNavigate?: (filters: OrderFilters) => void;
 }
 
-export function OrdersView({
-  initialFilters = {},
-  lang = "en",
-  role = "owner",
-  live = false,
-  stateOverride,
-  onNavigate,
-}: OrdersViewProps) {
+type Dialog = { kind: "paid" | "cancel"; id: string };
+const FILTERED_PREVIEW: OrderFilters = { mode: "delivery", payment: "paid", assigned: "u-yusuf" };
+
+/** The words a refusal gets: the ones the product says for each code, else nothing (the caller picks the general line). */
+function refusalText(error: unknown, lang: Lang, id: number): string | null {
+  const t = copy(lang);
+  if (!(error instanceof ApiError)) return null;
+  if (error.status === 403) return t.errNotAllowed;
+  if (error.status === 409) {
+    return { already_paid: t.errAlreadyPaid(id, lang), order_cancelled: t.errCancelled, order_on_account: t.errOnAccount, order_is_test: t.errTest }[error.code] ?? null;
+  }
+  return null;
+}
+
+export function OrdersView({ initialFilters = {}, lang = "en", role = "owner", live = false, stateOverride = null, cancelledPreview = false, onNavigate }: OrdersViewProps) {
   const t = copy(lang);
   const toast = useToast();
+  const phone = useIsPhone();
+  const api: OrdersApi = useMemo(() => (live ? liveApi : createFixtureApi({ cancelledPreview, empty: stateOverride === "empty" })), [live, cancelledPreview, stateOverride]);
 
-  const [filters, setFilters] = useState<OrderFilters>(initialFilters);
-  const [prevInitialFilters, setPrevInitialFilters] = useState(initialFilters);
-  if (initialFilters !== prevInitialFilters) {
-    setPrevInitialFilters(initialFilters);
-    setFilters(initialFilters);
-  }
-
-  const [data, setData] = useState<OrdersListResponse | null>(null);
-  const [detailData, setDetailData] = useState<OrderDetailFixture | null>(null);
-  const [team, setTeam] = useState<TeamMember[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isOffline, setIsOffline] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<string>(formatTime(new Date()));
-  const [reloadTick, setReloadTick] = useState(0);
-
-  const refresh = useCallback(() => setReloadTick((t) => t + 1), []);
-
-  // Active dialog state
-  const [markPaidOrder, setMarkPaidOrder] = useState<OrderRowFixture | null>(null);
-  const [cancelOrder, setCancelOrder] = useState<OrderRowFixture | null>(null);
-
-  // Load team
-  useEffect(() => {
-    ordersApi.getTeam(live).then(setTeam).catch(() => {});
-  }, [live]);
-
-  // Fetch orders list
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const res = await ordersApi.list(filters, live, role);
-        if (cancelled) return;
-        setData(res);
-        setError(null);
-        setLastUpdated(formatTime(new Date()));
-      } catch (err: unknown) {
-        if (cancelled) return;
-        if (typeof window !== "undefined" && !window.navigator.onLine) {
-          setIsOffline(true);
-        } else {
-          setError(err instanceof Error ? err.message : "Failed to load orders");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [filters, live, role, reloadTick]);
-
-  // Load detail if open or detail param present
-  const activeDetailNum = filters.detail ? parseInt(filters.detail.replace(/^#/, ""), 10) : null;
-  const activeDrawerNum = filters.open ? parseInt(filters.open.replace(/^#/, ""), 10) : null;
-  const targetOrderNum = activeDetailNum || activeDrawerNum;
-
-  useEffect(() => {
-    if (!targetOrderNum) {
-      return;
-    }
-    let cancelled = false;
-    void (async () => {
-      try {
-        const detail = await ordersApi.getDetail(targetOrderNum, live);
-        if (cancelled) return;
-        setDetailData(detail);
-        // Auto open dialog if requested
-        if (detail && filters.dialog === "paid") {
-          setMarkPaidOrder(detail.order);
-        } else if (detail && filters.dialog === "cancel") {
-          setCancelOrder(detail.order);
-        }
-      } catch {
-        // ignore
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [targetOrderNum, live, filters.dialog]);
-
-  // Polling: refresh every 10 seconds in live mode
-  useEffect(() => {
-    if (!live) return;
-    const interval = setInterval(() => {
-      setReloadTick((t) => t + 1);
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [live]);
-
-  const updateFilters = useCallback(
-    (next: Partial<OrderFilters>) => {
-      const updated = { ...filters, ...next };
-      setFilters(updated);
-      onNavigate?.(updated);
-    },
-    [filters, onNavigate]
+  const [filters, setFilters] = useState<OrderFilters>(() =>
+    stateOverride === "filtered" && !Object.keys(initialFilters).length ? FILTERED_PREVIEW : initialFilters,
   );
+  const [dialog, setDialog] = useState<Dialog | null>(() =>
+    initialFilters.dialog ? { kind: initialFilters.dialog, id: initialFilters.for ?? initialFilters.detail ?? initialFilters.open ?? "" } : null,
+  );
+  const [data, setData] = useState<OrdersList | null>(null);
+  const [team, setTeam] = useState<TeamMember[]>([]);
+  const [margins, setMargins] = useState<Record<string, Margin>>({});
+  const [detail, setDetail] = useState<Detail | null>(null);
+  const [missingId, setMissingId] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [offlineNow, setOfflineNow] = useState(false);
+  const [lastGood, setLastGood] = useState<string | null>(null);
+  const [clock, setClock] = useState(() => Date.now());
+  const [busy, setBusy] = useState(false);
 
-  // Step transition
-  const handleStep = async (orderId: string, nextStatus: string) => {
+  const now = data?.now ? Date.parse(data.now) : clock;
+  const offline = stateOverride === "offline" || offlineNow;
+  const manager = role !== "agent";
+
+  /** A number in the address (the preview) or an id: the id of the order in the list, when it is there. */
+  const resolve = useCallback(
+    (param?: string): string | null => {
+      if (!param) return null;
+      const bare = param.replace(/^#/, "");
+      return data?.orders.find((o) => o.id === param || String(o.number) === bare)?.id ?? param;
+    },
+    [data],
+  );
+  const detailParam = filters.detail ?? dialog?.id ?? filters.open;
+  const detailId = resolve(detailParam);
+  // Only the order that is asked for is ever drawn: a slower answer for another order is ignored.
+  const current = detail && detail.order.id === detailId ? detail : null;
+  const missing = missingId !== null && missingId === detailId;
+  const drawerId = filters.detail ? null : resolve(filters.open);
+
+  // ── reading ──
+  const filtersRef = useRef(filters);
+  useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
+  // The list is asked again when what it is asked for changes, not when a drawer opens: the query string stands for it.
+  const query = filtersToQuery(filters).toString();
+  const listFilters = useMemo(() => queryToFilters(Object.fromEntries(new URLSearchParams(query))), [query]);
+  const loadList = useCallback(async () => {
     try {
-      await ordersApi.setStatus(orderId, nextStatus, undefined, live);
-      const target = data?.orders.find((o) => o.id === orderId) || detailData?.order;
-      const num = target ? target.number : 1000;
-      const customer = target ? target.customer.split(" ")[0] : "Customer";
-      const stepName = nextStatus === "confirmed" ? t.stConfirmed : nextStatus === "ready" ? t.stReady : t.stDone;
+      const res = await api.list(listFilters, role);
+      setData(res);
+      setClock(Date.now());
+      setLastGood(formatTime(res.now ?? Date.now(), lang));
+      setFailed(false);
+      setOfflineNow(false);
+    } catch (error) {
+      if (error instanceof ApiError && error.code === "offline") setOfflineNow(true);
+      else setFailed(true);
+    }
+  }, [api, role, lang, listFilters]);
 
+  const loadDetail = useCallback(async () => {
+    if (!detailId) return;
+    try {
+      const res = await api.detail(detailId, role);
+      setDetail(res);
+      setMissingId(res === null ? detailId : null);
+    } catch {
+      // The list's own banner says when the connection is down; a detail that did not load keeps what it had.
+    }
+  }, [api, role, detailId]);
+
+  const refresh = useCallback(async () => {
+    await Promise.all([loadList(), loadDetail()]);
+  }, [loadList, loadDetail]);
+
+  // At once, when what is asked changes, then every 10 s while the page is on show. Never a skeleton after the first answer.
+  usePolling(loadList, 10_000);
+  usePolling(loadDetail, 10_000, Boolean(detailId));
+
+  useEffect(() => {
+    void api.members().then(setTeam, () => setTeam([]));
+  }, [api]);
+  useEffect(() => {
+    if (!manager || !detailId) return;
+    void api.margins(role).then(setMargins, () => setMargins({}));
+  }, [api, role, manager, detailId]);
+
+  // ── the address ──
+  const change = useCallback(
+    (next: OrderFilters) => {
+      // The link's preset is spelled out into real filters, so changing one keeps the rest; a new filter starts at the first page.
+      const merged: OrderFilters = { ...effectiveFilters(filtersRef.current), ...next, show: next.show ?? null };
+      if (next.offset === undefined && next.limit === undefined) merged.offset = 0;
+      filtersRef.current = merged;
+      setFilters(merged);
+      onNavigate?.(merged);
+    },
+    [onNavigate],
+  );
+  const open = (order: Order) => change(phone ? { detail: order.id, open: undefined } : { open: order.id, detail: undefined });
+  const closeDialog = () => {
+    setDialog(null);
+    if (filtersRef.current.dialog) change({ dialog: null, for: undefined });
+  };
+
+  // ── doing ──
+  const stepName = (n: number, to: "confirmed" | "ready" | "done", told: boolean, name: string) => t.toastStep(n, to, name, told, lang);
+
+  const doStep = async (to: "confirmed" | "ready" | "done") => {
+    if (!current || busy) return;
+    const { order, customer } = current;
+    setBusy(true);
+    try {
+      await api.setStatus(order.id, to);
+      toast.push({ tone: "ok", text: stepName(order.number, to, !customer.opted_out, firstName(order.customer)) });
+      await refresh();
+    } catch (error) {
+      const known = error instanceof ApiError && error.status === 422 && error.code === "backwards" ? t.errBackwards : null;
+      toast.push({ tone: "bad", text: known ?? t.toastStepFailed(order.number, t[stillKey(order.status)], firstName(order.customer), lang) });
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const doMarkPaid = async (method: PayMethod, reference: string, key: string) => {
+    if (!current) return;
+    const { order } = current;
+    try {
+      const res = await api.markPaid(order.id, { method, reference }, key);
       toast.push({
         tone: "ok",
-        text: t.toastStepDone(num, stepName, customer),
+        text: t.toastPaid(order.number, methodWord(res.payment.method, lang), money(res.payment.amount_minor, lang), lang),
+        meta: res.receipt?.number ? t.receiptMeta(res.receipt.number) : undefined,
       });
+      closeDialog();
+      await refresh();
+    } catch (error) {
+      const text = refusalText(error, lang, order.number);
+      if (!text) throw error; // the dialog stays open and says it did not save
+      toast.push({ tone: "bad", text });
+      closeDialog();
+      await refresh();
+    }
+  };
 
-      refresh();
-      if (targetOrderNum) {
-        const fresh = await ordersApi.getDetail(targetOrderNum, live);
-        setDetailData(fresh);
-      }
+  const doCancel = async (restock: boolean) => {
+    if (!current) return;
+    const { order } = current;
+    const res = await api.setStatus(order.id, "cancelled", restock);
+    toast.push({
+      tone: "ok",
+      text: t.toastCancelled(order.number, res.stock_returned ?? 0, res.refund_due ? money(order.total, lang) : null, Boolean(res.credit_reversed_text), lang),
+    });
+    closeDialog();
+    await refresh();
+  };
+
+  const doAssign = async (userId: string | null) => {
+    if (!current) return;
+    try {
+      await api.assign(current.order.id, userId);
     } catch {
-      const target = data?.orders.find((o) => o.id === orderId) || detailData?.order;
-      const num = target ? target.number : 1000;
-      const customer = target ? target.customer.split(" ")[0] : "Customer";
-      const currentStep = target ? target.status : "new";
-      toast.push({
-        tone: "bad",
-        text: t.toastSaveFailed(num, currentStep, customer),
-      });
+      toast.push({ tone: "bad", text: t.assignFailed });
     }
+    await refresh();
   };
 
-  // Mark paid
-  const handleMarkPaid = async (
-    method: "cash" | "bank_transfer" | "card_terminal" | "cheque",
-    reference: string
-  ) => {
-    if (!markPaidOrder) return;
-    await ordersApi.markPaid(markPaidOrder.id, method, reference, live);
-    toast.push({
-      tone: "ok",
-      text: t.toastMarkedPaid(markPaidOrder.number, method, money(markPaidOrder.total, lang)),
-    });
-    setMarkPaidOrder(null);
-    updateFilters({ dialog: null, forOrder: undefined });
-    refresh();
-    if (targetOrderNum) {
-      const fresh = await ordersApi.getDetail(targetOrderNum, live);
-      setDetailData(fresh);
-    }
+  const copyText = (text: string, done: string) => {
+    void navigator.clipboard?.writeText(text);
+    toast.push({ tone: "ok", text: done });
   };
+  const copyTrack = (url: string) => copyText(new URL(url, window.location.origin).href, t.linkCopied);
+  const copyOrderLink = () => copyText(`${window.location.origin}/s/${data?.slug ?? ""}`, t.orderLinkCopied);
 
-  // Cancel order
-  const handleCancel = async (restock: boolean) => {
-    if (!cancelOrder) return;
-    const res = await ordersApi.setStatus(cancelOrder.id, "cancelled", restock, live);
-    const stockMsg = res.stock_returned ? `${res.stock_returned} items went back to stock.` : "";
-    toast.push({
-      tone: "ok",
-      text: t.toastCancelled(cancelOrder.number, stockMsg),
-    });
-    setCancelOrder(null);
-    updateFilters({ dialog: null, forOrder: undefined });
-    refresh();
-    if (targetOrderNum) {
-      const fresh = await ordersApi.getDetail(targetOrderNum, live);
-      setDetailData(fresh);
-    }
-  };
+  // ── what to show ──
+  const loading = stateOverride === "loading" || (data === null && !failed && !offlineNow);
+  const notice = offline ? (
+    <OrdersOfflineBanner lastUpdated={lastGood ?? formatTime(now, lang)} lang={lang} />
+  ) : stateOverride === "error" || failed ? (
+    <OrdersErrorBanner lastUpdated={lastGood} lang={lang} onRetry={() => void refresh()} />
+  ) : null;
 
-  // Assign order
-  const handleAssign = async (orderId: string, userId: string | null) => {
-    await ordersApi.assign(orderId, userId, live);
-    refresh();
-    if (targetOrderNum) {
-      const fresh = await ordersApi.getDetail(targetOrderNum, live);
-      setDetailData(fresh);
-    }
-  };
+  const dialogs = dialog && current && current.order.id === resolve(dialog.id) ? (
+    dialog.kind === "paid" ? (
+      <MarkPaidDialog detail={current} lang={lang} onClose={closeDialog} onSave={doMarkPaid} />
+    ) : (
+      <CancelDialog detail={current} lang={lang} now={now} onClose={closeDialog} onConfirm={doCancel} />
+    )
+  ) : null;
 
-  // Copy tracking link
-  const handleCopyTrackLink = (url: string) => {
-    navigator.clipboard?.writeText(url);
-    toast.push({ tone: "ok", text: t.linkCopied });
-  };
-
-  // Copy store order link
-  const handleCopyStoreLink = () => {
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const slug = data?.slug || "demo";
-    navigator.clipboard?.writeText(`${origin}/s/${slug}`);
-    toast.push({ tone: "ok", text: t.orderLinkCopied });
-  };
-
-  // State overrides for testing & demo (?state=...)
-  if (stateOverride === "loading" || (loading && !data)) {
-    return <OrdersSkeleton lang={lang} />;
-  }
-
-  if (stateOverride === "empty" || (data && data.counts.all === 0)) {
+  // the full page of one order
+  if (filters.detail) {
+    const rows = data?.orders ?? [];
+    const at = rows.findIndex((o) => o.id === detailId);
+    const go = (i: number) => rows[i] && change({ detail: rows[i].id });
     return (
       <div className="ord-view">
-        <h1 className="ord-title">{t.title}</h1>
-        <OrdersEmptyFirstRun
-          slug={data?.slug || "demo"}
-          lang={lang}
-          onCopyLink={handleCopyStoreLink}
-        />
-      </div>
-    );
-  }
-
-  if (stateOverride === "filtered" || (data && data.orders.length === 0 && !error)) {
-    return (
-      <div className="ord-view">
-        <OrdersTable
-          orders={[]}
-          total={0}
-          counts={data?.counts || { all: 0, open: 0, new: 0, confirmed: 0, ready: 0, done: 0, cancelled: 0, pickup: 0, delivery: 0 }}
-          lateNew={data?.late_new || { count: 0, items: [] }}
-          openTotal={data?.open_total}
-          filters={filters}
-          team={team}
-          lang={lang}
-          role={role}
-          lastUpdated={lastUpdated}
-          onFilterChange={updateFilters}
-          onRowClick={() => {}}
-        />
-        <OrdersFilteredEmpty
-          query={filters.q}
-          lang={lang}
-          onClear={() => updateFilters({ q: undefined, payment: "all", mode: "all", assigned: "all", offset: 0 })}
-        />
-      </div>
-    );
-  }
-
-  // Full page Order Detail view
-  if (activeDetailNum && detailData) {
-    return (
-      <div className="ord-view">
-        <OrderDetail
-          orderDetail={detailData}
-          lang={lang}
-          team={team}
-          role={role}
-          onBack={() => updateFilters({ detail: undefined })}
-          onOpenCancel={() => setCancelOrder(detailData.order)}
-          onOpenMarkPaid={() => setMarkPaidOrder(detailData.order)}
-          onStep={handleStep}
-          onAssign={handleAssign}
-          onCopyTrackLink={handleCopyTrackLink}
-        />
-
-        {markPaidOrder && (
-          <MarkPaidDialog
-            order={markPaidOrder}
-            open={Boolean(markPaidOrder)}
-            lang={lang}
-            canRecordPayments={detailData.access.can_record_payments}
-            receiptOnPayment={detailData.access.receipt_on_payment}
-            onClose={() => {
-              setMarkPaidOrder(null);
-              updateFilters({ dialog: null });
-            }}
-            onSave={handleMarkPaid}
-          />
-        )}
-
-        {cancelOrder && (
-          <CancelDialog
-            order={cancelOrder}
-            open={Boolean(cancelOrder)}
-            lang={lang}
-            onClose={() => {
-              setCancelOrder(null);
-              updateFilters({ dialog: null });
-            }}
-            onConfirmCancel={handleCancel}
-          />
-        )}
-      </div>
-    );
-  }
-
-  // Main list view with table and drawer
-  return (
-    <div className="ord-view">
-      {stateOverride === "offline" || isOffline ? (
-        <OrdersOfflineBanner lastUpdated={lastUpdated} lang={lang} />
-      ) : null}
-
-      {stateOverride === "error" || error ? (
-        <OrdersErrorBanner lastUpdated={lastUpdated} lang={lang} onRetry={refresh} />
-      ) : null}
-
-      <div className="ord-table-layout">
-        <div className="ord-table-main">
-          {data && (
-            <OrdersTable
-              orders={data.orders}
-              total={data.total}
-              counts={data.counts}
-              lateNew={data.late_new}
-              openTotal={data.open_total}
-              filters={filters}
-              team={team}
-              lang={lang}
-              role={role}
-              isDrawerOpen={Boolean(activeDrawerNum)}
-              activeOrderNumber={activeDrawerNum || undefined}
-              lastUpdated={lastUpdated}
-              onFilterChange={updateFilters}
-              onRowClick={(row) => updateFilters({ open: String(row.number) })}
-            />
-          )}
-        </div>
-
-        {/* Docked Drawer */}
-        {activeDrawerNum && (
-          <OrderDrawer
-            orderDetail={detailData}
-            open={Boolean(activeDrawerNum)}
+        {notice}
+        {missing ? (
+          <OrderMissing lang={lang} onBack={() => change({ detail: undefined })} />
+        ) : current ? (
+          <OrderDetail
+            detail={current}
             lang={lang}
             team={team}
-            onClose={() => updateFilters({ open: undefined })}
-            onOpenDetail={(num) => updateFilters({ open: undefined, detail: String(num) })}
-            onOpenMarkPaid={(order) => setMarkPaidOrder(order)}
-            onOpenCancel={(order) => setCancelOrder(order)}
-            onStep={handleStep}
-            onAssign={handleAssign}
+            now={now}
+            margin={manager ? margins[current.order.id] ?? null : null}
+            offline={offline}
+            busy={busy}
+            hasPrev={at > 0}
+            hasNext={at >= 0 && at < rows.length - 1}
+            onBack={() => change({ detail: undefined })}
+            onPrev={() => go(at - 1)}
+            onNext={() => go(at + 1)}
+            onMarkPaid={() => setDialog({ kind: "paid", id: current.order.id })}
+            onCancel={() => setDialog({ kind: "cancel", id: current.order.id })}
+            onStep={doStep}
+            onAssign={doAssign}
+            onCopyLink={copyTrack}
           />
+        ) : (
+          <OrderDetailSkeleton lang={lang} />
         )}
+        {dialogs}
       </div>
+    );
+  }
 
-      {/* Dialogs */}
-      {markPaidOrder && (
-        <MarkPaidDialog
-          order={markPaidOrder}
-          open={Boolean(markPaidOrder)}
-          lang={lang}
-          canRecordPayments={data?.access.can_record_payments ?? true}
-          receiptOnPayment={data?.access.receipt_on_payment ?? true}
-          onClose={() => {
-            setMarkPaidOrder(null);
-            updateFilters({ dialog: null });
-          }}
-          onSave={handleMarkPaid}
-        />
-      )}
-
-      {cancelOrder && (
-        <CancelDialog
-          order={cancelOrder}
-          open={Boolean(cancelOrder)}
-          lang={lang}
-          onClose={() => {
-            setCancelOrder(null);
-            updateFilters({ dialog: null });
-          }}
-          onConfirmCancel={handleCancel}
-        />
-      )}
+  // the list, with the order beside it
+  return (
+    <div className="ord-view">
+      <div className={`ord-split${drawerId && !phone ? " ord-split--open" : ""}`}>
+        <div className="ord-main">
+          <OrdersTable
+            data={stateOverride === "loading" ? null : data}
+            filters={filters}
+            team={team}
+            lang={lang}
+            role={role}
+            now={now}
+            lastUpdated={lastGood ?? formatTime(now, lang)}
+            loading={loading}
+            disabled={offline}
+            activeId={drawerId}
+            drawerOpen={Boolean(drawerId) && !phone}
+            notice={notice}
+            onFilters={change}
+            onOpen={open}
+            onCopyLink={copyOrderLink}
+          />
+        </div>
+        {drawerId && !phone ? (
+          <OrderDrawer
+            detail={current && current.order.id === drawerId ? current : null}
+            number={Number(filters.open?.replace(/^#/, "")) || data?.orders.find((o) => o.id === drawerId)?.number || 0}
+            lang={lang}
+            team={team}
+            now={now}
+            offline={offline}
+            busy={busy}
+            onClose={() => change({ open: undefined })}
+            onOpenFull={() => change({ open: undefined, detail: drawerId })}
+            onMarkPaid={() => setDialog({ kind: "paid", id: drawerId })}
+            onCancel={() => setDialog({ kind: "cancel", id: drawerId })}
+            onStep={doStep}
+            onAssign={doAssign}
+          />
+        ) : null}
+      </div>
+      {dialogs}
     </div>
   );
 }

@@ -1,183 +1,100 @@
 "use client";
 
-import React, { useState } from "react";
-import {
-  Button,
-  Field,
-  FormSection,
-  Icon,
-  Input,
-  Modal,
-  Radio,
-} from "../../../_ui";
+import React, { useId, useRef, useState } from "react";
+import { Button, Field, FormSection, Icon, Input, Modal, Radio } from "../../../_ui";
 import { copy, type Lang } from "./copy";
-import { itemsSummary, money } from "./logic";
-import type { OrderDetailFixture, OrderRowFixture } from "./fixtures";
+import { firstName, itemsSummary, money } from "./logic";
+import type { OrderDetail, PayMethod } from "./types";
 
 export interface MarkPaidDialogProps {
-  order: OrderRowFixture | OrderDetailFixture["order"];
-  open: boolean;
+  detail: OrderDetail;
   lang: Lang;
-  canRecordPayments: boolean;
-  receiptOnPayment: boolean;
   onClose: () => void;
-  onSave: (method: "cash" | "bank_transfer" | "card_terminal" | "cheque", reference: string) => Promise<void>;
+  /** Records the payment. Throws when it could not be saved (the dialog then stays open and says so). */
+  onSave: (method: PayMethod, reference: string, idempotencyKey: string) => Promise<void>;
 }
 
-export function MarkPaidDialog({
-  order,
-  open,
-  lang,
-  canRecordPayments,
-  receiptOnPayment,
-  onClose,
-  onSave,
-}: MarkPaidDialogProps) {
+/** One key for each time the dialog is opened: pressing Save twice records one payment, not two. */
+function newKey(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `paid-${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+}
+
+/** "How did they pay?": four ways, a reference, and the two things that follow. The one Volt button saves a fact. */
+export function MarkPaidDialog({ detail, lang, onClose, onSave }: MarkPaidDialogProps) {
   const t = copy(lang);
-  const [method, setMethod] = useState<"cash" | "bank_transfer" | "card_terminal" | "cheque">("cash");
+  const { order } = detail;
+  const formId = useId();
+  const key = useRef(newKey());
+  const [method, setMethod] = useState<PayMethod>("cash");
   const [reference, setReference] = useState("");
   const [saving, setSaving] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  const name = firstName(order.customer);
+  const delivery = order.fulfilment?.mode === "delivery";
 
-  if (!open || !canRecordPayments) return null;
+  const ways: Array<{ id: PayMethod; label: string; hint: string }> = [
+    { id: "cash", label: t.methodCash, hint: "" },
+    { id: "bank_transfer", label: t.methodBankTransfer, hint: t.hintBankTransfer },
+    { id: "card_terminal", label: t.methodCardTerminal, hint: t.hintCardTerminal },
+    { id: "cheque", label: t.methodCheque, hint: t.hintCheque },
+  ];
 
-  const items = itemsSummary(order.items || [], lang);
-  const stepLabel = order.status === "new"
-    ? t.stNew
-    : order.status === "confirmed"
-    ? t.stConfirmed
-    : order.status === "ready"
-    ? t.stReady
-    : t.stDone;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (saving) return;
     setSaving(true);
-    setErrorMsg(null);
+    setFailed(false);
     try {
-      await onSave(method, reference);
-      onClose();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : t.toastSaveFailed(order.number, order.status, order.customer.split(" ")[0]);
-      setErrorMsg(msg);
-    } finally {
+      await onSave(method, reference.trim(), key.current);
+    } catch {
+      setFailed(true);
       setSaving(false);
     }
   };
 
   return (
     <Modal
-      open={open}
+      open
       onClose={onClose}
       title={t.markPaidTitle(order.number)}
-      closeLabel={t.btnCancel}
-      size="default"
+      closeLabel={t.btnClose}
+      footer={
+        <>
+          <Button kind="quiet" disabled={saving} onClick={onClose}>{t.btnCancelShort}</Button>
+          <Button kind="volt" type="submit" form={formId} loading={saving} loadingLabel={t.btnSaving}>{t.btnSaveAsPaid}</Button>
+        </>
+      }
     >
-      <form onSubmit={handleSubmit} className="ord-drawer-body">
-        {/* Order summary tile */}
-        <div className="ord-note-box" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <div style={{ fontWeight: 500, color: "var(--text)" }}>{order.customer}</div>
-            <div className="ord-item-sub">
-              {items.line1} · {stepLabel}
-            </div>
+      <form id={formId} className="ord-dialog" onSubmit={submit}>
+        <div className="ord-tile">
+          <div className="ord-tile-text">
+            <span className="ord-tile-name">{order.customer}</span>
+            <span className="ord-tile-sub">{itemsSummary(order.items, lang).full} · {t.trackStage(order.status, delivery)}</span>
           </div>
-          <div className="ord-cell-mono" style={{ fontSize: "1rem", color: "var(--text)" }}>
-            {money(order.total, lang)}
-          </div>
+          <bdi className="ord-tile-total u-mono">{money(order.total, lang)}</bdi>
         </div>
 
-        {/* Payment method selection */}
-        <FormSection label={t.howDidTheyPay}>
-          <Radio
-            name="paymentMethod"
-            value="cash"
-            checked={method === "cash"}
-            onChange={() => setMethod("cash")}
-          >
-            {t.methodCash}
-          </Radio>
-          <Radio
-            name="paymentMethod"
-            value="bank_transfer"
-            checked={method === "bank_transfer"}
-            onChange={() => setMethod("bank_transfer")}
-          >
-            <span>
-              {t.methodBankTransfer} <span style={{ color: "var(--text-muted)", fontSize: "0.8125rem" }}>({t.hintBankTransfer})</span>
-            </span>
-          </Radio>
-          <Radio
-            name="paymentMethod"
-            value="card_terminal"
-            checked={method === "card_terminal"}
-            onChange={() => setMethod("card_terminal")}
-          >
-            <span>
-              {t.methodCardTerminal} <span style={{ color: "var(--text-muted)", fontSize: "0.8125rem" }}>({t.hintCardTerminal})</span>
-            </span>
-          </Radio>
-          <Radio
-            name="paymentMethod"
-            value="cheque"
-            checked={method === "cheque"}
-            onChange={() => setMethod("cheque")}
-          >
-            <span>
-              {t.methodCheque} <span style={{ color: "var(--text-muted)", fontSize: "0.8125rem" }}>({t.hintCheque})</span>
-            </span>
-          </Radio>
+        <FormSection label={t.howDidTheyPay} className="ord-radios">
+          {ways.map((w) => (
+            <Radio key={w.id} name="method" value={w.id} checked={method === w.id} onChange={() => setMethod(w.id)}>
+              <span className="ord-radio">
+                <span>{w.label}</span>
+                {w.hint ? <span className="ord-radio-hint">{w.hint}</span> : null}
+              </span>
+            </Radio>
+          ))}
         </FormSection>
 
-        {/* Reference input */}
-        <Field label={t.refOptional}>
-          <Input
-            value={reference}
-            onChange={(e) => setReference(e.target.value)}
-            maxLength={80}
-            dir="auto"
-            placeholder={
-              method === "bank_transfer"
-                ? t.hintBankTransfer
-                : method === "card_terminal"
-                ? t.hintCardTerminal
-                : method === "cheque"
-                ? t.hintCheque
-                : t.refPlaceholder
-            }
-          />
+        <Field label={t.refOptional} error={failed ? t.saveFailed : undefined}>
+          <Input value={reference} maxLength={80} dir="auto" placeholder={t.refPlaceholder} onChange={(e) => setReference(e.target.value)} />
         </Field>
 
-        {/* Info notices */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-          {receiptOnPayment && (
-            <div style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem", fontSize: "0.75rem", color: "var(--text-muted)" }}>
-              <Icon name="info" size="sm" />
-              <span>{t.receiptNotice(order.customer.split(" ")[0])}</span>
-            </div>
-          )}
-          <div style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem", fontSize: "0.75rem", color: "var(--text-muted)" }}>
-            <Icon name="clock" size="sm" />
-            <span>{t.timelineNotice}</span>
-          </div>
-        </div>
-
-        {errorMsg && (
-          <div style={{ color: "var(--bad)", fontSize: "0.875rem" }}>
-            {errorMsg}
-          </div>
-        )}
-
-        {/* Footer actions */}
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", paddingTop: "0.5rem" }}>
-          <Button kind="quiet" type="button" onClick={onClose} disabled={saving}>
-            {t.btnCancel}
-          </Button>
-          <Button kind="volt" type="submit" disabled={saving}>
-            {saving ? t.btnSaving : t.btnSaveAsPaid}
-          </Button>
-        </div>
+        <ul className="ord-infos">
+          {detail.access.receipt_on_payment ? (
+            <li><Icon name="doc" /><span>{t.receiptNotice(name)}</span></li>
+          ) : null}
+          <li><Icon name="clock" /><span>{t.recordNotice}</span></li>
+        </ul>
       </form>
     </Modal>
   );
