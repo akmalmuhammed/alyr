@@ -326,6 +326,60 @@ def price_ready_message(
     return subject, _plain([part]), _letter([part])
 
 
+# The email an owner gets for each new booking and each cancellation by a customer (D-192). The
+# owner's language is known (`tenants.owner_lang`), so it is in that language only. It holds the
+# booking's number, the service with who does it and the time, and never the customer's name or
+# phone number: Resend is in the EU (docs/data-residency.md).
+_BOOKING = {
+    "en": {
+        "new_subject": lambda number, when: f"New booking {number}: {when}",
+        "cancelled_subject": lambda number, when: f"Booking {number} cancelled: {when}",
+        "hello": lambda name: f"Hello {name}," if name else "Hello,",
+        "new": lambda shop, number, what, when: (
+            f"A customer made booking {number} at {shop}: {what}, {when}."
+        ),
+        "cancelled": lambda shop, number, what, when: (
+            f"A customer cancelled booking {number} at {shop}: {what}, {when}. "
+            "The time is free again."
+        ),
+        "button": "Open your bookings",
+        "off": "You get one email for each new booking and each cancellation. You can switch "
+               "these off on the Team screen, under Your WhatsApp.",
+    },
+    "ar": {
+        "new_subject": lambda number, when: f"حجز جديد رقم {number}: {when}",
+        "cancelled_subject": lambda number, when: f"أُلغي الحجز رقم {number}: {when}",
+        "hello": lambda name: f"مرحباً {name}،" if name else "مرحباً،",
+        "new": lambda shop, number, what, when: (
+            f"أجرى عميل الحجز رقم {number} لدى {shop}: {what}، {when}."
+        ),
+        "cancelled": lambda shop, number, what, when: (
+            f"ألغى عميل الحجز رقم {number} لدى {shop}: {what}، {when}. "
+            "أصبح الوقت متاحاً من جديد."
+        ),
+        "button": "افتح حجوزاتك",
+        "off": "يصلك بريد واحد عن كل حجز جديد وكل إلغاء. يمكنك إيقافه من شاشة الفريق، "
+               "تحت «واتساب الخاص بك».",
+    },
+}
+
+
+def booking_alert_message(
+    lang: str, owner: str, shop: str, event: str, number: int, what: str, when: str, link: str,
+) -> tuple[str, str, str]:
+    """Subject, plain text and HTML of "a customer made (or cancelled) a booking", in the
+    language the owner reads. `event` is "new" or "cancelled"; `what` is the service with who does
+    it ("Blow-dry with Reem") and `when` the time, both worded in `lang` by the caller."""
+    lang = "ar" if lang == "ar" else "en"
+    w = _BOOKING[lang]
+    cancelled = event == "cancelled"
+    subject = w["cancelled_subject" if cancelled else "new_subject"](number, when)
+    body = w["cancelled" if cancelled else "new"](shop, number, what, when)
+    part = {"lang": lang, "lines": [w["hello"](_first(owner)), body],
+            "button": (w["button"], link), "small": w["off"]}
+    return subject, _plain([part]), _letter([part])
+
+
 def sign_in_message(code: str, minutes: int) -> tuple[str, str, str]:
     """Subject, plain text and HTML for a sign-in code, in English and Arabic together:
     the code is requested before we know which language the person reads."""

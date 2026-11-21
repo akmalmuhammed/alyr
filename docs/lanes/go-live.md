@@ -93,6 +93,10 @@ Last updated 31 Oct 2026 (Meta App Review submitted, ALY-262), on top of 30 Oct 
     words and prices, and internal links.
   - **`pnpm site:*` commands**, with Wrangler, axe and Lighthouse pinned.
   - **For machines:** `llms.txt`, `llms-full.txt` and a markdown copy of each page.
+- **The `coverage` workflow runs nightly and on demand, not on every pull request or push (21 Nov 2026, release speed),
+  in a pull request.** It does not gate a release (the gate reads `ci.yml` only; branch protection never listed
+  `api-coverage`), so no check leaves the release path; it only stops competing with `ci` for runners. Floor still 93.
+  Not applied until merged; the first scheduled run is the night after the merge. See `docs/runbooks/release.md`.
 - **Waiting on the founder (Needs Akmal):** the Cloudflare API token and account ID as
   GitHub secrets; the `production` environment with him as reviewer; version URLs on for
   `alyr-site`. The steps are in `docs/runbooks/site-deploy.md`, "One-time setup".
