@@ -114,6 +114,17 @@ def local_at(days: int, hour: int) -> datetime:
     return day.replace(hour=hour, minute=0, second=0, microsecond=0)
 
 
+def just_now(hours: float) -> datetime:
+    """About `hours` ago, but never before the business's day began. Orders the tests call "today's"
+    are placed with this, not with a bare `now() - hours`: between midnight and `hours` past it, in
+    Doha (21:00 UTC onward), a bare offset reaches back into yesterday and the order stops being
+    today's. The age is cut to a share of the time the day has run, the share growing with `hours`,
+    so the order stays today's and older seeds stay older than newer ones at any time of day."""
+    now = datetime.now(UTC)
+    began = now.astimezone(QATAR).replace(hour=0, minute=0, second=0, microsecond=0)
+    return now - min(timedelta(hours=hours), (now - began) * hours / (hours + 1))
+
+
 def test_customer(shop: Shop) -> UUID:
     """The owner's own test customer (D-064): what they order is real, but counted nowhere. A
     trigger marks the order from the customer's WhatsApp ID."""
@@ -160,10 +171,10 @@ def seed_trade(shop: Shop) -> dict:
     """A day's trade for a bakery: two customers, orders today (one cancelled, one a test) and
     yesterday, a booking tomorrow, and money owed (one balance is late)."""
     fatima, omar = customer(shop, FATIMA), customer(shop, OMAR)
-    order(shop, fatima, 1, 4500, hours_ago=0.2, lines=(("Pancake", 3), ("Zaatar roll", 1)))
-    order(shop, omar, 2, 2500, hours_ago=0.1, status="ready", payment="paid")
-    order(shop, fatima, 3, 9900, hours_ago=0.1, status="cancelled")
-    order(shop, test_customer(shop), 4, 7700, hours_ago=0.1)
+    order(shop, fatima, 1, 4500, at=just_now(0.2), lines=(("Pancake", 3), ("Zaatar roll", 1)))
+    order(shop, omar, 2, 2500, at=just_now(0.1), status="ready", payment="paid")
+    order(shop, fatima, 3, 9900, at=just_now(0.1), status="cancelled")
+    order(shop, test_customer(shop), 4, 7700, at=just_now(0.1))
     order(shop, omar, 5, 3000, status="done", payment="paid", at=local_at(-1, 10))
     booking(shop, fatima, 1, local_at(1, 12))
     credit(shop, omar, 12000, days_ago=75)
