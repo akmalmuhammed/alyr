@@ -45,7 +45,7 @@ async def gather(conn: asyncpg.Connection, f: Facts) -> None:
         "  and jsonb_array_length(k.lines) > 0 "
         "  and c.role = 'customer' and coalesce(c.wa_user_id, '') not like 'TEST.%' "
         "  and not exists (select 1 from orders o where o.contact_id = k.contact_id "
-        "                  and o.created_at >= k.updated_at) "
+        "                  and not o.is_test and o.created_at >= k.updated_at) "
         "order by value desc, c.id",
         f.now, IDLE,
     )

@@ -16,7 +16,7 @@ from alyr.modules.agent.facts import Facts
 from alyr.modules.agent.insights import INSIGHT_BY_KEY, INSIGHTS
 from alyr.modules.agent.rules import line_health as rule
 from alyr.modules.agent.words import plain
-from alyr.seed import DEMO_TENANT_ID, OWNER_EMAIL
+from alyr.seed import AGENT_EMAIL, DEMO_TENANT_ID
 from test_agent import ARABIC, facts
 from test_consent import owner_sql
 from test_onboarding import new_business
@@ -406,7 +406,10 @@ def test_the_rule_runs_without_money_and_only_for_shops_with_a_module_it_names(c
 
 def test_the_owners_home_shows_the_card_for_a_red_line_and_not_for_a_green_one(client):
     # The demo shop has records (a brand-new shop with none shows an empty home, no cards).
-    sign_in(client, OWNER_EMAIL)
+    # Read as its agent: the home shows three cards at most, money first, and the owner's
+    # three late-money cards of the demo shop would crowd a knowledge card out (the card is
+    # for everyone; an agent is sent no money, so none of those three is there).
+    sign_in(client, AGENT_EMAIL)
     tenant = str(DEMO_TENANT_ID)
     line = the_line(tenant)
     try:
