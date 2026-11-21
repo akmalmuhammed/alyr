@@ -14,13 +14,9 @@ Arabic is written whole for each count (`count()` for the noun, `agree()` for th
 and pronoun), never joined from fragments, and every name or figure is kept whole with
 `B` so a Latin name does not scramble the line (05-critique P0-5).
 
-To add a rule: write `find` and `say`, and add an `Insight` to `INSIGHTS`.
+To add a rule: write one file in `rules/` (see `rules/__init__.py`). The 21 below are the first set.
 """
 
-import hashlib
-import json
-from collections.abc import Callable
-from dataclasses import dataclass, field
 from datetime import timedelta
 
 from alyr.catalog import Text
@@ -40,6 +36,7 @@ from alyr.core.words import (
     Noun,
 )
 from alyr.modules.agent.facts import Facts, Row
+from alyr.modules.agent.model import Action, Finding, Insight, Say, applies  # noqa: F401
 from alyr.modules.agent.words import (
     B,
     agree,
@@ -89,51 +86,6 @@ def visit_noun(business_type: str) -> Noun:
 def people_noun(business_type: str) -> Noun:
     """Who the business serves: a clinic's are patients («مراجعون»)."""
     return PATIENTS if business_type == "clinic" else CUSTOMERS
-
-
-@dataclass(frozen=True)
-class Action:
-    label: Text
-    href: str
-
-
-@dataclass
-class Finding:
-    rows: list[Row] = field(default_factory=list)
-    noun: Noun = CUSTOMERS
-    numbers: dict = field(default_factory=dict)
-    # How many the rule counted, when that is not the number of rows (weeks, replies).
-    total: int | None = None
-
-    @property
-    def n(self) -> int:
-        return self.total if self.total is not None else len(self.rows)
-
-    def fingerprint(self, key: str) -> str:
-        """Changes when the counted records or their numbers change, so a card set
-        aside with "Not now" comes back when there is something new to see."""
-        data = {
-            "key": key, "ids": sorted(r.id for r in self.rows),
-            "numbers": {k: str(v) for k, v in sorted(self.numbers.items())},
-        }
-        return hashlib.sha1(json.dumps(data).encode()).hexdigest()[:16]
-
-
-Say = Callable[[Finding, Facts, str], tuple[list, list | None]]
-
-
-@dataclass(frozen=True)
-class Insight:
-    key: str
-    number: int  # its row in the research catalogue
-    kind: str  # task | money | knowledge
-    module: str
-    rule: Text
-    find: Callable[[Facts], Finding | None]
-    say: Say
-    action: Action | None = None
-    status: Text | None = None
-    money: bool = False
 
 
 def _first(rows: list[Row]) -> Row:
@@ -641,7 +593,7 @@ SHOW_ORDERS = Text("Show the orders", "اعرض الطلبات")
 SHOW_ACCOUNTS = Text("Show the accounts", "اعرض الحسابات")
 SHOW_BOOKINGS = Text("Show the bookings", "اعرض الحجوزات")
 
-INSIGHTS: tuple[Insight, ...] = (
+CORE: tuple[Insight, ...] = (
     # Tasks, in "Needs you now".
     Insight(
         "waiting", 1, "task", "inbox",
@@ -790,16 +742,18 @@ INSIGHTS: tuple[Insight, ...] = (
     ),
 )
 
+# The 21 rules above, then one file each in `rules/` (docs/work/insights-plan/plan.md).
+from alyr.modules.agent import rules  # noqa: E402  (rules read `model`, not this file)
+
+INSIGHTS: tuple[Insight, ...] = CORE + rules.INSIGHTS
 INSIGHT_BY_KEY = {i.key: i for i in INSIGHTS}
-
-
-def applies(insight: Insight, modules: frozenset) -> bool:
-    return any(m in modules for m in insight.module.split("|"))
 
 
 def check() -> None:
     keys = [i.key for i in INSIGHTS]
     assert len(keys) == len(set(keys)), "insight keys must be unique"
+    numbers = [i.number for i in INSIGHTS]
+    assert len(numbers) == len(set(numbers)), "insight numbers must be unique"
     for i in INSIGHTS:
         assert i.kind in ("task", "money", "knowledge"), i.key
         assert (i.action is None) != (i.status is None), f"{i.key}: an action or a status"
