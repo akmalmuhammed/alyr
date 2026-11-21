@@ -12,6 +12,13 @@
 // (D-092) is not printed on a public page. A Qatar-qualified lawyer reads both after they
 // are live (ALY-51); changes follow as a new dated version. Neither text is legal advice.
 //
+// 21 Nov 2026 (aly-fc-true-claims): three lines no longer say what the product does not do yet.
+// Bank transfers are not "invoiced by ALYR" (no ALYR invoice exists): we send the amount and
+// the bank details. The agreed result is not "counted in your ALYR workspace" (nothing records
+// it): how it is counted is written down with the result. The first-month promise is scoped to
+// the monthly plan on the pricing page. The promise itself, and the date the first month is
+// paid, are the founder's to decide, not this file's. docs/company/paddle/*-draft.md follow.
+//
 // A line may hold a link as [label](address); LegalPage.tsx turns it into one. An address
 // beginning with / is a page of this site in the page's language.
 //
@@ -37,7 +44,7 @@ export type LegalSection = {
 export type LegalPage = {
   eyebrow: string;
   title: string;
-  /** "Last updated 31 October 2026": the day the version was published. */
+  /** "Last updated 21 November 2026": the day the version was published. */
   updated: string;
   lead: string;
   /** The name of the contents list; when set, the page lists its sections at the top. */
@@ -52,7 +59,7 @@ export type LegalPage = {
 export const termsEn: LegalPage = {
   eyebrow: "Terms of service",
   title: "ALYR terms of service",
-  updated: "Last updated 31 October 2026",
+  updated: "Last updated 21 November 2026",
   lead: "These terms apply when you use ALYR. They sit on top of any agreement we sign with you: where there is one, it applies first.",
   contents: "On this page",
   numbered: true,
@@ -83,7 +90,7 @@ export const termsEn: LegalPage = {
       title: "Price and payment",
       paras: [
         { n: "4.1", text: "Prices are on our [pricing page](/pricing): in Qatari riyals when you pay by bank transfer, and in US dollars when you pay by card (our card provider charges in dollars). We can change a price by telling you in writing at least 30 days before; you can stop before the new price applies." },
-        { n: "4.2", text: "You pay each month in advance. Card payments are taken by Paddle.com Market Limited, our merchant of record, who charges in US dollars, handles sales tax and sends the receipt. Paddle's buyer terms apply to the card payment: [paddle.com/legal/checkout-buyer-terms](https://www.paddle.com/legal/checkout-buyer-terms). Payment by bank transfer is invoiced by ALYR." },
+        { n: "4.2", text: "You pay each month in advance. Card payments are taken by Paddle.com Market Limited, our merchant of record, who charges in US dollars, handles sales tax and sends the receipt. Paddle's buyer terms apply to the card payment: [paddle.com/legal/checkout-buyer-terms](https://www.paddle.com/legal/checkout-buyer-terms). For payment by bank transfer, we send you the amount and our bank details in writing." },
         { n: "4.3", text: "We never hold, receive or move the money your own customers pay you." },
         { n: "4.4", text: "If a payment is still unpaid 14 days after it was due, we may pause ALYR after at least 7 days' written notice. We charge no interest and no late fee. Pausing never deletes your data." },
       ],
@@ -150,14 +157,14 @@ export const termsEn: LegalPage = {
 export const refundEn: LegalPage = {
   eyebrow: "Refund policy",
   title: "ALYR refund policy",
-  updated: "Last updated 31 October 2026",
+  updated: "Last updated 21 November 2026",
   lead: "When ALYR refunds you, how the money comes back and how to ask.",
   sections: [
     {
       id: "first-month",
       title: "Your first month, refunded if the result is missed",
       paras: [
-        "Before we start, we agree one result with you in writing, for example a number of orders or bookings taken through the chat. It is counted in your ALYR workspace, where you can see it too, over the 30 days after you go live. If the result is missed, we refund your first month's subscription in full, within 14 days after the 30 days end, the same way you paid, without your having to ask. This applies once per business. To qualify, put up the QR codes we give you and share your chat link with your customers in the first 7 days.",
+        "Before we start, we agree one result with you in writing, for example a number of orders or bookings taken through the chat, and how it is counted over the 30 days after you go live. If the result is missed, we refund your first month's subscription in full, within 14 days after the 30 days end, the same way you paid, without your having to ask. This applies once per business and to the monthly plan on our [pricing page](/pricing); any other service we agree with you is covered only as far as we write it down. To qualify, put up the QR codes we give you and share your chat link with your customers in the first 7 days.",
       ],
     },
     {
@@ -209,7 +216,7 @@ export const refundEn: LegalPage = {
 export const termsAr: LegalPage = {
   eyebrow: "شروط الخدمة",
   title: "شروط خدمة ALYR",
-  updated: "آخر تحديث: 31 أكتوبر 2026",
+  updated: "آخر تحديث: 21 نوفمبر 2026",
   lead: "تسري هذه الشروط عند استخدامك ALYR، وهي تُضاف إلى أي اتفاقية نوقّعها معك؛ وحيثما وُجدت اتفاقية فإنها تُطبَّق أولاً.",
   contents: "في هذه الصفحة",
   numbered: true,
@@ -240,7 +247,7 @@ export const termsAr: LegalPage = {
       title: "السعر والدفع",
       paras: [
         { n: "4.1", text: "الأسعار مذكورة في [صفحة الأسعار](/ar/pricing): بالريال القطري عند الدفع بالتحويل المصرفي، وبالدولار الأمريكي عند الدفع بالبطاقة (لأن مزوّد البطاقات لدينا يحصّل المبالغ بالدولار). يجوز لنا تغيير السعر بإشعارك كتابةً قبل 30 يوماً على الأقل، ولك أن تتوقف قبل سريان السعر الجديد." },
-        { n: "4.2", text: "تدفع كل شهر مقدماً. تُحصَّل مدفوعات البطاقة عبر Paddle.com Market Limited، وهي التاجر المسجَّل (Merchant of Record) لدينا، وتحصّل المبالغ بالدولار الأمريكي، وتتولى ضريبة المبيعات، وترسل لك الإيصال. وتسري شروط المشتري لدى Paddle على الدفع بالبطاقة: [paddle.com/legal/checkout-buyer-terms](https://www.paddle.com/legal/checkout-buyer-terms). أما الدفع بالتحويل المصرفي فتصدر ALYR فاتورته." },
+        { n: "4.2", text: "تدفع كل شهر مقدماً. تُحصَّل مدفوعات البطاقة عبر Paddle.com Market Limited، وهي التاجر المسجَّل (Merchant of Record) لدينا، وتحصّل المبالغ بالدولار الأمريكي، وتتولى ضريبة المبيعات، وترسل لك الإيصال. وتسري شروط المشتري لدى Paddle على الدفع بالبطاقة: [paddle.com/legal/checkout-buyer-terms](https://www.paddle.com/legal/checkout-buyer-terms). أما الدفع بالتحويل المصرفي فنرسل إليك المبلغ وبياناتنا المصرفية كتابةً." },
         { n: "4.3", text: "لا نستلم أبداً الأموال التي يدفعها لك عملاؤك، ولا نحتفظ بها، ولا ننقلها." },
         { n: "4.4", text: "إذا بقي مبلغ غير مدفوع بعد 14 يوماً من استحقاقه، جاز لنا إيقاف ALYR مؤقتاً بعد إشعار كتابي مدته 7 أيام على الأقل. لا نفرض فوائد ولا رسوم تأخير. ولا يؤدي الإيقاف المؤقت إلى حذف بياناتك." },
       ],
@@ -307,14 +314,14 @@ export const termsAr: LegalPage = {
 export const refundAr: LegalPage = {
   eyebrow: "سياسة الاسترداد",
   title: "سياسة الاسترداد في ALYR",
-  updated: "آخر تحديث: 31 أكتوبر 2026",
+  updated: "آخر تحديث: 21 نوفمبر 2026",
   lead: "متى نعيد لك المبلغ، وكيف يعود إليك، وكيف تطلب ذلك.",
   sections: [
     {
       id: "first-month",
       title: "شهرك الأول، يُسترد إن لم نحقق النتيجة",
       paras: [
-        "قبل أن نبدأ، نتفق معك كتابةً على نتيجة واحدة، مثل عدد الطلبات أو الحجوزات التي تصلك عبر المحادثة. وتُحتسب النتيجة في مساحة عملك على ALYR، وتراها أنت أيضاً، خلال الـ 30 يوماً التي تلي بدء التشغيل. وإذا لم تتحقق النتيجة، نعيد إليك اشتراك شهرك الأول كاملاً خلال 14 يوماً من انتهاء الـ 30 يوماً، بالطريقة نفسها التي دفعت بها، ودون أن تضطر إلى طلب ذلك. ينطبق هذا مرة واحدة لكل مشروع. وحتى تستحق الاسترداد، ضع رموز QR التي نسلّمها لك وشارك رابط المحادثة مع عملائك خلال الأيام السبعة الأولى.",
+        "قبل أن نبدأ، نتفق معك كتابةً على نتيجة واحدة، مثل عدد الطلبات أو الحجوزات التي تصلك عبر المحادثة، وعلى طريقة احتسابها خلال الـ 30 يوماً التي تلي بدء التشغيل. وإذا لم تتحقق النتيجة، نعيد إليك اشتراك شهرك الأول كاملاً خلال 14 يوماً من انتهاء الـ 30 يوماً، بالطريقة نفسها التي دفعت بها، ودون أن تضطر إلى طلب ذلك. ينطبق هذا مرة واحدة لكل مشروع وعلى الخطة الشهرية المذكورة في [صفحة الأسعار](/ar/pricing)، وأي خدمة أخرى نتفق عليها معك لا تشملها إلا بقدر ما نكتبه. وحتى تستحق الاسترداد، ضع رموز QR التي نسلّمها لك وشارك رابط المحادثة مع عملائك خلال الأيام السبعة الأولى.",
       ],
     },
     {
