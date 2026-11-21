@@ -1,444 +1,286 @@
 "use client";
 
-import React, { useState } from "react";
-import { getCreditCopy, CreditLang } from "./copy";
+import { useId, useMemo, useState } from "react";
+import {
+  Banner, Button, Check, ConfirmDialog, Field, Icon, KV, KVList, PageTitle, Panel, PanelBody, PanelFooter, PanelHeader,
+  Select, Thumb, Toggle,
+} from "../../../_ui";
+import { formatDate, money, none } from "../../../_ui/format";
+import { copy, type Lang } from "./copy";
+import type { EarlierStatement } from "./types";
+import {
+  BUCKET_KEYS, addDays, statementOf, type CreditAccountRow, type CreditEntry,
+} from "./logic";
+import { Amount } from "./parts";
 
-interface CreditStatementProps {
-  lang?: CreditLang;
-  onBack?: () => void;
-  onSend?: () => void;
-}
+export type StatementProps = {
+  lang: Lang;
+  account: CreditAccountRow;
+  entries: CreditEntry[];
+  now: string;
+  /** The sheet's own details: shop, number, bank. */
+  shop: { name: string; nameAr: string; phone: string; address: string };
+  number: string;
+  bank: { name: string; account: string; iban: string } | null;
+  /** The pay link on the sheet, or null when the shop takes no money online. */
+  payLink: string | null;
+  earlier: EarlierStatement[] | null;
+  /** The last statement's end: the second period starts the day after. */
+  lastEnd: string | null;
+  email: string | null;
+  offline: boolean;
+  /** Sends the statement (to the channels ticked). Absent: the button is off. */
+  onSend?: (channels: { whatsapp: boolean; email: boolean }) => Promise<void>;
+  onBack: () => void;
+};
 
-export function CreditStatement({
-  lang = "en",
-  onBack,
-  onSend,
-}: CreditStatementProps) {
-  const t = getCreditCopy(lang);
+type Period = "all" | "sinceLast";
 
-  const [togglePaid, setTogglePaid] = useState(true);
-  const [toggleAge, setToggleAge] = useState(true);
-  const [toggleLink, setToggleLink] = useState(true);
-  const [toggleBank, setToggleBank] = useState(true);
+export function CreditStatement(p: StatementProps) {
+  const { lang, account, entries, now } = p;
+  const t = copy(lang);
+  const ids = useId();
+  const [period, setPeriod] = useState<Period>("all");
+  const [showPaid, setShowPaid] = useState(true);
+  const [showAge, setShowAge] = useState(true);
+  const [showLink, setShowLink] = useState(p.payLink !== null);
+  const [showBank, setShowBank] = useState(p.bank !== null);
+  const [whatsapp, setWhatsapp] = useState(true);
+  const [email, setEmail] = useState(p.email !== null);
+  const [confirm, setConfirm] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
 
-  const [sendWhatsApp, setSendWhatsApp] = useState(true);
-  const [sendEmail, setSendEmail] = useState(true);
+  const first = useMemo(() => [...entries].sort((a, b) => Date.parse(a.at) - Date.parse(b.at))[0]?.at ?? now, [entries, now]);
+  const from = period === "sinceLast" && p.lastEnd ? addDays(p.lastEnd, 1) : null;
+  const st = useMemo(() => statementOf(entries, now, { from, to: now, showPaid }), [entries, now, from, showPaid]);
+  const start = from ?? first;
+
+  async function send() {
+    if (!p.onSend) return;
+    setBusy(true);
+    setFailed(false);
+    try {
+      await p.onSend({ whatsapp, email });
+      setConfirm(false);
+    } catch {
+      setFailed(true);
+      setConfirm(false);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
-    <div className="crd-root">
-      {/* ── Top Header ────────────────────────────────────────────────────── */}
-      <header className="crd-header">
-        <div className="crd-title-group">
-          <h1 className="crd-title">{t.statementDocTitle}</h1>
-          <p className="crd-subtitle">{t.statementSubtitle}</p>
-        </div>
+    <div className="crd-page">
+      <nav className="crd-crumbs" aria-label={t.crumbsLabel}>
+        <button type="button" className="crd-link" onClick={p.onBack}>{t.title}</button>
+        <span aria-hidden="true" className="crd-quiet">/</span>
+        <span>{account.name}</span>
+        <span aria-hidden="true" className="crd-quiet">/</span>
+        <span aria-current="page">{t.statementCrumb}</span>
+      </nav>
 
-        <div className="crd-actions">
-          <button type="button" className="u-btn u-btn--line">
-            {t.btnPrint}
-          </button>
-          <button type="button" className="u-btn u-btn--line">
-            {t.btnPdf}
-          </button>
-          <button
-            type="button"
-            className="u-btn u-btn--volt"
-            onClick={onSend || onBack}
-          >
-            {t.btnSendStatement}
-          </button>
-        </div>
-      </header>
+      <PageTitle
+        title={t.statementTitle}
+        sub={t.statementSub(account.name)}
+        right={
+          <>
+            <Button kind="line" icon={<Icon name="print" />} onClick={() => window.print()}>{t.print}</Button>
+            <Button kind={confirm ? "dark" : "volt"} disabled={p.offline || !p.onSend || (!whatsapp && !email)} onClick={() => setConfirm(true)}>{t.sendStatement}</Button>
+          </>
+        }
+      />
+      {p.offline ? <Banner tone="warn">{t.offline}</Banner> : null}
+      {failed ? <Banner tone="bad" action={<Button kind="quiet" size="sm" onClick={() => setConfirm(true)}>{t.retry}</Button>}>{t.sendFailed}</Banner> : null}
 
-      {/* ── Main Layout: Paper stage on left, Options on right ────────────── */}
-      <div className="crd-statement-layout">
-        {/* Left Paper Stage */}
-        <div className="crd-statement-stage">
-          <div style={{ inlineSize: "100%", maxInlineSize: "41.25rem", display: "flex", alignItems: "center", justifyContent: "space-between", color: "var(--text-muted)", fontSize: "var(--font-size-xs)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <span style={{ fontWeight: 600 }}>{lang === "ar" ? "معاينة" : "Preview"}</span>
-              <span style={{ fontFamily: "var(--font-ui-mono)" }}>{t.previewMeta}</span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <button type="button" className="u-btn u-btn--quiet" style={{ blockSize: "1.75rem", padding: "0 0.5rem" }}>‹</button>
-              <span style={{ fontFamily: "var(--font-ui-mono)" }}>{t.pageCount}</span>
-              <button type="button" className="u-btn u-btn--quiet" style={{ blockSize: "1.75rem", padding: "0 0.5rem" }}>›</button>
-            </div>
-          </div>
-
-          {/* A4 Paper Document Preview */}
-          <div className="crd-paper">
-            {/* Document Header */}
-            <div className="crd-paper-header">
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-                <span style={{ fontSize: "var(--font-size-lg)", fontWeight: 700 }}>{t.companyName}</span>
-                <span style={{ fontSize: "var(--ui-micro)", color: "var(--text-muted)" }}>{t.companyDetails}</span>
-                <span style={{ fontFamily: "var(--font-ui-mono)", fontSize: "var(--ui-micro)", color: "var(--text-muted)" }}>{t.companyPhone}</span>
+      <div className="crd-stmt">
+        <div className="crd-sheet">
+          <p className="crd-sheet-note u-mono">{t.previewNote}</p>
+          <article className="crd-paper" aria-label={t.statementTitle}>
+            <header className="crd-paper-head">
+              <div className="crd-paper-shop">
+                <Thumb size={32} seed={1} initials="NC" />
+                <div className="crd-stack-2">
+                  <strong className="crd-paper-name">{lang === "ar" ? p.shop.nameAr : p.shop.name}</strong>
+                  <span className="crd-paper-quiet">{p.shop.address}</span>
+                  <span className="crd-paper-quiet u-mono"><bdi dir="ltr">{p.shop.phone}</bdi></span>
+                </div>
               </div>
+              <div className="crd-paper-doc">
+                <strong className="crd-paper-title">{t.statementTitle}</strong>
+                <span className="crd-paper-title-ar" lang="ar">كشف حساب</span>
+                <span className="crd-paper-quiet u-mono"><bdi>{p.number}</bdi> · {formatDate(now, lang, { year: "always" })}</span>
+              </div>
+            </header>
 
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.125rem" }}>
-                <span style={{ fontSize: "var(--font-size-xl)", fontWeight: 700 }}>{t.statementDocTitle}</span>
-                <span style={{ fontSize: "var(--font-size-base)", color: "var(--text-muted)", fontWeight: 500 }}>{t.statementDocArTitle}</span>
-                <span style={{ fontFamily: "var(--font-ui-mono)", fontSize: "var(--ui-micro)", color: "var(--text-muted)" }}>{t.docRef}</span>
+            <div className="crd-paper-meta">
+              <div className="crd-stack-2">
+                <span className="crd-paper-label u-mono">{t.to}</span>
+                <strong><bdi>{account.name}</bdi></strong>
+                <span className="crd-paper-quiet u-mono"><bdi dir="ltr">{account.phone}</bdi></span>
+              </div>
+              <div className="crd-stack-2">
+                <span className="crd-paper-label u-mono">{t.period}</span>
+                <strong>{t.periodText(formatDate(start, lang, { weekday: false, year: "always" }), formatDate(now, lang, { weekday: false, year: "always" }))}</strong>
+                <span className="crd-paper-quiet">{t.periodHelp}</span>
               </div>
             </div>
 
-            {/* Recipient & Period */}
-            <div className="crd-dialog-row-2" style={{ gap: "2rem", padding: "0.75rem 0", borderBlock: "var(--rule-hairline) solid var(--line)" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.1875rem" }}>
-                <span style={{ fontFamily: "var(--font-ui-mono)", fontSize: "var(--ui-micro)", textTransform: "uppercase", color: "var(--text-muted)" }}>{t.toLabel}</span>
-                <span style={{ fontWeight: 600, fontSize: "var(--font-size-sm)" }}>Bluefin Events</span>
-                <span style={{ fontFamily: "var(--font-ui-mono)", fontSize: "var(--ui-micro)", color: "var(--text-muted)" }}>+974 5555 0188</span>
-              </div>
+            <dl className="crd-paper-sum">
+              <div><dt>{t.owedAtStart}</dt><dd className="u-mono"><Amount value={st.opening} lang={lang} /></dd></div>
+              <div><dt>{t.putOnAccount}</dt><dd className="u-mono"><Amount value={st.put} lang={lang} /></dd></div>
+              <div><dt>{t.paid}</dt><dd className="u-mono"><Amount value={st.paid} lang={lang} /></dd></div>
+              <div className="crd-paper-sum-last"><dt>{t.youOwe}</dt><dd className="u-mono"><Amount value={st.owes} lang={lang} /></dd></div>
+            </dl>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.1875rem" }}>
-                <span style={{ fontFamily: "var(--font-ui-mono)", fontSize: "var(--ui-micro)", textTransform: "uppercase", color: "var(--text-muted)" }}>{t.periodLabel}</span>
-                <span style={{ fontWeight: 600, fontSize: "var(--font-size-sm)" }}>{t.periodVal}</span>
-                <span style={{ fontSize: "var(--ui-micro)", color: "var(--text-muted)" }}>{t.periodSub}</span>
-              </div>
-            </div>
-
-            {/* Summary 4-Col Row */}
-            <div className="crd-paper-summary-band">
-              <div className="crd-paper-sum-col">
-                <span style={{ fontSize: "var(--ui-micro)", color: "var(--text-muted)" }}>{t.statOwedAtStart}</span>
-                <span style={{ fontFamily: "var(--font-ui-mono)", fontWeight: 500, fontSize: "var(--font-size-sm)" }}>QAR 0</span>
-              </div>
-              <div className="crd-paper-sum-col">
-                <span style={{ fontSize: "var(--ui-micro)", color: "var(--text-muted)" }}>{t.statPutOnAccount}</span>
-                <span style={{ fontFamily: "var(--font-ui-mono)", fontWeight: 500, fontSize: "var(--font-size-sm)" }}>QAR 2,124</span>
-              </div>
-              <div className="crd-paper-sum-col">
-                <span style={{ fontSize: "var(--ui-micro)", color: "var(--text-muted)" }}>{t.statPaid}</span>
-                <span style={{ fontFamily: "var(--font-ui-mono)", fontWeight: 500, fontSize: "var(--font-size-sm)" }}>QAR 860</span>
-              </div>
-              <div className="crd-paper-sum-col" style={{ background: "var(--subtle)" }}>
-                <span style={{ fontSize: "var(--ui-micro)", color: "var(--text-muted)", fontWeight: 600 }}>{t.statYouOwe}</span>
-                <span style={{ fontFamily: "var(--font-ui-mono)", fontWeight: 600, fontSize: "var(--font-size-base)" }}>QAR 1,264</span>
-              </div>
-            </div>
-
-            {/* Statement Entries Table */}
-            <div className="crd-table-scroll" tabIndex={0} role="region" aria-label={t.statementDocTitle}>
-              <table className="crd-table" style={{ fontSize: "var(--font-size-xs)" }}>
+            <div className="crd-paper-table" role="region" aria-label={t.statementTitle} tabIndex={0}>
+              <table className="crd-paper-tbl">
                 <thead>
                   <tr>
-                    <th className="crd-th" style={{ inlineSize: "4.5rem" }}>{t.colDate}</th>
-                    <th className="crd-th">{t.colWhat}</th>
-                    <th className="crd-th crd-th-right" style={{ inlineSize: "6.5rem" }}>{t.statPutOnAccount}</th>
-                    <th className="crd-th crd-th-right" style={{ inlineSize: "5rem" }}>{t.statPaid}</th>
-                    <th className="crd-th crd-th-right" style={{ inlineSize: "5.5rem" }}>{t.colBalance}</th>
+                    <th scope="col">{t.colDate}</th>
+                    <th scope="col">{t.colWhat}</th>
+                    <th scope="col" className="crd-num">{t.colPutOn}</th>
+                    <th scope="col" className="crd-num">{t.colPaid}</th>
+                    <th scope="col" className="crd-num">{t.colBalance}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="crd-tr">
-                    <td className="crd-td" style={{ fontFamily: "var(--font-ui-mono)" }}>5 Sep</td>
-                    <td className="crd-td">
-                      <div style={{ display: "flex", flexDirection: "column" }}>
-                        <span style={{ fontWeight: 500 }}>Invoice INV-2026-0297</span>
-                        <span style={{ color: "var(--text-muted)", fontSize: "var(--ui-micro)" }}>6 × Full wash</span>
-                      </div>
-                    </td>
-                    <td className="crd-td crd-td-right">360</td>
-                    <td className="crd-td crd-td-right">–</td>
-                    <td className="crd-td crd-td-right" style={{ fontWeight: 500 }}>360</td>
-                  </tr>
-
-                  <tr className="crd-tr">
-                    <td className="crd-td" style={{ fontFamily: "var(--font-ui-mono)" }}>21 Sep</td>
-                    <td className="crd-td">
-                      <div style={{ display: "flex", flexDirection: "column" }}>
-                        <span style={{ fontWeight: 500 }}>Payment</span>
-                        <span style={{ color: "var(--text-muted)", fontSize: "var(--ui-micro)" }}>Bank transfer · TRX-71920</span>
-                      </div>
-                    </td>
-                    <td className="crd-td crd-td-right">–</td>
-                    <td className="crd-td crd-td-right">360</td>
-                    <td className="crd-td crd-td-right" style={{ fontWeight: 500 }}>0</td>
-                  </tr>
-
-                  <tr className="crd-tr">
-                    <td className="crd-td" style={{ fontFamily: "var(--font-ui-mono)" }}>2 Oct</td>
-                    <td className="crd-td">
-                      <div style={{ display: "flex", flexDirection: "column" }}>
-                        <span style={{ fontWeight: 500 }}>Invoice INV-2026-0358</span>
-                        <span style={{ color: "var(--text-muted)", fontSize: "var(--ui-micro)" }}>6 × Interior detail, 8 × Full wash, 3 × Engine bay</span>
-                      </div>
-                    </td>
-                    <td className="crd-td crd-td-right">1,620</td>
-                    <td className="crd-td crd-td-right">–</td>
-                    <td className="crd-td crd-td-right" style={{ fontWeight: 500 }}>1,620</td>
-                  </tr>
-
-                  <tr className="crd-tr">
-                    <td className="crd-td" style={{ fontFamily: "var(--font-ui-mono)" }}>6 Oct</td>
-                    <td className="crd-td">
-                      <div style={{ display: "flex", flexDirection: "column" }}>
-                        <span style={{ fontWeight: 500 }}>Credit note CN-2026-0009</span>
-                        <span style={{ color: "var(--text-muted)", fontSize: "var(--ui-micro)" }}>1 × Engine bay clean not done</span>
-                      </div>
-                    </td>
-                    <td className="crd-td crd-td-right">−80</td>
-                    <td className="crd-td crd-td-right">–</td>
-                    <td className="crd-td crd-td-right" style={{ fontWeight: 500 }}>1,540</td>
-                  </tr>
-
-                  <tr className="crd-tr">
-                    <td className="crd-td" style={{ fontFamily: "var(--font-ui-mono)" }}>14 Oct</td>
-                    <td className="crd-td">
-                      <div style={{ display: "flex", flexDirection: "column" }}>
-                        <span style={{ fontWeight: 500 }}>Payment</span>
-                        <span style={{ color: "var(--text-muted)", fontSize: "var(--ui-micro)" }}>Pay link · credit card</span>
-                      </div>
-                    </td>
-                    <td className="crd-td crd-td-right">–</td>
-                    <td className="crd-td crd-td-right">500</td>
-                    <td className="crd-td crd-td-right" style={{ fontWeight: 500 }}>1,040</td>
-                  </tr>
-
-                  <tr className="crd-tr">
-                    <td className="crd-td" style={{ fontFamily: "var(--font-ui-mono)" }}>12 Nov</td>
-                    <td className="crd-td">
-                      <div style={{ display: "flex", flexDirection: "column" }}>
-                        <span style={{ fontWeight: 500 }}>Order 1028</span>
-                        <span style={{ color: "var(--text-muted)", fontSize: "var(--ui-micro)" }}>12 × Air freshener, 2 × Glass cleaner</span>
-                      </div>
-                    </td>
-                    <td className="crd-td crd-td-right">224</td>
-                    <td className="crd-td crd-td-right">–</td>
-                    <td className="crd-td crd-td-right" style={{ fontWeight: 500 }}>1,264</td>
-                  </tr>
+                  {st.lines.map((e) => (
+                    <tr key={e.id}>
+                      <td className="u-mono">{formatDate(e.at, lang, { weekday: false })}</td>
+                      <td>
+                        <span>{t.entryKind[e.kind]} <bdi className="u-mono">{e.ref}</bdi></span>
+                        <span className="crd-paper-quiet crd-small crd-block">{e.note}</span>
+                      </td>
+                      <td className="crd-num u-mono">{e.kind === "payment" ? null : <Amount value={e.kind === "sale" ? e.amount : -e.amount} lang={lang} />}</td>
+                      <td className="crd-num u-mono">{e.kind === "payment" ? <Amount value={e.amount} lang={lang} /> : null}</td>
+                      <td className="crd-num u-mono"><Amount value={e.owesAfter} lang={lang} /></td>
+                    </tr>
+                  ))}
+                  {st.lines.length === 0 ? <tr><td colSpan={5}>{none(lang)}</td></tr> : null}
                 </tbody>
               </table>
             </div>
+            {st.hidden > 0 ? <p className="crd-paper-quiet crd-small">{t.hiddenLines(st.hidden)}</p> : null}
 
-            {/* Total Balance Row */}
-            <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "1.5rem", padding: "0.5rem 0" }}>
-              <span style={{ fontWeight: 600, fontSize: "var(--font-size-sm)" }}>{t.youOweOnDate}</span>
-              <span style={{ fontFamily: "var(--font-ui-mono)", fontWeight: 700, fontSize: "var(--font-size-xl)" }}>
-                QAR 1,264
-              </span>
-            </div>
+            <p className="crd-paper-total">
+              <span>{t.youOweOn(formatDate(now, lang, { year: "always" }))}</span>
+              <strong className="u-mono"><Amount value={st.owes} lang={lang} /></strong>
+            </p>
 
-            {/* Debt Age Breakdown */}
-            {toggleAge && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
-                <span style={{ fontFamily: "var(--font-ui-mono)", fontSize: "var(--ui-micro)", textTransform: "uppercase", color: "var(--text-muted)" }}>
-                  {t.howOldTitle}
-                </span>
-                <div className="crd-paper-summary-band">
-                  <div className="crd-paper-sum-col">
-                    <span style={{ fontSize: "var(--ui-micro)", color: "var(--text-muted)" }}>{t.age0to30}</span>
-                    <span style={{ fontFamily: "var(--font-ui-mono)", fontWeight: 500, fontSize: "var(--font-size-xs)" }}>QAR 224</span>
+            {showAge ? (
+              <section aria-labelledby={`${ids}-age`}>
+                <h3 id={`${ids}-age`} className="crd-paper-label u-mono">{t.howOld}</h3>
+                <dl className="crd-paper-age">
+                  {BUCKET_KEYS.map((k) => (
+                    <div key={k}><dt>{t.bucket[k]}</dt><dd className="u-mono"><Amount value={st.buckets[k]} lang={lang} /></dd></div>
+                  ))}
+                </dl>
+              </section>
+            ) : null}
+
+            {(showLink && p.payLink) || (showBank && p.bank) ? (
+              <div className="crd-paper-pay">
+                {showLink && p.payLink ? (
+                  <div className="crd-stack-2">
+                    <span className="crd-paper-label u-mono">{t.payOnline}</span>
+                    <span className="u-mono"><bdi dir="ltr">{p.payLink}</bdi></span>
+                    <span className="crd-paper-quiet">{t.payOnlineHelp(p.shop.name)}</span>
                   </div>
-                  <div className="crd-paper-sum-col">
-                    <span style={{ fontSize: "var(--ui-micro)", color: "var(--text-muted)" }}>{t.age31to60}</span>
-                    <span style={{ fontFamily: "var(--font-ui-mono)", fontWeight: 500, fontSize: "var(--font-size-xs)" }}>QAR 1,040</span>
+                ) : null}
+                {showBank && p.bank ? (
+                  <div className="crd-stack-2">
+                    <span className="crd-paper-label u-mono">{t.orBank}</span>
+                    <span>{p.bank.name}</span>
+                    <span className="u-mono"><bdi dir="ltr">{p.bank.iban}</bdi></span>
+                    <span className="crd-paper-quiet">{t.bankRef(p.number)}</span>
                   </div>
-                  <div className="crd-paper-sum-col">
-                    <span style={{ fontSize: "var(--ui-micro)", color: "var(--text-muted)" }}>{t.age61to90}</span>
-                    <span style={{ fontFamily: "var(--font-ui-mono)", fontWeight: 500, fontSize: "var(--font-size-xs)" }}>QAR 0</span>
-                  </div>
-                  <div className="crd-paper-sum-col">
-                    <span style={{ fontSize: "var(--ui-micro)", color: "var(--text-muted)" }}>{t.ageOver90}</span>
-                    <span style={{ fontFamily: "var(--font-ui-mono)", fontWeight: 500, fontSize: "var(--font-size-xs)" }}>QAR 0</span>
-                  </div>
-                </div>
+                ) : null}
               </div>
-            )}
+            ) : null}
 
-            {/* Payment Details */}
-            <div className="crd-dialog-row-2" style={{ gap: "1.5rem", padding: "0.75rem 0", borderBlockStart: "var(--rule-hairline) solid var(--line)" }}>
-              {toggleLink && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.1875rem" }}>
-                  <span style={{ fontFamily: "var(--font-ui-mono)", fontSize: "var(--ui-micro)", textTransform: "uppercase", color: "var(--text-muted)" }}>
-                    {t.payOnlineTitle}
-                  </span>
-                  <span style={{ fontFamily: "var(--font-ui-mono)", fontSize: "var(--font-size-xs)", fontWeight: 500 }}>
-                    {t.payOnlineUrl}
-                  </span>
-                  <span style={{ fontSize: "var(--ui-micro)", color: "var(--text-muted)" }}>
-                    {t.payOnlineSub}
-                  </span>
-                </div>
-              )}
-
-              {toggleBank && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.1875rem" }}>
-                  <span style={{ fontFamily: "var(--font-ui-mono)", fontSize: "var(--ui-micro)", textTransform: "uppercase", color: "var(--text-muted)" }}>
-                    {t.bankTransferTitle}
-                  </span>
-                  <span style={{ fontSize: "var(--font-size-xs)", fontWeight: 500 }}>{t.bankTransferAccount}</span>
-                  <span style={{ fontFamily: "var(--font-ui-mono)", fontSize: "var(--ui-micro)", color: "var(--text)" }}>{t.bankTransferIban}</span>
-                  <span style={{ fontSize: "var(--ui-micro)", color: "var(--text-muted)" }}>{t.bankTransferRef}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Arabic Footer Note */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "var(--ui-micro)", color: "var(--text-muted)", borderBlockStart: "var(--rule-hairline) solid var(--line)", paddingBlockStart: "0.5rem" }}>
-              <span>{t.tellWithin7Days}</span>
-              <span style={{ fontSize: "var(--font-size-xs)", fontWeight: 500 }}>{t.thankYouAr}</span>
-            </div>
-          </div>
+            <footer className="crd-paper-foot">
+              <span className="crd-paper-quiet">{t.tellUs}</span>
+              <span lang="ar" className="crd-paper-quiet">شكراً لتعاملكم معنا</span>
+            </footer>
+          </article>
         </div>
 
-        {/* Right Sidebar Options */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-          {/* Panel: What is on it */}
-          <section className="crd-panel" aria-label={t.whatIsOnItTitle}>
-            <div className="crd-panel-header">
-              <h2 className="crd-panel-title">{t.whatIsOnItTitle}</h2>
+        <div className="crd-side">
+          <Panel>
+            <PanelHeader title={t.whatIsOn} />
+            <PanelBody>
+              <Field label={t.periodPick}>
+                <Select value={period} onChange={(e) => setPeriod(e.target.value as Period)}>
+                  <option value="all">{t.periodAll(formatDate(first, lang, { weekday: false, year: "always" }))}</option>
+                  {p.lastEnd ? <option value="sinceLast">{t.periodSince(formatDate(addDays(p.lastEnd, 1), lang, { weekday: false, year: "always" }))}</option> : null}
+                </Select>
+              </Field>
+            </PanelBody>
+            <div className="crd-toggles">
+              <Toggle checked={showPaid} onChange={setShowPaid}>
+                <span className="crd-stack-2"><strong>{t.optPaid}</strong><span className="crd-quiet crd-small">{t.optPaidHelp}</span></span>
+              </Toggle>
+              <Toggle checked={showAge} onChange={setShowAge}>
+                <span className="crd-stack-2"><strong>{t.optAge}</strong><span className="crd-quiet crd-small">{t.optAgeHelp}</span></span>
+              </Toggle>
+              {p.payLink ? (
+                <Toggle checked={showLink} onChange={setShowLink}>
+                  <span className="crd-stack-2"><strong>{t.optLink(money(st.owes, lang))}</strong><span className="crd-quiet crd-small">{t.optLinkHelp}</span></span>
+                </Toggle>
+              ) : null}
+              {p.bank ? (
+                <Toggle checked={showBank} onChange={setShowBank}>
+                  <span className="crd-stack-2"><strong>{t.optBank}</strong><span className="crd-quiet crd-small">{t.optBankHelp}</span></span>
+                </Toggle>
+              ) : null}
             </div>
+          </Panel>
 
-            <div style={{ padding: "0.875rem 1.25rem", display: "flex", flexDirection: "column", gap: "0.375rem", borderBlockEnd: "var(--rule-hairline) solid var(--line)" }}>
-              <label style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>{t.periodFieldLabel}</label>
-              <select className="crd-search" style={{ inlineSize: "100%" }} aria-label={t.periodFieldLabel}>
-                <option value="default">{t.periodFieldVal}</option>
-                <option value="custom">Custom dates…</option>
-              </select>
-              <span style={{ fontSize: "var(--ui-micro)", color: "var(--text-muted)" }}>
-                {t.periodFieldHelp}
-              </span>
+          <Panel>
+            <PanelHeader title={t.sendTo} />
+            <div className="crd-channels">
+              <Check checked={whatsapp} onChange={(e) => setWhatsapp(e.target.checked)}>
+                <span className="crd-stack-2"><strong className="u-mono"><bdi dir="ltr">{account.phone}</bdi></strong><span className="crd-quiet crd-small">{t.byWhatsapp}</span></span>
+              </Check>
+              {p.email ? (
+                <Check checked={email} onChange={(e) => setEmail(e.target.checked)}>
+                  <span className="crd-stack-2"><strong className="u-mono"><bdi dir="ltr">{p.email}</bdi></strong><span className="crd-quiet crd-small">{t.byEmail}</span></span>
+                </Check>
+              ) : null}
             </div>
+            <PanelFooter>{t.onceSent(p.number)}</PanelFooter>
+          </Panel>
 
-            <div>
-              <label className="crd-list-row" style={{ cursor: "pointer", justifyContent: "space-between" }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.125rem" }}>
-                  <span style={{ fontWeight: 500 }}>{t.togglePaidLines}</span>
-                  <span style={{ fontSize: "var(--ui-micro)", color: "var(--text-muted)" }}>{t.togglePaidLinesSub}</span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={togglePaid}
-                  onChange={(e) => setTogglePaid(e.target.checked)}
-                />
-              </label>
-
-              <label className="crd-list-row" style={{ cursor: "pointer", justifyContent: "space-between" }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.125rem" }}>
-                  <span style={{ fontWeight: 500 }}>{t.toggleHowOld}</span>
-                  <span style={{ fontSize: "var(--ui-micro)", color: "var(--text-muted)" }}>{t.toggleHowOldSub}</span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={toggleAge}
-                  onChange={(e) => setToggleAge(e.target.checked)}
-                />
-              </label>
-
-              <label className="crd-list-row" style={{ cursor: "pointer", justifyContent: "space-between" }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.125rem" }}>
-                  <span style={{ fontWeight: 500 }}>{t.togglePayLink}</span>
-                  <span style={{ fontSize: "var(--ui-micro)", color: "var(--text-muted)" }}>{t.togglePayLinkSub}</span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={toggleLink}
-                  onChange={(e) => setToggleLink(e.target.checked)}
-                />
-              </label>
-
-              <label className="crd-list-row" style={{ cursor: "pointer", justifyContent: "space-between" }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.125rem" }}>
-                  <span style={{ fontWeight: 500 }}>{t.toggleBankDetails}</span>
-                  <span style={{ fontSize: "var(--ui-micro)", color: "var(--text-muted)" }}>{t.toggleBankDetailsSub}</span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={toggleBank}
-                  onChange={(e) => setToggleBank(e.target.checked)}
-                />
-              </label>
-            </div>
-          </section>
-
-          {/* Panel: Send to */}
-          <section className="crd-panel" aria-label={t.sendToTitle}>
-            <div className="crd-panel-header">
-              <h2 className="crd-panel-title">{t.sendToTitle}</h2>
-              <button
-                type="button"
-                className="u-btn u-btn--quiet"
-                style={{ padding: 0, textDecoration: "underline", color: "var(--text)", font: "inherit" }}
-              >
-                {t.changeContactsLink}
-              </button>
-            </div>
-
-            <div>
-              <label className="crd-list-row" style={{ cursor: "pointer" }}>
-                <input
-                  type="checkbox"
-                  checked={sendWhatsApp}
-                  onChange={(e) => setSendWhatsApp(e.target.checked)}
-                />
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.125rem", flex: 1 }}>
-                  <span style={{ fontFamily: "var(--font-ui-mono)", fontWeight: 500 }}>+974 5555 0188</span>
-                  <span style={{ fontSize: "var(--ui-micro)", color: "var(--text-muted)" }}>{t.sendToWhatsAppSub}</span>
-                </div>
-              </label>
-
-              <label className="crd-list-row" style={{ cursor: "pointer" }}>
-                <input
-                  type="checkbox"
-                  checked={sendEmail}
-                  onChange={(e) => setSendEmail(e.target.checked)}
-                />
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.125rem", flex: 1 }}>
-                  <span style={{ fontFamily: "var(--font-ui-mono)", fontWeight: 500 }}>accounts@bluefinevents.example</span>
-                  <span style={{ fontSize: "var(--ui-micro)", color: "var(--text-muted)" }}>{t.sendToEmailSub}</span>
-                </div>
-              </label>
-            </div>
-
-            {/* WhatsApp Preview message */}
-            <div style={{ padding: "0.875rem 1.25rem", display: "flex", flexDirection: "column", gap: "0.5rem", background: "var(--surface)" }}>
-              <span style={{ fontFamily: "var(--font-ui-mono)", fontSize: "var(--ui-micro)", textTransform: "uppercase", color: "var(--text-muted)" }}>
-                {t.withThisMessage}
-              </span>
-              <div className="crd-wa-paper">
-                <div className="crd-wa-bubble">
-                  <span>{t.statementMessageBubble}</span>
-                  <span className="crd-wa-time">{t.statementBubbleMeta}</span>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ padding: "0.75rem 1.25rem", borderBlockStart: "var(--rule-hairline) solid var(--line)" }}>
-              <span className="crd-rule-text">{t.ruleStatementSent}</span>
-            </div>
-          </section>
-
-          {/* Panel: Earlier statements */}
-          <section className="crd-panel" aria-label={t.earlierStatementsTitle}>
-            <div className="crd-panel-header">
-              <h2 className="crd-panel-title">{t.earlierStatementsTitle}</h2>
-              <span className="crd-panel-subtitle">2</span>
-            </div>
-
-            <div>
-              <div className="crd-list-row">
-                <span style={{ fontFamily: "var(--font-ui-mono)", fontWeight: 500 }}>ST-2026-0006</span>
-                <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>Sun 1 Nov</span>
-                <span className="crd-badge crd-badge-n" style={{ marginInlineStart: "auto", background: "var(--ok-soft)", color: "var(--ok-text)" }}>
-                  Read
-                </span>
-                <span style={{ fontFamily: "var(--font-ui-mono)", fontWeight: 500 }}>QAR 1,040</span>
-              </div>
-
-              <div className="crd-list-row">
-                <span style={{ fontFamily: "var(--font-ui-mono)", fontWeight: 500 }}>ST-2026-0003</span>
-                <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>Thu 1 Oct</span>
-                <span className="crd-badge crd-badge-n" style={{ marginInlineStart: "auto", background: "var(--ok-soft)", color: "var(--ok-text)" }}>
-                  Read
-                </span>
-                <span style={{ fontFamily: "var(--font-ui-mono)", fontWeight: 500 }}>QAR 0</span>
-              </div>
-            </div>
-          </section>
+          {p.earlier && p.earlier.length > 0 ? (
+            <Panel clip>
+              <PanelHeader title={t.earlier} sub={String(p.earlier.length)} right={<Button kind="quiet" size="sm" href="/app/documents">{t.openInDocuments}</Button>} />
+              <KVList className="crd-kv">
+                {p.earlier.map((e) => (
+                  <KV key={e.id} k={<span className="u-mono">{e.number} <span className="crd-quiet">{formatDate(e.at, lang)}</span></span>} mono>
+                    <Amount value={e.amount} lang={lang} />
+                  </KV>
+                ))}
+              </KVList>
+            </Panel>
+          ) : null}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirm}
+        onCancel={() => setConfirm(false)}
+        onConfirm={send}
+        busy={busy}
+        closeLabel={t.close}
+        title={t.confirmSendTitle(account.name)}
+        confirmLabel={t.sendStatement}
+        cancelLabel={t.cancel}
+        note={t.nothingSent}
+      >
+        {t.confirmSendBody(p.number, [whatsapp ? account.phone : null, email ? p.email : null].filter((x): x is string => !!x))}
+      </ConfirmDialog>
     </div>
   );
 }

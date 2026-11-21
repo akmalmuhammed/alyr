@@ -1,235 +1,200 @@
 "use client";
 
-import React, { useState } from "react";
-import { getCreditCopy, CreditLang } from "./copy";
-import { FIXTURE_REMINDERS_DATA } from "./fixtures";
+import { useMemo, useState } from "react";
+import { Banner, Button, Icon, Modal, Select, Tabs, Tag } from "../../../_ui";
+import { counted, formatDate, formatTime } from "../../../_ui/format";
+import { copy, type Lang } from "./copy";
+import {
+  PROMISE_DAYS, addDays, daysSince, dohaDay, planReminders, reminderText,
+  type CreditAccountRow, type ReminderGo, type ReminderSkip, type Tone,
+} from "./logic";
+import { Amount } from "./parts";
 
-interface CreditRemindersDialogProps {
-  lang?: CreditLang;
+export type SendResult = { sent: number; skippedPromised: number; skippedRecent: number; skippedOptedOut: number };
+
+export type RemindersProps = {
+  lang: Lang;
+  rows: CreditAccountRow[];
+  now: string;
+  shop: { name: string; nameAr: string };
+  /** The pay link the reminder carries, or null when the shop takes no money online yet. */
+  payLink: string | null;
+  /** The sentence that replaces the link when there is none. */
+  payHow: string | null;
+  /** The run: the API sends to every customer the rules reach. Absent: the button is off. */
+  onSend?: (minDays: number) => Promise<SendResult>;
   onClose: () => void;
-  onSend?: () => void;
-}
+  onDone: (result: SendResult, minDays: number) => void;
+};
 
-export function CreditRemindersDialog({
-  lang = "en",
-  onClose,
-  onSend,
-}: CreditRemindersDialogProps) {
-  const t = getCreditCopy(lang);
+const AGES = [0, 30, 60, 90] as const;
 
-  const [selected, setSelected] = useState<Record<string, boolean>>({
-    "bayview-school": true,
-    bluefin: true,
-    "omar-ali": true,
-  });
+export function CreditRemindersDialog(p: RemindersProps) {
+  const { lang, rows, now } = p;
+  const t = copy(lang);
+  const [minDays, setMinDays] = useState<number>(30);
+  const [pick, setPick] = useState<string | null>(null);
+  const [tone, setTone] = useState<Tone | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
 
-  const [previewTone, setPreviewTone] = useState<"gentle" | "firm" | "final">("gentle");
+  const plan = useMemo(() => planReminders(rows, minDays, now), [rows, minDays, now]);
+  const current: ReminderGo | undefined = plan.go.find((g) => g.row.id === pick) ?? plan.go[0];
+  const shownTone: Tone = tone ?? (current ? current.tone : "gentle");
 
-  const toggleSelect = (id: string) => {
-    setSelected((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  const selectedCount = Object.values(selected).filter(Boolean).length;
+  async function send() {
+    if (!p.onSend) return;
+    setBusy(true);
+    setFailed(false);
+    try {
+      const result = await p.onSend(minDays);
+      p.onDone(result, minDays);
+    } catch {
+      setFailed(true);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
-    <div className="crd-scrim" onClick={onClose}>
-      <div
-        className="crd-modal"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={t.dialogRemindersTitle}
-      >
-        <header className="crd-modal-header">
-          <h2 className="crd-modal-title">{t.dialogRemindersTitle}</h2>
-          <button
-            type="button"
-            className="u-btn u-btn--quiet"
-            style={{ padding: "0 0.5rem" }}
-            onClick={onClose}
-            aria-label="Close"
-          >
-            ✕
-          </button>
-        </header>
+    <Modal
+      open
+      onClose={p.onClose}
+      title={t.remindTitle}
+      closeLabel={t.close}
+      className="crd-wide"
+      footerNote={t.nothingSent}
+      footer={
+        <>
+          <Button kind="quiet" onClick={p.onClose}>{t.cancel}</Button>
+          <Button kind="volt" loading={busy} loadingLabel={t.sending} disabled={plan.go.length === 0 || !p.onSend} onClick={send}>
+            {t.sendN(plan.go.length)}
+          </Button>
+        </>
+      }
+    >
+      {failed ? <Banner tone="bad" action={<Button kind="quiet" size="sm" onClick={send}>{t.retry}</Button>}>{t.sendFailed}</Banner> : null}
 
-        <div className="crd-modal-body" tabIndex={0}>
-          {/* Top filter row */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
-            <span style={{ fontSize: "var(--font-size-sm)" }}>{t.filterRemindersLabel}</span>
-            <select
-              className="crd-search"
-              style={{ inlineSize: "13rem" }}
-              aria-label={t.filterRemindersLabel}
-            >
-              <option value="30">{t.filterRemindersOpt}</option>
-              <option value="60">60 days old or more</option>
-              <option value="90">90 days old or more</option>
-            </select>
-            <span style={{ marginInlineStart: "auto", fontFamily: "var(--font-ui-mono)", fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>
-              {t.remindersMatchCount}
-            </span>
+      <div className="crd-rem">
+        <div className="crd-rem-list">
+          <div className="crd-rem-head">
+            <Select variant="filter" label={t.oldestIs} value={String(minDays)} onChange={(e) => { setMinDays(Number(e.target.value)); setPick(null); }}>
+              {AGES.map((d) => <option key={d} value={d}>{d === 0 ? t.anyAge : t.orMore(counted(d, t.nounDay, lang))}</option>)}
+            </Select>
+            <span className="u-mono crd-quiet crd-small">{t.matchLine(plan.matched, plan.go.length, plan.skipped.length)}</span>
           </div>
 
-          {/* 2-column layout: Lists on left, WhatsApp preview on right */}
-          <div className="crd-reminders-grid">
-            {/* Left Column */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              {/* 3 will be reminded */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                <span style={{ fontSize: "var(--font-size-xs)", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                  {t.remindersSectionSend}
-                </span>
+          <h3 className="u-label">{t.willBe(plan.go.length)}</h3>
+          {plan.go.length === 0 ? (
+            <p className="crd-empty-line">{t.nobodyToRemind}</p>
+          ) : (
+            <ul className="crd-rem-rows" aria-label={t.willBe(plan.go.length)}>
+              {plan.go.map((g) => (
+                <li key={g.row.id}>
+                  <button
+                    type="button"
+                    className="crd-rem-row"
+                    aria-pressed={current?.row.id === g.row.id}
+                    onClick={() => { setPick(g.row.id); setTone(null); }}
+                  >
+                    <span className="crd-stack-2">
+                      <bdi className="crd-rem-name">{g.row.name}</bdi>
+                      <span className="u-mono crd-quiet crd-small"><Amount value={g.row.balance} lang={lang} /> · {counted(g.row.oldestDays, t.nounDay, lang)}</span>
+                    </span>
+                    <Tag tone={g.tone === "final" ? "bad" : g.tone === "firm" ? "warn" : "n"} dot={false}>{t.tone[g.tone]}</Tag>
+                    <span className="crd-stack-2">
+                      <span>{g.via === "buttons" ? t.viaButtons : t.viaTemplate}</span>
+                      <span className="crd-quiet crd-small">{viaSub(g, t, lang, now)}</span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
 
-                <div className="crd-panel">
-                  {FIXTURE_REMINDERS_DATA.willRemind.map((item) => (
-                    <div
-                      key={item.id}
-                      className="crd-list-row"
-                      style={{ cursor: "pointer", background: selected[item.id] ? "var(--subtle)" : "transparent" }}
-                      onClick={() => toggleSelect(item.id)}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={!!selected[item.id]}
-                        onChange={() => toggleSelect(item.id)}
-                        onClick={(e) => e.stopPropagation()}
-                        aria-label={item.name}
-                      />
-                      <div style={{ display: "flex", flexDirection: "column", gap: "0.125rem", flex: 1 }}>
-                        <span style={{ fontWeight: 500 }}>{item.name}</span>
-                        <span style={{ fontFamily: "var(--font-ui-mono)", fontSize: "var(--ui-micro)", color: "var(--text-muted)" }}>
-                          {item.sub}
-                        </span>
-                      </div>
-                      <span className={`crd-badge crd-badge-${item.tagTone}`}>
-                        {item.tone}
-                      </span>
-                      <div style={{ inlineSize: "10.5rem", display: "flex", flexDirection: "column", gap: "0.125rem" }}>
-                        <span style={{ fontSize: "var(--font-size-xs)", fontWeight: 500 }}>{item.goes}</span>
-                        <span style={{ fontSize: "var(--ui-micro)", color: "var(--text-muted)" }}>{item.goesSub}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+          <h3 className="u-label">{t.areSkipped(plan.skipped.length)}</h3>
+          {plan.skipped.length === 0 ? (
+            <p className="crd-empty-line">{t.nobodySkipped}</p>
+          ) : (
+            <ul className="crd-rem-skips" aria-label={t.areSkipped(plan.skipped.length)}>
+              {plan.skipped.map((s) => (
+                <li key={s.row.id} className="crd-rem-skip">
+                  <span className="crd-stack-2">
+                    <bdi className="crd-rem-name">{s.row.name}</bdi>
+                    <span className="u-mono crd-quiet crd-small"><Amount value={s.row.balance} lang={lang} /> · {counted(s.row.oldestDays, t.nounDay, lang)}</span>
+                  </span>
+                  <span className="crd-stack-2">
+                    <span>{skipWhy(s, t, lang)}</span>
+                    <span className="crd-quiet crd-small">{skipSub(s, t, lang, now)}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
 
-              {/* 3 are skipped */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                <span style={{ fontSize: "var(--font-size-xs)", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                  {t.remindersSectionSkip}
-                </span>
-
-                <div className="crd-panel">
-                  {FIXTURE_REMINDERS_DATA.skipped.map((item) => (
-                    <div key={item.name} className="crd-list-row">
-                      <span style={{ inlineSize: "0.5rem", blockSize: "0.5rem", borderRadius: "var(--radius-full)", border: "var(--rule-hairline) solid var(--text-muted)" }} />
-                      <div style={{ inlineSize: "9.375rem", display: "flex", flexDirection: "column", gap: "0.125rem" }}>
-                        <span style={{ fontWeight: 500, color: "var(--text-muted)" }}>{item.name}</span>
-                        <span style={{ fontFamily: "var(--font-ui-mono)", fontSize: "var(--ui-micro)", color: "var(--text-muted)" }}>{item.sub}</span>
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: "0.125rem", flex: 1 }}>
-                        <span style={{ fontSize: "var(--font-size-xs)", fontWeight: 500 }}>{item.why}</span>
-                        <span style={{ fontSize: "var(--ui-micro)", color: "var(--text-muted)" }}>{item.whySub}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Consequence Bullets */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", padding: "0.5rem 0" }}>
-                <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start", fontSize: "var(--font-size-xs)", color: "var(--text)" }}>
-                  <span>→</span>
-                  <span>{t.ruleBulletPayLink}</span>
-                </div>
-                <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start", fontSize: "var(--font-size-xs)", color: "var(--text)" }}>
-                  <span>⏳</span>
-                  <span>{t.ruleBulletWording}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column: WhatsApp Preview */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
-              <span style={{ fontSize: "var(--font-size-xs)", fontWeight: 600, color: "var(--text-muted)" }}>
-                {t.reminderPreviewTitle}
-              </span>
-
-              {/* Tone Tabs */}
-              <div className="crd-tabs" role="tablist" style={{ border: "none" }}>
-                <button
-                  type="button"
-                  className={`crd-tab ${previewTone === "gentle" ? "crd-tab-active" : ""}`}
-                  style={{ padding: "0.25rem 0.5rem", fontSize: "var(--font-size-xs)" }}
-                  onClick={() => setPreviewTone("gentle")}
-                >
-                  {t.toneGentle}
-                </button>
-                <button
-                  type="button"
-                  className={`crd-tab ${previewTone === "firm" ? "crd-tab-active" : ""}`}
-                  style={{ padding: "0.25rem 0.5rem", fontSize: "var(--font-size-xs)" }}
-                  onClick={() => setPreviewTone("firm")}
-                >
-                  {t.toneFirm}
-                </button>
-                <button
-                  type="button"
-                  className={`crd-tab ${previewTone === "final" ? "crd-tab-active" : ""}`}
-                  style={{ padding: "0.25rem 0.5rem", fontSize: "var(--font-size-xs)" }}
-                  onClick={() => setPreviewTone("final")}
-                >
-                  {t.toneFinal}
-                </button>
-              </div>
-
-              {/* WhatsApp Green Bubble & Buttons */}
-              <div className="crd-wa-paper">
-                <div className="crd-wa-bubble">
-                  <span>{t.previewBubble}</span>
-                  <span className="crd-wa-time">{t.previewBubbleTime}</span>
-                </div>
-                <button type="button" className="crd-wa-action">
-                  {t.btnPayNow}
-                </button>
-                <button type="button" className="crd-wa-action">
-                  {t.btnPromiseWeek}
-                </button>
-              </div>
-
-              <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)", lineHeight: 1.4 }}>
-                {t.promiseWeekHelp}
-              </span>
-              <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)", lineHeight: 1.4 }}>
-                {t.bayviewTemplateNote}
-              </span>
-            </div>
-          </div>
+          <ul className="crd-rem-notes">
+            <li><Icon name="arrow" />{p.payLink ? t.noteLink : t.noteNoLink}</li>
+            <li><Icon name="clock" />{t.noteWording}</li>
+          </ul>
         </div>
 
-        <footer className="crd-modal-footer">
-          <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>
-            {t.noticePressButton}
-          </span>
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            <button
-              type="button"
-              className="u-btn u-btn--quiet"
-              onClick={onClose}
-            >
-              {t.btnCancel}
-            </button>
-            <button
-              type="button"
-              className="u-btn u-btn--volt"
-              onClick={onSend || onClose}
-            >
-              {selectedCount === 3 ? t.btnSend3Reminders : `Send ${selectedCount} reminders`}
-            </button>
-          </div>
-        </footer>
+        <div className="crd-rem-side">
+          {current ? (
+            <>
+              <h3 className="u-label">{t.whatReads(current.row.name)}</h3>
+              <Tabs
+                label={t.toneLabel}
+                value={shownTone}
+                onChange={(id) => setTone(id as Tone)}
+                items={[
+                  { id: "gentle", label: t.tone.gentle },
+                  { id: "firm", label: t.tone.firm },
+                  { id: "final", label: t.tone.final },
+                ]}
+              />
+              <div className="crd-wa" dir={current.row.lang === "ar" ? "rtl" : "ltr"}>
+                <p className="crd-wa-bubble">
+                  {reminderText({
+                    lang: current.row.lang, shop: p.shop.name, shopAr: p.shop.nameAr, amount: current.row.balance,
+                    days: current.row.oldestDays, tone: shownTone, link: p.payLink ?? "", how: p.payLink ? "" : (p.payHow ?? ""),
+                  })}
+                  <span className="crd-wa-time u-mono">{formatTime(now, lang)} · {t.waKind}</span>
+                </p>
+                {current.via === "buttons" ? (
+                  <ul className="crd-wa-buttons" aria-label={t.waButtons}>
+                    {p.payLink ? <li>{current.row.lang === "ar" ? "ادفع الآن" : "Pay now"}</li> : null}
+                    <li>{current.row.lang === "ar" ? "سأدفع خلال أسبوع" : "I'll pay within a week"}</li>
+                  </ul>
+                ) : null}
+              </div>
+              <p className="crd-quiet crd-small">{t.promiseTapHelp(formatDate(addDays(now, PROMISE_DAYS), lang))}</p>
+              <p className="crd-quiet crd-small">{t.viaHelp(current.row.name, current.via, current.row.lastInboundAt ? daysSince(current.row.lastInboundAt, now) : null, t.tone[current.tone])}</p>
+              {current.row.lang !== lang ? <p className="crd-quiet crd-small">{t.inTheirLanguage(current.row.lang === "ar" ? t.langArabic : t.langEnglish)}</p> : null}
+            </>
+          ) : (
+            <p className="crd-quiet">{t.noPreview}</p>
+          )}
+        </div>
       </div>
-    </div>
+    </Modal>
   );
 }
+
+function viaSub(g: ReminderGo, t: ReturnType<typeof copy>, lang: Lang, now: string): string {
+  if (g.via === "template") return t.windowClosedShort;
+  if (g.row.promisePassed) return t.promisePassedShort(g.row.promisePassedOn ? formatDate(g.row.promisePassedOn, lang) : null);
+  return g.row.lastInboundAt ? t.wroteAt(formatDate(g.row.lastInboundAt, lang), formatTime(g.row.lastInboundAt, lang), daysSince(g.row.lastInboundAt, now) === 0) : "";
+}
+
+function skipWhy(s: ReminderSkip, t: ReturnType<typeof copy>, lang: Lang): string {
+  if (s.reason === "stop") return t.skipStop(s.row.optedOutAt ? formatDate(s.row.optedOutAt, lang) : null);
+  if (s.reason === "promise") return t.skipPromise(formatDate(s.until, lang));
+  return t.skipRecent(s.row.lastRemindedAt ? `${formatDate(s.row.lastRemindedAt, lang)} ${formatTime(s.row.lastRemindedAt, lang)}` : "");
+}
+
+function skipSub(s: ReminderSkip, t: ReturnType<typeof copy>, lang: Lang, now: string): string {
+  if (s.reason === "stop") return t.skipStopSub(s.row.phone);
+  if (s.reason === "promise") return t.skipPromiseSub;
+  return t.skipRecentSub(s.until ? `${dohaDay(s.until) === dohaDay(now) ? t.today.toLowerCase() : formatDate(s.until, lang)} ${formatTime(s.until, lang)}` : "");
+}
+
