@@ -1,273 +1,106 @@
-import type { TeamMember, WorkPerson } from "./logic";
+// Sample data for the preview route and the tests: Nuqta Car Care, a fictional car-care shop. It has
+// the shape of what the API sends (GET /api/team, GET /api/team/performance, GET /api/team/settings),
+// so the screens read it through the same code as live data. All names are made up. Money is in fils.
+// Day of the sample: Thu 12 Nov 2026, Doha 09:40. Erasable TypeScript only.
 
-export const FIXTURE_MEMBERS: TeamMember[] = [
-  {
-    id: "bilal",
-    name: "Bilal",
-    email: "bilal@nuqta.qa",
-    role: "agent",
-    phone: {
-      lastDigits: "0124",
-      since: "3 Mar",
-    },
-    lastSeen: {
-      label: "Active now",
-      sub: "Chrome · counter",
-      tone: "volt",
-    },
-    bays: ["Ceramic"],
-    joinedDate: "3 Mar 2026",
-    work: {
-      openConvs: 2,
-      ordersHandled: ["Order 1041", "Order 1036"],
-    },
-  },
-  {
-    id: "hana",
-    name: "Hana",
-    email: "hana@nuqta.qa",
-    role: "owner",
-    isYou: true,
-    phone: {
-      lastDigits: "0101",
-      since: "2 Mar",
-    },
-    lastSeen: {
-      label: "Active now",
-      sub: "This device · and 1 phone",
-      tone: "volt",
-    },
-    joinedDate: "2 Mar 2026",
-    work: {
-      openConvs: 1,
-      waitingMinutes: 4,
-      ordersHandled: ["Order 1040"],
-    },
-  },
-  {
-    id: "maha",
-    name: "Maha",
-    email: "maha@nuqta.qa",
-    role: "agent",
-    notSignedInYet: true,
-    phone: null,
-    invitedDate: "Tue 10 Nov",
-    invitedBy: "Omar",
-    lastSeen: {
-      label: "Not signed in yet",
-      sub: "Invited Tue 10 Nov by Omar",
-      tone: "warn",
-    },
-    bays: ["Bay 1", "Detailing"],
-  },
-  {
-    id: "omar",
-    name: "Omar",
-    email: "omar@nuqta.qa",
-    role: "admin",
-    phone: {
-      lastDigits: "0107",
-      since: "2 Mar",
-    },
-    lastSeen: {
-      label: "Today 08:52",
-      sub: "Safari on iPhone",
-      tone: "neutral",
-    },
-    joinedDate: "2 Mar 2026",
-    work: {
-      openConvs: 2,
-      ordersHandled: ["Order 1037", "Order 1030"],
-    },
-  },
-  {
-    id: "reem",
-    name: "Reem",
-    email: "reem@nuqta.qa",
-    role: "agent",
-    phone: null,
-    lastSeen: {
-      label: "Today 09:31",
-      sub: "Chrome · counter",
-      tone: "neutral",
-    },
-    joinedDate: "15 Mar 2026",
-    work: {
-      openConvs: 3,
-      ordersHandled: ["Order 1035", "Order 1028"],
-    },
-  },
-  {
-    id: "salma",
-    name: "Salma",
-    email: "salma@nuqta.qa",
-    role: "agent",
-    phone: {
-      lastDigits: "0131",
-      since: "7 Nov",
-    },
-    lastSeen: {
-      label: "Active now",
-      sub: "Chrome · counter",
-      tone: "volt",
-    },
-    joinedDate: "2 Mar 2026",
-    invitedBy: "Hana",
-    bays: ["Bay 1", "Bay 2"],
-    devices: [
-      {
-        type: "store",
-        title: "Chrome on Windows",
-        sub: "Counter · signed in Sun 8 Nov 06:58",
-        activeNow: true,
-      },
-      {
-        type: "phone",
-        title: "Safari on iPhone",
-        sub: "Last used Wed 11 Nov 21:40 · signed in 2 Nov",
-        activeNow: false,
-      },
-    ],
-    work: {
-      openConvs: 4,
-      waitingMinutes: 7,
-      ordersHandled: [
-        "Order 1039",
-        "Order 1038",
-        "Order 1034",
-        "Order 1032",
-        "Order 1029",
-      ],
-    },
-    history: [
-      {
-        title: "Linked her own phone",
-        sub: "Sat 7 Nov 2026 · by Salma",
-        tone: "ok",
-      },
-      {
-        title: "Hana gave her Bay 2",
-        sub: "Mon 14 Sep 2026",
-      },
-      {
-        title: "Signed in for the first time",
-        sub: "Mon 2 Mar 2026 08:14",
-      },
-      {
-        title: "Hana invited her as an agent",
-        sub: "Mon 2 Mar 2026 07:50",
-      },
-    ],
-  },
-  {
-    id: "yusuf",
-    name: "Yusuf",
-    email: "yusuf@nuqta.qa",
-    role: "agent",
-    phone: null,
-    lastSeen: {
-      label: "Wed 11 Nov 21:40",
-      sub: "Safari on iPhone",
-      tone: "neutral",
-    },
-    joinedDate: "2 Mar 2026",
-    work: {
-      openConvs: 2,
-      ordersHandled: ["Order 1033"],
-    },
-  },
+import type { Me, Member, Period, RawPerformance, RawPerson } from "./logic.ts";
+
+export const SHOP_NAME = "Nuqta Car Care";
+/** Doha's wall clock for the sample: the report below was read at this moment. */
+export const SAMPLE_NOW = "2026-11-12T09:40";
+export const SAMPLE_OFFLINE_FROM = "2026-11-12T09:31";
+
+/** In the order the API sends them (by when they joined), not by name: the screen sorts. */
+export const FIXTURE_MEMBERS: Member[] = [
+  { id: "hana", name: "Hana", email: "hana@nuqta.qa", role: "owner" },
+  { id: "omar", name: "Omar", email: "omar@nuqta.qa", role: "admin" },
+  { id: "bilal", name: "Bilal", email: "bilal@nuqta.qa", role: "agent" },
+  { id: "salma", name: "Salma", email: "salma@nuqta.qa", role: "agent" },
+  { id: "yusuf", name: "Yusuf", email: "yusuf@nuqta.qa", role: "agent" },
+  { id: "reem", name: "Reem", email: "reem@nuqta.qa", role: "agent" },
+  { id: "maha", name: "Maha", email: "maha@nuqta.qa", role: "agent" },
 ];
 
-export const FIXTURE_WORK_PEOPLE: WorkPerson[] = [
-  {
-    initials: "B",
-    name: "Bilal",
-    role: "Agent",
-    open: 2,
-    waiting: undefined,
-    replies: 64,
-    firstAnswer: "3 min",
-    outcomes: { sold: 6, booked: 9, answered: 5, lost: 1 },
-    bookings: { marked: 31, noShow: 2 },
-    orders: 9,
-    sales: "QAR\u00a02,890",
-  },
-  {
-    initials: "H",
-    name: "Hana",
-    role: "Owner",
-    open: 1,
-    waiting: "1 waiting · 4 min",
-    replies: 12,
-    firstAnswer: "6 min",
-    outcomes: { sold: 1, booked: 1, answered: 2, lost: 0 },
-    bookings: null,
-    orders: 2,
-    sales: "QAR\u00a01,240",
-  },
-  {
-    initials: "M",
-    name: "Maha",
-    role: "Not signed in yet",
-    open: 0,
-    waiting: undefined,
-    replies: 0,
-    firstAnswer: "–",
-    outcomes: null,
-    bookings: null,
-    orders: 0,
-    sales: "–",
-  },
-  {
-    initials: "O",
-    name: "Omar",
-    role: "Admin",
-    open: 2,
-    waiting: undefined,
-    replies: 38,
-    firstAnswer: "4 min",
-    outcomes: { sold: 4, booked: 5, answered: 4, lost: 1 },
-    bookings: { marked: 12, noShow: 0 },
-    orders: 6,
-    sales: "QAR\u00a03,640",
-  },
-  {
-    initials: "R",
-    name: "Reem",
-    role: "Agent",
-    open: 3,
-    waiting: undefined,
-    replies: 71,
-    firstAnswer: "2 min",
-    outcomes: { sold: 8, booked: 11, answered: 6, lost: 1 },
-    bookings: { marked: 18, noShow: 1 },
-    orders: 11,
-    sales: "QAR\u00a03,208",
-  },
-  {
-    initials: "S",
-    name: "Salma",
-    role: "Agent",
-    open: 4,
-    waiting: "1 waiting · 7 min",
-    replies: 88,
-    firstAnswer: "1 min",
-    outcomes: { sold: 12, booked: 13, answered: 8, lost: 1 },
-    bookings: { marked: 22, noShow: 1 },
-    orders: 14,
-    sales: "QAR\u00a04,870",
-  },
-  {
-    initials: "Y",
-    name: "Yusuf",
-    role: "Agent",
-    open: 2,
-    waiting: undefined,
-    replies: 47,
-    firstAnswer: "3 min",
-    outcomes: { sold: 5, booked: 8, answered: 4, lost: 1 },
-    bookings: { marked: 27, noShow: 2 },
-    orders: 7,
-    sales: "QAR\u00a02,720",
-  },
+export const FIXTURE_OWNER: Me = { id: "hana", role: "owner" };
+export const FIXTURE_AGENT: Me = { id: "salma", role: "agent" };
+
+const person = (
+  id: string, name: string, role: string, p: Partial<RawPerson> & { closed?: RawPerson["closed"] },
+): RawPerson => {
+  const closed = p.closed ?? {};
+  return {
+    id, name, role, open: 0, waiting: 0, oldest_wait_minutes: null, replies: 0, median_reply_seconds: null,
+    closed, closed_total: Object.values(closed).reduce((n, v) => n + (v ?? 0), 0), orders: 0, sales: 0,
+    bookings_completed: 0, no_shows: 0, ...p,
+  };
+};
+
+/** The seven-day numbers. Other periods are scaled from these, below. */
+const WEEK: RawPerson[] = [
+  person("bilal", "Bilal", "agent", { open: 2, replies: 64, median_reply_seconds: 180, closed: { sold: 6, booked: 9, answered: 5, lost: 1 }, orders: 9, sales: 289000, bookings_completed: 29, no_shows: 2 }),
+  person("hana", "Hana", "owner", { open: 1, waiting: 1, oldest_wait_minutes: 4, replies: 12, median_reply_seconds: 360, closed: { sold: 1, booked: 1, answered: 2, lost: 0 }, orders: 2, sales: 124000 }),
+  person("maha", "Maha", "agent", {}),
+  person("omar", "Omar", "admin", { open: 2, replies: 38, median_reply_seconds: 240, closed: { sold: 4, booked: 5, answered: 4, lost: 1 }, orders: 6, sales: 364000, bookings_completed: 12, no_shows: 0 }),
+  person("reem", "Reem", "agent", { open: 3, replies: 71, median_reply_seconds: 120, closed: { sold: 8, booked: 11, answered: 6, lost: 1 }, orders: 11, sales: 320800, bookings_completed: 17, no_shows: 1 }),
+  person("salma", "Salma", "agent", { open: 4, waiting: 1, oldest_wait_minutes: 7, replies: 88, median_reply_seconds: 60, closed: { sold: 12, booked: 13, answered: 8, lost: 1 }, orders: 14, sales: 487000, bookings_completed: 21, no_shows: 1 }),
+  person("yusuf", "Yusuf", "agent", { open: 2, replies: 47, median_reply_seconds: 180, closed: { sold: 5, booked: 8, answered: 4, lost: 1 }, orders: 7, sales: 272000, bookings_completed: 25, no_shows: 2 }),
 ];
+const NOBODY = { open: 1, waiting: 1, oldest_wait_minutes: 12, orders: 3, sales: 291200 };
+
+const SINCE: Record<Period, string> = {
+  1: "2026-11-12T00:00:00+03:00",
+  7: "2026-11-06T00:00:00+03:00",
+  30: "2026-10-14T00:00:00+03:00",
+};
+const FACTOR: Record<Period, number> = { 1: 0.2, 7: 1, 30: 4 };
+
+function scale(p: RawPerson, factor: number): RawPerson {
+  if (factor === 1) return p;
+  const k = (n: number) => Math.round(n * factor);
+  const closed: RawPerson["closed"] = {};
+  for (const [key, value] of Object.entries(p.closed)) closed[key as keyof typeof closed] = k(value ?? 0);
+  return {
+    ...p, replies: k(p.replies), orders: k(p.orders), sales: k(p.sales), bookings_completed: k(p.bookings_completed), no_shows: k(p.no_shows),
+    closed, closed_total: Object.values(closed).reduce((n, v) => n + (v ?? 0), 0),
+  };
+}
+
+/** What the API sends for a period, for the owner. An agent's own view is `agentReport`. */
+export function fixtureReport(days: Period): RawPerformance {
+  const factor = FACTOR[days];
+  const people = WEEK.map((p) => scale(p, factor));
+  const medians = people.map((p) => p.median_reply_seconds).filter((v): v is number => v !== null).sort((a, b) => a - b);
+  const sales = people.reduce((n, p) => n + p.sales, 0) + Math.round(NOBODY.sales * factor);
+  return {
+    days,
+    since: SINCE[days],
+    waiting_minutes: 10,
+    can_see_everyone: true,
+    unassigned: { ...NOBODY, orders: Math.round(NOBODY.orders * factor), sales: Math.round(NOBODY.sales * factor) },
+    totals: {
+      waiting: people.reduce((n, p) => n + p.waiting, 0) + NOBODY.waiting,
+      open: people.reduce((n, p) => n + p.open, 0) + NOBODY.open,
+      closed: people.reduce((n, p) => n + p.closed_total, 0),
+      sold: people.reduce((n, p) => n + (p.closed.sold ?? 0), 0),
+      sales,
+      median_reply_seconds: medians.length ? medians[Math.floor(medians.length / 2)] : null,
+    },
+    people,
+  };
+}
+
+/** What the API sends an agent: their own row. (The totals and unassigned block still arrive today; the screen never draws them. See requests.md.) */
+export function agentReport(days: Period, me: Me): RawPerformance {
+  const full = fixtureReport(days);
+  return { ...full, can_see_everyone: false, people: full.people.filter((p) => p.id === me.id) };
+}
+
+/** A new shop: nobody has replied, closed or sold anything yet. */
+export function emptyReport(days: Period): RawPerformance {
+  return {
+    days, since: SINCE[days], waiting_minutes: 10, can_see_everyone: true,
+    unassigned: { open: 0, waiting: 0, oldest_wait_minutes: null, orders: 0, sales: 0 },
+    totals: { waiting: 0, open: 0, closed: 0, sold: 0, sales: 0, median_reply_seconds: null },
+    people: FIXTURE_MEMBERS.slice(0, 1).map((m) => person(m.id, m.name, m.role, {})),
+  };
+}
