@@ -12,6 +12,12 @@ manager falls back to the numbers that receive the weekly report, who are the ow
 A number marked with **new orders** (`order_alerts`) is told about every order placed
 (`modules/orders/staff_alert.py`, D-079). Nobody is, until the owner marks a number.
 
+A number marked with **new bookings** (`booking_alerts`) is told about each booking a customer
+makes and each one they cancel (`modules/bookings/staff_alert.py`, D-192). An owner's or an
+admin's own phone is marked when they link it (`core/staff_link.py`); any other number only when
+the owner marks it. A number marked for the **weekly report** (`weekly_report`) receives it
+(D-030); registering a number is the owner choosing, so the form asks for it.
+
 Every function takes a tenant-scoped connection.
 """
 
@@ -20,10 +26,12 @@ from uuid import UUID
 
 import asyncpg
 
-from alyr.core import consent
+from alyr.core import consent, staff_link
 from alyr.core.normalise import western_digits
 
-_FIELDS = "id, name, phone, lang, catalog_manager, weekly_report, order_alerts"
+_FIELDS = (
+    "id, name, phone, lang, catalog_manager, weekly_report, order_alerts, booking_alerts"
+)
 # E.164 numbers have at most 15 digits; the shortest real ones have about 8.
 _DIGITS = re.compile(r"\d{8,15}")
 
@@ -48,7 +56,7 @@ def _shown(row: asyncpg.Record) -> dict:
     return {
         "id": str(row["id"]), "name": row["name"], "phone": row["phone"], "lang": row["lang"],
         "manager": row["catalog_manager"], "weekly_report": row["weekly_report"],
-        "order_alerts": row["order_alerts"],
+        "order_alerts": row["order_alerts"], "booking_alerts": row["booking_alerts"],
     }
 
 
@@ -88,10 +96,14 @@ async def _agree_to_notices(conn: asyncpg.Connection, contact_id: UUID) -> None:
 
 async def register(
     conn: asyncpg.Connection, name: str, phone: str, lang: str = "en", manager: bool = False,
-    order_alerts: bool = False,
+    order_alerts: bool = False, weekly_report: bool | None = None,
+    booking_alerts: bool | None = None,
 ) -> dict:
     """Register a number as staff. A number the shop already knows as a customer becomes
-    staff (its history stays). Registering a staff number again changes its details."""
+    staff (its history stays). Registering a staff number again changes its details. The
+    weekly report and the booking alerts are off for a new number unless asked for; asked
+    again with nothing said (None) they stay as they were, so registering an owner's linked
+    number a second time does not switch their report off."""
     name = " ".join(name.split())
     number = clean_phone(phone)
     if not name:
@@ -102,13 +114,17 @@ async def register(
             "for example 974 5550 0001.",
         )
     row = await conn.fetchrow(
-        "insert into contacts (phone, name, role, lang, catalog_manager, order_alerts) "
-        "values ($1, $2, 'staff', $3, $4, $5) "
+        "insert into contacts (phone, name, role, lang, catalog_manager, order_alerts, "
+        "    weekly_report, booking_alerts) "
+        "values ($1, $2, 'staff', $3, $4, $5, coalesce($6, false), coalesce($7, false)) "
         "on conflict (tenant_id, phone) do update set role = 'staff', name = excluded.name, "
         "lang = excluded.lang, catalog_manager = excluded.catalog_manager, "
-        "order_alerts = excluded.order_alerts "
+        "order_alerts = excluded.order_alerts, "
+        "weekly_report = coalesce($6, contacts.weekly_report), "
+        "booking_alerts = coalesce($7, contacts.booking_alerts) "
         f"returning {_FIELDS}",
         number, name[:80], "ar" if lang == "ar" else "en", manager, order_alerts,
+        weekly_report, booking_alerts,
     )
     await _agree_to_notices(conn, row["id"])
     return _shown(row)
@@ -117,18 +133,23 @@ async def register(
 async def update(
     conn: asyncpg.Connection, contact_id: UUID, name: str | None = None,
     lang: str | None = None, manager: bool | None = None, order_alerts: bool | None = None,
+    weekly_report: bool | None = None, booking_alerts: bool | None = None,
 ) -> dict | None:
-    """Change a staff number's name, language, whether it is a manager or whether it is told
-    about new orders. None if there is no such staff number."""
+    """Change a staff number's name, language, whether it is a manager, whether it is told
+    about new orders or new bookings and whether it receives the weekly report. None if there
+    is no such staff number."""
     if name is not None and not " ".join(name.split()):
         raise StaffError("name_needed", "Give the person's name.")
     row = await conn.fetchrow(
         "update contacts set name = coalesce($2, name), lang = coalesce($3, lang), "
         "catalog_manager = coalesce($4, catalog_manager), "
-        "order_alerts = coalesce($5, order_alerts) "
+        "order_alerts = coalesce($5, order_alerts), "
+        "weekly_report = coalesce($6, weekly_report), "
+        "booking_alerts = coalesce($7, booking_alerts) "
         f"where id = $1 and role = 'staff' returning {_FIELDS}",
         contact_id, " ".join(name.split())[:80] if name is not None else None,
         ("ar" if lang == "ar" else "en") if lang is not None else None, manager, order_alerts,
+        weekly_report, booking_alerts,
     )
     if row is None:
         return None
@@ -139,21 +160,22 @@ async def update(
 async def remove(conn: asyncpg.Connection, contact_id: UUID) -> bool:
     """Stop treating a number as staff: it is an ordinary customer from now on, and the
     history stays. Returns False if there is no such staff number."""
-    row = await conn.fetchrow(
-        "update contacts set role = 'customer', catalog_manager = false, weekly_report = false, "
-        "order_alerts = false where id = $1 and role = 'staff' returning id",
-        contact_id,
-    )
-    if row is None:
-        return False
-    await conn.execute("delete from staff_pending where contact_id = $1", contact_id)
-    return True
+    return await staff_link.stand_down(conn, contact_id=contact_id) is not None
 
 
 async def order_watchers(conn: asyncpg.Connection) -> list[asyncpg.Record]:
     """Who is told about each new order: the staff numbers marked for it, and nobody else."""
     return await conn.fetch(
         "select id, name, lang from contacts where role = 'staff' and order_alerts order by name"
+    )
+
+
+async def booking_watchers(conn: asyncpg.Connection) -> list[asyncpg.Record]:
+    """Who is told about each new booking and each cancellation: the staff numbers marked for it,
+    and nobody else. `window_open` says whether the number wrote to ALYR in the last 24 hours."""
+    return await conn.fetch(
+        "select id, name, lang, coalesce(last_inbound_at > now() - interval '24 hours', false) "
+        "as window_open from contacts where role = 'staff' and booking_alerts order by name"
     )
 
 
