@@ -90,8 +90,10 @@ export function InboxWorkbench({
   const loadedAt = useRef<number>(now);
 
   // The open conversation
-  const asWindowClosed = dialog === "close" || state === "window";
-  const [selectedId, setSelectedId] = useState<string | null>(asWindowClosed ? "ms-saleh" : initialSelectedId);
+  // The drawing of the close dialog sits over Mariam, whose window has closed.
+  const [selectedId, setSelectedId] = useState<string | null>(dialog === "close" ? "ms-saleh" : initialSelectedId);
+  // The conversation a late answer must still be for: a slow thread never lands on the one chosen after it.
+  const wanted = useRef<string | null>(selectedId);
   const [pane, setPane] = useState<WorkbenchPane>(initialPane);
   const [thread, setThread] = useState<ThreadItem[]>([]);
   const [threadCustomer, setThreadCustomer] = useState<ConversationItem | null>(null);
@@ -140,14 +142,15 @@ export function InboxWorkbench({
   const loadThread = useCallback(async (id: string) => {
     try {
       const [answer, context] = await Promise.all([fetchThread(id, mode), fetchContext(id, mode, role)]);
+      if (id !== wanted.current) return;
       setThread(answer.items);
       setThreadCustomer(answer.customer);
       setCtx(context);
       setThreadError(false);
     } catch {
-      setThreadError(true);
+      if (id === wanted.current) setThreadError(true);
     } finally {
-      setLoadingThread(false);
+      if (id === wanted.current) setLoadingThread(false);
     }
   }, [mode, role]);
 
@@ -258,6 +261,7 @@ export function InboxWorkbench({
       setLoadingThread(Boolean(id));
       setSendError(null);
     }
+    wanted.current = id;
     setSelectedId(id);
   }
 
