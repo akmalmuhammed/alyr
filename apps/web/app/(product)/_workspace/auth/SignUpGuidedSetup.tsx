@@ -94,6 +94,7 @@ export function SignUpGuidedSetup({ t, lang, businessName, initialServices = FIX
                     <tr key={s.id} className={s.id === focusId ? "auth-price-row auth-price-row--focus" : "auth-price-row"}>
                       <td data-label={t.colService}>
                         <Input
+                          dir="auto"
                           value={s.name}
                           aria-label={t.nameOfService(index + 1)}
                           onChange={(e) => edit(s.id, { name: e.target.value })}
@@ -143,6 +144,7 @@ export function SignUpGuidedSetup({ t, lang, businessName, initialServices = FIX
                   <tr className="auth-price-row auth-price-row--add">
                     <td data-label={t.colService}>
                       <Input
+                        dir="auto"
                         value={draft.name}
                         placeholder={t.newServicePlaceholder}
                         aria-label={t.newServicePlaceholder}

@@ -513,6 +513,7 @@
 .auth-wizard-main {
   display: grid;
   flex: 1;
+  min-inline-size: 0;
   grid-template-columns: minmax(0, 1fr) var(--auth-w-preview);
 }
 
@@ -700,7 +701,9 @@
 
 .auth-price-table {
   inline-size: 100%;
+  min-inline-size: 0; /* the legacy global `table` rule asks for 440 */
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .auth-price-table th {
@@ -734,7 +737,7 @@
 .auth-price-table td:nth-child(2),
 .auth-price-table td:nth-child(3),
 .auth-price-table td:nth-child(4) {
-  inline-size: calc(var(--ui-size-side-column) * 0.3);
+  inline-size: calc(var(--ui-size-side-column) * 0.35);
 }
 
 .auth-price-table td {
@@ -1446,5 +1449,21 @@
 
   .auth-state-col {
     flex-basis: auto;
+  }
+}
+
+@media (max-width: 48rem) {
+  .auth-action-row {
+    flex-wrap: wrap;
+  }
+
+  .auth-code-row--small .auth-code-box {
+    inline-size: calc(var(--ui-size-control-sm) + var(--ui-space-2));
+  }
+}
+
+@media (max-width: 24rem) {
+  .auth-bar-support {
+    display: none;
   }
 }
