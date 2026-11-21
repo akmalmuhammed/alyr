@@ -97,7 +97,7 @@ const EN = {
   typesLegend: "Kind of business",
   withAlyrBadge: "WITH ALYR",
   types: {
-    salon: { title: "Salon & barber", desc: "Bookings, reminders" },
+    salon: { title: "Salon & beauty", desc: "Bookings, team, reminders" },
     spa: { title: "Spa & wellness", desc: "Bookings, packages" },
     carcare: { title: "Car care & garage", desc: "Bookings by bay, a shelf" },
     home: { title: "Home services", desc: "Visits, quotes" },
@@ -313,7 +313,7 @@ const AR: AuthCopyStrings = {
   typesLegend: "نوع النشاط",
   withAlyrBadge: "مع ALYR",
   types: {
-    salon: { title: "صالون وحلاقة", desc: "مواعيد وتذكيرات" },
+    salon: { title: "صالون وتجميل", desc: "مواعيد وفريق وتذكيرات" },
     spa: { title: "سبا وعناية", desc: "مواعيد وباقات" },
     carcare: { title: "عناية بالسيارات وورشة", desc: "مواعيد حسب المسار، ورف أصناف" },
     home: { title: "خدمات منزلية", desc: "زيارات وعروض أسعار" },

@@ -20,7 +20,7 @@ from alyr.core import team
 from alyr.core.media import MediaService
 from alyr.core.normalise import has_arabic
 from alyr.core.outbound import Outbound
-from alyr.modules import report
+from alyr.modules import pleasantries, report
 from alyr.modules.bookings import chat as bookings_chat
 from alyr.modules.items import wa_customer, wa_order, wa_staff, wa_text
 from alyr.modules.ledger import chat as ledger_chat
@@ -75,6 +75,12 @@ async def handle(
         # Nothing above took it (the Catalog's order chat answers its own shops). Say so once
         # and leave it to a person, instead of answering a voice note with the welcome menu.
         return await _hand_to_person(conn, tenant_id, contact, message)
+    if contact["role"] != "staff" and not message.reply_id and pleasantries.is_thanks(
+        message.text
+    ):
+        # "thanks", "ok": nothing asked for an answer, so no menu comes back (T10). It stays in the
+        # inbox for a person; the order chat above has already taken an "ok" that answers it.
+        return []
     if "bookings" in modules:
         replies = await bookings_chat.maybe_handle(
             conn, tenant_id, contact, message, web_url, outbound

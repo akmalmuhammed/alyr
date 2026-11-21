@@ -2873,3 +2873,25 @@ A salon's owner learned of a booking only by opening the Bookings tab, typing BO
 **Revisit when** media is stored and shown (the "not shown here yet" words go with it), or when a salon asks for a different first reply to a photo.
 
 **Not checked.** A real voice note or photo from a real phone (the payloads are Meta's documented shapes); the Arabic by a native speaker (ALY-66).
+
+## D-196 · A salon starts as a salon
+
+**Date** 21 Nov 2026 · **Status** Accepted by the Product lane for the first client's preparation (the founder reviews it in the pull request) · Builds on D-031 (starting setups), D-069 (people and chairs), D-039 (the Catalog's types).
+
+The "Salon & barber" starting setup began a new owner with five barber services and one chair, `/start` never asked for the people who work there, renaming a starting service left its old Arabic name on the Arabic booking page, and a business made in the back office had no test line.
+
+**Decision.**
+1. **The `salon` type is a beauty salon** ("Salon & beauty", «صالون وتجميل»), generic and not any one salon's: eleven bilingual services with example prices, the week's opening hours, three people, and retail samples for hair, skin and nails. The key stays `salon`, so no type, template or price setting moves. A pure barber deletes what he does not offer; there is no separate barber type.
+2. **A salon starts with three people**, named "Team member 1" to "3" («عضو الفريق 1» to «3»), and the hours step of `/start` asks the owner to name them, add more and remove the rest. The placeholders are on the booking page until renamed.
+3. **Arabic follows the English name.** Renaming a starting service or person without writing an Arabic name drops the Arabic of the old sample; one the owner wrote is kept. `/start` shows both names for every row.
+4. **A business made in the back office has a test line** (migration 0148), and choosing a type's template for a business with Bookings seeds the type's starting services, hours and people.
+
+**Why.** A three-stylist salon on one chair ran at a third of its capacity until the owner found Set up bookings, and customers on the Arabic page saw the wrong service name or the English one. An owner could not try a business ALYR set up for them.
+
+**Not decided.** Whether three placeholders or none is the right start (three can overbook an owner who never renames; none repeats the one-chair start); Arabic names (a draft until ALY-66); deposits (still off, the pay page is a stand-in); businesses made in the back office before 0148 (left as they are).
+
+**Rejected.** *A new `beauty` type* (it touches the price list, templates, the dashboard and the golden tests for a list that fits `salon`). *Clearing every Arabic name on any rename* (it would erase one the owner wrote).
+
+**Revisit when** a real salon has signed up and shows whether the three placeholders get renamed.
+
+**Migrations.** 0148 (`admin_create_business` adds the test line).

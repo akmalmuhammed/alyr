@@ -510,7 +510,10 @@ def test_a_customer_who_came_keeps_the_deposit_against_the_bill(client):
 
 def test_the_customer_cancelling_in_the_chat_is_told_about_the_deposit(client):
     _, _, made = paid_booking(client)
-    answer = say(client, AHMED_PHONE, reply_id=f"booking_cancel:{made['id']}")
+    asked = say(client, AHMED_PHONE, reply_id=f"booking_cancel:{made['id']}")[-1]
+    assert asked["body"].startswith("Cancel booking ")  # the shop's deposit rule is on the question
+    assert "deposit" in asked["body"]
+    answer = say(client, AHMED_PHONE, reply_id=asked["payload"]["choices"][0]["id"])
     told = answer[-1]["body"]
     assert "Your booking has been cancelled. The shop will refund your deposit" in told
 
