@@ -129,6 +129,52 @@ def _forget_fastapi_route_caches() -> None:
             cached.cache_clear()
 
 
+async def _tenant_ids() -> set:
+    conn = await asyncpg.connect(OWNER_DSN)
+    try:
+        return {r["id"] for r in await conn.fetch("select id from tenants")}
+    finally:
+        await conn.close()
+
+
+async def _drop_tenants(ids: list) -> None:
+    """Delete every row of the given shops, the shops included. Foreign keys and triggers are
+    switched off for the transaction (the owner role is a superuser on a developer's or CI's
+    own database), because the point is to leave the database as the shops found it."""
+    conn = await asyncpg.connect(OWNER_DSN)
+    try:
+        tables = [r["table_name"] for r in await conn.fetch(
+            "select c.table_name from information_schema.columns c "
+            "join information_schema.tables t on t.table_schema = c.table_schema "
+            "and t.table_name = c.table_name and t.table_type = 'BASE TABLE' "
+            "where c.table_schema = 'public' and c.column_name = 'tenant_id' "
+            "and c.table_name <> 'tenants'"
+        )]
+        async with conn.transaction():
+            await conn.execute("set local session_replication_role = replica")
+            for table in tables:
+                await conn.execute(f'delete from "{table}" where tenant_id = any($1::uuid[])', ids)
+            await conn.execute("delete from tenants where id = any($1::uuid[])", ids)
+    finally:
+        await conn.close()
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _agent_rule_tests_leave_no_shops_behind(request):
+    """The Agent's rule tests (tests/test_agent_rule*.py) each make shops of their own with
+    orders, discounts and watches. Other tests count or read the newest of those tables over
+    every shop in the one test database (`select count(*) from order_discounts`, the order with
+    the highest number), so a rule's shops are deleted when its file is done."""
+    if not request.module.__name__.startswith("test_agent_rule"):
+        yield
+        return
+    before = asyncio.run(_tenant_ids())
+    yield
+    made = sorted(asyncio.run(_tenant_ids()) - before)
+    if made:
+        asyncio.run(_drop_tenants(made))
+
+
 @pytest.fixture
 def client(client_factory):
     return client_factory()
