@@ -211,7 +211,7 @@ export function Clients({ pricing, onChange, initialClient }: { pricing: Pricing
 
             <h3>Businesses</h3>
             <div className="tablewrap"><table>
-              <thead><tr><th>Business</th><th>Type · area</th><th>Products</th><th>Onboarding</th><th>WhatsApp</th><th>Catalog</th></tr></thead>
+              <thead><tr><th>Business</th><th>Type · area</th><th>Products</th><th>Onboarding</th><th>WhatsApp</th><th>Catalog</th><th>Discovery</th></tr></thead>
               <tbody>
                 {detail.businesses.map((b) => (
                   <tr key={b.id} className="norow">
@@ -221,6 +221,7 @@ export function Clients({ pricing, onChange, initialClient }: { pricing: Pricing
                     <td>{progress(b)}</td>
                     <td><span className={`sh-pill ${b.whatsapp_connected ? "active" : "idle"}`}>{b.whatsapp_connected ? "Connected" : "Not connected"}</span></td>
                     <td><button type="button" className="btn small ghost" aria-expanded={templateFor === b.id} onClick={() => setTemplateFor(templateFor === b.id ? null : b.id)}>Template</button></td>
+                    <td><a className="btn small ghost" href={`/ops/discovery?business=${b.id}`}>Discovery check-up</a></td>
                   </tr>
                 ))}
               </tbody>

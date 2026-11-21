@@ -189,6 +189,8 @@ def _listing(place: PlaceSnapshot) -> Listing | None:
 
 
 def _listing_missing(location, place, ctx):
+    if place.listing.found is None:
+        return None  # the source did not say whether there is one
     if place.listing.found:
         return PASS, ()
     return FAIL, (Evidence("listing_status", "~not_found", "listing"),)
@@ -444,10 +446,16 @@ def writable(rule_id: str, writes) -> tuple[tuple[str, str, str], ...]:
     return tuple(p for p in PROPOSES.get(rule_id, ()) if (p[2], p[1]) in (writes or ()))
 
 
-def effective_kind(rule: Rule, writes) -> str:
+def effective_kind(rule: Rule, writes, by_hand: bool = False) -> str:
     """`agent` only while the connector can write something for the rule; otherwise the rule's own
-    Phase 1 kind (spec 066). The engine refreshes a finding's kind with this on every upsert."""
-    return "agent" if writable(rule.id, writes) else rule.kind
+    Phase 1 kind (spec 066). The engine refreshes a finding's kind with this on every upsert.
+
+    A hand-recorded source (D-169) can write nothing, and an `agent` finding reads "ALYR can change
+    this after you approve": for it that is never true, so such a finding is the owner's (or
+    whoever the owner asks to change the listing by hand) and reads "Needs you or Google"."""
+    if writable(rule.id, writes):
+        return "agent"
+    return "owner" if by_hand and rule.kind == "agent" else rule.kind
 
 
 SEVERITY_ORDER = {"high": 0, "medium": 1, "low": 2}

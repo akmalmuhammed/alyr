@@ -388,7 +388,9 @@ def test_google_business_profile_is_an_interface_and_nothing_stands_in_for_it(
         connectors.get("gbp")
     assert refused.value.code == "connector_unavailable"
     folder = Path(connectors.__file__).parent
-    assert sorted(p.name for p in folder.glob("*.py")) == ["__init__.py", "base.py", "sample.py"]
+    # the sample, and the manual source ALYR staff record by hand (D-169): no file for gbp
+    assert sorted(p.name for p in folder.glob("*.py")) == [
+        "__init__.py", "base.py", "manual.py", "sample.py"]
     shop = prepared_shop(client_factory, monkeypatch, run=False)
     answer = shop.owner.put(f"{BASE}/connection", json={"kind": "gbp", "on": True})
     assert answer.status_code == 422 and answer.json()["code"] == "bad_connector"
