@@ -1,192 +1,122 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
+import { Banner, Button, Check, Modal, Thumb } from "@/app/_ui";
+import { formatDate } from "@/app/_ui/format";
 import type { SettingsCopy } from "./copy";
-import { formatCodeDigits } from "./logic";
+import { closeSchedule } from "./logic";
+import type { Lang } from "./logic";
 
-interface SettingsCloseDialogProps {
-  t: SettingsCopy;
-  onClose: () => void;
-  onConfirmClose: () => void;
+export interface CloseImpact {
+  bookingsAfter: number;
+  customersOwing: number;
+  /** Dirhams owed in all. */
+  owed: number;
 }
 
-export function SettingsCloseDialog({
-  t,
-  onClose,
-  onConfirmClose,
-}: SettingsCloseDialogProps) {
-  const [hasConfirmedCopy, setHasConfirmedCopy] = useState(true);
+/** A calendar day (an ISO date) as the shop prints it: «Thu 19 Nov», «الخميس 19 نوفمبر». */
+function day(iso: string, lang: Lang, todayIso: string): string {
+  return formatDate(`${iso}T12:00:00+03:00`, lang, { now: `${todayIso}T12:00:00+03:00` });
+}
 
-  const digits = formatCodeDigits("4819");
+/**
+ * The check before asking ALYR to end the plan. What it says is what the product does: seven
+ * days' notice (core/subscription.py), an email to every owner, ALYR's sending ends that day, and
+ * the data is erased 60 days later (core/erase.py, spec 042). It claims nothing else.
+ */
+export function SettingsCloseDialog({
+  t, lang, businessName, businessNameAr, todayIso, impact, initialAcknowledged = false, requestClose, onClose, onDone,
+}: {
+  t: SettingsCopy;
+  lang: Lang;
+  businessName: string;
+  businessNameAr: string;
+  /** The shop's today, an ISO date: the notice and the erasure count from it. */
+  todayIso: string;
+  /** What closing interrupts, when the host can say; nothing is drawn without it. */
+  impact?: CloseImpact;
+  initialAcknowledged?: boolean;
+  requestClose: () => Promise<void>;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [acknowledged, setAcknowledged] = useState(initialAcknowledged);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  const { noticeEnds, eraseOn } = closeSchedule(todayIso);
+  const ends = day(noticeEnds, lang, todayIso);
+  const erases = day(eraseOn, lang, todayIso);
+  const name = lang === "ar" && businessNameAr ? businessNameAr : businessName;
+  const other = lang === "ar" ? businessName : businessNameAr;
+  const mono = lang === "en" ? "u-mono" : undefined;
+  const hasImpact = impact && (impact.bookingsAfter > 0 || impact.customersOwing > 0);
+
+  async function confirm() {
+    setBusy(true);
+    setFailed(false);
+    try {
+      await requestClose();
+      onDone();
+    } catch {
+      setFailed(true);
+      setBusy(false);
+    }
+  }
+
+  const steps: Array<{ when: string; text: string; last?: boolean }> = [
+    { when: t.closeToday, text: t.closeTodayText },
+    { when: t.closeUntil(ends), text: t.closeUntilText },
+    { when: t.closeFrom(ends), text: t.closeFromText },
+    { when: t.closeFrom(erases), text: t.closeEraseText, last: true },
+  ];
 
   return (
-    <div className="set-scrim" role="dialog" aria-modal="true" aria-labelledby="set-close-dialog-title">
-      <div className="set-modal" style={{ maxInlineSize: "37.5rem" }}>
-        <div className="set-modal-header">
-          <h2 id="set-close-dialog-title" className="set-modal-title">
-            {t.closeAccountModalTitle}
-          </h2>
-          <button
-            type="button"
-            className="u-btn u-btn--quiet u-btn--sm"
-            onClick={onClose}
-            aria-label="Close"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="set-modal-body">
-          {/* Business identity badge */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--sp-3, 0.75rem)",
-              padding: "var(--sp-3, 0.75rem)",
-              background: "var(--subtle)",
-              borderRadius: "var(--radius-sm, 0.25rem)",
-            }}
-          >
-            <div
-              style={{
-                inlineSize: "2.25rem",
-                blockSize: "2.25rem",
-                borderRadius: "var(--radius-sm, 0.25rem)",
-                background: "var(--band)",
-                color: "var(--volt)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontWeight: 700,
-                fontSize: "1rem",
-              }}
-            >
-              N
-            </div>
-            <div>
-              <span style={{ fontWeight: 600, fontSize: "0.8125rem", color: "var(--text)", display: "block" }}>
-                Nuqta Car Care
-              </span>
-              <span style={{ fontSize: "0.75rem", color: "var(--muted)" }}>
-                {t.closeBusinessSummary}
-              </span>
-            </div>
-          </div>
-
-          {/* Timeline breakdown */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-2, 0.5rem)" }}>
-            <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--muted)" }}>
-              {t.whatHappensSection}
-            </span>
-            <div
-              style={{
-                border: "var(--rule-hairline, 0.0625rem solid var(--line))",
-                borderRadius: "var(--radius-sm, 0.25rem)",
-                overflow: "hidden",
-              }}
-            >
-              <div className="set-list-row" style={{ paddingBlock: "var(--sp-2, 0.5rem)" }}>
-                <span style={{ fontFamily: "monospace", fontSize: "0.75rem", inlineSize: "7.5rem", flexShrink: 0 }}>
-                  {t.stepToday}
-                </span>
-                <span style={{ fontSize: "0.75rem", color: "var(--text)", flex: 1 }}>
-                  {t.stepTodayDesc}
-                </span>
-              </div>
-              <div className="set-list-row" style={{ paddingBlock: "var(--sp-2, 0.5rem)" }}>
-                <span style={{ fontFamily: "monospace", fontSize: "0.75rem", inlineSize: "7.5rem", flexShrink: 0 }}>
-                  {t.stepNotice}
-                </span>
-                <span style={{ fontSize: "0.75rem", color: "var(--text)", flex: 1 }}>
-                  {t.stepNoticeDesc}
-                </span>
-              </div>
-              <div className="set-list-row" style={{ paddingBlock: "var(--sp-2, 0.5rem)" }}>
-                <span style={{ fontFamily: "monospace", fontSize: "0.75rem", inlineSize: "7.5rem", flexShrink: 0 }}>
-                  {t.stepClose}
-                </span>
-                <span style={{ fontSize: "0.75rem", color: "var(--text)", flex: 1 }}>
-                  {t.stepCloseDesc}
-                </span>
-              </div>
-              <div className="set-list-row" style={{ paddingBlock: "var(--sp-2, 0.5rem)", borderBottom: "none" }}>
-                <span style={{ fontFamily: "monospace", fontSize: "0.75rem", inlineSize: "7.5rem", flexShrink: 0, color: "var(--bad)" }}>
-                  {t.stepErase}
-                </span>
-                <span style={{ fontSize: "0.75rem", color: "var(--text)", flex: 1 }}>
-                  {t.stepEraseDesc}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Warning banner */}
-          <div className="set-warn-banner">
-            {t.closeWarningBanner}
-          </div>
-
-          {/* Confirmation checkbox */}
-          <label
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: "var(--sp-2, 0.5rem)",
-              cursor: "pointer",
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={hasConfirmedCopy}
-              onChange={(e) => setHasConfirmedCopy(e.target.checked)}
-              style={{ marginTop: "0.125rem" }}
-            />
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.125rem" }}>
-              <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text)" }}>
-                {t.copyConfirmationCheck}
-              </span>
-              <span style={{ fontSize: "0.75rem", color: "var(--muted)" }}>
-                {t.copyConfirmationSub}
-              </span>
-            </div>
-          </label>
-
-          {/* Code input */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-2, 0.5rem)" }}>
-            <span style={{ fontSize: "0.75rem", color: "var(--muted)" }}>
-              {t.emailCodeNotice}
-            </span>
-            <div className="set-code-grid">
-              {digits.map((digit, idx) => (
-                <div
-                  key={idx}
-                  className={`set-code-box ${idx === 4 ? "set-code-box--active" : ""}`}
-                >
-                  {digit}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="set-modal-footer" style={{ justifyContent: "space-between" }}>
-          <span style={{ fontSize: "0.75rem", color: "var(--muted)" }}>
-            {t.closeAccountOwnersOnly}
-          </span>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2, 0.5rem)" }}>
-            <button type="button" className="u-btn u-btn--line" onClick={onClose}>
-              {t.keepAccountBtn}
-            </button>
-            <button
-              type="button"
-              className="set-destructive-action"
-              onClick={onConfirmClose}
-            >
-              {t.confirmCloseBtn}
-            </button>
-          </div>
+    <Modal
+      open
+      onClose={onClose}
+      title={t.closeDialogTitle(name)}
+      closeLabel={t.dismiss}
+      footerNote={t.closeNote}
+      footer={
+        <>
+          <Button kind="line" data-autofocus="" onClick={onClose}>{t.closeKeep}</Button>
+          <Button kind="bad" loading={busy} disabled={!acknowledged} onClick={confirm}>{t.closeConfirm(ends)}</Button>
+        </>
+      }
+    >
+      <div className="set-business">
+        <Thumb size={36} seed={0} initials={name.slice(0, 1)} />
+        <div className="set-business-text">
+          <span className="set-business-name"><bdi>{name}</bdi></span>
+          {other ? <span className="set-help"><bdi>{other}</bdi></span> : null}
         </div>
       </div>
-    </div>
+
+      <div className="set-says">
+        <p className="set-label">{t.closeWhatHappens}</p>
+        <ol className="set-timeline">
+          {steps.map((step) => (
+            <li key={step.when} className={`set-step${step.last ? " set-step--last" : ""}`}>
+              <span className={`set-step-when ${mono ?? ""}`}>{step.when}</span>
+              <p className="set-step-text">{step.text}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      {hasImpact ? (
+        <Banner tone="warn">{t.closeImpact(impact.bookingsAfter, ends, impact.customersOwing, impact.owed)}</Banner>
+      ) : null}
+
+      <Check checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)}>
+        <span className="set-check-text">
+          <span className="set-row-title">{t.closeHaveCopy}</span>
+          <span className="set-check-hint">{t.closeHaveCopyHint(erases)}</span>
+        </span>
+      </Check>
+
+      {failed ? <p className="set-error" role="alert">{t.closeFailed}</p> : null}
+    </Modal>
   );
 }

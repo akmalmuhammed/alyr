@@ -1,88 +1,68 @@
-// Typed API client for /api/account endpoints
+// The calls Settings makes, on the kit's one fetch client. A refusal throws `ApiError` (status, code,
+// the API's words), so the dialog can say it; nothing here pretends a call worked. The preview
+// route never uses this file: it passes its own actions that touch no network.
 
-import {
-  FIXTURE_PROFILE,
-  FIXTURE_BUSINESSES,
-} from "./fixtures";
-import type { BusinessItem } from "./logic";
+import { api } from "@/app/_ui/api";
+import type { AccountData, Business, Role } from "./logic";
 
-export interface AccountInfoResponse {
-  me: {
-    name: string;
-    email: string;
-    role: "owner" | "admin" | "agent";
-  };
+interface AccountResponse {
+  me: { name: string; email: string; role: Role };
   signed_in: boolean;
-  businesses: BusinessItem[];
+  businesses: Array<{ id: string; name: string; name_ar: string; slug: string; role: Role; current: boolean }>;
   can_change_email: boolean;
   can_export: boolean;
 }
 
-export async function fetchAccountInfo(): Promise<AccountInfoResponse> {
-  try {
-    const res = await fetch("/api/account", { credentials: "same-origin" });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-  } catch {
-    // Preview fallback
-    return {
-      me: {
-        name: FIXTURE_PROFILE.name,
-        email: FIXTURE_PROFILE.email,
-        role: FIXTURE_PROFILE.role,
-      },
-      signed_in: true,
-      businesses: FIXTURE_BUSINESSES,
-      can_change_email: true,
-      can_export: FIXTURE_PROFILE.role === "owner",
-    };
-  }
+/** `GET /api/account`: who is signed in, the businesses they work for, what they may do here. */
+export async function fetchAccount(): Promise<AccountData> {
+  const answer = await api<AccountResponse>("/api/account");
+  const businesses: Business[] = answer.businesses.map((b) => ({
+    id: b.id, name: b.name, nameAr: b.name_ar, role: b.role, current: b.current,
+  }));
+  return { me: answer.me, businesses, canChangeEmail: answer.can_change_email, canExport: answer.can_export };
 }
 
-export async function requestEmailCode(email: string): Promise<{ sent: boolean; email: string; dev_code?: string }> {
-  try {
-    const res = await fetch("/api/account/email/code", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-      credentials: "same-origin",
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-  } catch {
-    // Preview fallback
-    return { sent: true, email, dev_code: "730518" };
-  }
+/** What the screen does, and nothing else; the host passes these in. */
+export interface SettingsActions {
+  /** `POST /api/account/email/code`: emails a 6-digit code to the new address. */
+  requestEmailCode: (email: string) => Promise<void>;
+  /** `POST /api/account/email`: the code makes the address the sign-in email. */
+  confirmEmailChange: (email: string, code: string) => Promise<string>;
+  /** `POST /api/account/switch`: a session in the other business, then the workspace reloads. */
+  switchBusiness: (businessId: string) => Promise<void>;
+  /** `POST /api/auth/logout`: this device only. */
+  signOut: () => Promise<void>;
+  /** `GET /api/account/export`: the ZIP, as a download of the browser's own. */
+  download: () => void;
+  /**
+   * Asks ALYR to end the plan with seven days' notice. There is no route for an owner to do this
+   * today (cancelling is back office only, D-082): leave it out and the screen draws no close
+   * button at all.
+   */
+  requestClose?: () => Promise<void>;
 }
 
-export async function confirmEmailChange(email: string, code: string): Promise<{ email: string }> {
-  try {
-    const res = await fetch("/api/account/email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, code }),
-      credentials: "same-origin",
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-  } catch {
-    // Preview fallback
-    return { email };
-  }
-}
-
-export async function switchBusiness(businessId: string): Promise<{ business_id: string }> {
-  try {
-    const res = await fetch("/api/account/switch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ business_id: businessId }),
-      credentials: "same-origin",
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-  } catch {
-    // Preview fallback
-    return { business_id: businessId };
-  }
-}
+export const settingsActions: Omit<SettingsActions, "requestClose"> = {
+  async requestEmailCode(email) {
+    await api("/api/account/email/code", { method: "POST", body: { email } });
+  },
+  async confirmEmailChange(email, code) {
+    const answer = await api<{ email: string }>("/api/account/email", { method: "POST", body: { email, code } });
+    return answer.email;
+  },
+  async switchBusiness(businessId) {
+    await api("/api/account/switch", { method: "POST", body: { business_id: businessId } });
+    window.location.reload();
+  },
+  async signOut() {
+    await api("/api/auth/logout", { method: "POST", signOut: false });
+    window.location.replace("/login");
+  },
+  download() {
+    // A link of the browser's own, so the ZIP downloads without leaving the page.
+    const link = document.createElement("a");
+    link.href = "/api/account/export";
+    link.download = "";
+    link.click();
+  },
+};

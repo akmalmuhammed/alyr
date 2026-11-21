@@ -1,450 +1,174 @@
 "use client";
 
-import React from "react";
+import {
+  Avatar, Button, Field, Icon, Input, Panel, PanelBody, PanelFooter, PanelHeader, Radio, Tag, Thumb,
+} from "@/app/_ui";
 import type { SettingsCopy } from "./copy";
-import type { AccountProfile } from "./fixtures";
-import type { UserDevice, BusinessItem, ThemeChoice, NoticeChannel, LanguageChoice } from "./logic";
+import type { AccountData, Lang, ThemeChoice } from "./logic";
 
-interface SettingsAccountProps {
-  t: SettingsCopy;
-  profile: AccountProfile;
-  devices: UserDevice[];
-  businesses: BusinessItem[];
-  theme: ThemeChoice;
-  language: LanguageChoice;
-  noticesChannel: NoticeChannel;
-  onThemeChange: (theme: ThemeChoice) => void;
-  onLanguageChange: (lang: LanguageChoice) => void;
-  onNoticesChange: (ch: NoticeChannel) => void;
-  onChangeEmailClick: () => void;
-  onSwitchBusiness: (id: string) => void;
+const THEMES: readonly ThemeChoice[] = ["light", "dark", "auto"];
+
+/** A small drawing of the workspace in one theme (or half and half for "as the device"). */
+function ThemePicture({ choice }: { choice: ThemeChoice }) {
+  const pane = (tone: "light" | "dark") => (
+    <span className={`set-theme-pane set-theme-pane--${tone}`}>
+      <span className="set-theme-bar set-theme-bar--head" />
+      <span className="set-theme-bar" />
+      <span className="set-theme-bar set-theme-bar--volt" />
+    </span>
+  );
+  return (
+    <span className="set-theme-pic" aria-hidden="true">
+      {choice === "auto" ? <>{pane("light")}{pane("dark")}</> : pane(choice)}
+    </span>
+  );
 }
 
 export function SettingsAccount({
-  t,
-  profile,
-  devices,
-  businesses,
-  theme,
-  language,
-  noticesChannel,
-  onThemeChange,
-  onLanguageChange,
-  onNoticesChange,
-  onChangeEmailClick,
-  onSwitchBusiness,
-}: SettingsAccountProps) {
+  t, lang, account, theme, online, teamHref, openingId, onTheme, onLanguage, onChangeEmail, onSwitch, onSignOut,
+}: {
+  t: SettingsCopy;
+  lang: Lang;
+  account: AccountData;
+  theme: ThemeChoice;
+  /** False draws every change that needs the server as a line button that cannot be pressed. */
+  online: boolean;
+  /** The Team screen, where a person's name and role are set. Left out, the link is not drawn. */
+  teamHref?: string;
+  openingId: string | null;
+  onTheme: (choice: ThemeChoice) => void;
+  onLanguage: (lang: Lang) => void;
+  onChangeEmail: () => void;
+  onSwitch: (businessId: string) => void;
+  onSignOut: () => void;
+}) {
+  const { me } = account;
+  const themeLabels: Record<ThemeChoice, string> = { light: t.themeLight, dark: t.themeDark, auto: t.themeAuto };
+  const roleWord = t.roles[me.role];
+
   return (
-    <div className="set-layout">
-      {/* Left column: Profile, Email, Devices, Businesses */}
-      <div className="set-col-main">
-        {/* You panel */}
-        <div className="set-panel">
-          <div className="set-panel-header">
-            <div className="set-panel-title-wrap">
-              <h2 className="set-panel-title">{t.youSection}</h2>
-              <span className="set-panel-subtitle">{t.ownerBadge}</span>
-            </div>
-            <a href="#roles" className="set-tab-link">
-              {t.rolesLink}
-            </a>
-          </div>
-          <div className="set-panel-body">
-            <div className="set-user-row">
-              <div className="set-avatar" aria-hidden="true">
-                {profile.name.charAt(0)}
+    <div className="set-cols">
+      <div className="set-col">
+        <Panel>
+          <PanelHeader
+            title={t.youTitle}
+            sub={roleWord}
+            right={teamHref ? <a className="set-link" href={teamHref}>{t.teamRoles}</a> : undefined}
+          />
+          <PanelBody>
+            <div className="set-you">
+              <Avatar initials={me.name.slice(0, 1)} size={56} tone="ink" />
+              <div className="set-you-fields">
+                <Field label={t.nameLabel} hint={t.nameHint}>
+                  <Input readOnly value={me.name} />
+                </Field>
+                <Field label={t.roleLabel} hint={t.roleHint}>
+                  <Input readOnly value={roleWord} />
+                </Field>
               </div>
-              <div className="set-field-group" style={{ flex: 1 }}>
-                <div className="set-form-row">
-                  <div className="set-field-group">
-                    <label className="set-field-label" htmlFor="set-name-input">
-                      {t.yourNameLabel}
-                    </label>
-                    <input
-                      id="set-name-input"
-                      type="text"
-                      className="set-field-input"
-                      defaultValue={profile.name}
-                    />
-                  </div>
-                  <div className="set-field-group">
-                    <label className="set-field-label" htmlFor="set-reply-name-input">
-                      {t.replyNameLabel}
-                    </label>
-                    <input
-                      id="set-reply-name-input"
-                      type="text"
-                      className="set-field-input"
-                      defaultValue={profile.replyName}
-                    />
-                    <span className="set-field-help">{t.replyNameHelp}</span>
-                  </div>
-                </div>
+            </div>
+          </PanelBody>
+        </Panel>
 
-                <div className="set-form-row" style={{ marginTop: "var(--sp-3, 0.75rem)" }}>
-                  <div className="set-field-group">
-                    <div className="set-field-label-row">
-                      <label className="set-field-label" htmlFor="set-wa-input">
-                        {t.whatsappLabel}
-                      </label>
-                      <span className="u-tag u-tag--muted" style={{ fontSize: "0.625rem" }}>
-                        {t.whatsappLinkedTag}
-                      </span>
-                    </div>
-                    <input
-                      id="set-wa-input"
-                      type="text"
-                      dir="ltr"
-                      className="set-field-input"
-                      defaultValue={profile.whatsapp}
-                    />
-                    <span className="set-field-help">{t.whatsappHelp}</span>
-                  </div>
-                  <div className="set-field-group">
-                    <label className="set-field-label" htmlFor="set-role-input">
-                      {t.roleLabel}
-                    </label>
-                    <input
-                      id="set-role-input"
-                      type="text"
-                      className="set-field-input"
-                      readOnly
-                      defaultValue={t.ownerBadge}
-                    />
-                    <span className="set-field-help">{t.roleHelp}</span>
-                  </div>
-                </div>
+        <Panel>
+          <PanelHeader
+            title={t.emailTitle}
+            right={
+              account.canChangeEmail ? (
+                <Button kind="line" size="sm" onClick={onChangeEmail} disabled={!online}>{t.emailChange}</Button>
+              ) : undefined
+            }
+          />
+          <PanelBody>
+            <div className="set-email">
+              <span className="set-icon-tile" aria-hidden="true"><Icon name="lock" /></span>
+              <div className="set-email-text">
+                <bdi className="set-email-address u-mono" dir="ltr">{me.email}</bdi>
+                <p className="set-help">{t.emailHelp}</p>
               </div>
             </div>
-          </div>
-        </div>
+          </PanelBody>
+          <PanelFooter>{t.sessionNote}</PanelFooter>
+        </Panel>
 
-        {/* Sign-in email panel */}
-        <div className="set-panel">
-          <div className="set-panel-header">
-            <h2 className="set-panel-title">{t.signInEmailSection}</h2>
-            <button
-              type="button"
-              className="u-btn u-btn--line u-btn--sm"
-              onClick={onChangeEmailClick}
-            >
-              {t.changeEmailBtn}
-            </button>
-          </div>
-          <div className="set-panel-body">
-            <div className="set-list-row" style={{ padding: 0 }}>
-              <div className="set-list-info">
-                <span
-                  style={{
-                    fontFamily: "monospace",
-                    fontSize: "0.9375rem",
-                    fontWeight: 600,
-                    color: "var(--text)",
-                  }}
-                >
-                  {profile.email}
-                </span>
-                <span className="set-list-sub">{t.codeHelp}</span>
-              </div>
-              <div style={{ textAlign: "end", flexShrink: 0 }}>
-                <span style={{ fontSize: "0.625rem", letterSpacing: "0.04em", color: "var(--muted)", display: "block" }}>
-                  {t.lastSignInLabel}
-                </span>
-                <span style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--text)" }}>
-                  {profile.lastSignIn}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Devices panel */}
-        <div className="set-panel">
-          <div className="set-panel-header">
-            <div className="set-panel-title-wrap">
-              <h2 className="set-panel-title">{t.devicesSection}</h2>
-              <span className="set-panel-subtitle">{t.deviceCount}</span>
-            </div>
-            <a href="#signout-all" className="set-tab-link">
-              {t.signOutEverywhere}
-            </a>
-          </div>
-          <div>
-            {devices.map((device) => (
-              <div key={device.id} className="set-list-row">
-                <div className="set-list-info">
-                  <span className="set-list-title">{device.name}</span>
-                  <span className="set-list-sub">
-                    {device.location} · {device.signedInAt}
-                    {device.lastUsedAt ? ` · ${device.lastUsedAt}` : ""}
-                    {device.expiresAt ? ` · ${device.expiresAt}` : ""}
-                  </span>
-                </div>
-                {device.isCurrent ? (
-                  <span className="u-tag u-tag--ok">{t.thisDeviceTag}</span>
-                ) : (
-                  <button type="button" className="u-btn u-btn--line u-btn--sm">
-                    {t.signOutBtn}
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-          <div className="set-panel-footer">{t.deviceDurationNote}</div>
-        </div>
-
-        {/* Your businesses panel */}
-        <div className="set-panel">
-          <div className="set-panel-header">
-            <div className="set-panel-title-wrap">
-              <h2 className="set-panel-title">{t.businessesSection}</h2>
-              <span className="set-panel-subtitle">{t.businessesSubtitle}</span>
-            </div>
-          </div>
-          <div>
-            {businesses.map((biz) => (
-              <div key={biz.id} className="set-list-row">
-                <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-3, 0.75rem)" }}>
-                  <div
-                    style={{
-                      inlineSize: "2.25rem",
-                      blockSize: "2.25rem",
-                      borderRadius: "var(--radius-sm, 0.25rem)",
-                      background: "var(--band)",
-                      color: "var(--volt)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontWeight: 700,
-                      fontSize: "1rem",
-                    }}
-                  >
-                    {biz.initial}
-                  </div>
-                  <div className="set-list-info">
-                    <span className="set-list-title">
-                      {biz.nameEn} · <span>{biz.nameAr}</span>
+        <Panel clip>
+          <PanelHeader title={t.businessesTitle} sub={t.businessesSub} />
+          <ul className="set-rows" aria-label={t.businessesTitle}>
+            {account.businesses.map((b, index) => {
+              const name = lang === "ar" && b.nameAr ? b.nameAr : b.name;
+              const other = lang === "ar" ? b.name : b.nameAr;
+              return (
+                <li key={b.id} className={`set-row set-row--stack${b.current ? " set-row--on" : ""}`}>
+                  <Thumb size={36} seed={index} initials={name.slice(0, 1)} />
+                  <div className="set-row-text">
+                    <span className="set-row-title">
+                      <bdi>{name}</bdi>
+                      {other ? <span className="set-row-name-ar"><bdi>{other}</bdi></span> : null}
                     </span>
-                    <span className="set-list-sub">
-                      {biz.role === "owner" ? t.ownerBadge : biz.role} · {biz.peopleCount} people
-                    </span>
+                    <span className="set-row-sub">{t.youAreRole[b.role]}</span>
                   </div>
-                </div>
-                {biz.isOpenNow ? (
-                  <span className="u-tag u-tag--ink">{t.openNowTag}</span>
-                ) : (
-                  <button
-                    type="button"
-                    className="u-btn u-btn--line u-btn--sm"
-                    onClick={() => onSwitchBusiness(biz.id)}
-                  >
-                    {t.openBtn}
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-          <div className="set-panel-footer">{t.businessSeparationNote}</div>
-        </div>
+                  {b.current ? (
+                    <Tag tone="ink">{t.openNow}</Tag>
+                  ) : (
+                    <Button
+                      kind="line"
+                      size="sm"
+                      loading={openingId === b.id}
+                      loadingLabel={t.opening}
+                      disabled={!online}
+                      onClick={() => onSwitch(b.id)}
+                    >
+                      {t.open}
+                    </Button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          <PanelFooter>{t.businessesNote}</PanelFooter>
+        </Panel>
       </div>
 
-      {/* Right column: Language, Appearance, Notices, Sign out */}
-      <div className="set-col-side">
-        {/* Language panel */}
-        <div className="set-panel">
-          <div className="set-panel-header">
-            <h2 className="set-panel-title">{t.languageSection}</h2>
-          </div>
-          <div>
-            <label
-              className="set-list-row"
-              style={{ cursor: "pointer", background: language === "en" ? "var(--subtle)" : undefined }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2, 0.5rem)" }}>
-                <input
-                  type="radio"
-                  name="set-lang"
-                  checked={language === "en"}
-                  onChange={() => onLanguageChange("en")}
-                />
-                <span className="set-list-title">{t.englishOption}</span>
+      <div className="set-col">
+        <Panel clip>
+          <PanelHeader title={t.languageTitle} sub={t.languageSub} />
+          <fieldset className="set-rows">
+            <legend className="u-sr">{t.languageTitle}</legend>
+            {(["en", "ar"] as const).map((value) => (
+              <div key={value} className={`set-row${lang === value ? " set-row--on" : ""}`}>
+                <Radio name="set-lang" checked={lang === value} onChange={() => onLanguage(value)}>
+                  <span className={lang === value ? "set-row-title" : undefined} lang={value}>{t.languageName[value]}</span>
+                </Radio>
+                <span className="set-row-end">{t.languageDirection[value]}</span>
               </div>
-              <span className="set-list-sub">{t.englishSub}</span>
-            </label>
-            <label
-              className="set-list-row"
-              style={{ cursor: "pointer", background: language === "ar" ? "var(--subtle)" : undefined }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2, 0.5rem)" }}>
-                <input
-                  type="radio"
-                  name="set-lang"
-                  checked={language === "ar"}
-                  onChange={() => onLanguageChange("ar")}
-                />
-                <span className="set-list-title">
-                  {t.arabicOption}
-                </span>
+            ))}
+          </fieldset>
+        </Panel>
+
+        <Panel>
+          <PanelHeader title={t.appearanceTitle} sub={t.appearanceSub} />
+          <fieldset className="set-themes">
+            <legend className="u-sr">{t.appearanceTitle}</legend>
+            {THEMES.map((choice) => (
+              <div key={choice} className={`set-theme${theme === choice ? " set-theme--on" : ""}`}>
+                <ThemePicture choice={choice} />
+                <Radio name="set-theme" checked={theme === choice} onChange={() => onTheme(choice)}>
+                  {themeLabels[choice]}
+                </Radio>
               </div>
-              <span className="set-list-sub">{t.arabicSub}</span>
-            </label>
-          </div>
-          <div className="set-panel-footer">{t.languageHelp}</div>
-        </div>
+            ))}
+          </fieldset>
+        </Panel>
 
-        {/* Appearance panel */}
-        <div className="set-panel">
-          <div className="set-panel-header">
-            <h2 className="set-panel-title">{t.appearanceSection}</h2>
-          </div>
-          <div className="set-panel-body">
-            <div className="set-theme-grid">
-              <button
-                type="button"
-                className={`set-theme-tile ${theme === "light" ? "set-theme-tile--active" : ""}`}
-                onClick={() => onThemeChange("light")}
-              >
-                <div className="set-theme-preview set-theme-preview--light">
-                  <div className="set-mock-line" style={{ inlineSize: "60%" }} />
-                  <div className="set-mock-line" style={{ inlineSize: "85%" }} />
-                  <div className="set-mock-bar" />
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
-                  <input
-                    type="radio"
-                    name="set-theme"
-                    checked={theme === "light"}
-                    onChange={() => onThemeChange("light")}
-                  />
-                  <span style={{ fontSize: "0.75rem", fontWeight: theme === "light" ? 600 : 400 }}>
-                    {t.lightOption}
-                  </span>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                className={`set-theme-tile ${theme === "dark" ? "set-theme-tile--active" : ""}`}
-                onClick={() => onThemeChange("dark")}
-              >
-                <div className="set-theme-preview set-theme-preview--dark">
-                  <div className="set-mock-line" style={{ inlineSize: "60%" }} />
-                  <div className="set-mock-line" style={{ inlineSize: "85%" }} />
-                  <div className="set-mock-bar" />
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
-                  <input
-                    type="radio"
-                    name="set-theme"
-                    checked={theme === "dark"}
-                    onChange={() => onThemeChange("dark")}
-                  />
-                  <span style={{ fontSize: "0.75rem", fontWeight: theme === "dark" ? 600 : 400 }}>
-                    {t.darkOption}
-                  </span>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                className={`set-theme-tile ${theme === "auto" ? "set-theme-tile--active" : ""}`}
-                onClick={() => onThemeChange("auto")}
-              >
-                <div className="set-theme-preview set-theme-preview--auto">
-                  <div className="set-theme-split-light">
-                    <div className="set-mock-line" style={{ inlineSize: "60%" }} />
-                    <div className="set-mock-bar" />
-                  </div>
-                  <div className="set-theme-split-dark">
-                    <div className="set-mock-line" style={{ inlineSize: "60%" }} />
-                    <div className="set-mock-bar" />
-                  </div>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
-                  <input
-                    type="radio"
-                    name="set-theme"
-                    checked={theme === "auto"}
-                    onChange={() => onThemeChange("auto")}
-                  />
-                  <span style={{ fontSize: "0.75rem", fontWeight: theme === "auto" ? 600 : 400 }}>
-                    {t.autoOption}
-                  </span>
-                </div>
-              </button>
+        <Panel>
+          <div className="set-row">
+            <div className="set-row-text">
+              <span className="set-row-title">{t.signOutTitle}</span>
+              <span className="set-row-sub">{t.signOutHelp}</span>
             </div>
+            <Button kind="line" size="sm" onClick={onSignOut}>{t.signOutAction}</Button>
           </div>
-        </div>
-
-        {/* Notices panel */}
-        <div className="set-panel">
-          <div className="set-panel-header">
-            <h2 className="set-panel-title">{t.noticesSection}</h2>
-            <a href="#alerts-matrix" className="set-tab-link">
-              {t.noticesLink}
-            </a>
-          </div>
-          <div>
-            <label
-              className="set-list-row"
-              style={{ cursor: "pointer", background: noticesChannel === "workspace" ? "var(--subtle)" : undefined }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2, 0.5rem)" }}>
-                <input
-                  type="radio"
-                  name="set-alerts"
-                  checked={noticesChannel === "workspace"}
-                  onChange={() => onNoticesChange("workspace")}
-                />
-                <span className="set-list-title">{t.noticeWorkspace}</span>
-              </div>
-              <span className="set-list-sub">{t.noticeWorkspaceSub}</span>
-            </label>
-            <label
-              className="set-list-row"
-              style={{ cursor: "pointer", background: noticesChannel === "whatsapp" ? "var(--subtle)" : undefined }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2, 0.5rem)" }}>
-                <input
-                  type="radio"
-                  name="set-alerts"
-                  checked={noticesChannel === "whatsapp"}
-                  onChange={() => onNoticesChange("whatsapp")}
-                />
-                <span className="set-list-title">{t.noticeWhatsapp}</span>
-              </div>
-              <span className="set-list-sub" dir="ltr">{profile.whatsapp}</span>
-            </label>
-            <label
-              className="set-list-row"
-              style={{ cursor: "pointer", background: noticesChannel === "both" ? "var(--subtle)" : undefined }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2, 0.5rem)" }}>
-                <input
-                  type="radio"
-                  name="set-alerts"
-                  checked={noticesChannel === "both"}
-                  onChange={() => onNoticesChange("both")}
-                />
-                <span className="set-list-title">{t.noticeBoth}</span>
-              </div>
-            </label>
-          </div>
-          <div className="set-panel-footer">{t.noticeHelp}</div>
-        </div>
-
-        {/* Sign out panel */}
-        <div className="set-panel">
-          <div className="set-list-row">
-            <div className="set-list-info">
-              <span className="set-list-title">{t.signOutSection}</span>
-              <span className="set-list-sub">{t.signOutSubtitle}</span>
-            </div>
-            <button type="button" className="u-btn u-btn--line u-btn--sm">
-              {t.signOutDeviceBtn}
-            </button>
-          </div>
-        </div>
+        </Panel>
       </div>
     </div>
   );

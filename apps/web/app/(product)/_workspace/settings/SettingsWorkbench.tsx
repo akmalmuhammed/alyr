@@ -1,219 +1,227 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
+import { Banner, Button, ConfirmDialog, PageTitle, useToast } from "@/app/_ui";
+import { formatTime } from "@/app/_ui/format";
 import { SETTINGS_COPY } from "./copy";
-import {
-  FIXTURE_PROFILE,
-  FIXTURE_DEVICES,
-  FIXTURE_BUSINESSES,
-  FIXTURE_DOWNLOADS,
-  FIXTURE_REQUESTS,
-  FIXTURE_TERMS,
-} from "./fixtures";
-import type { ThemeChoice, LanguageChoice, NoticeChannel } from "./logic";
+import type { SettingsActions } from "./settingsApi";
 import { SettingsAccount } from "./SettingsAccount";
 import { SettingsPrivacy } from "./SettingsPrivacy";
 import { SettingsEmailDialog } from "./SettingsEmailDialog";
 import { SettingsCloseDialog } from "./SettingsCloseDialog";
-import { SettingsStates } from "./SettingsStates";
+import type { CloseImpact } from "./SettingsCloseDialog";
+import { SettingsLoading } from "./SettingsStates";
+import { THEME_KEY, mayClose, mayDownload, themeAttribute, themeFromStored } from "./logic";
+import type { AccountData, Lang, ThemeChoice } from "./logic";
 import "./settings.css";
 
+export type SettingsView = "account" | "privacy";
+export type SettingsState = "loading" | "offline" | "error";
+type Dialog = "email" | "close" | "download";
+
 export interface SettingsWorkbenchProps {
-  initialTab?: "account" | "privacy";
-  initialDialog?: "email" | "close";
-  initialState?: "loading" | "agent" | "offline";
-  initialLang?: LanguageChoice;
-  initialTheme?: ThemeChoice;
+  lang: Lang;
+  view: SettingsView;
+  /** Null while it loads or when it could not be loaded. */
+  account: AccountData | null;
+  /** loading, offline (what is on screen was loaded earlier) or error (it could not be loaded). */
+  state?: SettingsState | null;
+  actions: SettingsActions;
+  /** The shop's today (an ISO date) and the moment the screen was loaded, in Doha time. */
+  todayIso: string;
+  loadedAt: string;
+  /** What closing interrupts, when the host knows. */
+  impact?: CloseImpact;
+  /** The Team screen, where a name and a role are set. */
+  teamHref?: string;
+  /** The language radio: the host keeps the choice and reloads the screen in it. */
+  onLanguage: (lang: Lang) => void;
+  onRetry?: () => void;
+  /** A dialog to open on arrival (a link, or the preview). */
+  initialDialog?: Dialog | null;
+  initialEmail?: { step: 0 | 1; address: string; code: string };
+  initialAcknowledged?: boolean;
+}
+
+// The theme choice lives in localStorage (the site's switch writes the same key), so it is read as an
+// external store: the server draws "as the device", the browser then draws what was kept.
+const themeListeners = new Set<() => void>();
+let themeInMemory: ThemeChoice | null = null;
+function subscribeTheme(listener: () => void) {
+  themeListeners.add(listener);
+  window.addEventListener("storage", listener);
+  return () => {
+    themeListeners.delete(listener);
+    window.removeEventListener("storage", listener);
+  };
+}
+function readTheme(): ThemeChoice {
+  try { return themeFromStored(localStorage.getItem(THEME_KEY)); } catch { return themeInMemory ?? "auto"; }
 }
 
 export function SettingsWorkbench({
-  initialTab = "account",
-  initialDialog,
-  initialState,
-  initialLang = "en",
-  initialTheme = "light",
+  lang, view, account: initialAccount, state = null, actions, todayIso, loadedAt, impact, teamHref, onLanguage,
+  onRetry, initialDialog = null, initialEmail, initialAcknowledged,
 }: SettingsWorkbenchProps) {
-  const [tab, setTab] = useState<"account" | "privacy">(initialTab);
-  const [dialog, setDialog] = useState<"email" | "close" | null>(initialDialog || null);
-  const [activeState, setActiveState] = useState<"loading" | "agent" | "offline" | null>(initialState || null);
-  const [language, setLanguage] = useState<LanguageChoice>(initialLang);
-  const [theme, setTheme] = useState<ThemeChoice>(initialTheme);
-  const [noticesChannel, setNoticesChannel] = useState<NoticeChannel>("both");
-  const [profile, setProfile] = useState(FIXTURE_PROFILE);
+  const t = SETTINGS_COPY[lang];
+  const toast = useToast();
+  const [account, setAccount] = useState(initialAccount);
+  const [dialog, setDialog] = useState<Dialog | null>(initialDialog);
+  const theme = useSyncExternalStore(subscribeTheme, readTheme, () => "auto" as ThemeChoice);
+  const [openingId, setOpeningId] = useState<string | null>(null);
 
-  const t = SETTINGS_COPY[language];
+  function chooseTheme(choice: ThemeChoice) {
+    themeInMemory = choice;
+    const attribute = themeAttribute(choice);
+    try {
+      if (attribute) localStorage.setItem(THEME_KEY, attribute);
+      else localStorage.removeItem(THEME_KEY);
+    } catch { /* not remembered; this tab still changes */ }
+    if (attribute) document.documentElement.setAttribute("data-theme", attribute);
+    else document.documentElement.removeAttribute("data-theme");
+    themeListeners.forEach((listener) => listener());
+  }
 
-  // Sync DOM document direction, language, and theme
-  useEffect(() => {
-    document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
-    document.documentElement.lang = language;
-    document.documentElement.setAttribute("data-theme", theme === "auto" ? "light" : theme);
-  }, [language, theme]);
+  const online = state !== "offline";
+  const role = account?.me.role ?? "owner";
+  const canDownload = account ? mayDownload(role, account.canExport) : false;
+  const canClose = account ? mayClose(role) && !!actions.requestClose : false;
+  const current = account?.businesses.find((b) => b.current) ?? account?.businesses[0];
+  const dialogOpen = dialog !== null;
 
-  const hasOpenDialog = dialog !== null;
+  const title = view === "account" ? t.accountTitle : t.privacyTitle;
+  const sub = view === "account" ? t.accountSub : t.privacySub;
+  const loaded = formatTime(loadedAt, lang);
 
-  if (activeState === "loading") {
-    return (
-      <div className="set-preview-wrap">
-        <SettingsStates t={t} state="loading" />
-      </div>
+  async function switchTo(businessId: string) {
+    setOpeningId(businessId);
+    try {
+      await actions.switchBusiness(businessId);
+    } catch {
+      toast.push({ text: t.mailRefusals.failed, tone: "bad" });
+    } finally {
+      setOpeningId(null);
+    }
+  }
+
+  async function signOut() {
+    try {
+      await actions.signOut();
+    } catch {
+      toast.push({ text: t.mailRefusals.failed, tone: "bad" });
+    }
+  }
+
+  // The title row's one action. Behind a dialog the page is inert and the dialog owns the Volt.
+  let right = null;
+  if (view === "privacy" && state !== "loading" && state !== "error" && canDownload) {
+    right = (
+      <>
+        <span className="set-note">{t.titleAction}</span>
+        {!online ? (
+          <Button kind="line" disabled>{t.downloadAll}</Button>
+        ) : dialogOpen ? (
+          <Button kind="dark" onClick={() => setDialog("download")}>{t.downloadAll}</Button>
+        ) : (
+          <Button kind="volt" onClick={() => setDialog("download")}>{t.downloadAll}</Button>
+        )}
+      </>
     );
   }
 
-  if (activeState === "agent") {
-    return (
-      <div className="set-preview-wrap">
-        <SettingsStates
-          t={t}
-          state="agent"
-          onBackToWorkspace={() => setActiveState(null)}
-        />
-      </div>
+  let banner = null;
+  if (state === "offline") {
+    banner = <Banner tone="warn">{t.offlineBanner(loaded)}</Banner>;
+  } else if (state === "error") {
+    banner = (
+      <Banner tone="bad" action={onRetry ? <Button kind="quiet" size="sm" onClick={onRetry}>{t.retry}</Button> : undefined}>
+        {t.errorBanner}
+      </Banner>
     );
+  } else if (account && view === "privacy" && !canDownload) {
+    banner = <Banner tone="n">{t.noAccessBody}</Banner>;
   }
 
   return (
-    <div className="set-preview-wrap">
-      <div className="set-shell">
-        {/* Top bar with time, status, bell */}
-        <div className="set-top-nav">
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2, 0.5rem)" }}>
-            <span style={{ fontFamily: "monospace", fontSize: "0.6875rem", color: "var(--muted)" }}>
-              Thu 12 Nov · Doha 09:40
-            </span>
-            <span className="u-tag u-tag--volt" style={{ fontSize: "0.625rem" }}>
-              WhatsApp live
-            </span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2, 0.5rem)" }}>
-            <span style={{ fontSize: "0.875rem" }} aria-label="Notifications">
-              🔔
-            </span>
-          </div>
-        </div>
+    <div className="set-page">
+      <PageTitle title={title} sub={sub} right={right} />
+      {banner}
 
-        {/* Offline notice banner if in offline state */}
-        {activeState === "offline" && (
-          <SettingsStates t={t} state="offline" />
-        )}
+      {state === "loading" || !account ? (
+        state === "error" ? null : <SettingsLoading t={t} />
+      ) : view === "account" ? (
+        <SettingsAccount
+          t={t}
+          lang={lang}
+          account={account}
+          theme={theme}
+          online={online}
+          teamHref={teamHref}
+          openingId={openingId}
+          onTheme={chooseTheme}
+          onLanguage={onLanguage}
+          onChangeEmail={() => setDialog("email")}
+          onSwitch={switchTo}
+          onSignOut={signOut}
+        />
+      ) : (
+        <SettingsPrivacy
+          t={t}
+          mayClose={canClose}
+          closeDisabled={!online}
+          onClose={() => setDialog("close")}
+        />
+      )}
 
-        {/* Workspace section tabs */}
-        <div className="set-tabs" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "account"}
-            className={`set-tab-link ${tab === "account" ? "set-tab-link--active" : ""}`}
-            onClick={() => setTab("account")}
-          >
-            {t.accountTab}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "privacy"}
-            className={`set-tab-link ${tab === "privacy" ? "set-tab-link--active" : ""}`}
-            onClick={() => setTab("privacy")}
-          >
-            {t.privacyTab}
-          </button>
-        </div>
-
-        {/* Screen Title & Action Bar */}
-        <div className="set-title-bar">
-          <div className="set-title-group">
-            <h1 className="set-title">
-              {tab === "account" ? t.accountTitle : t.privacyTitle}
-            </h1>
-            <p className="set-subtitle">
-              {tab === "account" ? t.accountSubtitle : t.privacySubtitle}
-            </p>
-          </div>
-
-          <div className="set-action-bar">
-            {tab === "account" ? (
-              <>
-                <span className="set-status-note">{t.savedDate}</span>
-                <button
-                  type="button"
-                  className={`u-btn ${hasOpenDialog ? "u-btn--line" : "u-btn--volt"}`}
-                >
-                  {t.saveChanges}
-                </button>
-              </>
-            ) : (
-              <>
-                <span className="set-status-note">{t.actionConfirmNotice}</span>
-                <button
-                  type="button"
-                  className={`u-btn ${hasOpenDialog ? "u-btn--line" : "u-btn--volt"}`}
-                  onClick={() => alert("Downloading business data ZIP...")}
-                >
-                  {t.downloadAllBtn}
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Main Tab Views */}
-        {tab === "account" ? (
-          <SettingsAccount
-            t={t}
-            profile={profile}
-            devices={FIXTURE_DEVICES}
-            businesses={FIXTURE_BUSINESSES}
-            theme={theme}
-            language={language}
-            noticesChannel={noticesChannel}
-            onThemeChange={setTheme}
-            onLanguageChange={setLanguage}
-            onNoticesChange={setNoticesChannel}
-            onChangeEmailClick={() => setDialog("email")}
-            onSwitchBusiness={(bizId) => {
-              const selected = FIXTURE_BUSINESSES.find((b) => b.id === bizId);
-              if (selected) {
-                setProfile((prev) => ({
-                  ...prev,
-                  role: selected.role,
-                }));
-              }
-            }}
-          />
-        ) : (
-          <SettingsPrivacy
-            t={t}
-            downloads={FIXTURE_DOWNLOADS}
-            requests={FIXTURE_REQUESTS}
-            terms={FIXTURE_TERMS}
-            onCloseAccountClick={() => setDialog("close")}
-          />
-        )}
-      </div>
-
-      {/* Modal Dialogs */}
-      {dialog === "email" && (
+      {dialog === "email" && account ? (
         <SettingsEmailDialog
           t={t}
-          currentEmail={profile.email}
+          currentEmail={account.me.email}
+          actions={actions}
+          initialStep={initialEmail?.step}
+          initialAddress={initialEmail?.address}
+          initialCode={initialEmail?.code}
           onClose={() => setDialog(null)}
-          onConfirm={(newEmail) => {
-            setProfile((prev) => ({ ...prev, email: newEmail }));
+          onDone={(email) => {
+            setAccount({ ...account, me: { ...account.me, email } });
             setDialog(null);
+            toast.push({ text: t.mailDone(email), tone: "ok" });
           }}
         />
-      )}
+      ) : null}
 
-      {dialog === "close" && (
+      {dialog === "close" && account && current && actions.requestClose ? (
         <SettingsCloseDialog
           t={t}
+          lang={lang}
+          businessName={current.name}
+          businessNameAr={current.nameAr}
+          todayIso={todayIso}
+          impact={impact}
+          initialAcknowledged={initialAcknowledged}
+          requestClose={actions.requestClose}
           onClose={() => setDialog(null)}
-          onConfirmClose={() => {
+          onDone={() => {
             setDialog(null);
-            alert("Account close request scheduled for Thu 19 Nov.");
+            toast.push({ text: t.closeAsked, tone: "ok" });
           }}
         />
-      )}
+      ) : null}
+
+      <ConfirmDialog
+        open={dialog === "download"}
+        onCancel={() => setDialog(null)}
+        onConfirm={() => {
+          setDialog(null);
+          actions.download();
+        }}
+        title={t.downloadTitle}
+        closeLabel={t.dismiss}
+        confirmLabel={t.downloadConfirm}
+        cancelLabel={t.downloadKeep}
+      >
+        {t.downloadBody}
+      </ConfirmDialog>
     </div>
   );
 }
