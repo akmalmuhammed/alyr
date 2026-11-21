@@ -13,7 +13,7 @@ import pytest
 from alyr.modules import report
 from alyr.seed import AGENT_EMAIL, DEMO_TENANT_ID, OWNER_EMAIL, STAFF_PHONE
 from test_consent import conversation, owner_sql, say
-from test_owner_actions import ( 
+from test_owner_actions import (
     AGENT_PHONE_NEW,
     OWNER_PHONE_NEW,
     SPARE_PHONE,
