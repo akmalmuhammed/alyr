@@ -171,7 +171,7 @@ export function CreditStatement(p: StatementProps) {
 
             {showAge ? (
               <section aria-labelledby={`${ids}-age`}>
-                <h3 id={`${ids}-age`} className="crd-paper-label u-mono">{t.howOld}</h3>
+                <h2 id={`${ids}-age`} className="crd-paper-label u-mono">{t.howOld}</h2>
                 <dl className="crd-paper-age">
                   {BUCKET_KEYS.map((k) => (
                     <div key={k}><dt>{t.bucket[k]}</dt><dd className="u-mono"><Amount value={st.buckets[k]} lang={lang} /></dd></div>

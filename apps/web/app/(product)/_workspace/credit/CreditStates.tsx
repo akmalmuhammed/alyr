@@ -25,7 +25,7 @@ export function CreditFirstRun({ lang }: { lang: Lang }) {
   return (
     <div className="crd-page">
       <PageTitle title={t.title} sub={t.firstRunSub} />
-      <DashedSlot title={t.firstRunTitle} action={<Button kind="line" href="/app/orders">{t.openOrders}</Button>}>
+      <DashedSlot level={2} title={t.firstRunTitle} action={<Button kind="line" href="/app/orders">{t.openOrders}</Button>}>
         {t.firstRunHelp}
       </DashedSlot>
     </div>

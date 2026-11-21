@@ -224,7 +224,7 @@ export function CreditAccounts(props: AccountsProps) {
           rowActions={{ label: t.rowMenu, items: rowMenu }}
           scrollX={false}
           empty={
-            <Empty
+            <Empty level={2}
               title={t.noMatch}
               action={<Button kind="line" onClick={clear}>{t.clearFilters}</Button>}
             >
