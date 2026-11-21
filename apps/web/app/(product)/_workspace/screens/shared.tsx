@@ -114,11 +114,15 @@ export function useShopFacts(modules: readonly string[] | undefined) {
   const loadShop = useCallback(async () => {
     await Promise.all([
       getJson<Me>("/api/auth/me").then(setMe),
+      // The credit accounts are the shop's money: asked for only by an owner or admin, since the
+      // server refuses an agent (403) and has nothing to show them.
       getJson<{ members: Member[]; can_manage: boolean }>("/api/team").then((team) => {
         setMembers(team.members);
         setCanManage(team.can_manage);
+        return ledgerOn && team.can_manage
+          ? maybe<Summary | null>("/api/ledger/summary", null).then(setSummary)
+          : null;
       }),
-      ledgerOn ? maybe<Summary | null>("/api/ledger/summary", null).then(setSummary) : null,
     ]);
   }, [ledgerOn]);
   usePolling(loadShop, 300_000);
