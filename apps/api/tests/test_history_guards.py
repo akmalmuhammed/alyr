@@ -196,6 +196,8 @@ def test_no_review_request_is_ever_asked_of_an_imported_client(office, shop):
 
     assert run_in(shop, ask_native) == "sent"
     assert count("review_requests", shop) == 1
+    # Other tests read review_requests across every business (`[0]` of a join): leave none behind.
+    sql("delete from review_requests where tenant_id = $1", shop)
 
 
 def test_the_reminder_job_finds_nothing_to_remind_in_an_imported_visit(office, shop):
