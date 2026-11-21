@@ -101,6 +101,13 @@ RULES: dict[str, Rule] = {
         "discovery_answer_settings", "discovery_answers",
     ),
     **_delete(
+        "the visits imports (spec 070, D-197): one row per file with its hash, its counts and the "
+        "dates it covers, and, while it is only a preview, what was read from the file. The "
+        "visits, clients, services and stylists an import made are in the tables above and go "
+        "with them; the file itself is never kept after it is applied or discarded",
+        "history_imports",
+    ),
+    **_delete(
         "the records of the business's photos; the files in the photo store are emptied by the "
         "worker from `erasure_files`",
         "media_assets", "media_links", "media_ops", "media_usage",
