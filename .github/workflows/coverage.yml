@@ -8,21 +8,29 @@ name: coverage
 # A workflow of its own, like `e2e`, on purpose: the release gate waits for the whole `ci` run, and
 # this suite under coverage runs as long as `api` or longer, which would make every release wait
 # for the slower of the two. It is not in branch protection yet either; the runbook says when it is.
+#
+# It runs every night on main, and on demand (Actions -> coverage -> Run workflow, on any branch),
+# not on every pull request and every push: it takes 60 to 90 minutes on one runner, nothing
+# reads its result before a release (the gate reads `ci.yml` only), and every run it started
+# competed for runners with the `ci` run that does gate. Nightly, a slide below the floor is
+# found the next morning instead of on the pull request. If it is ever made a required check,
+# it must go back to `pull_request`, or branch protection waits for a check that never comes.
 
 on:
-  pull_request:
-  push:
-    branches: [main]
+  schedule:
+    # 23:27 UTC, 02:27 in Doha. Scheduled runs use the default branch (main).
+    - cron: "27 23 * * *"
+  workflow_dispatch:
 
 # Least privilege: the job reads the code and nothing else (ALY-114).
 permissions:
   contents: read
 
-# A newer push to a pull request makes the older run pointless, and this one is long. Runs on main
-# are all kept.
+# One run at a time per branch; a run that is already going is never cancelled (it is long, and the
+# number it gives is wanted).
 concurrency:
   group: coverage-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: false
 
 jobs:
   api-coverage:

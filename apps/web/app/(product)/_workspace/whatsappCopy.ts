@@ -56,6 +56,17 @@ const en = {
   },
   needLink: "Link your phone above so ALYR can answer you on WhatsApp.",
 
+  // ── what ALYR sends you ──────────────────────────────
+  alertsTitle: "What ALYR sends you",
+  alertsHint: "Switch each one on or off. They are for you only.",
+  alertReport: "Weekly report",
+  alertReportHint: "On WhatsApp, Sunday morning: last week's numbers. For owners and admins.",
+  alertBookings: "New bookings",
+  alertBookingsHint: "A WhatsApp message each time a customer books or cancels.",
+  alertEmail: "Booking emails",
+  alertEmailHint: "One email for each new booking and each cancellation. It leaves out the customer's name and number.",
+  alertsNeedLink: "Link your phone above to get these on WhatsApp.",
+
   // ── what you can send ────────────────────────────────
   sendTitle: "What you can send",
   sendIntroLinked: (role: string) => `As ${role}, you can send these to your shop's WhatsApp number.`,
@@ -129,6 +140,16 @@ const ar: Copy = {
     both: { name: "الاثنان", hint: "الأقرب إليّ" },
   },
   needLink: "اربط هاتفك أعلاه ليجيبك ALYR على واتساب.",
+
+  alertsTitle: "ما ترسله ALYR إليك",
+  alertsHint: "شغّل كل رسالة أو أوقفها. هي لك وحدك.",
+  alertReport: "التقرير الأسبوعي",
+  alertReportHint: "على واتساب، صباح الأحد: أرقام الأسبوع الماضي. لأصحاب المحل والمدراء.",
+  alertBookings: "الحجوزات الجديدة",
+  alertBookingsHint: "رسالة واتساب كلما حجز عميل أو ألغى.",
+  alertEmail: "بريد الحجوزات",
+  alertEmailHint: "بريد واحد عن كل حجز جديد وكل إلغاء. لا يتضمن اسم العميل ولا رقمه.",
+  alertsNeedLink: "اربط هاتفك أعلاه لتصلك على واتساب.",
 
   sendTitle: "ما يمكنك إرساله",
   sendIntroLinked: (role: string) => `بصفتك ${role}، يمكنك إرسال هذه الكلمات إلى رقم واتساب المحل.`,

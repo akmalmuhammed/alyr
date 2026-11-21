@@ -162,6 +162,10 @@ journey proves, and how to run one on a laptop, is in `tests/e2e/README.md`.
 fails when the line coverage of `src/alyr` is below `COVERAGE_FLOOR`, the number at the top of the
 job. coverage.py and pytest-cov are added for the run only (`uv run --with`, pinned), so the API's
 own dependencies and `uv.lock` do not change. The run's summary page shows the number every time.
+It runs **every night at 02:27 Doha time on `main`**, and on demand (Actions, `coverage`, Run
+workflow, on any branch), not on pull requests or pushes: nothing reads its result before a
+release, and 60 to 90 minutes on one runner per push held runners that `ci` needed. Open the
+newest run each morning you release, or run it on the branch you are worried about.
 
 - **Measured on 31 Oct 2026, on GitHub:** **94.08%**, 28,237 of 30,013 lines, with 3,241 tests
   passed and 2 skipped, under Python 3.14.4 (the runner's own). Under Python 3.13, the version the
@@ -171,10 +175,13 @@ own dependencies and `uv.lock` do not change. The run's summary page shows the n
   turn it red but a module added with no tests will.
 - **Why a workflow of its own.** The suite under coverage takes about 45 minutes (30 of them
   tests), and the release gate waits for the whole `ci` run, so a second long job inside `ci`
-  would make every release wait for the slower of the two. A newer push to a pull request cancels
-  the older run. It is not in branch protection yet: to make it required (Needs Akmal, one pull
-  request), add `"api-coverage"` to `required_status_checks.contexts` in the command below once it
-  has run green five times in a row on `main`, as for `e2e`.
+  would make every release wait for the slower of the two. The release gate reads `ci.yml` only,
+  and branch protection (below) does not list `api-coverage`, so running it nightly removes no
+  check from the release path. It is not in branch protection yet: to make it required (Needs
+  Akmal, one pull request), put `pull_request` back in the `on:` of `coverage.yml` (a required
+  check that never runs blocks every merge), and add `"api-coverage"` to
+  `required_status_checks.contexts` in the command below once it has run green five nights in a
+  row on `main`, as for `e2e`.
 - **How it ratchets up.** Only upward, by hand, in a pull request that changes that one number.
   Read the number on the summary of the last three runs on `main`. The new floor is the whole
   number of the **lowest** of the three, minus one (94.08% gives 93; 95.6% would give 94). Raise

@@ -1,8 +1,9 @@
 """The shop's staff numbers in the workspace: who may change the Catalog by WhatsApp.
 
 Owners and admins register a number (a name, a phone number, a language, and whether it
-is a manager who gets the stock and refund alerts), change it, or take it off. A number
-that is not on this list is answered like any customer (`modules/items/staff.py`).
+is a manager who gets the stock and refund alerts, and whether it is told about new orders and
+new bookings or receives the weekly report), change it, or take it off. A number that is not on
+this list is answered like any customer (`modules/items/staff.py`).
 """
 
 from typing import Literal
@@ -26,6 +27,11 @@ class NewNumber(BaseModel):
     manager: bool = False
     # Told on WhatsApp about every new order (D-079).
     order_alerts: bool = False
+    # Told about each new booking and each cancellation by the customer (D-192), and sent the
+    # weekly report (D-030). Not said: off for a new number, unchanged for a number registered
+    # again.
+    booking_alerts: bool | None = None
+    weekly_report: bool | None = None
 
 
 class NumberChanges(BaseModel):
@@ -33,6 +39,8 @@ class NumberChanges(BaseModel):
     lang: Literal["en", "ar"] | None = None
     manager: bool | None = None
     order_alerts: bool | None = None
+    booking_alerts: bool | None = None
+    weekly_report: bool | None = None
 
 
 def _fail(error: staff.StaffError) -> HTTPException:
@@ -58,7 +66,8 @@ async def register(
         async with request.app.state.db.tenant(member.tenant_id) as conn:
             before = await staff.find(conn, body.phone)
             person = await staff.register(
-                conn, body.name, body.phone, body.lang, body.manager, body.order_alerts
+                conn, body.name, body.phone, body.lang, body.manager, body.order_alerts,
+                body.weekly_report, body.booking_alerts,
             )
             await changes.staff_changed(
                 conn, team.actor_of(member), "staff_added" if before is None else "staff_changed",
@@ -79,7 +88,8 @@ async def change(
         async with request.app.state.db.tenant(member.tenant_id) as conn:
             before = await staff.get(conn, contact_id)
             found = await staff.update(
-                conn, contact_id, body.name, body.lang, body.manager, body.order_alerts
+                conn, contact_id, body.name, body.lang, body.manager, body.order_alerts,
+                body.weekly_report, body.booking_alerts,
             )
             if found is not None and before is not None:
                 await changes.staff_changed(

@@ -305,6 +305,12 @@ async def change_role(
         "and tenant_id = nullif(current_setting('app.tenant_id', true), '')::uuid",
         user_id, role,
     )
+    if role == "agent":
+        # An agent is sent no money (D-035): the weekly report stops on their phone.
+        await conn.execute(
+            "update contacts set weekly_report = false where user_id = $1 and role = 'staff'",
+            user_id,
+        )
 
 
 async def remove_member(conn: asyncpg.Connection, actor_role: str, user_id: UUID) -> None:
@@ -324,3 +330,7 @@ async def remove_member(conn: asyncpg.Connection, actor_role: str, user_id: UUID
     )
     # Their conversations go back to nobody, so a colleague picks them up.
     await conn.execute("update contacts set assigned_to = null where assigned_to = $1", user_id)
+    # Their phone stops being staff's: no commands, no report, no alerts (D-193).
+    from alyr.core import staff_link  # here, not on top: staff_link reads the action layer
+
+    await staff_link.stand_down(conn, user_id=user_id)
