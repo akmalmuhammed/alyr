@@ -98,7 +98,7 @@ export function SettingsAccount({
               const name = lang === "ar" && b.nameAr ? b.nameAr : b.name;
               const other = lang === "ar" ? b.name : b.nameAr;
               return (
-                <li key={b.id} className={`set-row set-row--stack${b.current ? " set-row--on" : ""}`}>
+                <li key={b.id} className={`set-row${b.current ? " set-row--on" : ""}`}>
                   <Thumb size={36} seed={index} initials={name.slice(0, 1)} />
                   <div className="set-row-text">
                     <span className="set-row-title">

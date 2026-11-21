@@ -139,10 +139,10 @@
   .set-preview-wrap { padding-inline: var(--ui-space-16); padding-block-start: var(--ui-space-16); }
   .set-you { flex-direction: column; }
   .set-code { grid-template-columns: repeat(6, minmax(0, var(--ui-size-touch))); }
-  .set-row--stack { flex-wrap: wrap; }
   .set-compare { flex-direction: column; align-items: stretch; }
   .set-compare > .u-ico { display: none; }
   .set-themes { gap: var(--ui-space-8); padding: var(--ui-space-16); }
+  .set-link { display: inline-flex; align-items: center; min-block-size: var(--ui-size-touch); }
 }
 
 /* The loading page: skeleton rows at the loaded heights. */

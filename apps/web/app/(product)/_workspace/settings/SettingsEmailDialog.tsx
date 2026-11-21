@@ -25,6 +25,7 @@ function CodeBoxes({ value, onChange, label, bad }: { value: string; onChange: (
         maxLength={12}
         value={value}
         data-autofocus=""
+        autoFocus
         onChange={(event) => onChange(normalizeCode(event.target.value))}
       />
     </div>
@@ -122,6 +123,7 @@ export function SettingsEmailDialog({
             dir="ltr"
             value={address}
             data-autofocus=""
+            autoFocus
             onChange={(event) => { setAddress(event.target.value); setProblem(null); }}
           />
         </Field>
