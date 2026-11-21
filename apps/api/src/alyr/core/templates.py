@@ -364,6 +364,31 @@ CATALOGUE: dict[str, Template] = {
         samples_ar=("النور للكهربائيات", "1001", "179 ر.ق",
                     "2 x قاطع 16 أمبير، 1 x كابل 1.5 مم. استلام من المتجر · لم يُدفع بعد"),
     ),
+    # A new booking and a cancellation by the customer, to the staff numbers marked for them
+    # (D-192, `modules/bookings/staff_alert.py`). WRITTEN, NOT SUBMITTED to Meta: that is the
+    # founder's go, and `templates_sync --create` skips them (`held`). While they are held, a
+    # number whose 24-hour window is closed is sent nothing over WhatsApp (the owner's email is
+    # the way to learn of a booking then). {{3}} is the service and who does it ("Blow-dry with
+    # Reem") and {{4}} the time as the shop prints it. The Arabic is a draft until ALY-66.
+    "booking_new_staff": Template(
+        "utility",
+        "New booking at {{1}}: booking {{2}} for {{3}}, {{4}}. Open ALYR to see it in your "
+        "bookings.",
+        "حجز جديد في {{1}}: الحجز رقم {{2}} لخدمة {{3}}، موعده {{4}}. افتح ALYR لتراه في حجوزاتك.",
+        ("Sky Studio", "104", "Blow-dry with Reem", "Sat 22 Nov, 4:30 PM"),
+        samples_ar=("استوديو سكاي", "104", "سشوار مع ريم", "22/11 16:30"),
+        held=HELD,
+    ),
+    "booking_cancelled_staff": Template(
+        "utility",
+        "Booking cancelled at {{1}}: the customer cancelled booking {{2}} for {{3}}, {{4}}. "
+        "The time is free again.",
+        "إلغاء حجز في {{1}}: ألغى العميل الحجز رقم {{2}} لخدمة {{3}}، موعده {{4}}. "
+        "أصبح الوقت متاحاً من جديد.",
+        ("Sky Studio", "104", "Blow-dry with Reem", "Sat 22 Nov, 4:30 PM"),
+        samples_ar=("استوديو سكاي", "104", "سشوار مع ريم", "22/11 16:30"),
+        held=HELD,
+    ),
     "draft_added": Template(
         "utility",
         "New item draft at {{1}}: {{2}} sent a photo for {{3}}. Open the Catalog to check "

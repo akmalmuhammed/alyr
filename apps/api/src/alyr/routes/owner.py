@@ -20,6 +20,14 @@ class Preference(BaseModel):
     preference: str
 
 
+class Alerts(BaseModel):
+    """What ALYR sends the signed-in person. Any of them; one not said stays as it is."""
+
+    weekly_report: bool | None = None
+    booking_alerts: bool | None = None
+    booking_email: bool | None = None
+
+
 def _need_account(staff: Staff):
     """The open local demo has no person behind it, so it has no number to link."""
     if staff.user_id is None:
@@ -89,3 +97,27 @@ async def channel(
             return await staff_link.status(conn, user_id)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+_ALERT_REFUSED = {
+    "report_for_managers": (403, "the weekly report is for owners and admins"),
+    "emails_for_owners": (403, "the booking emails are for owners"),
+    "link_first": (409, "link your WhatsApp number first"),
+}
+
+
+@router.put("/alerts")
+async def alerts(body: Alerts, request: Request, staff: Staff = Depends(current_staff)) -> dict:
+    """Switch on or off what ALYR sends this person (D-193): the weekly report and each new
+    booking on their linked WhatsApp number, and the email for each new booking."""
+    user_id = _need_account(staff)
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            await staff_link.set_alerts(
+                conn, user_id, staff.role, weekly_report=body.weekly_report,
+                booking_alerts=body.booking_alerts, booking_email=body.booking_email,
+            )
+            return await staff_link.status(conn, user_id)
+    except staff_link.AlertError as error:
+        status, message = _ALERT_REFUSED[error.code]
+        raise HTTPException(status_code=status, detail=message) from error

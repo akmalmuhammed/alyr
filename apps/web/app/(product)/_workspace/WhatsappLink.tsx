@@ -9,7 +9,13 @@ import "./whatsapp.css";
 // The API is routes/owner.py. Every word is in whatsappCopy.ts.
 
 type Preference = "portal" | "whatsapp" | "both";
-type Status = { linked: boolean; number_ends: string | null; verified_at: string | null; preference: Preference };
+// `weekly_report` and `booking_alerts` are null while no phone is linked; `booking_email` is the
+// person's own switch for the email on each booking (owners).
+type Status = {
+  linked: boolean; number_ends: string | null; verified_at: string | null; preference: Preference;
+  weekly_report: boolean | null; booking_alerts: boolean | null; booking_email: boolean | null;
+};
+type AlertKey = "weekly_report" | "booking_alerts" | "booking_email";
 type Code = { code: string; message: string; expiresAt: number; lifetime: number };
 
 const PREFERENCES: Preference[] = ["portal", "whatsapp", "both"];
@@ -125,6 +131,18 @@ export function WhatsappLink({ lang, role, modules, signedIn }: { lang: Lang; ro
     }
   }
 
+  async function setAlert(key: AlertKey, on: boolean) {
+    if (!status) return;
+    const before = status;
+    setStatus({ ...status, [key]: on });
+    try {
+      setStatus(await call("/api/owner/alerts", "PUT", { [key]: on }));
+    } catch {
+      setStatus(before);
+      setMessage({ text: t.saveFailed, bad: true });
+    }
+  }
+
   const roleName = t.roles[role] ?? role;
   const shell = (body: React.ReactNode) => (
     <section className="wa" aria-labelledby="wa-title" dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
@@ -148,6 +166,15 @@ export function WhatsappLink({ lang, role, modules, signedIn }: { lang: Lang; ro
     ? new Date(status.verified_at).toLocaleDateString(lang === "ar" ? "ar-QA-u-nu-latn" : "en-GB", { day: "numeric", month: "short", year: "numeric" })
     : "";
   const commands = commandsFor(role, modules);
+  // What this person may be sent: the report is for owners and admins, the booking messages need
+  // the Bookings product, the email is the owner's. The two WhatsApp ones need a linked phone.
+  const manager = role === "owner" || role === "admin";
+  const hasBookings = modules.includes("bookings");
+  const alertRows: { key: AlertKey; name: string; hint: string; on: boolean; disabled: boolean }[] = [
+    ...(manager ? [{ key: "weekly_report" as const, name: t.alertReport, hint: t.alertReportHint, on: status.weekly_report === true, disabled: !status.linked }] : []),
+    ...(hasBookings ? [{ key: "booking_alerts" as const, name: t.alertBookings, hint: t.alertBookingsHint, on: status.booking_alerts === true, disabled: !status.linked }] : []),
+    ...(hasBookings && role === "owner" ? [{ key: "booking_email" as const, name: t.alertEmail, hint: t.alertEmailHint, on: status.booking_email !== false, disabled: false }] : []),
+  ];
 
   return shell(
     <>
@@ -227,6 +254,23 @@ export function WhatsappLink({ lang, role, modules, signedIn }: { lang: Lang; ro
 
         {message && <p className={message.bad ? "wa-bad" : "wa-ok"} role="status">{message.text}</p>}
       </div>
+
+      {alertRows.length > 0 && (
+        <div className="wa-card">
+          <div className="wa-card-head"><h3>{t.alertsTitle}</h3></div>
+          <p className="wa-quiet">{t.alertsHint}</p>
+          <ul className="wa-alerts">
+            {alertRows.map((row) => (
+              <li key={row.key} className="wa-toggle">
+                <span className="wa-toggle-text"><b>{row.name}</b><small>{row.hint}</small></span>
+                <button type="button" role="switch" aria-checked={row.on} aria-label={row.name} disabled={row.disabled}
+                  className="sh-switch wa-hit" onClick={() => void setAlert(row.key, !row.on)} />
+              </li>
+            ))}
+          </ul>
+          {!status.linked && alertRows.some((row) => row.key !== "booking_email") && <p className="wa-quiet">{t.alertsNeedLink}</p>}
+        </div>
+      )}
 
       <div className="wa-pair">
         <div className="wa-card">
