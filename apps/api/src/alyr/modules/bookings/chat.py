@@ -9,7 +9,6 @@ from alyr.core import links, team
 from alyr.core.normalise import has_arabic
 from alyr.core.outbound import Outbound
 from alyr.core.words import MINUTES, counted
-from alyr.modules.bookings import service, words
 from alyr.modules.bookings import intent, service, words
 
 # The buttons. Cancelling takes two taps: the first asks, the second does it (T10 of the first
