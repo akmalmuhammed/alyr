@@ -63,6 +63,7 @@ const T = {
     preparing: "Getting your payment ready…",
     unavailableTitle: "This payment link no longer works",
     unavailableText: "Nothing was charged. Please ask the shop for a new link in your chat.",
+    unavailableDeposit: "The shop cannot take this deposit on this page. Nothing was charged. Please message the shop to arrange it.",
     simulated: "Test provider page. No money moves.",
     expiredLink: "This link has expired", invalidLink: "This link is not valid",
     noneTitle: "Open this page from the link we sent you",
@@ -90,6 +91,7 @@ const T = {
     preparing: "جارٍ تجهيز الدفع…",
     unavailableTitle: "رابط الدفع هذا لم يعد يعمل",
     unavailableText: "لم يُخصم أي مبلغ. اطلب من المتجر رابطاً جديداً في المحادثة.",
+    unavailableDeposit: "لا يستطيع المحل استلام هذا العربون من هذه الصفحة. لم يُخصم أي مبلغ. راسل المحل لترتيب الدفع.",
     simulated: "صفحة مزوّد تجريبية. لا تُنقل أي أموال.",
     expiredLink: "انتهت صلاحية هذا الرابط", invalidLink: "هذا الرابط غير صالح",
     noneTitle: "افتح هذه الصفحة من الرابط الذي أرسلناه لك",
@@ -254,7 +256,7 @@ function Pay() {
         <section className="cx-done" role="status">
           <h1>{t.unavailableTitle}</h1>
           {data.order_number && <p>{t.order(data.order_number)}</p>}
-          <p>{t.unavailableText}</p>
+          <p>{booking ? t.unavailableDeposit : t.unavailableText}</p>
         </section>
       </Frame>
     );

@@ -17,10 +17,14 @@ import { customerName } from "../../_customer/testName";
 // a service may ask a deposit. The deposit and the shop's rule for it are shown before the
 // customer confirms; the deposit is paid by link, which opens a test page until the shop's
 // payment provider is connected (the page says so).
+//
+// D-190: where the shop cannot take a deposit online (production today) a service that asks one
+// is shown but cannot be chosen, with the words "message the shop" and the shop's WhatsApp
+// button, and the API refuses it too. The page never offers a Pay button that cannot work.
 
 type Service = {
   id: string; name: string; name_ar: string; duration_minutes: number; price: number;
-  deposit: number; doers: string[];
+  deposit: number; deposit_open: boolean; doers: string[];
 };
 type Person = { id: string; name: string; name_ar: string; kind: "person" | "place"; services: string[] };
 type LinkState = { state: "none" | "ok" | "invalid" | "expired"; message: string; message_ar: string };
@@ -49,6 +53,9 @@ const T = {
     service: "Choose a service", day: "Choose a day", time: "Choose a time", minutes: (n: number) => `${n} min`,
     who: "Choose who", anyone: "Anyone", anyoneHint: "The first one free",
     depositTag: (a: string) => `Deposit ${a}`,
+    depositShop: "Deposit needed: message the shop",
+    depositClosed: "Some services ask a deposit, and a deposit cannot be paid on this page yet. Message the shop to book one of those.",
+    depositRefused: "This service asks a deposit, and the shop cannot take it here yet. Please message the shop to book it.",
     depositAsk: (a: string, m: number) => `A deposit of ${a} holds this time for ${m} minutes while you pay it by link.`,
     confirmPay: "Book and pay the deposit",
     held: (n: number) => `Booking ${n} is held for you`,
@@ -72,6 +79,9 @@ const T = {
     service: "اختر الخدمة", day: "اختر اليوم", time: "اختر الوقت", minutes: (n: number) => `${n} دقيقة`,
     who: "اختر من يخدمك", anyone: "أي أحد", anyoneHint: "أول من يكون متاحاً",
     depositTag: (a: string) => `العربون ${a}`,
+    depositShop: "يلزم عربون: راسل المحل",
+    depositClosed: "بعض الخدمات تطلب عربوناً، ولا يمكن دفع العربون من هذه الصفحة بعد. راسل المحل لحجز إحداها.",
+    depositRefused: "هذه الخدمة تطلب عربوناً ولا يستطيع المحل استلامه هنا بعد. راسل المحل لحجزها.",
     depositAsk: (a: string, m: number) => `عربون ${a} يحجز لك هذا الموعد لمدة ${m} دقيقة حتى تدفعه عبر الرابط.`,
     confirmPay: "احجز وادفع العربون",
     held: (n: number) => `الحجز رقم ${n} محجوز لك`,
@@ -140,7 +150,7 @@ function BookingForm() {
         // The page speaks the customer's own language when their link says who they are.
         setChosen((current) => current ?? data.customer?.lang ?? preferred(askedLang));
         setDay(upcomingDays(data.shop.timezone)[0]);
-        if (data.services.length === 1) setServiceId(data.services[0].id);
+        if (data.services.length === 1 && data.services[0].deposit_open) setServiceId(data.services[0].id);
       })
       .catch(() => { setChosen((current) => current ?? preferred(askedLang)); setMissing(true); });
   }, [slug, token, askedLang]);
@@ -189,7 +199,8 @@ function BookingForm() {
         setStopped({ state: refusal.code === "expired_link" ? "expired" : "invalid", message: refusal.message, message_ar: refusal.message_ar });
         return;
       }
-      setError(refusal?.message ?? t.failed);
+      // The owner asked a deposit after this page opened: the shop cannot take it here (D-190).
+      setError(refusal?.code === "deposit_unavailable" ? t.depositRefused : refusal?.message ?? t.failed);
       // Someone else may have just taken the time: show what is still free.
       if (response.status === 409) pick(setDay, day);
       return;
@@ -209,6 +220,8 @@ function BookingForm() {
   const nameOf = (r: { name: string; name_ar: string }) => (lang === "ar" && r.name_ar ? r.name_ar : r.name);
   const holdMinutes = page.deposit_terms.hold_minutes ?? 30;
   const whatsapp = page.shop.whatsapp ? `https://wa.me/${page.shop.whatsapp}?text=${encodeURIComponent(t.prefill)}` : "";
+  // Services that ask a deposit the shop cannot take on this page (D-190).
+  const closedDeposits = page.services.some((s) => !s.deposit_open);
 
   // A link that has expired or is not valid (an edited one, one from another shop, an order
   // link, or the old bare contact ID): the customer is told, kindly, to ask the shop for a new
@@ -284,16 +297,20 @@ function BookingForm() {
           <h2><span className={`cx-step ${serviceId ? "done" : ""}`}>1</span>{t.service}</h2>
           <div className="cx-card" role="radiogroup" aria-label={t.service}>
             {page.services.map((s) => (
-              <button key={s.id} role="radio" aria-checked={serviceId === s.id} className="cx-choice"
-                onClick={() => { setResourceId(""); pick(setServiceId, s.id); }}>
+              <button key={s.id} role="radio" aria-checked={serviceId === s.id} aria-disabled={!s.deposit_open} className="cx-choice"
+                onClick={() => { if (!s.deposit_open) return; setResourceId(""); pick(setServiceId, s.id); }}>
                 <span className="cx-row-text">
                   <b>{lang === "ar" && s.name_ar ? s.name_ar : s.name}</b>
-                  <span className="num">{t.minutes(s.duration_minutes)}{s.price ? <> · <bdi>{formatPrice(s.price, lang)}</bdi></> : null}{s.deposit ? <> · <bdi>{t.depositTag(formatPrice(s.deposit, lang))}</bdi></> : null}</span>
+                  <span className="num">{t.minutes(s.duration_minutes)}{s.price ? <> · <bdi>{formatPrice(s.price, lang)}</bdi></> : null}{s.deposit ? <> · <bdi>{s.deposit_open ? t.depositTag(formatPrice(s.deposit, lang)) : t.depositShop}</bdi></> : null}</span>
                 </span>
                 <span className="cx-radio"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
               </button>
             ))}
           </div>
+          {closedDeposits && <p className="cx-note">{t.depositClosed}</p>}
+          {closedDeposits && whatsapp && (
+            <a className="cx-btn ghost" href={whatsapp}><Glyph name="wa" />{t.askShop}</a>
+          )}
         </section>
       )}
 

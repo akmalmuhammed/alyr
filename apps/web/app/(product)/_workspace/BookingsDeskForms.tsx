@@ -1,7 +1,8 @@
 "use client";
 
-// The three forms staff use at the desk (ALY-259, D-142, spec 043): write a visit down (a
-// walk-in standing there, or a booking by phone), move a booking, cancel one. A customer the
+// The forms staff use at the desk (ALY-259, D-142, spec 043): write a visit down (a
+// walk-in standing there, or a booking by phone), move a booking, cancel one, and write down a
+// deposit the customer paid the shop by bank transfer (D-191). A customer the
 // shop already has is found by name or number instead of typed again; a move shows the free
 // times for that person; and before anything is sent the form says when the customer cannot be
 // messaged (they never wrote, or said stop), so staff tell them themselves. What the API says
@@ -11,8 +12,9 @@
 import { useEffect, useState } from "react";
 import type { BookingsCopy, Lang } from "./bookingsCopy";
 import {
-  addMinutes, clock, resourceName, warningFor, type DayBooking, type Resource, type Service,
+  addMinutes, checkReceived, clock, resourceName, warningFor, type DayBooking, type Resource, type Service,
 } from "./bookingsDeskLogic";
+import { qarText } from "./bookingsServiceForm";
 import { nowIn, zonedIso } from "./bookingsTime";
 
 type Match = { id: string; name: string; phone: string | null; lang: Lang; consent: string };
@@ -200,6 +202,51 @@ export function MoveBooking({ t, lang, b, active, zone, onDone, onClose, error }
       {error && <p className="bk-error" role="alert">{error}</p>}
       <div className="bk-acts">
         <button type="submit" className="btn primary">{t.save}</button>
+        <button type="button" className="btn ghost" onClick={onClose}>{t.close}</button>
+      </div>
+    </form>
+  );
+}
+
+/** Staff write down a deposit the customer paid the shop by bank transfer (D-191). The amount is
+ * typed in QAR; the form says when the customer cannot be messaged, so staff tell them. */
+export function DepositReceived({ t, b, onDone, onClose, error }: {
+  t: BookingsCopy; b: DayBooking; error: string;
+  onDone: (body: { amount: number; reference: string }) => void; onClose: () => void;
+}) {
+  // A deposit the link was still waiting for is the amount to write down; otherwise staff type it.
+  const [amount, setAmount] = useState(b.deposit_state === "due" && b.deposit ? qarText(b.deposit) : "");
+  const [reference, setReference] = useState("");
+  const [bad, setBad] = useState(false);
+  const warning = warningFor(b.consent, b.phone, t);
+  const id = `bk-dep-${b.id}`;
+  return (
+    <form className="bk-form inline" noValidate aria-labelledby={`${id}-title`} onSubmit={(e) => {
+      e.preventDefault();
+      const checked = checkReceived(amount, b.price);
+      if ("error" in checked) { setBad(true); return; }
+      setBad(false);
+      onDone({ amount: checked.amount, reference: reference.trim() });
+    }}>
+      <h4 id={`${id}-title`}>{t.depositTitle(b.number)}</h4>
+      <p className="bk-quiet">{t.depositHint}</p>
+      <div className="bk-grid start">
+        <label className="bk-field" htmlFor={`${id}-a`}>
+          <span>{t.depositAmount}</span>
+          <input id={`${id}-a`} value={amount} inputMode="decimal" dir="ltr" autoComplete="off" required
+            aria-invalid={bad} onChange={(e) => setAmount(e.target.value)} />
+        </label>
+        <label className="bk-field" htmlFor={`${id}-r`}>
+          <span>{t.depositReference}</span>
+          <input id={`${id}-r`} value={reference} maxLength={80} dir="auto" autoComplete="off"
+            onChange={(e) => setReference(e.target.value)} />
+        </label>
+      </div>
+      {warning && <p className="bk-warn" role="status"><bdi>{warning}</bdi></p>}
+      {bad && <p className="bk-error" role="alert">{t.errors.bad_received}</p>}
+      {error && <p className="bk-error" role="alert">{error}</p>}
+      <div className="bk-acts">
+        <button type="submit" className="btn primary">{t.depositSave}</button>
         <button type="button" className="btn ghost" onClick={onClose}>{t.close}</button>
       </div>
     </form>

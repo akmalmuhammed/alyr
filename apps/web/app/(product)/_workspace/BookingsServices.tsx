@@ -6,6 +6,10 @@
 // with, so hiding or repricing a service never moves a customer's visit. The checks run here
 // in the page's language (`bookingsServiceForm.ts`) and again in the API. Words in
 // `bookingsCopy.ts`; money from `_customer/price.ts`.
+//
+// D-190: until a deposit can be paid online (`depositsOpen` false: production today) a service
+// that asks one cannot be booked from the booking page. The screen says so in three places: above
+// the list, on the service, and under the deposit field of its form.
 
 import { useEffect, useRef, useState } from "react";
 import { formatPrice } from "../_customer/price";
@@ -28,7 +32,7 @@ function serviceName(s: ServiceRow, lang: Lang): string {
 }
 
 /** The facts under a service's name: how long, what it costs, its deposit, what is booked. */
-function facts(s: ServiceRow, t: BookingsCopy, lang: Lang): string[] {
+function facts(s: ServiceRow, t: BookingsCopy, lang: Lang, depositsOpen: boolean): string[] {
   const deposit = s.deposit_kind === "none" ? ""
     : t.depositOf(s.deposit_kind === "percent"
       ? `${s.deposit_value}% (${formatPrice(s.deposit, lang)})`
@@ -38,17 +42,19 @@ function facts(s: ServiceRow, t: BookingsCopy, lang: Lang): string[] {
     s.price ? formatPrice(s.price, lang) : t.noPriceShown,
     deposit,
     s.upcoming ? t.bookedAhead(s.upcoming) : "",
+    s.active && s.deposit_kind !== "none" && !depositsOpen ? t.depositsClosedRow : "",
   ].filter(Boolean);
 }
 
-export function BookingsServices({ t, lang, services, people, save }: {
-  t: BookingsCopy; lang: Lang; services: ServiceRow[]; people: Person[]; save: Save;
+export function BookingsServices({ t, lang, services, people, save, depositsOpen }: {
+  t: BookingsCopy; lang: Lang; services: ServiceRow[]; people: Person[]; save: Save; depositsOpen: boolean;
 }) {
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [hiding, setHiding] = useState<string | null>(null);
   const active = people.filter((p) => p.active);
   const noneShown = services.length > 0 && services.every((s) => !s.active);
+  const closedDeposits = !depositsOpen && services.some((s) => s.active && s.deposit_kind !== "none");
 
   function giveBack(id: string) {
     // The form is gone: put the keyboard back on the button that opened it.
@@ -66,6 +72,7 @@ export function BookingsServices({ t, lang, services, people, save }: {
       <p className="bk-quiet">{t.servicesHint}</p>
       {services.length > 1 && <p className="bk-quiet">{t.serviceOrderHint}</p>}
       {noneShown && <p className="bk-warn" role="status">{t.noneShown}</p>}
+      {closedDeposits && <p className="bk-warn" role="status">{t.depositsClosed}</p>}
 
       {services.length === 0 ? (
         <p className="bk-empty">{t.noServices}</p>
@@ -76,7 +83,7 @@ export function BookingsServices({ t, lang, services, people, save }: {
               {editing === s.id ? (
                 <ServiceFormView
                   t={t} lang={lang} idp={`bk-s-${s.id}`} title={t.editServiceTitle(serviceName(s, lang))}
-                  submit={t.save} people={active} start={formFromService(s, active.map((p) => p.id))}
+                  submit={t.save} people={active} depositsOpen={depositsOpen} start={formFromService(s, active.map((p) => p.id))}
                   onSubmit={(body) => save(`/api/services/${s.id}`, "PATCH", body, t.serviceSaved)}
                   onClose={() => { setEditing(null); giveBack(s.id); }}
                 />
@@ -88,7 +95,7 @@ export function BookingsServices({ t, lang, services, people, save }: {
                       {!s.active && <span className="bk-tag">{t.hiddenTag}</span>}
                     </p>
                     <p className="bk-facts">
-                      {facts(s, t, lang).map((f) => <span key={f}><bdi>{f}</bdi></span>)}
+                      {facts(s, t, lang, depositsOpen).map((f) => <span key={f}><bdi>{f}</bdi></span>)}
                     </p>
                   </div>
                   <div className="bk-acts">
@@ -126,7 +133,7 @@ export function BookingsServices({ t, lang, services, people, save }: {
       {adding ? (
         <ServiceFormView
           t={t} lang={lang} idp="bk-s-new" title={t.addServiceTitle} submit={t.addServiceSave}
-          people={active} start={blankForm()}
+          people={active} depositsOpen={depositsOpen} start={blankForm()}
           onSubmit={(body) => save("/api/services", "POST", body, t.serviceAdded)}
           onClose={() => { setAdding(false); setTimeout(() => document.getElementById("bk-svc-add")?.focus(), 0); }}
         />
@@ -141,8 +148,8 @@ export function BookingsServices({ t, lang, services, people, save }: {
   );
 }
 
-function ServiceFormView({ t, lang, idp, title, submit, people, start, onSubmit, onClose }: {
-  t: BookingsCopy; lang: Lang; idp: string; title: string; submit: string; people: Person[];
+function ServiceFormView({ t, lang, idp, title, submit, people, start, onSubmit, onClose, depositsOpen }: {
+  t: BookingsCopy; lang: Lang; idp: string; title: string; submit: string; people: Person[]; depositsOpen: boolean;
   start: ServiceForm; onSubmit: (body: Record<string, unknown>) => Promise<string>; onClose: () => void;
 }) {
   const [form, setForm] = useState<ServiceForm>(start);
@@ -191,6 +198,7 @@ function ServiceFormView({ t, lang, idp, title, submit, people, start, onSubmit,
               onChange={(e) => set({ deposit: e.target.value })} required aria-invalid={error === "bad_deposit"} /></label>
         )}
       </div>
+      {form.depositKind !== "none" && !depositsOpen && <p className="bk-warn" role="status">{t.depositsClosedField}</p>}
       {hasPeople && (
         <fieldset className="bk-choices">
           <legend>{t.whoDoes}</legend>

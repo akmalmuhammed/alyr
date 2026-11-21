@@ -53,6 +53,13 @@ class BookingError(Exception):
         self.data = data or {}
 
 
+# What a customer is told when a service asks a deposit the shop cannot take online (D-190).
+DEPOSIT_UNAVAILABLE = (
+    "This service needs a deposit, and the shop cannot take it online yet. "
+    "Please message the shop to book it."
+)
+
+
 def deposit_amount(kind: str, value: int, price: int) -> int:
     """What a service's deposit comes to, in dirhams: a fixed amount, or a share of the price
     rounded to the nearest dirham. Nothing for a percentage of a service with no price."""
@@ -862,7 +869,7 @@ async def _customer(conn: asyncpg.Connection, contact_id: UUID) -> asyncpg.Recor
     return contact
 
 
-async def _told(conn: asyncpg.Connection, contact_id: UUID, result) -> dict:
+async def customer_told(conn: asyncpg.Connection, contact_id: UUID, result) -> dict:
     """What staff need to know about a message to a customer: whether the outbound layer took it,
     and when it did not (the customer said stop, never agreed to messages, ALYR's sending for the
     shop is paused), why and where to reach them, so staff tell them themselves."""
@@ -880,7 +887,7 @@ async def _confirm(
     contact: asyncpg.Record, starts_at: datetime,
 ) -> tuple[str, dict]:
     """Tell the customer the booking is confirmed and queue the reminder. Returns the time
-    as the customer reads it, and whether the customer was told (`_told`)."""
+    as the customer reads it, and whether the customer was told (`customer_told`)."""
     arabic = contact["lang"] == "ar"
     when = await when_text(conn, starts_at, arabic)
     shop = await shop_name(conn, arabic)
@@ -895,7 +902,7 @@ async def _confirm(
         contact["id"], "booking_confirmed", contact["lang"], body, number, shop, what, when,
     ))
     await schedule_reminder(conn, booking_id, starts_at)
-    return when, await _told(conn, contact["id"], sent)
+    return when, await customer_told(conn, contact["id"], sent)
 
 
 async def create_booking(
@@ -904,13 +911,18 @@ async def create_booking(
     web_url: str = "",
 ) -> dict:
     """A customer books from their link. A service that asks a deposit holds the time until
-    the deposit is paid by link (`deposits.py`); otherwise the booking is confirmed now."""
+    the deposit is paid by link (`deposits.py`); otherwise the booking is confirmed now. A
+    service that asks a deposit the shop cannot take online is refused, not held (D-190)."""
     from alyr.modules.bookings import deposits
 
     contact = await _customer(conn, contact_id)
     await lock(conn, tenant_id)
     service, chosen = await _place(conn, service_id, starts_at, resource_id)
     amount = deposit_amount(service["deposit_kind"], service["deposit_value"], service["price"])
+    if amount and not await deposits.can_take(conn):
+        # Nothing is held, sent or written: a customer is never given a pay link that cannot
+        # be paid (D-190). The booking page says the same before they get this far.
+        raise BookingError("deposit_unavailable", DEPOSIT_UNAVAILABLE)
     terms = await deposits.shop_terms(conn) if amount else None
     hold_until = await deposits.hold_end(conn) if amount else None
     booking_id, number = await _insert(
@@ -1085,7 +1097,7 @@ async def cancel_booking(
             sent = await outbound.send(conn, templates.notice(
                 row["contact_id"], "booking_cancelled", lang, body, row["number"], when,
             ))
-        told = await _told(conn, row["contact_id"], sent)
+        told = await customer_told(conn, row["contact_id"], sent)
     return {"deposit_state": state, "told": told}
 
 
@@ -1146,7 +1158,7 @@ async def reschedule(
         await schedule_reminder(conn, booking_id, starts_at)
     return {"id": str(booking_id), "when_text": when, "starts_at": starts_at.isoformat(),
             "resource": named["name"] if named else None,
-            "told": await _told(conn, current["contact_id"], sent)}
+            "told": await customer_told(conn, current["contact_id"], sent)}
 
 
 async def set_outcome(
@@ -1192,7 +1204,7 @@ async def list_bookings(
     rows = await conn.fetch(
         f"""
         select b.id, b.number, b.service_id, b.service_name, b.starts_at, b.ends_at, b.status,
-               b.note, b.walk_in, b.deposit, b.deposit_state, b.hold_until,
+               b.note, b.walk_in, b.deposit, b.deposit_state, b.hold_until, b.deposit_method,
                b.price, s.name_ar as service_name_ar,
                c.id as contact_id, c.name as customer, c.phone, c.consent_service as consent,
                b.assigned_to, u.name as assignee,
@@ -1244,6 +1256,8 @@ async def list_bookings(
             "walk_in": r["walk_in"],
             # The deposit, where it stands, and what is left of the price after what was paid.
             "deposit": r["deposit"], "deposit_state": r["deposit_state"],
+            # "link" or "transfer": how a paid deposit came (D-191).
+            "deposit_method": r["deposit_method"],
             "hold_until": r["hold_until"].isoformat() if r["hold_until"] else None,
             "price": r["price"] or 0, "paid": paid,
             "left_to_pay": max((r["price"] or 0) - paid, 0),
