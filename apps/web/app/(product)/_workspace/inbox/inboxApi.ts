@@ -5,6 +5,7 @@
  */
 
 import { api } from "../../../_ui/api";
+import { inboundText } from "../inboxKinds";
 import {
   FIXTURE_CLOSED, FIXTURE_CONVERSATIONS, FIXTURE_NOT_SENT, FIXTURE_SAVED_REPLIES, FIXTURE_TEMPLATES, ME,
   fixtureContext, fixtureThread,
@@ -34,7 +35,7 @@ export type ConversationsAnswer = { conversations: ConversationItem[]; total: nu
 type ApiConversation = Omit<ConversationItem, "window_closes_at" | "last"> & {
   window_open: boolean;
   window_closes_at: string | null;
-  last: { body: string; direction: "in" | "out"; status: string; created_at: string; sent_by?: string | null };
+  last: { body: string; direction: "in" | "out"; kind?: string; status: string; created_at: string; sent_by?: string | null };
 };
 
 export async function fetchConversations(
@@ -57,7 +58,7 @@ export async function fetchConversations(
       id: c.id, name: c.name, phone: c.phone, status: c.status, assistant_paused: c.assistant_paused,
       opted_out: c.opted_out, window_closes_at: c.window_open ? c.window_closes_at : null, unread: c.unread,
       assigned: c.assigned,
-      last: { body: c.last.body, direction: c.last.direction, status: c.last.status, created_at: c.last.created_at, by: c.last.direction === "out" ? byOf(c.last.sent_by) : undefined },
+      last: { body: (c.last.direction === "in" && c.last.kind && inboundText(c.last.kind, c.last.body)) || c.last.body, direction: c.last.direction, status: c.last.status, created_at: c.last.created_at, by: c.last.direction === "out" ? byOf(c.last.sent_by) : undefined },
     })),
   };
 }
@@ -102,7 +103,7 @@ export async function fetchThread(id: string, mode: Mode): Promise<ThreadAnswer>
   const items: ThreadItem[] = [
     ...body.messages.map((m): ThreadItem => ({
       kind: "message", id: m.id, at: m.created_at, direction: m.direction, by: m.direction === "out" ? byOf(m.sent_by) : undefined,
-      text: m.body,
+      text: (m.direction === "in" && inboundText(m.kind, m.body)) || m.body,
       delivery: m.direction === "out" && DELIVERY.has(m.status)
         ? { status: m.status as "queued", reason: m.error ?? undefined }
         : undefined,

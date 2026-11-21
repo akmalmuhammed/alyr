@@ -7,6 +7,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | # | Decision | Status |
 |---|---|---|
 | D-194 | A message that cannot go fails where the shop can see it: a template Meta has not approved is refused when queued, a message Meta refuses is failed at once in Meta's words, and a refused reminder or review request is not counted as sent | Accepted, 21 Nov 2026 |
+| D-195 | A customer's voice note, photo or other message that is not text is labelled in the inbox, left to a person and acknowledged once; a reaction is shown and never answered | Accepted, 21 Nov 2026 |
 | D-001 | One deployable service (modular monolith) | Accepted |
 | D-002 | PostgreSQL with forced row-level security for tenant separation | Accepted |
 | D-003 | Plain SQL migrations, never edited after they are applied | Accepted |
@@ -2855,6 +2856,23 @@ A salon's owner learned of a booking only by opening the Bookings tab, typing BO
 **Revisit when** the founder chooses a different report day, or a shop wants the report on a second phone by default.
 
 **Taken from the reserved range:** D-193.
+## D-195 · What the chat does with a message it cannot read
+
+**Date** 21 Nov 2026 · **Status** Accepted (a decision of the product lane for the first client; the founder reviews it with the pull request) · T8 of the first client's product audit · Builds on D-065, D-084, ALY-272 (the order chat's `_hand_to_person`), CLAUDE.md hard rule 5
+
+**Problem.** Meta's webhook says what kind of message a customer sent. ALYR kept the text and the caption of a photo and dropped everything else. A voice note became an empty message; the booking router answered it, and a "thumbs-up" reaction, with the welcome menu; the owner saw an empty bubble and no sign that a customer had asked something. A salon's customers send inspiration photos and voice notes every day.
+
+**What was decided.**
+1. **The parser keeps the kind.** Photos, audio, videos, files and stickers keep their caption and Meta's file ID (nothing downloads the file); a voice note is Meta's audio type with `voice: true` and is kept as `voice`; a reaction keeps its emoji as its text; a place, a contact card and a message Meta marks unsupported keep their kind.
+2. **A message no module reads is left to a person.** In `modules/router.py`, after the Catalog's order chat (which already did this for its own shops) and before the booking chat, a customer's photo, voice note, audio, video, file, sticker, place, contact card or unsupported message writes "asked for a person" on the conversation and answers once with the Catalog's words ("Thank you, we received it. A person from {shop} will look at it and reply here."). A second one within ten minutes writes and says nothing. While a person is already handling the customer the assistant stays quiet, as before.
+3. **A reaction is not answered.** It is stored and shown ("Reaction: a thumbs-up"), and it does not bring back the welcome menu.
+4. **The inbox says what arrived**, in both languages and in both the classic and the redesigned screens, in the conversation and in the list's preview: "Voice note (not shown here yet)", "Photo (not shown here yet) · the caption". It says plainly that the file is not shown, so the person knows to ask the customer to write it down.
+
+**Rejected.** *Downloading and storing the file now* (a store, a size limit, a retention rule and a privacy line for the lawyer; a later job). *Transcribing a voice note* (no model is in the product; D-012). *Acknowledging every photo* (a set of five photos would get five replies). *Answering a reaction with "thanks"* (a customer who reacts to a confirmation is not asking anything).
+
+**Revisit when** media is stored and shown (the "not shown here yet" words go with it), or when a salon asks for a different first reply to a photo.
+
+**Not checked.** A real voice note or photo from a real phone (the payloads are Meta's documented shapes); the Arabic by a native speaker (ALY-66).
 
 ## D-196 · A salon starts as a salon
 
