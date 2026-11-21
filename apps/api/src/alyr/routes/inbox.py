@@ -83,7 +83,8 @@ async def conversations(
             }
 
     # Tabs that look at the same list within a moment share one run (core/pollcache.py).
-    mine = staff.user_id if assigned == "me" else None
+    # What depends on who is asking (the "mine" chip and count, assigned to me) is kept per person.
+    mine = staff.user_id if (assigned == "me" or chip == "mine" or counts) else None
     cache_key = ("inbox", status, assigned, chip, q, limit, offset, counts, mine)
     return await request.app.state.poll.get_json(staff.tenant_id, cache_key, compute)
 
