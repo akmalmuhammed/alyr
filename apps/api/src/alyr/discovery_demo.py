@@ -5,7 +5,8 @@ turned on (spec 065). For the demo shop, and for the screens' author:
     uv run python -m alyr.discovery_demo --tenant <id>   # another local shop
     uv run python -m alyr.discovery_demo --off           # switch it off again; nothing is deleted
 
-It switches the `discovery` module on and turns the `sample` connection on, which gives the shop
+It switches the `discovery` module on, marks the shop as a demo shop (the one mark that lets a shop
+use the sample, D-169) and turns the `sample` connection on, which gives the shop
 the five fictional branches if it has no places yet and writes what the fictional owner has
 confirmed about each (opening hours, phone, category, name and WhatsApp number: spec 066), never
 over a fact someone typed. That is all a proposal needs: run a check-up (from the workspace or
@@ -41,6 +42,12 @@ async def switch(database_url: str, tenant_id: UUID, on: bool = True) -> None:
                 KEY, on,
             )
             if on:
+                # The sample is for a shop marked as a demo (D-169): on a developer's machine this
+                # command is the back office, so it makes the mark the way `/ops` does.
+                await conn.execute("select set_config('app.platform_admin', 'on', true)")
+                await conn.fetchval(
+                    "select admin_set_demo_data_allowed($1, true, 'discovery_demo')", tenant_id
+                )
                 caller = Caller(None, "Discovery demo", "owner", "system")
                 await actions.set_connection(conn, caller, {"kind": "sample", "on": True})
     finally:

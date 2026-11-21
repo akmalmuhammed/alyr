@@ -38,6 +38,14 @@ from alyr.modules.discovery.connectors.sample import SampleConnector
 AVAILABLE: tuple[str, ...] = ("sample",)
 
 
+def available_for(demo: bool) -> tuple[str, ...]:
+    """What THIS shop may turn on. The sample is a made-up business ("Nuqta Car Care", five
+    branches, invented hours and reviews): it is offered only to a shop ALYR staff marked as a
+    demo or test business in `/ops` (`tenants.demo_data_allowed`, D-169). A real shop is offered
+    nothing here: its source is set up by ALYR."""
+    return AVAILABLE if demo else ()
+
+
 def get(kind: str) -> Connector:
     """The connector for a kind a shop has switched on."""
     if kind == "sample":
@@ -51,6 +59,7 @@ def get(kind: str) -> Connector:
 
 __all__ = [
     "AVAILABLE",
+    "available_for",
     "BudgetExceeded",
     "Change",
     "Connector",

@@ -5,6 +5,7 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- Discovery can no longer show a real business a made-up one (the first client's audit, D-169; no migration, no new dependency): the sample ("Nuqta Car Care", five invented branches) is turned on only for a shop ALYR staff marked as a demo or test business in `/ops`. Home's "Turn on Discovery" is drawn only for such a shop and its sentence now says the business is made up; any other shop reads "Discovery is not connected to your business yet. ALYR sets this up with you." with nothing to press, the route refuses the sample for it (409 `sample_not_allowed`, English and Arabic), and a sample left on such a shop starts no check-up and a queued one stops. `GET /api/discovery/connection` lists only what that shop may turn on and both it and the overview say `demo`. Arabic is a draft until ALY-66.
 - The Agent's cards about messages speak only for a shop that has the inbox in ALYR (the first client's Insights audit, task I6; no migration, no new dependency; on top of the eleven new Agent cards of #271): "your 10 best customers have not heard from you in a month" and "chats at hours nobody answers" are made only when the shop has the inbox, because ALYR cannot know what a shop writes to its customers elsewhere, and a test fails any rule that reads the messages without saying so.
 
 ## v0.3.26 (21 Nov 2026)
