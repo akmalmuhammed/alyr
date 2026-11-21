@@ -5,7 +5,7 @@ import json
 import pathlib
 import random
 
-from conftest import shard_plan
+from conftest import shard_group, shard_plan
 
 SCRIPT = pathlib.Path(__file__).resolve().parents[3] / "scripts" / "ci" / "shards.py"
 
@@ -37,6 +37,17 @@ def test_the_plan_balances_by_weight():
     loads = sorted(sum(weights[n] for n in part) for part in shard_plan(weights, 4))
     # The big file sits alone on one slice; the twenty small ones fill the other three evenly.
     assert loads == [60.0, 70.0, 70.0, 100.0]
+
+
+def test_files_that_start_with_the_same_word_always_share_a_slice():
+    assert shard_group("tests/test_catalog_cards.py") == "catalog"
+    assert shard_group("tests/test_access.py") == "access"
+    names = [f"tests/test_{word}_{i}.py" for word in ("catalog", "documents", "demo", "erase")
+             for i in range(5)]
+    for total in (2, 3, 6):
+        for part in shard_plan({name: 1.0 for name in names}, total):
+            for word in {shard_group(name) for name in part}:
+                assert len([n for n in part if shard_group(n) == word]) == 5  # never split
 
 
 def _report(index, total, selected, files, ran=None, collected=100, exitstatus=0):
