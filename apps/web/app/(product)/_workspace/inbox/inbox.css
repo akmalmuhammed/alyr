@@ -238,7 +238,7 @@
 .ibx-sort { font-size: var(--u-fs-cap); color: var(--text-muted); }
 
 .ibx-band { --u-band-cols: 5; }
-.ibx-closed-grid { display: grid; grid-template-columns: minmax(0, 1fr) calc(var(--ui-size-side-column) - var(--ui-space-48)); gap: var(--ui-space-20); align-items: start; }
+.ibx-closed-grid { display: grid; grid-template-columns: minmax(0, 1fr) calc(var(--ui-size-side-column) - var(--ui-space-48) - var(--ui-space-12)); gap: var(--ui-space-20); align-items: start; }
 .ibx-filterbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--ui-space-12); padding: var(--ui-space-12) var(--ui-space-20); border-block-end: var(--rule-hairline) solid var(--line); }
 .ibx-closed-side { display: flex; flex-direction: column; gap: var(--ui-space-20); min-inline-size: 0; }
 .ibx-closed-card { display: flex; flex-direction: column; gap: var(--ui-space-8); padding: var(--ui-space-16) var(--ui-space-20); font-size: var(--u-fs-body); }

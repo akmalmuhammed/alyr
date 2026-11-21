@@ -76,7 +76,7 @@ export function InboxClosedView({ lang, now, mode, role, openCount, onOpenTab, o
         </span>
       ),
     },
-    { key: "how", header: c.colHow, width: "var(--ibx-col-s)", phone: "tag", cell: (r) => <Status tone={TONE[r.outcome]}>{t.outcomes[r.outcome].label}</Status> },
+    { key: "how", header: c.colHow, width: "var(--ibx-col-xs)", phone: "tag", cell: (r) => <Status tone={TONE[r.outcome]}>{t.outcomes[r.outcome].label}</Status> },
     {
       key: "ref", header: c.colRef, width: "var(--ibx-col-m)", phone: "body",
       cell: (r) => <span className={r.booking || r.order ? "u-mono" : "ibx-muted"} dir="auto"><bdi>{refText(r)}</bdi></span>,
