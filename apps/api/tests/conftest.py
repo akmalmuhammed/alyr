@@ -161,11 +161,11 @@ async def _drop_tenants(ids: list) -> None:
 
 @pytest.fixture(scope="module", autouse=True)
 def _agent_rule_tests_leave_no_shops_behind(request):
-    """The Agent's rule tests (tests/test_agent_rule_*.py) each make shops of their own with
+    """The Agent's rule tests (tests/test_agent_rule*.py) each make shops of their own with
     orders, discounts and watches. Other tests count or read the newest of those tables over
     every shop in the one test database (`select count(*) from order_discounts`, the order with
     the highest number), so a rule's shops are deleted when its file is done."""
-    if not request.module.__name__.startswith("test_agent_rule_"):
+    if not request.module.__name__.startswith("test_agent_rule"):
         yield
         return
     before = asyncio.run(_tenant_ids())

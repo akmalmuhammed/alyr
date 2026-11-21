@@ -5,6 +5,7 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- The Agent's cards about messages speak only for a shop that has the inbox in ALYR (the first client's Insights audit, task I6; no migration, no new dependency; on top of the eleven new Agent cards of #271): "your 10 best customers have not heard from you in a month" and "chats at hours nobody answers" are made only when the shop has the inbox, because ALYR cannot know what a shop writes to its customers elsewhere, and a test fails any rule that reads the messages without saying so.
 
 ## v0.3.26 (21 Nov 2026)
 - A message that cannot go now fails where the shop can see it (the first client's audit, D-194; no migration, no new dependency): a message ALYR starts outside the 24-hour window is refused when it is queued, with the reason on the Not sent screen, if Meta has not approved its template on the shop's account (nothing is refused while ALYR has not read the account's templates); a booking whose reminder was refused is not marked as reminded; a review request that did not arrive does not use up the customer's 30 days; a message Meta itself refuses is failed on the first try in Meta's words instead of after six; "Not sent" is in the menu (English and Arabic, the Arabic a draft until ALY-66).

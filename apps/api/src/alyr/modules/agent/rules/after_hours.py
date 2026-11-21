@@ -159,4 +159,5 @@ INSIGHT = Insight(
          "الساعات التي فيها 10 محادثات أو أكثر ورد شخص خلال 60 دقيقة على أقل من ربعها"),
     _find, _say,
     Action(Text("Open the inbox", "افتح المحادثات"), "/app/inbox"),
+    chat=True,
 )

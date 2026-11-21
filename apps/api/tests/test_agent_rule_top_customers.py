@@ -22,8 +22,14 @@ KEY = top_customers.KEY
 NB = " "
 
 
+async def make(conn, modules=("orders", "bookings", "inbox"), name="Loyalty test shop"):
+    """The rule reads the messages ALYR holds, so it speaks only for a shop that has the inbox
+    (`Insight.chat`, tests/test_agent_rules_chat_honesty.py)."""
+    return await Shop.make(conn, modules=modules, name=name)
+
+
 def facts(**values) -> Facts:
-    base = {"now": NOW, "modules": frozenset({"orders"}), "business_type": "restaurant",
+    base = {"now": NOW, "modules": frozenset({"orders", "inbox"}), "business_type": "restaurant",
             "started": NOW - timedelta(days=200)}
     return Facts(**(base | values))
 
@@ -44,7 +50,7 @@ def with_numbers(**values) -> Facts:
 def test_the_rule_is_registered_as_number_32_for_information_only_and_money():
     assert INSIGHT_BY_KEY[KEY] is INSIGHT
     assert (INSIGHT.number, INSIGHT.kind, INSIGHT.module) == (32, "knowledge", "orders|bookings")
-    assert INSIGHT.money is True and INSIGHT.action is None
+    assert INSIGHT.money is True and INSIGHT.chat is True and INSIGHT.action is None
     assert INSIGHT.status == INFO_ONLY
 
 
@@ -107,6 +113,9 @@ def test_the_finding_names_the_ten_for_show_me_and_changes_when_they_do():
 def test_only_managers_are_shown_the_card():
     f = facts(extra={KEY: numbers()}, orders=5, orders_last=5)
     assert KEY in {c["key"] for c in view.render(f, "en")["suggestions"]}
+    # It is about messages, so it is not shown to a shop that has no inbox in ALYR.
+    no_inbox = facts(extra={KEY: numbers()}, orders=5, orders_last=5, modules=frozenset({"orders"}))
+    assert KEY not in {c["key"] for c in view.render(no_inbox, "en")["suggestions"]}
     f.money = False
     v = view.render(f, "en")
     assert KEY not in {c["key"] for c in v["suggestions"]}
@@ -128,7 +137,7 @@ async def crowd(shop: Shop, n: int, base: int = 10_000, step: int = 100) -> list
 
 def test_it_ranks_what_customers_spent_in_90_days_through_the_real_path():
     async def build(conn):
-        a = await Shop.make(conn)
+        a = await make(conn)
         await crowd(a, 35)
         # Visits only: two at an explicit price and one at the service's price when it was
         # booked (5,000), 45,000 in all: the biggest spender. A later price change moves nothing.
@@ -157,9 +166,9 @@ def test_it_ranks_what_customers_spent_in_90_days_through_the_real_path():
         await a.message(top, day(31))
         await a.message(top, NOW + timedelta(minutes=1))
         # A second shop whose customers all spent a fortune: none of it may show in the first.
-        b = await Shop.make(conn, name="Other shop")
+        b = await make(conn, name="Other shop")
         await crowd(b, 40, base=1_000_000)
-        c = await Shop.make(conn, name="Empty shop")
+        c = await make(conn, name="Empty shop")
         return [a.tenant, b.tenant, c.tenant]
 
     a, b, c = read(build)
@@ -193,7 +202,7 @@ def test_one_sent_message_to_a_top_ten_customer_in_30_days_silences_it():
             ("sent", 30, 30),        # exactly 30 days ago is the edge: it still counts
             ("sent", 31, 30),        # 31 days ago does not
         ]:
-            shop = await Shop.make(conn, name=f"Heard {status}")
+            shop = await make(conn, name=f"Heard {status}")
             made = await crowd(shop, 30)
             await shop.message(made[rank - 1], NOW - timedelta(days=days_ago), status=status)
             out.append(shop.tenant)
@@ -207,7 +216,7 @@ def test_one_sent_message_to_a_top_ten_customer_in_30_days_silences_it():
 
 def test_an_automatic_message_does_not_count_as_hearing_from_the_shop():
     async def build(conn):
-        shop = await Shop.make(conn, name="Automatic only")
+        shop = await make(conn, name="Automatic only")
         made = await crowd(shop, 30)
         for who in made[-10:]:
             await shop.message(who, NOW - timedelta(days=2), automatic=True)
@@ -219,23 +228,23 @@ def test_an_automatic_message_does_not_count_as_hearing_from_the_shop():
 
 def test_it_needs_thirty_who_spent_and_reads_only_the_modules_the_shop_has_on():
     async def build(conn):
-        twenty_nine = await Shop.make(conn, name="Twenty nine")
+        twenty_nine = await make(conn, name="Twenty nine")
         await crowd(twenty_nine, 29)
-        thirty = await Shop.make(conn, name="Thirty")
+        thirty = await make(conn, name="Thirty")
         await crowd(thirty, 30)
         # Thirty customers, but one has spent nothing (a visit to a service with no price).
-        free = await Shop.make(conn, name="One spent nothing")
+        free = await make(conn, name="One spent nothing")
         await conn.execute("update services set price = 0 where id = $1", free.service)
         await crowd(free, 29)
         await free.visit(await free.customer("Free"), day(10))
         # A shop without the orders module does not read its orders, and one without bookings
         # does not read its visits.
-        visits_only = await Shop.make(conn, modules=("bookings",), name="Visits only shop")
+        visits_only = await make(conn, modules=("bookings", "inbox"), name="Visits only shop")
         for i in range(1, 31):
             who = await visits_only.customer(f"Visitor {i}")
             await visits_only.visit(who, day(10 + i), price=1_000 + 10 * i)
             await visits_only.order(who, day(10 + i), total=5_000_000)
-        orders_only = await Shop.make(conn, modules=("orders",), name="Orders only shop")
+        orders_only = await make(conn, modules=("orders", "inbox"), name="Orders only shop")
         for i in range(1, 31):
             who = await orders_only.customer(f"Buyer {i}")
             await orders_only.order(who, day(10 + i), total=1_000 + 10 * i)
@@ -254,7 +263,7 @@ def test_it_needs_thirty_who_spent_and_reads_only_the_modules_the_shop_has_on():
 
 def test_staff_who_may_not_see_money_get_nothing_gathered_and_no_card():
     async def build(conn):
-        shop = await Shop.make(conn)
+        shop = await make(conn)
         await crowd(shop, 30)
         return [shop.tenant]
 
@@ -262,7 +271,7 @@ def test_staff_who_may_not_see_money_get_nothing_gathered_and_no_card():
     assert KEY in owner.extra
 
     async def same_shop_as_agent(conn):
-        shop = await Shop.make(conn, name="Agent reads")
+        shop = await make(conn, name="Agent reads")
         await crowd(shop, 30)
         return [shop.tenant]
 
