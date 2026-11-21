@@ -8,7 +8,7 @@ Last updated: 21 Nov 2026 (operator pass, checked against GitHub: merged pull re
 
 **Live today (21 Nov 2026)**
 
-- **App: v0.3.24**, commit `78b0b72a` (the merge of #310, workspace redesign wave 1), deployed by `deploy-gcp` on 21 Nov at 12:22 UTC; every job passed. Inferred from the tag and the run: not read from Cloud Run.
+- **App: v0.3.25**, commit `b3e09d04` (release cut of #311 the agent money fix and #312 the redesign wiring, opt-in `?ui=2`), deployed by `deploy-gcp` on 21 Nov, every job passed, tagged; the production smoke test passed. Before it: v0.3.24, commit `78b0b72a` (12:22 UTC). Inferred from the tag, the run and the smoke test: not read from Cloud Run.
 - **Merged, not deployed: #311** (an agent is no longer sent the shop's money), **#312** (the redesign wiring, `?ui=2`) and **#313 "Release v0.3.25"** (merged 21 Nov at 14:26 UTC as `b3e09d04`; there is no `v0.3.25` tag yet because the deploy creates it). Deploying is the founder's go (manual `deploy-gcp`, about 45 to 60 minutes door to door). For the first client's first fortnight, ship fixes only.
 - **Site: v0.3.21**, commit `2dcbe1d` (`/version.txt`), offer off, "Try it free" off.
 - **Meta:** business verification done 28 Oct; **App Review approved 16 Nov** (ALY-262, Done). **The app is not published, so Meta sends no production webhooks, and Embedded Signup is off** (`setup.sh es-on` not run). No real client number has ever been attached; the only live round trip is Meta's test number on 12 Oct. The approval state of the templates on the account a client would use is not known.
