@@ -6,6 +6,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 
 | # | Decision | Status |
 |---|---|---|
+| D-194 | A message that cannot go fails where the shop can see it: a template Meta has not approved is refused when queued, a message Meta refuses is failed at once in Meta's words, and a refused reminder or review request is not counted as sent | Accepted, 21 Nov 2026 |
 | D-001 | One deployable service (modular monolith) | Accepted |
 | D-002 | PostgreSQL with forced row-level security for tenant separation | Accepted |
 | D-003 | Plain SQL migrations, never edited after they are applied | Accepted |
@@ -2795,6 +2796,23 @@ The product's screens (the workspace, the back office, sign-in, sign-up and the 
 
 **Reserved.** Decisions D-180 to D-199 belong to the product UI redesign (rules, kit, tokens, areas). Migrations: none.
 
+## D-194 · A message that cannot go fails where the shop can see it
+
+**Date** 21 Nov 2026 · **Status** Accepted (a decision of the product lane for the first client; the founder reviews it with the pull request) · T6 of the first client's product audit · Builds on D-077 (jobs), spec 036 (the "Not sent" screen), spec 061 (templates per business), CLAUDE.md hard rule 5
+
+**Problem.** A message ALYR starts outside the customer's 24-hour window can go only as a template Meta has approved on the shop's account. Nothing checked that when the message was queued. It was tried six times in about two and a half minutes and then marked failed, while the booking was already stamped as reminded and the customer had already used up their 30 days of the review request. The only place the failure showed was `/app/unsent`, which no menu linked to. For a salon, whose customers book days ahead, most reminders and every review request go outside the window.
+
+**What was decided.**
+1. **The outbound layer asks first.** When a message must go as a template, `core/template_approval.py` looks at what Meta said about that template on the account of the number the customer talks to (`whatsapp_templates`, spec 061). A template with a status other than `approved`, or one the account does not have after its list was read in full, is recorded as blocked with the reason `template_not_approved` and is never queued. When nothing is known (a number with no account ID saved, or an account whose list was never read), the message goes as before: refusing on a guess would stop every message of a shop whose templates nobody has read. The simulator is never checked.
+2. **A refusal is not a send.** A booking whose reminder was refused is not marked as reminded. A review request whose message was refused, or failed after it was queued, does not count toward the customer's 30 days.
+3. **A message Meta refuses is failed at once.** A 4xx answer about the message itself (a template Meta does not have, a number it will not write to) is marked failed on the first try with Meta's own words; a rate limit, a busy Meta and a wrong or expired access token are still tried again.
+4. **"Not sent" is in the menu**, under the account group, for every member of staff, and says the new reason in both languages (the Arabic a draft until ALY-66). The reason can be sent again once Meta has approved the template.
+
+**Rejected.** *Refusing whenever a template is not listed as approved* (a shop whose templates were never read would send nothing). *Checking again when the job runs* (the queue time is where the reason can be shown against the message). *Putting "Not sent" among the products or the core group* (the phone's tab bar shows the first four and a salon's Bookings would drop off it).
+
+**Revisit when** templates are read automatically after a number is attached (T19), so that "nothing is known" stops being a normal state; or when an approved template can be sent from the inbox (T7).
+
+**Not covered.** A reminder that was let through and then failed at Meta after being queued still has its time stamped; the message is on the "Not sent" screen and can be sent again. A reminder refused for lack of consent (a booking made by staff for a customer who never wrote) is now unstamped and shown as not sent, but the consent question (D-142) is the founder's.
 ## D-192 · The owner is told about bookings
 
 **Date** 21 Nov 2026 · **Status** Accepted (the founder asked for the product to be ready for the first client, a Qatar salon; audit task T5) · Builds on D-079 (new-order alerts), D-065 (linking a staff number), D-064 (the owner's own test) · Spec `specs/069-owner-alerts` · Migration 0142

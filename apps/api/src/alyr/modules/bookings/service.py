@@ -1312,7 +1312,7 @@ class Reminders:
                 "where id = $1 and status = 'booked' and reminded_at is null "
                 "  and deposit_state in ('none', 'paid') "
                 "  and starts_at = $2::timestamptz and starts_at > now() "
-                "returning number, contact_id, service_name, starts_at, resource_id",
+                "returning id, number, contact_id, service_name, starts_at, resource_id",
                 UUID(payload["booking_id"]), datetime.fromisoformat(payload["starts_at"]),
             )
             if row is None:
@@ -1327,7 +1327,13 @@ class Reminders:
                 f"تذكير: حجزك رقم {row['number']} لدى {shop}، {when_with}." if arabic
                 else f"Reminder: booking {row['number']} at {shop}, {when_with}."
             )
-            await self._outbound.send(conn, templates.notice(
+            sent = await self._outbound.send(conn, templates.notice(
                 row["contact_id"], "booking_reminder", "ar" if arabic else "en", body,
                 row["number"], shop, when_with,
             ))
+            if sent.blocked:
+                # Refused (no template approved on the shop's account, no consent, stopped): the
+                # customer was not reminded, so the booking is not marked as reminded. The
+                # refusal is on the "Not sent" screen with its reason (D-194).
+                await conn.execute(
+                    "update bookings set reminded_at = null where id = $1", row["id"])

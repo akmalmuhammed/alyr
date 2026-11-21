@@ -167,4 +167,5 @@ export const BLOCK_REASON: Record<string, string> = {
   no_marketing_consent: "customer has not agreed to offers",
   window_closed: "more than 24 hours since their last message",
   billing_paused: "ALYR paused automatic messages until your payment is recorded",
+  template_not_approved: "WhatsApp has not approved this message's wording yet",
 };

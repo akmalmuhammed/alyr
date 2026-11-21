@@ -55,8 +55,12 @@ async def after_visit(
     # One decision per customer at a time, so two visits marked together send one message.
     await conn.execute("select pg_advisory_xact_lock(hashtext($1))", f"review:{contact_id}")
     if await conn.fetchval(
-        "select exists (select 1 from review_requests where contact_id = $1 "
-        "and blocked is null and sent_at > now() - $2::interval)",
+        "select exists (select 1 from review_requests r where r.contact_id = $1 "
+        "and r.blocked is null and r.sent_at > now() - $2::interval "
+        # a request whose message did not arrive (it failed after being queued) did not ask
+        # anyone, so it does not use up the customer's 30 days (D-194)
+        "and not exists (select 1 from messages m where m.id = r.message_id "
+        "                and m.status in ('failed', 'blocked')))",
         contact_id, EVERY,
     ):
         return None
