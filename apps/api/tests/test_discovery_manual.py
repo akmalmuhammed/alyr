@@ -824,3 +824,32 @@ def test_the_new_sentences_are_whole_in_both_languages_and_say_no_ai():
         assert re.search("[؀-ۿ]", pair[1]) and not re.search("[٠-٩]", pair[1])
     # the sample's wording is untouched
     assert "the next check-up looks again" in w.RULE_WORDS["hours_missing"]["what_happens"][0]
+
+
+# ── a page nobody ever answered does not read 100 for reviews (first-client audit T9) ─────
+
+
+def test_forty_reviews_and_no_reply_is_a_finding_and_not_a_hundred_for_reviews(staff, biz):
+    place = start(staff, biz)
+    reviews = [{"rating": 5, "posted_on": iso(10 + n), "replied": False} for n in range(20)]
+    record(staff, biz, place, seen(reviews=reviews))  # five stars each: no low review waits
+    done = run(staff, biz)
+    silent = by_rule(findings(biz.owner))["review_unanswered"][0]
+    shown = {e["label"]: e["value"] for e in silent["evidence"]}
+    assert shown == {
+        "Reviews over 7 days old that have a reply from the business": "0 of 20",
+        "The oldest, in days": "27",  # counted from the day it was seen, two days ago
+    }
+    ar = by_rule(findings(biz.owner, lang="ar"))["review_unanswered"][0]
+    assert "0 من 20" in {e["value"] for e in ar["evidence"]}
+    # the part reads what it counted: the rating passes, the answers do not
+    assert done["score_parts"]["reviews"]["value"] == 50
+    overview = biz.owner.get("/api/discovery/overview").json()
+    assert overview["score_parts"]["reviews"]["value"] == 50
+    names = {c["id"]: c["label"] for c in biz.owner.get("/api/discovery/checks").json()["rules"]}
+    assert names["review_unanswered"] == "Reviews answered"
+    # one reply, in a later look, and it passes
+    reviews[0]["replied"] = True
+    record(staff, biz, place, seen(observed_on=iso(0), reviews=reviews))
+    run(staff, biz)
+    assert "review_unanswered" not in by_rule(findings(biz.owner))

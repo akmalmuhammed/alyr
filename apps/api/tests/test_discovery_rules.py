@@ -286,6 +286,59 @@ def test_review_unanswered_is_not_measured_when_reviews_were_not_read():
     assert one("review_unanswered", LOC, reviews=[]).state == PASS
 
 
+# ── review_unanswered, the page nobody ever answered (first-client audit T9, D-169) ──────
+
+
+def test_review_unanswered_fires_when_ten_old_reviews_have_not_had_one_reply():
+    reviews = [review(5, 20 + n, n=n) for n in range(12)]  # five stars each: nothing low waits
+    got = one("review_unanswered", LOC, reviews=reviews)
+    assert got.state == FAIL
+    assert {e.label: e.value for e in got.evidence} == {
+        "replies_seen": "~of:0:12", "oldest_unanswered": "31"}
+
+
+def test_review_unanswered_does_not_fire_for_nine_for_one_reply_or_for_new_reviews():
+    nine = [review(5, 20 + n, n=n) for n in range(9)]
+    assert one("review_unanswered", LOC, reviews=nine).state == PASS
+    answered = [review(5, 20 + n, n=n) for n in range(11)] + [review(5, 25, replied=True, n=99)]
+    assert one("review_unanswered", LOC, reviews=answered).state == PASS
+    # reviews under a week old have not had the time to be answered: they are not counted
+    new = [review(5, 2 + n % 5, n=n) for n in range(15)]
+    assert one("review_unanswered", LOC, reviews=new).state == PASS
+    # ten that are old enough count, however many new ones there are beside them
+    mixed = [review(5, 20 + n, n=n) for n in range(10)] + new
+    assert one("review_unanswered", LOC, reviews=mixed).state == FAIL
+    nine_old = [review(5, 20 + n, n=n) for n in range(9)] + new
+    assert one("review_unanswered", LOC, reviews=nine_old).state == PASS
+
+
+def test_review_unanswered_says_both_when_low_reviews_wait_and_nobody_answered_anyone():
+    reviews = [review(r, 10 + n, n=n) for n, r in enumerate((1, 2, 3, 5, 5, 5, 5, 4, 5, 5, 5))]
+    got = one("review_unanswered", LOC, reviews=reviews)
+    assert got.state == FAIL
+    assert {e.label: e.value for e in got.evidence} == {
+        "unanswered_reviews": "3", "replies_seen": "~of:0:11", "oldest_unanswered": "20"}
+
+
+def test_a_page_with_forty_reviews_and_no_reply_does_not_read_100_for_reviews():
+    from alyr.modules.discovery import scoring
+
+    here = location()
+    reviews = [review(5, 10 + n, n=n) for n in range(40)]
+    outcomes = rules.evaluate(context((here, place(
+        here, lst=listing(rating=5.0, review_count=40), reviews=reviews))))
+    wanted = ("review_unanswered", "rating_low")
+    states = {o.rule_id: o.state for o in outcomes if o.rule_id in wanted}
+    assert states == {"review_unanswered": FAIL, "rating_low": PASS}
+    _, parts = scoring.score(outcomes)
+    assert parts["reviews"]["value"] == 50 and parts["reviews"]["measured"] is True
+    # one reply and the rule passes again, and so does the part
+    reviews[0] = review(5, 10, replied=True, n=0)
+    outcomes = rules.evaluate(context((here, place(
+        here, lst=listing(rating=5.0, review_count=40), reviews=reviews))))
+    assert scoring.score(outcomes)[1]["reviews"]["value"] == 100
+
+
 # ── rating_low ──────────────────────────────────────────────────────────────────────────
 
 

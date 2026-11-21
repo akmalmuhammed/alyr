@@ -243,15 +243,19 @@ RULE_WORDS: dict[str, dict[str, tuple[str, str]]] = {
         ),
     },
     "review_unanswered": {
-        "title": ("Low reviews are waiting for an answer", "مراجعات منخفضة التقييم تنتظر رداً"),
+        "title": ("Reviews are waiting for an answer", "مراجعات تنتظر رداً"),
         "rule": (
-            "3 or more reviews of 3 stars or fewer, older than 7 days, have no reply",
-            "3 مراجعات أو أكثر بتقييم 3 نجوم أو أقل، مضى عليها أكثر من 7 أيام، بلا رد",
+            "3 or more reviews of 3 stars or fewer, older than 7 days, have no reply, or 10 or "
+            "more reviews older than 7 days and not one of them has a reply",
+            "3 مراجعات أو أكثر بتقييم 3 نجوم أو أقل، مضى عليها أكثر من 7 أيام، بلا رد، أو "
+            "10 مراجعات أو أكثر مضى عليها أكثر من 7 أيام ولم يُرد على أي منها",
         ),
         "why": (
             "A reply shows the next customer that someone pays attention to what is written. "
-            "A complaint with no reply looks ignored.",
-            "الرد يُري العميل التالي أن أحداً يقرأ ما يُكتب. والشكوى بلا رد تبدو مهملة.",
+            "A complaint with no reply looks ignored, and so does a page where nothing has "
+            "ever been answered.",
+            "الرد يُري العميل التالي أن أحداً يقرأ ما يُكتب. والشكوى بلا رد تبدو مهملة، "
+            "وكذلك صفحة لم يُردّ فيها على شيء قط.",
         ),
         "what_happens": (
             "Nothing is sent for you. Mark it done after the replies are written; "
@@ -259,8 +263,8 @@ RULE_WORDS: dict[str, dict[str, tuple[str, str]]] = {
             "لا يُرسل شيء نيابةً عنك. علّمه منجزاً بعد كتابة الردود، وسيعدّ الفحص التالي من جديد.",
         ),
         "what_is_needed": (
-            "The owner or a manager writes a reply to each, on Google.",
-            "يكتب المالك أو المدير رداً على كل منها، على Google.",
+            "The owner or a manager writes replies on Google, starting with the lowest reviews.",
+            "يكتب المالك أو المدير ردوداً على Google، بدءاً بأقل المراجعات تقييماً.",
         ),
     },
     "rating_low": {
@@ -305,6 +309,10 @@ LABELS: dict[str, tuple[str, str]] = {
         "مراجعات بتقييم 3 نجوم أو أقل، مضى عليها أكثر من 7 أيام، بلا رد",
     ),
     "oldest_unanswered": ("The oldest, in days", "أقدمها، بالأيام"),
+    "replies_seen": (
+        "Reviews over 7 days old that have a reply from the business",
+        "مراجعات مضى عليها أكثر من 7 أيام ورد عليها النشاط",
+    ),
     "rating": ("Rating on the listing", "التقييم على صفحة Google"),
     "review_count": ("Reviews on the listing", "عدد المراجعات على صفحة Google"),
 }
@@ -352,7 +360,7 @@ CHECK_NAMES: dict[str, tuple[str, str]] = {
     "photos_few": ("5 photos or more", "5 صور أو أكثر"),
     "website_location_missing": ("On the website", "مذكور في الموقع الإلكتروني"),
     "whatsapp_link_missing": ("WhatsApp link", "رابط واتساب"),
-    "review_unanswered": ("Low reviews answered", "الرد على المراجعات المنخفضة"),
+    "review_unanswered": ("Reviews answered", "الرد على المراجعات"),
     "rating_low": ("Rating 4.0 or more", "التقييم 4.0 أو أكثر"),
 }
 
@@ -541,6 +549,9 @@ def day_list(keys: str, lang: str) -> str:
 
 
 def value_text(value: str, lang: str) -> str:
+    if value.startswith("~of:"):  # "0 of 12", «0 من 12»
+        part, whole = value[len("~of:") :].split(":")
+        return f"{part} {'من' if lang == 'ar' else 'of'} {whole}"
     if value.startswith("~days:"):
         return day_list(value[len("~days:") :], lang)
     if value in VALUES:
