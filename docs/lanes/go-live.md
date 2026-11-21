@@ -29,7 +29,8 @@ Last updated 31 Oct 2026 (Meta App Review submitted, ALY-262), on top of 30 Oct 
   pull request.** Jobs `api-shard 1..6` (whole test files by weight, each on its own runner and PostgreSQL), `api-image`
   (ruff, image build and `/health`, `pip-audit`) and `api`, still the required check, which fails unless every slice
   passed and together they ran every test once. The release gate is unchanged (it reads the whole `ci` run). Measured
-  timings and how to rebalance: `docs/runbooks/ci-shards.md`. Not applied until merged.
+  timings (about 48 min before, about 12.5 min with free runners) are in PR #318; how to rebalance: `docs/runbooks/ci-shards.md`.
+  Not applied until merged (PR #318).
 - **A shop's WhatsApp line is checked, tested, watched and, if it wants, connected by the shop itself (ALY-166 specs 060, 062,
   D-145, D-147; ALY-172 spec 061, D-146; ALY-39 spec 063, D-148, D-149), in pull requests.** `/ops` → WhatsApp lines (English and
   Arabic) lists every line, lets staff Check it against Meta (reads only) and send one test message to the shop's own staff,
@@ -99,9 +100,9 @@ Last updated 31 Oct 2026 (Meta App Review submitted, ALY-262), on top of 30 Oct 
   - **`pnpm site:*` commands**, with Wrangler, axe and Lighthouse pinned.
   - **For machines:** `llms.txt`, `llms-full.txt` and a markdown copy of each page.
 - **The `coverage` workflow runs nightly and on demand, not on every pull request or push (21 Nov 2026, release speed),
-  in a pull request.** It does not gate a release (the gate reads `ci.yml` only; branch protection never listed
+  merged as #317 at 15:56 UTC.** It does not gate a release (the gate reads `ci.yml` only; branch protection never listed
   `api-coverage`), so no check leaves the release path; it only stops competing with `ci` for runners. Floor still 93.
-  Not applied until merged; the first scheduled run is the night after the merge. See `docs/runbooks/release.md`.
+  The first scheduled run is the night of 21 to 22 Nov at 02:27 Doha (not yet seen). See `docs/runbooks/release.md`.
 - **Waiting on the founder (Needs Akmal):** the Cloudflare API token and account ID as
   GitHub secrets; the `production` environment with him as reviewer; version URLs on for
   `alyr-site`. The steps are in `docs/runbooks/site-deploy.md`, "One-time setup".
