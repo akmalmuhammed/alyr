@@ -54,7 +54,16 @@ class Insight:
     action: Action | None = None
     status: Text | None = None
     money: bool = False
+    # The card says something about what did or did not happen in chats or messages ("none of
+    # them has heard from you", "a chat nobody answered"). ALYR knows only its own messages, so
+    # it speaks only for a shop that has the inbox, whatever else its module list asks for: a
+    # shop that talks to its customers somewhere else has nothing here to say about them.
+    # `tests/test_agent_rules_chat_honesty.py` fails a rule that reads `messages` and does
+    # not say so.
+    chat: bool = False
 
 
 def applies(insight: Insight, modules: frozenset) -> bool:
+    if insight.chat and "inbox" not in modules:
+        return False
     return any(m in modules for m in insight.module.split("|"))

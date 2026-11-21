@@ -14,6 +14,9 @@ touch. One query over 90 days of orders and visits; the message check is one pro
 customer on `messages (tenant_id, contact_id, created_at)`.
 Information only: writing to them needs marketing consent, which ALYR does not collect yet.
 Money: the card shows the shop's takings, so managers only.
+Chat: "none has heard from you" is read from the messages ALYR holds, so it speaks only for a
+shop that has the inbox (`Insight.chat`); a shop that writes to its customers elsewhere would be
+told something it cannot know.
 """
 
 from datetime import timedelta
@@ -129,5 +132,5 @@ INSIGHT = Insight(
          "30 or more who spent",
          "أكثر 10 أنفقوا خلال 90 يوماً، ولم تُرسل لأي منهم رسالة خلال آخر 30 يوماً؛ "
          "30 ممن أنفقوا أو أكثر"),
-    _find, _say, status=INFO_ONLY, money=True,
+    _find, _say, status=INFO_ONLY, money=True, chat=True,
 )
