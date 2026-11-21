@@ -3,7 +3,8 @@
 // Today's workspace shell: the sidebar, the top bar, the phone tab bar, the search palette and
 // the page the open section draws. It holds no data of its own: `useWorkspace()` loads it, and the
 // section registry says which section draws the page. A second shell can render the same data.
-// Moved out of the shell page unchanged.
+// Moved out of the shell page unchanged. The workspace is loaded once by the page and handed in,
+// so moving between a section in the redesigned shell and one in this shell does not load it again.
 
 import Link from "next/link";
 import { Suspense } from "react";
@@ -15,11 +16,10 @@ import { T as DISCOVERY } from "./discoveryCopy";
 import { subItems } from "./discoveryLogic";
 import { findSection, sectionOpens } from "./sectionRegistry";
 import { Icon, Mark, initials } from "./shellParts";
-import { isReady, useWorkspace, type NavItem } from "./useWorkspace";
+import { isReady, type NavItem, type Workspace } from "./useWorkspace";
 import "./shell.css";
 
-export default function LegacyShell() {
-  const ws = useWorkspace();
+export default function LegacyShell({ ws }: { ws: Workspace }) {
   if (!isReady(ws)) {
     return <div className="sh-empty">{ws.offline ? ws.t.offline : ws.t.loading}</div>;
   }

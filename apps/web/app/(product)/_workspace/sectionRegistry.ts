@@ -32,11 +32,17 @@ export type SectionDef = {
   crumbUnder?: string;
   /** The component that draws it; lazy except Home, which most visits land on. */
   load: ComponentType<SectionProps>;
+  /** The redesigned screen of this section, drawn in `NewShell` when a visitor opts in with
+   * `?ui=2` (and then remembered on their device). `defaultUi` is what a visitor who never chose
+   * gets: it is 1 (the classic look) for every section until the founder flips it. `fill` is a
+   * screen that owns the whole page below the top bar (the Inbox's panes) instead of sitting in
+   * the padded column. */
+  v2?: { load: ComponentType<SectionProps>; defaultUi: 1 | 2; fill?: boolean };
 };
 
 export const SECTIONS: SectionDef[] = [
   { key: "home", route: "/app", depth: 0, gate: "always", load: HomeSection },
-  { key: "account", route: "/app/account", depth: 0, gate: "always", load: dynamic(() => import("./sections/AccountSection")) },
+  { key: "account", route: "/app/account", depth: 0, gate: "always", load: dynamic(() => import("./sections/AccountSection")), v2: { load: dynamic(() => import("./sections/v2/AccountV2Section")), defaultUi: 1 } },
   { key: "products", route: "/app/products", depth: 0, gate: "always", load: dynamic(() => import("./sections/ProductsSection")) },
   { key: "connections", route: "/app/connections", depth: 0, gate: "always", load: dynamic(() => import("./sections/ConnectionsSection")) },
   { key: "unsent", route: "/app/unsent", depth: 0, gate: "always", load: dynamic(() => import("./sections/NotSentSection")) },
@@ -45,11 +51,11 @@ export const SECTIONS: SectionDef[] = [
   { key: "catalog", route: "/app/catalog", depth: 0, gate: "nav", load: dynamic(() => import("./sections/CatalogSection")) },
   { key: "documents", route: "/app/documents", depth: 0, gate: "nav", load: dynamic(() => import("./sections/DocumentsSection")) },
   { key: "discovery", route: "/app/discovery", depth: 0, gate: "nav", load: dynamic(() => import("./sections/DiscoverySection")) },
-  { key: "inbox", route: "/app/inbox", depth: 0, gate: "nav", load: dynamic(() => import("./sections/InboxSection")) },
-  { key: "ledger", route: "/app/ledger", depth: 0, gate: "nav", load: dynamic(() => import("./sections/CreditSection")) },
-  { key: "orders", route: "/app/orders", depth: 0, gate: "nav", load: dynamic(() => import("./sections/OrdersSection")) },
+  { key: "inbox", route: "/app/inbox", depth: 0, gate: "nav", load: dynamic(() => import("./sections/InboxSection")), v2: { load: dynamic(() => import("./sections/v2/InboxV2Section")), defaultUi: 1, fill: true } },
+  { key: "ledger", route: "/app/ledger", depth: 0, gate: "nav", load: dynamic(() => import("./sections/CreditSection")), v2: { load: dynamic(() => import("./sections/v2/CreditV2Section")), defaultUi: 1 } },
+  { key: "orders", route: "/app/orders", depth: 0, gate: "nav", load: dynamic(() => import("./sections/OrdersSection")), v2: { load: dynamic(() => import("./sections/v2/OrdersV2Section")), defaultUi: 1 } },
   { key: "bookings", route: "/app/bookings", depth: 0, gate: "nav", load: dynamic(() => import("./sections/BookingsSection")) },
-  { key: "team", route: "/app/team", depth: 0, gate: "nav", load: dynamic(() => import("./sections/TeamSection")) },
+  { key: "team", route: "/app/team", depth: 0, gate: "nav", load: dynamic(() => import("./sections/TeamSection")), v2: { load: dynamic(() => import("./sections/v2/TeamV2Section")), defaultUi: 1 } },
 ];
 
 export function findSection(key: string): SectionDef | undefined {
@@ -66,4 +72,9 @@ export function sectionOpens(def: SectionDef, ws: ReadyWorkspace): boolean {
   if (def.gate === "nav") return ws.enabledScreens.has(def.key);
   if (def.gate === "documents") return ws.documentsOn;
   return true;
+}
+
+/** The redesigned screen of a section, when it has one. */
+export function v2Of(key: string): SectionDef["v2"] {
+  return findSection(key)?.v2;
 }
