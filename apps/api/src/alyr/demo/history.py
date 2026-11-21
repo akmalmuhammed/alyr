@@ -649,7 +649,7 @@ class Fortnight:
                 at += timedelta(minutes=rng.choice([0, 15, 30]))
                 busy = min(0.95, share * 55 / max((end_of_day - at).total_seconds() / 60, 1) * 1.6)
                 while True:
-                    service = rng.choices(services, [3, 2, 2, 1, 1][: len(services)])[0]
+                    service = rng.choices(services, ([3, 2, 2, 1, 1] + [1] * len(services))[: len(services)])[0]
                     ends = at + timedelta(minutes=service["minutes"])
                     if ends > end_of_day:
                         break
