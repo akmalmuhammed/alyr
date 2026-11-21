@@ -95,7 +95,7 @@ async def customer_context(
     staff: Staff = Depends(current_staff),
 ) -> dict:
     async with request.app.state.db.tenant(staff.tenant_id) as conn:
-        ctx = await listing.get_customer_context(conn, contact_id)
+        ctx = await listing.get_customer_context(conn, contact_id, staff.role)
     if ctx is None:
         raise HTTPException(status_code=404, detail="customer not found")
     return ctx

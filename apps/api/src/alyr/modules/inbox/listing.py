@@ -5,9 +5,29 @@ from uuid import UUID
 
 import asyncpg
 
+from alyr.core import team
 from alyr.modules.inbox import service
 
 _WINDOW = "coalesce(c.last_inbound_at > now() - interval '24 hours', false)"
+
+# Open conversations whose customer is waiting for a person: the last message that was not
+# refused is theirs, it is older than `team.WAITING_MINUTES` (the rule Home and the team page
+# use), and a typed reply can still go.
+_WAITING = (
+    "(c.inbox_status = 'open' and " + _WINDOW + " and exists (select 1 from ("
+    "select m.direction, m.created_at from messages m where m.contact_id = c.id "
+    "and coalesce(m.status, '') <> 'blocked' order by m.created_at desc limit 1) l "
+    "where l.direction = 'in' and l.created_at < now() - "
+    f"interval '{team.WAITING_MINUTES} minutes'))"
+)
+
+# Open conversations whose last message (ours) did not reach the customer.
+_NOT_DELIVERED = (
+    "(c.inbox_status = 'open' and exists (select 1 from ("
+    "select m.direction, m.status from messages m where m.contact_id = c.id "
+    "order by m.created_at desc limit 1) l "
+    "where l.direction = 'out' and l.status in ('failed', 'blocked')))"
+)
 
 
 async def get_inbox_counts(
@@ -55,14 +75,21 @@ async def get_inbox_counts(
         "and c.forgotten_at is null"
     ) or 0
 
-    # Waiting: open conversations where the last message was inbound and over 10 minutes ago
+    # Waiting, not delivered and window closed: the chips' counts, by the rules the chips filter by.
     waiting_count = await conn.fetchval(
-        "select count(*)::int from contacts c "
-        "join lateral (select direction, created_at from messages m "
-        "              where m.contact_id = c.id order by created_at desc limit 1) last on true "
-        "where c.role = 'customer' and c.last_inbound_at is not null and c.inbox_status = 'open' "
-        "and last.direction = 'in' and last.created_at < now() - interval '10 minutes' "
-        "and c.forgotten_at is null"
+        "select count(*)::int from contacts c where c.role = 'customer' "
+        "and c.last_inbound_at is not null "
+        f"and c.forgotten_at is null and {_WAITING}"
+    ) or 0
+    not_delivered_count = await conn.fetchval(
+        "select count(*)::int from contacts c where c.role = 'customer' "
+        "and c.last_inbound_at is not null "
+        f"and c.forgotten_at is null and {_NOT_DELIVERED}"
+    ) or 0
+    window_closed_count = await conn.fetchval(
+        "select count(*)::int from contacts c where c.role = 'customer' "
+        "and c.last_inbound_at is not null "
+        f"and c.inbox_status = 'open' and c.forgotten_at is null and not {_WINDOW}"
     ) or 0
 
     return {
@@ -72,6 +99,8 @@ async def get_inbox_counts(
         "mine": mine_count,
         "unread": unread_count,
         "waiting": waiting_count,
+        "not_delivered": not_delivered_count,
+        "window_closed": window_closed_count,
     }
 
 
@@ -114,6 +143,10 @@ async def list_conversations_filtered(
         where_parts.append(f"c.assigned_to = ${len(params)}")
     elif chip == "window_closed":
         where_parts.append("not " + _WINDOW)
+    elif chip == "waiting":
+        where_parts.append(_WAITING)
+    elif chip == "not_delivered":
+        where_parts.append(_NOT_DELIVERED)
 
     # Search query
     if q and q.strip():
@@ -141,7 +174,7 @@ async def list_conversations_filtered(
         "select c.id, c.name, c.phone, c.username, c.inbox_status, c.assistant_paused, "
         f"      c.consent_service, {_WINDOW} as window_open, "
         "       c.last_inbound_at + interval '24 hours' as window_closes_at, "
-        "       last.body, last.direction, last.kind, last.status, last.created_at, "
+        "       last.body, last.direction, last.kind, last.status, last.created_at, last.sent_by, "
         "       c.assigned_to, u.name as assignee_name, "
         "       case when c.last_in_message_at > coalesce(c.inbox_read_at, '-infinity') then "
         "         (select count(*) from messages m where m.contact_id = c.id "
@@ -150,7 +183,7 @@ async def list_conversations_filtered(
         "         else 0 end as unread "
         f"from contacts c "
         f"left join users u on u.id = c.assigned_to "
-        f"join lateral (select body, direction, kind, status, created_at from messages m "
+        f"join lateral (select body, direction, kind, status, created_at, sent_by from messages m "
         f"              where m.contact_id = c.id order by created_at desc limit 1) last on true "
         f"where {where_sql} "
         f"order by last.created_at desc limit ${limit_idx} offset ${offset_idx}"
@@ -176,6 +209,8 @@ async def list_conversations_filtered(
                 "kind": r["kind"],
                 "status": r["status"],
                 "created_at": service._iso(r["created_at"]),
+                # Who sent it: a person's name, or None for an automatic reply (`messages.sent_by`).
+                "sent_by": r["sent_by"] or None,
             },
         }
         for r in rows
@@ -183,11 +218,27 @@ async def list_conversations_filtered(
     return results, total
 
 
-async def get_customer_context(conn: asyncpg.Connection, contact_id: UUID) -> dict[str, Any] | None:
-    """Retrieve full customer context for the 3rd workbench pane."""
+# What a staff member with the agent role must not receive: the customer's totals (ui-rules
+# section 16). Per-order totals stay; the 12-month spend and the balance owed are aggregates, for
+# owners and admins.
+AGGREGATES = ("spent_12mo", "balance_owed")
+
+
+def for_role(context: dict[str, Any], role: str | None) -> dict[str, Any]:
+    """The customer context as `role` may see it. The agent role gets no aggregates in the
+    response at all: they are left out, not hidden by the screen. An unknown role is an agent."""
+    if role in ("owner", "admin"):
+        return context
+    return {key: value for key, value in context.items() if key not in AGGREGATES}
+
+
+async def get_customer_context(
+    conn: asyncpg.Connection, contact_id: UUID, role: str | None = "owner"
+) -> dict[str, Any] | None:
+    """Retrieve full customer context for the 3rd workbench pane, as `role` may see it."""
     contact = await conn.fetchrow(
         "select c.id, c.name, c.phone, c.username, c.created_at, c.consent_service, "
-        "       c.price_group_id, c.lang "
+        "       c.consent_marketing, c.price_group_id, c.lang "
         "from contacts c "
         "where c.id = $1 and c.role = 'customer' and c.forgotten_at is null",
         contact_id,
@@ -224,6 +275,13 @@ async def get_customer_context(conn: asyncpg.Connection, contact_id: UUID) -> di
         contact_id,
     )
 
+    # The customer's price group: their own, or the shop's default one, in its two names.
+    group = await conn.fetchrow(
+        "select name, name_ar from price_groups "
+        "where (id = $1 or ($1::uuid is null and is_default)) and archived_at is null limit 1",
+        contact["price_group_id"],
+    )
+
     # Credit balance from ledger if available
     credit_info = await conn.fetchrow(
         "select coalesce(sum(case when kind = 'sale' then amount "
@@ -234,7 +292,7 @@ async def get_customer_context(conn: asyncpg.Connection, contact_id: UUID) -> di
         contact_id,
     )
 
-    return {
+    context = {
         "id": str(contact["id"]),
         "name": contact["name"] or contact["phone"],
         "phone": contact["phone"],
@@ -242,7 +300,8 @@ async def get_customer_context(conn: asyncpg.Connection, contact_id: UUID) -> di
         "visits": orders_info["total_orders"] if orders_info else 0,
         "spent_12mo": orders_info["spent_12mo"] if orders_info else 0,
         "balance_owed": max(0, credit_info["balance"]) if credit_info else 0,
-        "price_group": "Standard",
+        "price_group": group["name"] if group else None,
+        "price_group_ar": group["name_ar"] if group else None,
         "lang": contact["lang"] or "ar",
         "orders": [
             {
@@ -265,6 +324,7 @@ async def get_customer_context(conn: asyncpg.Connection, contact_id: UUID) -> di
         } if next_booking else None,
         "consent": {
             "service": contact["consent_service"] or "agreed",
-            "marketing": "not_asked",
+            "marketing": contact["consent_marketing"] or "unknown",
         },
     }
+    return for_role(context, role)
