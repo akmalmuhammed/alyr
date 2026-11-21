@@ -1,455 +1,407 @@
 "use client";
 
-import React, { useEffect, useState, useTransition } from "react";
-import { Avatar, Button, Chip, Search, Tabs, UiIcon, useToast } from "../../../_ui";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Banner, Button, Icon, SkeletonRows, Workbench, useIsPhone, useToast, type WorkbenchPane } from "../../../_ui";
+import { ApiError, say } from "../../../_ui/api";
+import { formatTime, money } from "../../../_ui/format";
 import { copy, type Lang } from "./copy";
+import { FIXTURE_CONVERSATIONS, ME, NOW } from "./fixtures";
 import {
-  FIXTURE_CONVERSATIONS,
-  FIXTURE_THREAD_MARIAM,
-  FIXTURE_THREAD_RASHID,
-  FIXTURE_CONTEXT_MARIAM,
-  FIXTURE_CONTEXT_RASHID,
-  type MessageItem,
-  type CustomerContextData,
-} from "./fixtures";
-import {
-  closeConversation,
-  fetchConversations,
-  fetchCustomerContext,
-  fetchThread,
-  postNote,
-  postReply,
-  toggleAssistant,
+  fetchContext, fetchConversations, fetchSavedReplies, fetchShop, fetchTemplates, fetchThread,
+  postAssign, postAutomatic, postNote, postRead, postReply, postStatus, type Mode, type Shop,
 } from "./inboxApi";
-import { InboxCloseDialog } from "./InboxCloseDialog";
+import { InboxCloseDialog, type CloseDraft } from "./InboxCloseDialog";
 import { InboxClosedView } from "./InboxClosedView";
 import { InboxContextPane } from "./InboxContextPane";
 import { InboxConversationList } from "./InboxConversationList";
 import { InboxNotDelivered } from "./InboxNotDelivered";
-import {
-  InboxEmptyFirstRun,
-  InboxFilteredEmpty,
-  InboxOfflineBanner,
-  InboxSkeleton,
-} from "./InboxStates";
+import { InboxFirstRun, InboxOffline, InboxPick } from "./InboxStates";
 import { InboxThread } from "./InboxThread";
-import { InboxWindowClosed } from "./InboxWindowClosed";
-import type { ConversationItem, InboxFilters } from "./logic";
+import { type ConversationItem, type InboxCounts, type InboxFilters, type LostReason, type Outcome } from "./logic";
+import type { CustomerContext, Role, SavedReply, Template, ThreadItem } from "./types";
+import { useSoon } from "./useSoon";
 import "./inbox.css";
 
-export interface InboxWorkbenchProps {
-  initialFilters?: Partial<InboxFilters>;
-  initialSelectedId?: string;
+export type InboxView = "conversations" | "unsent" | "closed";
+
+export type InboxWorkbenchProps = {
   lang?: Lang;
+  /** Talk to the product's API. Off: the sample (Nuqta Car Care), which sends nothing anywhere. */
   live?: boolean;
-  stateOverride?: string | null;
-  dialogOverride?: string | null;
-  viewOverride?: string | null;
-  windowOverride?: string | null;
-  isPhone?: boolean;
-}
+  /** The role the screen is drawn for; the live screen reads it from the session. */
+  role?: Role;
+  /** The moment the screen draws. The sample pins it; the live screen reads the clock. */
+  now?: number;
+  view?: InboxView;
+  /** One state of the States frame: loading, empty, firstrun, offline. (A filtered list is `initialFilters.q`.) */
+  state?: string | null;
+  /** A dialog open on arrival: "close". */
+  dialog?: string | null;
+  initialFilters?: Partial<InboxFilters>;
+  initialSelectedId?: string | null;
+  /** The pane a phone starts on. */
+  initialPane?: WorkbenchPane;
+  /** Texts already typed in a conversation's box (the sample's drawing has one). */
+  drafts?: Record<string, string>;
+  closeInitial?: Partial<CloseDraft>;
+  /** The workspace's own sections that the pane links to. */
+  hrefs?: { credit: string; bookings: string; orders: string };
+};
+
+const HREFS = { credit: "/app/credit", bookings: "/app/bookings", orders: "/app/orders" };
+const LIVE_POLL = 10_000;
 
 export function InboxWorkbench({
-  initialFilters,
-  initialSelectedId = "rm-148",
-  lang = "en",
-  live = false,
-  stateOverride = null,
-  dialogOverride = null,
-  viewOverride = null,
-  windowOverride = null,
-  isPhone = false,
+  lang = "en", live = false, role: roleProp, now: nowProp, view: viewProp = "conversations", state = null, dialog = null,
+  initialFilters, initialSelectedId = "rm-148", initialPane = "list", drafts: draftsProp, closeInitial, hrefs = HREFS,
 }: InboxWorkbenchProps) {
   const t = copy(lang);
   const toast = useToast();
-  const [, startTransition] = useTransition();
+  const phone = useIsPhone();
+  const mode = useMemo<Mode>(() => ({ live }), [live]);
 
-  const [filters, setFilters] = useState<InboxFilters>({
-    tab: initialFilters?.tab || "open",
-    chip: initialFilters?.chip || null,
-    q: initialFilters?.q || "",
-  });
-
-  const [selectedId, setSelectedId] = useState<string>(
-    windowOverride === "closed" ? "ms-saleh" : initialSelectedId
-  );
-  const [conversations, setConversations] = useState<ConversationItem[]>(FIXTURE_CONVERSATIONS);
-  const [counts, setCounts] = useState({
-    open: 23,
-    closed: 142,
-    unassigned: 4,
-    mine: 6,
-    unread: 12,
-    waiting: 3,
-  });
-
-  const [messages, setMessages] = useState<MessageItem[]>(
-    selectedId === "ms-saleh" ? FIXTURE_THREAD_MARIAM : FIXTURE_THREAD_RASHID
-  );
-  const [customerCtx, setCustomerCtx] = useState<CustomerContextData>(
-    selectedId === "ms-saleh" ? FIXTURE_CONTEXT_MARIAM : FIXTURE_CONTEXT_RASHID
-  );
-
-  const [closeDialogOpen, setCloseDialogOpen] = useState(dialogOverride === "close");
-  const [phoneShowThread, setPhoneShowThread] = useState(
-    isPhone && (initialSelectedId || windowOverride) ? true : false
-  );
-
-  // Load data on change or in live mode
+  // The clock: pinned in the sample, the device's in the product (read after mount, so the server and client draw the same).
+  const [clock, setClock] = useState<number>(nowProp ?? (live ? 0 : NOW));
+  const readClock = useCallback(() => {
+    if (nowProp === undefined && live) setClock(Date.now());
+  }, [nowProp, live]);
+  useSoon(readClock);
   useEffect(() => {
-    let active = true;
-    async function load() {
-      try {
-        const res = await fetchConversations(filters, live);
-        if (active) {
-          setConversations(res.conversations);
-          setCounts(res.counts);
-        }
-      } catch {
-        // fallback
-      }
-    }
-    load();
-    return () => {
-      active = false;
-    };
-  }, [filters, live]);
+    if (nowProp !== undefined || !live) return;
+    const id = setInterval(() => setClock(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, [nowProp, live]);
+  const now = nowProp ?? clock;
 
+  const [view, setView] = useState<InboxView>(viewProp);
+  const [shop, setShop] = useState<Shop | null>(null);
+  const role: Role = roleProp ?? shop?.me.role ?? "owner";
+  const me = shop?.me ?? { ...ME, role: "owner" as Role };
+  const members = shop?.members ?? [];
+
+  // The list
+  const [filters, setFilters] = useState<InboxFilters>({ tab: initialFilters?.tab ?? "open", chip: initialFilters?.chip ?? null, q: initialFilters?.q ?? "" });
+  const [sample, setSample] = useState<ConversationItem[]>(() => FIXTURE_CONVERSATIONS.map((c) => ({ ...c })));
+  const [items, setItems] = useState<ConversationItem[]>([]);
+  const [counts, setCounts] = useState<InboxCounts>({ open: 0, closed: 0, waiting: 0, mine: 0, unassigned: 0, unread: 0 });
+  const [loadingList, setLoadingList] = useState(true);
+  const [listError, setListError] = useState(false);
+  const [offlineAt, setOfflineAt] = useState<number | null>(state === "offline" ? NOW : null);
+  const loadedAt = useRef<number>(now);
+
+  // The open conversation
+  const asWindowClosed = dialog === "close" || state === "window";
+  const [selectedId, setSelectedId] = useState<string | null>(asWindowClosed ? "ms-saleh" : initialSelectedId);
+  const [pane, setPane] = useState<WorkbenchPane>(initialPane);
+  const [thread, setThread] = useState<ThreadItem[]>([]);
+  const [threadCustomer, setThreadCustomer] = useState<ConversationItem | null>(null);
+  const [ctx, setCtx] = useState<CustomerContext | null>(null);
+  const [loadingThread, setLoadingThread] = useState(true);
+  const [threadError, setThreadError] = useState(false);
+  const [savedReplies, setSavedReplies] = useState<SavedReply[]>([]);
+  const [templates, setTemplates] = useState<Template[]>([]);
+
+  // What is being typed
+  const [drafts, setDrafts] = useState<Record<string, string>>(draftsProp ?? {});
+  const [modes, setModes] = useState<Record<string, "reply" | "note">>({});
+  const [sending, setSending] = useState(false);
+  // The States frame's "a reply that could not go": the sample draws it as a lost connection, the text kept in the box.
+  const [sendError, setSendError] = useState<string | null>(state === "notsent" ? `${t.couldNotReach} ${t.replyKept}` : null);
+  const [closeOpen, setCloseOpen] = useState(dialog === "close");
+  // Each time the dialog is opened it starts clean (nothing chosen, no note), whatever was typed in the last one.
+  const [closeRun, setCloseRun] = useState(0);
+
+  const forcedLoading = state === "loading";
+  const forcedEmpty = state === "empty";
+  const ready = now !== 0;
+
+  // ── loading ────────────────────────────────────────────────
+
+  const loadList = useCallback(async () => {
+    if (!ready) return;
+    try {
+      const answer = await fetchConversations(filters, mode, lang, now, sample);
+      setItems(answer.conversations);
+      setCounts(answer.counts);
+      setListError(false);
+      // The sample's offline frame stays offline: nothing there can come back.
+      if (state !== "offline") setOfflineAt(null);
+      loadedAt.current = now;
+    } catch (error) {
+      setListError(true);
+      if (error instanceof ApiError && error.code === "offline") setOfflineAt(loadedAt.current);
+    } finally {
+      setLoadingList(false);
+    }
+  }, [filters, mode, lang, now, sample, ready, state]);
+
+  useSoon(loadList);
+
+  const loadThread = useCallback(async (id: string) => {
+    try {
+      const [answer, context] = await Promise.all([fetchThread(id, mode), fetchContext(id, mode, role)]);
+      setThread(answer.items);
+      setThreadCustomer(answer.customer);
+      setCtx(context);
+      setThreadError(false);
+    } catch {
+      setThreadError(true);
+    } finally {
+      setLoadingThread(false);
+    }
+  }, [mode, role]);
+
+  const openThread = useCallback(() => {
+    if (!selectedId) return;
+    void loadThread(selectedId);
+    void postRead(selectedId, mode).catch(() => undefined);
+  }, [selectedId, loadThread, mode]);
+  useSoon(openThread);
+
+  const loadShop = useCallback(() => {
+    void fetchShop(mode).then(setShop).catch(() => undefined);
+    void fetchSavedReplies(mode).then(setSavedReplies).catch(() => undefined);
+    void fetchTemplates(mode).then(setTemplates).catch(() => undefined);
+  }, [mode]);
+  useSoon(loadShop);
+
+  // The product polls; the sample does not (nothing changes by itself in a drawing).
   useEffect(() => {
-    let active = true;
-    async function loadThread() {
-      try {
-        const [threadData, ctxData] = await Promise.all([
-          fetchThread(selectedId, live),
-          fetchCustomerContext(selectedId, live),
-        ]);
-        if (active) {
-          setMessages(threadData.messages);
-          setCustomerCtx(ctxData);
+    if (!live) return;
+    const id = setInterval(() => {
+      void loadList();
+      if (selectedId) void loadThread(selectedId);
+    }, LIVE_POLL);
+    return () => clearInterval(id);
+  }, [live, loadList, loadThread, selectedId]);
+
+  const current = items.find((c) => c.id === selectedId) ?? sample.find((c) => c.id === selectedId) ?? threadCustomer;
+  const draft = (selectedId && drafts[selectedId]) || "";
+  const typing = (selectedId && modes[selectedId]) || "reply";
+
+  // ── what a person does ─────────────────────────────────────
+
+  const patch = (id: string, change: Partial<ConversationItem>) => {
+    setSample((all) => all.map((c) => (c.id === id ? { ...c, ...change } : c)));
+    setItems((all) => all.map((c) => (c.id === id ? { ...c, ...change } : c)));
+  };
+
+  async function send() {
+    const id = selectedId;
+    const text = draft.trim();
+    if (!id || !text || sending) return;
+    setSending(true);
+    setSendError(null);
+    try {
+      if (typing === "note") {
+        await postNote(id, text, mode);
+        if (!mode.live) setThread((all) => [...all, { kind: "note", id: `n-${all.length}`, at: new Date(now).toISOString(), author: me.name, text }]);
+      } else {
+        const result = await postReply(id, text, mode);
+        if (result.blocked) {
+          setSendError(`${t.blockedReason(result.blocked)}. ${t.replyKept}`);
+          return;
         }
-      } catch {
-        // fallback
+        if (result.sample) {
+          // The sample sends nothing, so it never says it did: the bubble is marked as a preview.
+          setThread((all) => [...all, { kind: "message", id: `p-${all.length}`, at: new Date(now).toISOString(), direction: "out", by: me.name, text, delivery: { status: "preview" } }]);
+        }
       }
+      setDrafts((all) => ({ ...all, [id]: "" }));
+      if (mode.live) await loadThread(id);
+    } catch (error) {
+      setSendError(`${error instanceof ApiError && error.code === "offline" ? t.couldNotReach : say(error, lang)} ${t.replyKept}`.trim());
+    } finally {
+      setSending(false);
     }
-    loadThread();
-    return () => {
-      active = false;
-    };
-  }, [selectedId, live]);
-
-  // Active customer object
-  const activeCustomer =
-    conversations.find((c) => c.id === selectedId) ||
-    FIXTURE_CONVERSATIONS.find((c) => c.id === selectedId) ||
-    FIXTURE_CONVERSATIONS[4];
-
-  // Actions
-  const handleReply = async (text: string) => {
-    await postReply(selectedId, text, live);
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: `m-${Date.now()}`,
-        type: "message",
-        direction: "out",
-        sender: "You",
-        text,
-        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        status: "Sent",
-      },
-    ]);
-    toast.push({ text: t.btnReply, tone: "ok" });
-  };
-
-  const handleSaveNote = async (text: string) => {
-    await postNote(selectedId, text, live);
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: `n-${Date.now()}`,
-        type: "note",
-        sender: "You",
-        text,
-        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      },
-    ]);
-  };
-
-  const handleCloseConfirm = async (outcome: string, reason?: string, note?: string) => {
-    await closeConversation(selectedId, outcome, reason, note, live);
-    setConversations((prev) =>
-      prev.map((c) => (c.id === selectedId ? { ...c, status: "closed" } : c))
-    );
-  };
-
-  const handleToggleAssistant = async (paused: boolean) => {
-    await toggleAssistant(selectedId, paused, live);
-    setConversations((prev) =>
-      prev.map((c) => (c.id === selectedId ? { ...c, assistant_paused: paused } : c))
-    );
-  };
-
-  // State overrides
-  if (stateOverride === "loading") {
-    return <InboxSkeleton lang={lang} />;
-  }
-  if (stateOverride === "empty") {
-    return <InboxEmptyFirstRun lang={lang} />;
-  }
-  if (stateOverride === "filtered") {
-    return (
-      <div className="ibx-workbench">
-        <InboxConversationList
-          conversations={[]}
-          selectedId={null}
-          onSelect={() => {}}
-          filters={filters}
-          onFilterChange={(f) => setFilters((p) => ({ ...p, ...f }))}
-          counts={counts}
-          lang={lang}
-        />
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <InboxFilteredEmpty lang={lang} onClear={() => setFilters({ tab: "open", chip: null, q: "" })} />
-        </div>
-      </div>
-    );
   }
 
-  // Views: Not delivered (/unsent)
-  if (viewOverride === "unsent") {
+  async function assign(userId: string | null) {
+    const id = selectedId;
+    if (!id) return;
+    const who = members.find((m) => m.id === userId) ?? (userId === ME.id ? ME : null);
+    try {
+      await postAssign(id, userId, mode);
+      patch(id, { assigned: who ? { id: who.id, name: who.name } : null });
+    } catch (error) {
+      toast.push({ text: say(error, lang), tone: "bad" });
+    }
+  }
+
+  async function turnBackOn() {
+    const id = selectedId;
+    if (!id) return;
+    try {
+      await postAutomatic(id, false, mode);
+      patch(id, { assistant_paused: false });
+    } catch (error) {
+      toast.push({ text: say(error, lang), tone: "bad" });
+    }
+  }
+
+  async function closeConversation(outcome: Outcome, reason: LostReason | null, note: string) {
+    const id = selectedId;
+    if (!id || !current) return;
+    await postStatus(id, "closed", mode, outcome, reason ?? undefined);
+    if (note) await postNote(id, note, mode);
+    patch(id, { status: "closed" });
+    toast.push({ text: t.closedToast(current.name), tone: "ok" });
+    const next = (mode.live ? items : sample).find((c) => c.id !== id && c.status === "open");
+    select(next?.id ?? null);
+    setPane("list");
+    if (mode.live) void loadList();
+  }
+
+  /** Choose a conversation: its thread loads, a phone moves to it, and what a failed send said is forgotten. */
+  function select(id: string | null) {
+    if (id !== selectedId) {
+      setLoadingThread(Boolean(id));
+      setSendError(null);
+    }
+    setSelectedId(id);
+  }
+
+  function open(id: string) {
+    select(id);
+    setPane("main");
+    setView("conversations");
+  }
+
+  // ── pages that are not the three panes ─────────────────────
+
+  if (state === "firstrun") return <InboxFirstRun lang={lang} />;
+
+  if (view === "unsent") {
     return (
       <InboxNotDelivered
-        onRetry={async () => {
-          toast.push({ text: t.btnSendAgain, tone: "ok" });
-        }}
-        onOpenConversation={() => {
-          startTransition(() => {
-            setSelectedId("kn-ar");
-          });
-        }}
         lang={lang}
+        now={now}
+        mode={mode}
+        canSendTemplates={templates.length > 0}
+        onOpenConversation={open}
       />
     );
   }
 
-  // Views: Closed
-  if (viewOverride === "closed") {
+  if (view === "closed") {
     return (
       <InboxClosedView
-        onReopen={(phone) => {
-          toast.push({ text: `${t.btnReopen}: ${phone}`, tone: "ok" });
+        lang={lang}
+        now={now}
+        mode={mode}
+        role={role}
+        openCount={counts.open || sample.filter((c) => c.status === "open").length}
+        onOpenTab={() => setView("conversations")}
+        onUnavailable={() => {
+          setFilters((f) => ({ ...f, tab: "closed", chip: null }));
+          setView("conversations");
         }}
-        lang={lang}
       />
     );
   }
 
-  // Mobile view
-  if (isPhone) {
-    if (phoneShowThread) {
-      return (
-        <div style={{ maxWidth: "24.375rem", margin: "0 auto", background: "var(--surface)", border: "var(--rule-hairline) solid var(--line)" }}>
-          {/* Mobile Top Bar */}
-          <div style={{ height: "3rem", paddingInline: "var(--space-3)", display: "flex", alignItems: "center", gap: "var(--space-2)", borderBottom: "var(--rule-hairline) solid var(--line)" }}>
-            <Button kind="quiet" size="sm" onClick={() => setPhoneShowThread(false)}>
-              <UiIcon name="start" className="u-ico" />
-              <span>{t.backToInbox}</span>
-            </Button>
-            <span style={{ fontWeight: 600, fontSize: "var(--font-size-sm)" }}>{activeCustomer.name}</span>
-          </div>
+  // ── the three panes ────────────────────────────────────────
 
-          {/* Quick Customer Summary Strip */}
-          <div style={{ padding: "var(--space-2) var(--space-4)", background: "var(--surface-subtle)", borderBottom: "var(--rule-hairline) solid var(--line)", display: "flex", alignItems: "center", gap: "var(--space-2)", fontSize: "var(--font-size-xs)" }}>
-            <span style={{ color: "var(--text-muted)" }}>{t.owesTitle}</span>
-            <span style={{ fontFamily: "var(--font-ui-mono)", fontWeight: 600 }}>{customerCtx.owesAmount || t.nothingOwed}</span>
-            <span>·</span>
-            <span style={{ color: "var(--text-muted)" }}>{t.nextBookingTitle}</span>
-            <span style={{ fontFamily: "var(--font-ui-mono)", fontWeight: 600 }}>{customerCtx.booking ? "Sat 08:00" : "None"}</span>
-            <span>·</span>
-            <span style={{ color: "var(--text-muted)" }}>{t.ordersCount(customerCtx.orders.length)}</span>
-          </div>
+  const showItems = forcedEmpty ? [] : items;
+  const showCounts: InboxCounts = forcedEmpty
+    ? { open: 0, closed: counts.closed, waiting: 0, mine: 0, unassigned: 0, unread: 0, not_delivered: 0, window_closed: 0 }
+    : counts;
+  const loading = forcedLoading || loadingList || !ready;
 
-          <InboxThread
-            customer={activeCustomer}
-            messages={messages}
-            onReply={handleReply}
-            onSaveNote={handleSaveNote}
-            onCloseClick={() => setCloseDialogOpen(true)}
-            onToggleAssistant={handleToggleAssistant}
-            lang={lang}
-          />
-        </div>
-      );
-    }
+  const strip = ctx ? (
+    <button type="button" className="ibx-strip" aria-label={t.stripButton} onClick={() => setPane("context")}>
+      {ctx.balanceOwed ? (
+        <span><span className="ibx-muted">{t.strip.owes}</span> <b className="u-mono"><bdi>{money(ctx.balanceOwed, lang)}</bdi></b></span>
+      ) : null}
+      {ctx.nextBooking ? (
+        <span><span className="ibx-muted">{t.strip.next}</span> <b className="u-mono"><bdi>{formatTime(ctx.nextBooking.startsAt, lang)}</bdi></b></span>
+      ) : null}
+      {ctx.ordersTotal ? <span className="ibx-muted">{t.strip.orders(ctx.ordersTotal)}</span> : null}
+      <span className="ibx-strip-end">{t.strip.customer}<Icon name="right" /></span>
+    </button>
+  ) : null;
 
-    // Phone Inbox List
-    const waitingList = conversations.filter((c) => c.mark && c.mark[0] === "wait");
-    const otherList = conversations.filter((c) => !(c.mark && c.mark[0] === "wait"));
+  const main = forcedLoading ? (
+    <div className="ibx-mainload" aria-busy="true"><SkeletonRows rows={5} columns={2} label={t.states.loading} /></div>
+  ) : current && !forcedEmpty ? (
+    <InboxThread
+      customer={current}
+      items={thread}
+      lang={lang}
+      now={now}
+      members={members}
+      templates={templates}
+      savedReplies={savedReplies}
+      draft={draft}
+      onDraft={(text) => selectedId && setDrafts((all) => ({ ...all, [selectedId]: text }))}
+      mode={typing}
+      onMode={(next) => selectedId && setModes((all) => ({ ...all, [selectedId]: next }))}
+      onSend={() => void send()}
+      sending={sending}
+      sendError={sendError}
+      onAssign={(id) => void assign(id)}
+      onClose={() => { setCloseRun((n) => n + 1); setCloseOpen(true); }}
+      onTurnBackOn={() => void turnBackOn()}
+      onSendTemplate={() => toast.push({ text: t.templatePreviewNote })}
+      yieldVolt={closeOpen}
+      offline={offlineAt !== null}
+      phone={phone}
+      onBack={() => setPane("list")}
+      strip={strip}
+      loading={loadingThread}
+      writesIn={ctx?.writesIn}
+    />
+  ) : threadError ? (
+    <Banner tone="bad" action={<Button kind="quiet" size="xs" onClick={() => selectedId && void loadThread(selectedId)}>{t.states.tryNow}</Button>}>{t.states.loadError}</Banner>
+  ) : (
+    <InboxPick lang={lang} />
+  );
 
-    return (
-      <div style={{ maxWidth: "24.375rem", margin: "0 auto", background: "var(--surface)", border: "var(--rule-hairline) solid var(--line)" }}>
-        <div style={{ padding: "var(--space-3) var(--space-4)", borderBottom: "var(--rule-hairline) solid var(--line)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <Tabs
-              label={t.title}
-              items={[
-                { id: "open", label: t.tabOpen, count: counts.open },
-                { id: "closed", label: t.tabClosed },
-              ]}
-              value={filters.tab}
-              onChange={(val) => setFilters((p) => ({ ...p, tab: val as "open" | "closed" }))}
-            />
-            <span style={{ fontFamily: "var(--font-ui-mono)", fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>
-              {t.unreadCount(counts.unread)}
-            </span>
-          </div>
-
-          <Search
-            label={t.searchConversations}
-            placeholder={t.searchConversations}
-            value={filters.q || ""}
-            onChange={(val) => setFilters((p) => ({ ...p, q: val }))}
-          />
-
-          <div style={{ display: "flex", gap: "var(--space-1)", overflowX: "auto" }}>
-            <Chip on={filters.chip === "waiting"} count={counts.waiting} onClick={() => setFilters((p) => ({ ...p, chip: p.chip === "waiting" ? null : "waiting" }))}>
-              {t.chipWaiting}
-            </Chip>
-            <Chip on={filters.chip === "mine"} count={counts.mine} onClick={() => setFilters((p) => ({ ...p, chip: p.chip === "mine" ? null : "mine" }))}>
-              {t.chipMine}
-            </Chip>
-            <Chip on={filters.chip === "unassigned"} count={counts.unassigned} onClick={() => setFilters((p) => ({ ...p, chip: p.chip === "unassigned" ? null : "unassigned" }))}>
-              {t.chipUnassigned}
-            </Chip>
-          </div>
-        </div>
-
-        {/* Group 1: Waiting for a person */}
-        {waitingList.length > 0 && (
-          <div>
-            <div style={{ padding: "var(--space-2) var(--space-4)", background: "var(--surface-subtle)", fontSize: "var(--font-size-xs)", fontWeight: 600, color: "var(--text-muted)", display: "flex", justifyContent: "space-between" }}>
-              <span>{t.waitingForPersonGroup}</span>
-              <span style={{ fontFamily: "var(--font-ui-mono)" }}>3 · oldest 12 min</span>
-            </div>
-            {waitingList.map((item) => (
-              <div
-                key={item.id}
-                style={{ padding: "var(--space-3) var(--space-4)", borderBottom: "var(--rule-hairline) solid var(--line)", display: "flex", alignItems: "center", gap: "var(--space-3)", cursor: "pointer" }}
-                onClick={() => {
-                  setSelectedId(item.id);
-                  setPhoneShowThread(true);
-                }}
-              >
-                <Avatar name={item.name} size={40} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ fontWeight: 600, fontSize: "var(--font-size-sm)" }}>{item.name}</span>
-                    <span style={{ fontFamily: "var(--font-ui-mono)", fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>09:27</span>
-                  </div>
-                  <div style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {item.last.body}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Group 2: Answered or handled */}
-        <div>
-          <div style={{ padding: "var(--space-2) var(--space-4)", background: "var(--surface-subtle)", fontSize: "var(--font-size-xs)", fontWeight: 600, color: "var(--text-muted)", display: "flex", justifyContent: "space-between" }}>
-            <span>{t.answeredGroup}</span>
-            <span style={{ fontFamily: "var(--font-ui-mono)" }}>20</span>
-          </div>
-          {otherList.map((item) => (
-            <div
-              key={item.id}
-              style={{ padding: "var(--space-3) var(--space-4)", borderBottom: "var(--rule-hairline) solid var(--line)", display: "flex", alignItems: "center", gap: "var(--space-3)", cursor: "pointer" }}
-              onClick={() => {
-                setSelectedId(item.id);
-                setPhoneShowThread(true);
-              }}
-            >
-              <Avatar name={item.name} size={40} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ fontWeight: 600, fontSize: "var(--font-size-sm)" }}>{item.name}</span>
-                  <span style={{ fontFamily: "var(--font-ui-mono)", fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>09:38</span>
-                </div>
-                <div style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {item.last.body}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  // Desktop 3-pane workbench
   return (
-    <div style={{ width: "100%", display: "flex", flexDirection: "column" }}>
-      {stateOverride === "offline" && <InboxOfflineBanner lang={lang} time="09:40" />}
-
-      <div className="ibx-workbench">
-        {/* Pane 1: Conversation List */}
-        <InboxConversationList
-          conversations={conversations}
-          selectedId={selectedId}
-          onSelect={(id) => {
-            setSelectedId(id);
-          }}
-          filters={filters}
-          onFilterChange={(f) => setFilters((p) => ({ ...p, ...f }))}
-          counts={counts}
-          lang={lang}
+    <div className="ibx-frame">
+      {offlineAt !== null ? <InboxOffline lang={lang} time={formatTime(offlineAt, lang)} onRetry={() => void loadList()} /> : null}
+      <div className="ibx-wb">
+        <Workbench
+          pane={pane}
+          labels={{ list: t.listLabel, main: t.threadLabel, context: t.contextLabel }}
+          list={
+            <InboxConversationList
+              items={showItems}
+              selectedId={phone ? null : selectedId}
+              onSelect={open}
+              filters={filters}
+              onFilters={(next) => setFilters((f) => ({ ...f, ...next }))}
+              counts={showCounts}
+              lang={lang}
+              now={now}
+              loading={loading}
+              error={listError && offlineAt === null}
+              onRetry={() => void loadList()}
+              onSeeClosed={() => setFilters((f) => ({ ...f, tab: "closed", chip: null }))}
+              grouped={phone}
+            />
+          }
+          main={main}
+          context={
+            forcedEmpty || !selectedId ? undefined : (
+              <InboxContextPane data={ctx} lang={lang} now={now} loading={loadingThread || forcedLoading} hrefs={hrefs} onBack={phone ? () => setPane("main") : undefined} />
+            )
+          }
         />
-
-        {/* Pane 2: Message Thread OR Window Closed */}
-        {windowOverride === "closed" || selectedId === "ms-saleh" ? (
-          <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-            <InboxThread
-              customer={activeCustomer}
-              messages={messages}
-              onReply={handleReply}
-              onSaveNote={handleSaveNote}
-              onCloseClick={() => setCloseDialogOpen(true)}
-              onToggleAssistant={handleToggleAssistant}
-              lang={lang}
-            />
-            <InboxWindowClosed
-              customerName={activeCustomer.name}
-              onSendTemplate={(tpl) => {
-                toast.push({ text: `${t.btnSendTemplate}: ${tpl}`, tone: "ok" });
-              }}
-              lang={lang}
-            />
-          </div>
-        ) : (
-          <InboxThread
-            customer={activeCustomer}
-            messages={messages}
-            onReply={handleReply}
-            onSaveNote={handleSaveNote}
-            onCloseClick={() => setCloseDialogOpen(true)}
-            onToggleAssistant={handleToggleAssistant}
-            lang={lang}
-          />
-        )}
-
-        {/* Pane 3: Customer Context */}
-        <InboxContextPane data={customerCtx} lang={lang} />
       </div>
 
-      {/* Close Conversation Modal */}
-      <InboxCloseDialog
-        open={closeDialogOpen}
-        customerName={activeCustomer.name}
-        onClose={() => setCloseDialogOpen(false)}
-        onConfirm={handleCloseConfirm}
-        lang={lang}
-      />
+      {current ? (
+        <InboxCloseDialog
+          key={`${current.id}-${closeRun}`}
+          open={closeOpen}
+          customerName={current.name}
+          lang={lang}
+          onClose={() => setCloseOpen(false)}
+          onConfirm={closeConversation}
+          initial={dialog === "close" ? closeInitial : undefined}
+        />
+      ) : null}
     </div>
   );
 }
+

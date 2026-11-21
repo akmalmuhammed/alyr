@@ -1,193 +1,144 @@
 "use client";
 
-import React from "react";
-import { Avatar, Chip, Search, Status, Tabs } from "../../../_ui";
-import { formatTime } from "../../../_ui/format";
+import { Avatar, Banner, Button, Chip, Icon, Search, SkeletonRows, Status, Tabs } from "../../../_ui";
 import { copy, type Lang } from "./copy";
-import type { ConversationItem, InboxFilters } from "./logic";
+import { InboxFilteredEmpty, InboxNoOpen } from "./InboxStates";
+import { phoneGroups, pickText, rowMark, rowStamp, type Chip as ChipId, type ConversationItem, type InboxCounts, type InboxFilters } from "./logic";
 
-export interface InboxConversationListProps {
-  conversations: ConversationItem[];
+export type ListProps = {
+  items: readonly ConversationItem[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   filters: InboxFilters;
-  onFilterChange: (newFilters: Partial<InboxFilters>) => void;
-  counts: {
-    open: number;
-    closed: number;
-    unassigned: number;
-    mine: number;
-    unread: number;
-    waiting: number;
-  };
+  onFilters: (next: Partial<InboxFilters>) => void;
+  counts: InboxCounts;
   lang: Lang;
-}
+  now: number;
+  loading: boolean;
+  /** The list could not be loaded; what is shown is the last answer, if any. */
+  error: boolean;
+  onRetry: () => void;
+  onSeeClosed: () => void;
+  /** A thread was opened by a phone: the list is the first screen, so it shows its two groups. */
+  grouped?: boolean;
+};
 
-function formatSnippet(body: string, lang: Lang): string {
-  if (lang !== "ar") return body;
-  if (body.startsWith("Auto: Paid. Order 1039 is confirmed.")) {
-    return "رد تلقائي: تم الدفع. تم تأكيد الطلب 1039.";
-  }
-  if (body.startsWith("Auto: Booked. Full wash, Fri 17:00")) {
-    return "رد تلقائي: تم الحجز. غسيل كامل، الجمعة 17:00";
-  }
-  if (body.startsWith("Auto: Ceramic coating is QAR 1,200")) {
-    return "رد تلقائي: طلاء سيراميك 1,200\u00a0ر.ق. المتاح السبت 08:00 أو 14:00.";
-  }
-  if (body.startsWith("Auto: We are open")) {
-    return "رد تلقائي: أوقات العمل السبت–الخميس 08:00–22:00، الجمعة 13:00–22:00.";
-  }
-  if (body.startsWith("Auto: Sent payment link for QAR 300.")) {
-    return "رد تلقائي: تم إرسال رابط الدفع بمبلغ 300\u00a0ر.ق.";
-  }
-  if (body.startsWith("Auto: ")) {
-    return body.replace("Auto: ", "رد تلقائي: ");
-  }
-  return body;
-}
+const CHIPS: { id: ChipId; key: "chipWaiting" | "chipMine" | "chipUnassigned" | "chipNotDelivered" | "chipWindowClosed"; count: (c: InboxCounts) => number | undefined }[] = [
+  { id: "waiting", key: "chipWaiting", count: (c) => c.waiting },
+  { id: "mine", key: "chipMine", count: (c) => c.mine },
+  { id: "unassigned", key: "chipUnassigned", count: (c) => c.unassigned },
+  { id: "not_delivered", key: "chipNotDelivered", count: (c) => c.not_delivered },
+  { id: "window_closed", key: "chipWindowClosed", count: (c) => c.window_closed },
+];
 
-export function InboxConversationList({
-  conversations,
-  selectedId,
-  onSelect,
-  filters,
-  onFilterChange,
-  counts,
-  lang,
-}: InboxConversationListProps) {
+function Row({ item, selected, onSelect, lang, now }: { item: ConversationItem; selected: boolean; onSelect: (id: string) => void; lang: Lang; now: number }) {
   const t = copy(lang);
+  const mark = rowMark(item, now);
+  const words = pickText(item.last.body, lang);
+  const automatic = item.last.direction === "out" && item.last.by === "auto";
+  const snippet = automatic ? `${t.autoPrefix}: ${words}` : item.last.direction === "out" && item.last.by ? `${item.last.by}: ${words}` : words;
+  const who = item.assigned ? item.assigned.name : automatic ? t.automaticReplies : t.nobodyYet;
+  return (
+    <li>
+      <button type="button" className="ibx-row" aria-current={selected ? "true" : undefined} onClick={() => onSelect(item.id)}>
+        <Avatar name={item.name} size={36} />
+        <span className="ibx-row-main">
+          <span className="ibx-row-top">
+            <span className="ibx-row-name"><bdi>{item.name}</bdi></span>
+            <span className="ibx-row-time u-mono"><bdi>{rowStamp(item.last.created_at, lang, now)}</bdi></span>
+          </span>
+          <span className="ibx-row-snip">
+            <span className={item.unread > 0 ? "ibx-row-text ibx-row-text--unread" : "ibx-row-text"} dir="auto">{snippet}</span>
+            {item.unread > 0 ? <span className="ibx-badge u-mono" aria-label={t.unreadBadge(item.unread)}>{item.unread}</span> : null}
+          </span>
+          <span className="ibx-row-bot">
+            <span className="ibx-row-who">{who}</span>
+            {mark?.kind === "waiting" ? <Status tone="warn">{t.waitingFor(mark.minutes)}</Status> : null}
+            {mark?.kind === "not_delivered" ? <Status tone="bad">{t.rowNotDelivered}</Status> : null}
+            {mark?.kind === "template_only" ? (
+              <span className="ibx-lock"><Icon name="lock" />{t.templateOnly}</span>
+            ) : null}
+          </span>
+        </span>
+      </button>
+    </li>
+  );
+}
 
-  const tabItems = [
-    { id: "open", label: t.tabOpen, count: counts.open },
-    { id: "closed", label: t.tabClosed },
-  ];
+export function InboxConversationList(props: ListProps) {
+  const { items, selectedId, onSelect, filters, onFilters, counts, lang, now, loading, error, onRetry, onSeeClosed, grouped } = props;
+  const t = copy(lang);
+  const q = filters.q ?? "";
+  const filtered = Boolean(filters.chip) || q.trim() !== "";
+  const groups = grouped ? phoneGroups(items, now) : null;
+  const rows = (list: readonly ConversationItem[]) => (
+    <ul className="ibx-rowlist">
+      {list.map((item) => <Row key={item.id} item={item} selected={item.id === selectedId} onSelect={onSelect} lang={lang} now={now} />)}
+    </ul>
+  );
 
   return (
-    <aside className="ibx-pane-list" aria-label={t.title}>
-      {/* Header */}
-      <div className="ibx-list-header">
-        <h1 className="ibx-list-title">{t.title}</h1>
-        {counts.unread > 0 && (
-          <span className="ibx-list-unread">{t.unreadCount(counts.unread)}</span>
-        )}
-        <div style={{ marginInlineStart: "auto" }}>
-          <Tabs
-            label={t.title}
-            items={tabItems}
-            value={filters.tab}
-            onChange={(val) => onFilterChange({ tab: val as "open" | "closed" })}
-          />
-        </div>
-      </div>
+    <div className="ibx-list">
+      <header className="ibx-list-head">
+        <h1 className="ibx-title">{t.title}</h1>
+        {counts.unread > 0 ? <span className="ibx-unread u-mono" aria-live="polite">{t.unreadCount(counts.unread)}</span> : null}
+        <Tabs
+          className="ibx-tabs"
+          label={t.tabsLabel}
+          items={[{ id: "open", label: t.tabOpen, count: counts.open }, { id: "closed", label: t.tabClosed }]}
+          value={filters.tab}
+          onChange={(id) => onFilters({ tab: id as "open" | "closed", chip: null })}
+        />
+      </header>
 
-      {/* Toolbar: Search & Chips */}
-      <div className="ibx-list-tools">
+      <div className="ibx-tools">
         <Search
           label={t.searchConversations}
           placeholder={t.searchConversations}
-          value={filters.q || ""}
-          onChange={(val) => onFilterChange({ q: val })}
+          clearLabel={t.clearSearch}
+          value={q}
+          onChange={(value) => onFilters({ q: value })}
         />
-
-        <div className="ibx-chips-row">
-          <Chip
-            on={filters.chip === "waiting"}
-            count={counts.waiting > 0 ? counts.waiting : undefined}
-            onClick={() => onFilterChange({ chip: filters.chip === "waiting" ? null : "waiting" })}
-          >
-            {t.chipWaiting}
-          </Chip>
-          <Chip
-            on={filters.chip === "mine"}
-            count={counts.mine > 0 ? counts.mine : undefined}
-            onClick={() => onFilterChange({ chip: filters.chip === "mine" ? null : "mine" })}
-          >
-            {t.chipMine}
-          </Chip>
-          <Chip
-            on={filters.chip === "unassigned"}
-            count={counts.unassigned > 0 ? counts.unassigned : undefined}
-            onClick={() => onFilterChange({ chip: filters.chip === "unassigned" ? null : "unassigned" })}
-          >
-            {t.chipUnassigned}
-          </Chip>
+        <div className="ibx-chips" role="group" aria-label={t.chipsLabel}>
+          {CHIPS.map((chip) => (
+            <Chip key={chip.id} on={filters.chip === chip.id} count={chip.count(counts)} onClick={() => onFilters({ chip: filters.chip === chip.id ? null : chip.id })}>
+              {t[chip.key]}
+            </Chip>
+          ))}
         </div>
       </div>
 
-      {/* Conversations Scrollable List */}
-      <div className="ibx-list-scroll" role="list">
-        {conversations.map((item) => {
-          const isSelected = item.id === selectedId;
-          const handlerName = item.assigned
-            ? item.assigned.name === "Automatic replies"
-              ? t.automaticReplies
-              : item.assigned.name
-            : t.nobodyYet;
+      {error ? (
+        <Banner tone="bad" action={<Button kind="quiet" size="xs" onClick={onRetry}>{t.states.tryNow}</Button>}>{t.states.loadError}</Banner>
+      ) : null}
 
-          return (
-            <div
-              key={item.id}
-              role="listitem"
-              tabIndex={0}
-              className={`ibx-row ${isSelected ? "ibx-row--active" : ""}`}
-              onClick={() => onSelect(item.id)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onSelect(item.id);
-                }
-              }}
-            >
-              <Avatar name={item.name} size={36} />
-
-              <div className="ibx-row-main">
-                <div className="ibx-row-line1">
-                  <span className="ibx-row-name">{item.name}</span>
-                  <span className="ibx-row-time">
-                    {formatTime(item.last.created_at, lang)}
-                  </span>
-                </div>
-
-                <div className="ibx-row-line2">
-                  <span
-                    className={`ibx-row-snippet ${
-                      item.unread > 0 ? "ibx-row-snippet--unread" : ""
-                    }`}
-                  >
-                    {formatSnippet(item.last.body, lang)}
-                  </span>
-                  {item.unread > 0 && (
-                    <span className="ibx-row-badge">{item.unread}</span>
-                  )}
-                </div>
-
-                <div className="ibx-row-line3">
-                  <span className="ibx-row-who">{handlerName}</span>
-                  {item.mark && (
-                    <Status
-                      tone={
-                        item.mark[0] === "wait"
-                          ? "warn"
-                          : item.mark[0] === "bad"
-                          ? "bad"
-                          : "n"
-                      }
-                    >
-                      {lang === "ar"
-                        ? item.mark[1] === "Not delivered"
-                          ? "لم تُسلَّم"
-                          : item.mark[1] === "12 min"
-                          ? "12 د"
-                          : item.mark[1]
-                        : item.mark[1]}
-                    </Status>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+      <div className="ibx-rows">
+        {loading ? (
+          <SkeletonRows rows={8} columns={3} label={t.states.loading} />
+        ) : items.length === 0 ? (
+          filtered ? (
+            <InboxFilteredEmpty lang={lang} query={q} onClear={() => onFilters({ chip: null, q: "" })} />
+          ) : filters.tab === "open" ? (
+            <InboxNoOpen lang={lang} onSeeClosed={onSeeClosed} />
+          ) : (
+            <InboxNoOpen lang={lang} onSeeClosed={onSeeClosed} closed />
+          )
+        ) : groups ? (
+          <>
+            {groups.waiting.length > 0 ? (
+              <>
+                <p className="u-label ibx-group">{t.phoneWaitingGroup(groups.waiting.length, groups.oldest)}</p>
+                {rows(groups.waiting)}
+              </>
+            ) : null}
+            <p className="u-label ibx-group">{t.phoneRestGroup(groups.rest.length)}</p>
+            {rows(groups.rest)}
+          </>
+        ) : (
+          rows(items)
+        )}
       </div>
-    </aside>
+    </div>
   );
 }
+

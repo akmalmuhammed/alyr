@@ -1,151 +1,101 @@
 "use client";
 
-import React, { useState } from "react";
-import { Button, Chip, Modal, Panel, Radio, UiIcon } from "../../../_ui";
+import { useState } from "react";
+import { Banner, Button, Chip, Field, FormSection, Icon, Modal, Radio, Textarea } from "../../../_ui";
 import { copy, type Lang } from "./copy";
+import { LOST_REASONS, OUTCOMES, type LostReason, type Outcome } from "./logic";
 
-export interface InboxCloseDialogProps {
+export type CloseDraft = { outcome: Outcome | null; reason: LostReason | null; note: string };
+
+export type CloseDialogProps = {
   open: boolean;
   customerName: string;
-  onClose: () => void;
-  onConfirm: (outcome: string, reason?: string, note?: string) => Promise<void>;
   lang: Lang;
-}
+  onClose: () => void;
+  /** Saves how it ended. A refusal throws; the dialog stays open and says nothing changed. */
+  onConfirm: (outcome: Outcome, reason: LostReason | null, note: string) => Promise<void>;
+  /** The dialog opens with this chosen (the sample's drawing); a person opens it with nothing chosen. */
+  initial?: Partial<CloseDraft>;
+};
 
-export function InboxCloseDialog({
-  open,
-  customerName,
-  onClose,
-  onConfirm,
-  lang,
-}: InboxCloseDialogProps) {
+/**
+ * "How did it end?" The outcome is what the Closed screen counts, so it is asked for; the reason is asked only
+ * for a lost customer and is optional. The words in the sentence are the ids the API takes (`sold`, `no_reply`),
+ * never the labels on screen. The Volt button is the one main action while the dialog is up.
+ */
+export function InboxCloseDialog({ open, customerName, lang, onClose, onConfirm, initial }: CloseDialogProps) {
   const t = copy(lang);
-  const [outcome, setOutcome] = useState("lost");
-  const [reason, setReason] = useState("Stopped replying");
-  const [note, setNote] = useState("");
+  const [draft, setDraft] = useState<CloseDraft>({ outcome: initial?.outcome ?? null, reason: initial?.reason ?? null, note: initial?.note ?? "" });
   const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const first = customerName.split(" ")[0];
 
-  if (!open) return null;
-
-  const outcomes = [
-    { id: "sold", label: t.outcomeSold, sub: t.outcomeSoldSub },
-    { id: "booked", label: t.outcomeBooked, sub: t.outcomeBookedSub },
-    { id: "answered", label: t.outcomeAnswered, sub: t.outcomeAnsweredSub },
-    { id: "lost", label: t.outcomeLost, sub: t.outcomeLostSub },
-  ];
-
-  const reasons = [
-    t.reasonPrice,
-    t.reasonNotAvailable,
-    t.reasonStoppedReplying,
-    t.reasonWentElsewhere,
-    t.reasonOther,
-  ];
-
-  const handleSubmit = async () => {
+  async function submit() {
+    if (!draft.outcome || busy) return;
     setBusy(true);
+    setFailed(false);
     try {
-      await onConfirm(outcome, outcome === "lost" ? reason : undefined, note);
+      await onConfirm(draft.outcome, draft.outcome === "lost" ? draft.reason : null, draft.note.trim());
       onClose();
+    } catch {
+      setFailed(true);
     } finally {
       setBusy(false);
     }
-  };
+  }
 
   return (
     <Modal
-      title={t.closeDialogTitle(customerName)}
       open={open}
       onClose={onClose}
-      closeLabel={lang === "ar" ? "إغلاق" : "Close"}
+      title={t.closeTitle(customerName)}
+      closeLabel={t.dialogClose}
       footer={
         <>
-          <Button kind="quiet" onClick={onClose} disabled={busy}>
-            {t.btnKeepOpen}
-          </Button>
-          <Button kind="volt" onClick={handleSubmit} loading={busy}>
-            {t.btnCloseConversation}
-          </Button>
+          <Button kind="quiet" onClick={onClose} disabled={busy}>{t.keepOpen}</Button>
+          <Button kind="volt" disabled={!draft.outcome} loading={busy} loadingLabel={t.closing} onClick={submit}>{t.closeConversation}</Button>
         </>
       }
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-        {/* How did it end? */}
-        <div>
-          <label style={{ display: "block", marginBottom: "var(--space-2)", fontSize: "var(--font-size-sm)", fontWeight: 600 }}>
-            {t.howDidItEnd}
-          </label>
-          <Panel>
-            {outcomes.map((o) => {
-              const isSelected = outcome === o.id;
-              return (
-                <div
-                  key={o.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-3)",
-                    padding: "var(--space-3) var(--space-4)",
-                    borderBottom: "var(--rule-hairline) solid var(--line)",
-                    background: isSelected ? "var(--surface-subtle)" : "transparent",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => setOutcome(o.id)}
-                >
-                  <Radio checked={isSelected} onChange={() => setOutcome(o.id)} />
-                  <span style={{ inlineSize: "5rem", fontSize: "var(--font-size-sm)", fontWeight: 600 }}>
-                    {o.label}
-                  </span>
-                  <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>
-                    {o.sub}
-                  </span>
-                </div>
-              );
-            })}
-          </Panel>
-        </div>
+      <div className="ibx-close">
+        {failed ? <Banner tone="bad">{t.closeFailed}</Banner> : null}
 
-        {/* Why was it lost? (Conditional) */}
-        {outcome === "lost" && (
-          <div>
-            <label style={{ display: "block", marginBottom: "var(--space-2)", fontSize: "var(--font-size-sm)", fontWeight: 600 }}>
-              {t.whyWasItLost}
-            </label>
-            <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
-              {reasons.map((r) => (
-                <Chip
-                  key={r}
-                  on={reason === r}
-                  onClick={() => setReason(r)}
-                >
-                  {r}
+        <FormSection label={t.howDidItEnd}>
+          <div className="ibx-outcomes">
+            {OUTCOMES.map((id) => (
+              <Radio
+                key={id}
+                name="ibx-outcome"
+                className="ibx-outcome"
+                checked={draft.outcome === id}
+                onChange={() => setDraft((d) => ({ ...d, outcome: id, reason: id === "lost" ? d.reason : null }))}
+              >
+                <span className="ibx-opt ibx-opt--row">
+                  <span className="ibx-opt-name">{t.outcomes[id].label}</span>
+                  <span className="ibx-opt-sub">{t.outcomes[id].sub}</span>
+                </span>
+              </Radio>
+            ))}
+          </div>
+        </FormSection>
+
+        {draft.outcome === "lost" ? (
+          <FormSection label={t.whyLost}>
+            <div className="ibx-reasons">
+              {LOST_REASONS.map((id) => (
+                <Chip key={id} on={draft.reason === id} onClick={() => setDraft((d) => ({ ...d, reason: d.reason === id ? null : id }))}>
+                  {t.reasons[id]}
                 </Chip>
               ))}
             </div>
-          </div>
-        )}
+          </FormSection>
+        ) : null}
 
-        {/* Note for the team */}
-        <div>
-          <label style={{ display: "block", marginBottom: "var(--space-1)", fontSize: "var(--font-size-sm)", fontWeight: 600 }}>
-            {t.noteForTeam}
-          </label>
-          <textarea
-            className="ibx-composer-box"
-            rows={2}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            style={{ inlineSize: "100%" }}
-          />
-        </div>
+        <Field label={t.noteForTeam}>
+          <Textarea rows={2} value={draft.note} onChange={(e) => setDraft((d) => ({ ...d, note: e.target.value }))} />
+        </Field>
 
-        {/* Info Note */}
-        <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-2)", padding: "var(--space-2) var(--space-3)", background: "var(--surface-subtle)", borderRadius: "var(--radius-sm)" }}>
-          <UiIcon name="info" className="u-ico" style={{ color: "var(--text-muted)", marginTop: "0.125rem" }} />
-          <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)", lineHeight: 1.4 }}>
-            {t.closeDialogInfo}
-          </span>
-        </div>
+        <p className="ibx-close-info"><Icon name="info" />{t.closeInfo(first)}</p>
       </div>
     </Modal>
   );

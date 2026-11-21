@@ -1,220 +1,218 @@
 "use client";
 
-import React, { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
-  Chip,
-  KV,
-  KVList,
-  Meter,
-  PageTitle,
-  Panel,
-  PanelFooter,
-  PanelHeader,
-  Search,
-  Status,
-  Table,
-  type TableColumn,
+  Band, BandItem, Banner, Button, Chip, Empty, KV, KVList, Meter, PageTitle, Panel, PanelFooter, PanelHeader, Search, SkeletonRows, Spark,
+  Status, Table, Tabs, useToast, type TableColumn,
 } from "../../../_ui";
+import { formatDate, formatTime, money } from "../../../_ui/format";
 import { copy, type Lang } from "./copy";
-import { FIXTURE_CLOSED } from "./fixtures";
+import { useSoon } from "./useSoon";
+import { fetchClosed, type Mode } from "./inboxApi";
+import { dayKey, pickText } from "./logic";
+import type { ClosedData, ClosedRow, Role } from "./types";
 
-export interface InboxClosedViewProps {
-  onReopen: (customerPhone: string) => void;
+export type ClosedViewProps = {
   lang: Lang;
-}
+  now: number;
+  mode: Mode;
+  role: Role;
+  openCount: number;
+  /** Back to the conversations (the "Open" tab). */
+  onOpenTab: () => void;
+  /** Nothing to count in this mode: the screen falls back to the closed list. */
+  onUnavailable: () => void;
+};
 
-export function InboxClosedView({ onReopen, lang }: InboxClosedViewProps) {
+const TONE = { sold: "ok", booked: "ok", answered: "n", lost: "bad" } as const;
+type Series = "total" | "sold" | "booked" | "answered" | "lost";
+
+export function InboxClosedView({ lang, now, mode, role, openCount, onOpenTab, onUnavailable }: ClosedViewProps) {
   const t = copy(lang);
-  const [outcomeFilter, setOutcomeFilter] = useState("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const data = FIXTURE_CLOSED;
+  const c = t.closed;
+  const toast = useToast();
+  const [data, setData] = useState<ClosedData | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [outcome, setOutcome] = useState<"all" | ClosedRow["outcome"]>("all");
+  const [query, setQuery] = useState("");
+  const [picked, setPicked] = useState<string | null>(null);
 
-  const filteredRows = data.rows.filter((r) => {
-    if (outcomeFilter !== "all" && r.outcome.toLowerCase() !== outcomeFilter.toLowerCase()) return false;
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      if (!r.customer.toLowerCase().includes(q) && !r.phone.includes(q)) return false;
+  const load = useCallback(async () => {
+    try {
+      const answer = await fetchClosed(mode, role);
+      if (answer === null) onUnavailable();
+      else setData(answer);
+      setFailed(false);
+    } catch {
+      setFailed(true);
     }
-    return true;
-  });
+  }, [mode, role, onUnavailable]);
 
-  type ClosedRow = (typeof FIXTURE_CLOSED)["rows"][number];
+  useSoon(load);
+
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return (data?.rows ?? []).filter(
+      (r) => (outcome === "all" || r.outcome === outcome) && (!q || (r.customer ?? "").toLowerCase().includes(q) || r.phone.replace(/\s/g, "").includes(q.replace(/\s/g, ""))),
+    );
+  }, [data, outcome, query]);
+
+  const selected = (data?.rows ?? []).find((r) => r.id === picked) ?? (data?.rows ?? []).find((r) => r.outcome === "lost") ?? data?.rows[0] ?? null;
+
+  const refText = (r: ClosedRow): string => {
+    if (r.booking) return c.bookingNo(r.booking);
+    if (r.order) return `#${r.order.number} · ${money(r.order.total, lang)}`;
+    if (r.reason) return t.reasons[r.reason];
+    return r.note ? pickText(r.note, lang) : "";
+  };
+
   const columns: TableColumn<ClosedRow>[] = [
     {
-      key: "customer",
-      header: t.colCustomer,
-      cell: (row) => (
-        <div>
-          <div style={{ fontWeight: 600 }}>{row.customer}</div>
-          <div style={{ fontFamily: "var(--font-ui-mono)", fontSize: "0.75rem", color: "var(--text-muted)" }}>{row.phone}</div>
-        </div>
+      key: "customer", header: c.colCustomer, phone: "title",
+      cell: (r) => (
+        <span className="ibx-who2">
+          <span className="ibx-who2-name">{r.customer ? <bdi>{r.customer}</bdi> : c.noNameYet}</span>
+          <span className="ibx-who2-phone u-mono"><bdi>{r.phone}</bdi></span>
+        </span>
       ),
     },
+    { key: "how", header: c.colHow, width: "var(--ibx-col-s)", phone: "tag", cell: (r) => <Status tone={TONE[r.outcome]}>{t.outcomes[r.outcome].label}</Status> },
     {
-      key: "outcome",
-      header: t.colHowItEnded,
-      width: "8rem",
-      cell: (row) => {
-        const tone = row.outcome === "Sold" || row.outcome === "Booked" ? "ok" : row.outcome === "Lost" ? "bad" : "n";
-        return <Status tone={tone}>{row.outcome}</Status>;
-      },
+      key: "ref", header: c.colRef, width: "var(--ibx-col-m)", phone: "body",
+      cell: (r) => <span className={r.booking || r.order ? "u-mono" : "ibx-muted"} dir="auto"><bdi>{refText(r)}</bdi></span>,
     },
+    { key: "by", header: c.colBy, width: "var(--ibx-col-xs)", phone: "foot", cell: (r) => r.by },
     {
-      key: "note",
-      header: t.colOrderBookingNote,
-      width: "12rem",
-      cell: (row) => <span style={{ fontFamily: "var(--font-ui-mono)", fontSize: "0.8125rem" }}>{row.note}</span>,
-    },
-    {
-      key: "closedBy",
-      header: t.colClosedBy,
-      width: "7rem",
-      cell: (row) => <span style={{ fontSize: "0.8125rem" }}>{row.closedBy}</span>,
-    },
-    {
-      key: "closedAt",
-      header: t.colClosed,
-      width: "8rem",
-      cell: (row) => <span style={{ fontFamily: "var(--font-ui-mono)", fontSize: "0.8125rem" }}>{row.closedAt}</span>,
+      key: "at", header: c.colAt, width: "var(--ibx-col-s)", align: "end", mono: true, phone: "foot-end",
+      cell: (r) => <bdi>{dayKey(r.at) === dayKey(now) ? t.today : formatDate(r.at, lang, { now }).split(" ")[0]} {formatTime(r.at, lang)}</bdi>,
     },
   ];
 
+  const week = data?.week.total ?? 0;
+  const share = (n: number) => (week > 0 ? `${Math.round((n / week) * 100)}%` : "");
+  const totals = (key: Series) => (data ? data.trend[key].reduce((a, b) => a + b, 0) : 0);
+  const topReason = data ? [...data.whyLost].sort((a, b) => b.count - a.count)[0] : null;
+  const lostTotal = data ? data.whyLost.reduce((a, b) => a + b.count, 0) : 0;
+  const maxLost = data ? Math.max(1, ...data.whyLost.map((w) => w.count)) : 1;
+  const label: Record<Series, string> = {
+    total: c.thisWeek, sold: t.outcomes.sold.label, booked: t.outcomes.booked.label, answered: t.outcomes.answered.label, lost: t.outcomes.lost.label,
+  };
+  const spark = (key: Series) => (
+    <Spark onBand width="100%" values={data?.trend[key] ?? []} summary={c.trend(label[key], (data?.trend[key] ?? []).join(", "))} />
+  );
+
   return (
-    <div style={{ padding: "var(--space-6)", display: "flex", flexDirection: "column", gap: "var(--space-4)", maxInlineSize: "80rem", marginInline: "auto" }}>
-      {/* Title */}
+    <div className="ibx-page">
       <PageTitle
-        title={t.closedTitle}
-        sub={t.closedSub}
+        title={c.title}
+        sub={c.sub}
         right={
-          <Search
-            label={t.searchClosed}
-            placeholder={t.searchClosed}
-            value={searchQuery}
-            onChange={setSearchQuery}
+          <Tabs
+            label={c.viewLabel}
+            items={[{ id: "open", label: t.tabOpen, count: openCount }, { id: "closed", label: t.tabClosed }]}
+            value="closed"
+            onChange={(id) => { if (id === "open") onOpenTab(); }}
           />
         }
       />
 
-      {/* Outcomes Band */}
-      <div className="ibx-closed-band">
-        <div className="ibx-closed-fig">
-          <span style={{ fontSize: "var(--font-size-xs)", color: "var(--band-muted)", textTransform: "uppercase" }}>{t.statClosedWeek}</span>
-          <div className="ibx-closed-fig-val">{data.summary.closedThisWeek}</div>
-          <span style={{ fontSize: "var(--font-size-xs)", color: "var(--band-muted)" }}>{data.summary.closedSub}</span>
-        </div>
-        <div className="ibx-closed-fig">
-          <span style={{ fontSize: "var(--font-size-xs)", color: "var(--band-muted)", textTransform: "uppercase" }}>{t.outcomeSold}</span>
-          <div className="ibx-closed-fig-val">{data.summary.sold}</div>
-          <span style={{ fontSize: "var(--font-size-xs)", color: "var(--band-muted)" }}>{data.summary.soldSub}</span>
-        </div>
-        <div className="ibx-closed-fig">
-          <span style={{ fontSize: "var(--font-size-xs)", color: "var(--band-muted)", textTransform: "uppercase" }}>{t.outcomeBooked}</span>
-          <div className="ibx-closed-fig-val">{data.summary.booked}</div>
-          <span style={{ fontSize: "var(--font-size-xs)", color: "var(--band-muted)" }}>{data.summary.bookedSub}</span>
-        </div>
-        <div className="ibx-closed-fig">
-          <span style={{ fontSize: "var(--font-size-xs)", color: "var(--band-muted)", textTransform: "uppercase" }}>{t.outcomeAnswered}</span>
-          <div className="ibx-closed-fig-val">{data.summary.answered}</div>
-          <span style={{ fontSize: "var(--font-size-xs)", color: "var(--band-muted)" }}>{data.summary.answeredSub}</span>
-        </div>
-        <div className="ibx-closed-fig">
-          <span style={{ fontSize: "var(--font-size-xs)", color: "var(--band-muted)", textTransform: "uppercase" }}>{t.outcomeLost}</span>
-          <div className="ibx-closed-fig-val">{data.summary.lost}</div>
-          <span style={{ fontSize: "var(--font-size-xs)", color: "var(--band-muted)" }}>{data.summary.lostSub}</span>
-        </div>
-      </div>
+      {failed ? <Banner tone="bad" action={<Button kind="quiet" size="xs" onClick={() => void load()}>{t.states.tryNow}</Button>}>{t.states.loadError}</Banner> : null}
 
-      {/* Main Content Layout */}
-      <div className="ibx-closed-layout">
-        {/* Table Panel */}
-        <div style={{ flex: "1 1 20rem", minInlineSize: 0, maxInlineSize: "100%", overflowX: "auto" }}>
-          <Panel>
-            <div style={{ padding: "var(--space-3) var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-2)", borderBottom: "var(--rule-hairline) solid var(--line)", flexWrap: "wrap" }}>
-              <Chip on={outcomeFilter === "all"} onClick={() => setOutcomeFilter("all")}>
-                {t.chipAll} (142)
-              </Chip>
-              <Chip on={outcomeFilter === "sold"} onClick={() => setOutcomeFilter("sold")}>
-                {t.outcomeSold} (31)
-              </Chip>
-              <Chip on={outcomeFilter === "booked"} onClick={() => setOutcomeFilter("booked")}>
-                {t.outcomeBooked} (44)
-              </Chip>
-              <Chip on={outcomeFilter === "answered"} onClick={() => setOutcomeFilter("answered")}>
-                {t.outcomeAnswered} (58)
-              </Chip>
-              <Chip on={outcomeFilter === "lost"} onClick={() => setOutcomeFilter("lost")}>
-                {t.outcomeLost} (9)
-              </Chip>
-            </div>
-            <Table
-              caption={t.tabClosed}
-              columns={columns}
-              rows={filteredRows}
-              rowKey={(r) => `${r.customer}-${r.closedAt}`}
-            />
-          </Panel>
-        </div>
+      {!data ? (
+        <SkeletonRows rows={6} columns={4} label={t.states.loading} />
+      ) : (
+        <>
+          <Band className="ibx-band" aria-label={c.thisWeek}>
+            <BandItem
+              label={c.thisWeek} value={data.week.total.toLocaleString("en")} unit={c.soFar}
+              sub={c.byLastWeek(data.week.lastWeekToDate, formatDate(now, lang).split(" ")[0])}
+            >{spark("total")}</BandItem>
+            <BandItem
+              label={t.outcomes.sold.label} value={totals("sold")} unit={share(totals("sold"))}
+              sub={data.soldValue !== undefined ? c.soldSub(money(data.soldValue, lang)) : undefined}
+            >{spark("sold")}</BandItem>
+            <BandItem label={t.outcomes.booked.label} value={totals("booked")} unit={share(totals("booked"))} sub={c.bookedSub}>{spark("booked")}</BandItem>
+            <BandItem label={t.outcomes.answered.label} value={totals("answered")} unit={share(totals("answered"))} sub={c.answeredSub}>{spark("answered")}</BandItem>
+            <BandItem
+              label={t.outcomes.lost.label} value={totals("lost")} unit={share(totals("lost"))}
+              sub={topReason && topReason.count > 0 ? c.lostSub(t.reasons[topReason.reason]) : undefined}
+            >{spark("lost")}</BandItem>
+          </Band>
 
-        {/* Side Cards (Why lost & Speed) */}
-        <div className="ibx-closed-side" style={{ inlineSize: "20rem", display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-          {/* Selected Reopen Card */}
-          <Panel>
-            <PanelHeader
-              title="+974 5555 0190"
-              right={
-                <button
-                  type="button"
-                  style={{ background: "none", border: "none", textDecoration: "underline", fontSize: "var(--font-size-xs)", fontWeight: 500, cursor: "pointer", color: "inherit" }}
-                  onClick={() => onReopen("+974 5555 0190")}
-                >
-                  {t.btnReopen}
-                </button>
-              }
-            />
-            <div style={{ padding: "var(--space-3) var(--space-4)", fontSize: "var(--font-size-xs)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-              <p style={{ margin: 0, lineHeight: 1.4 }}>
-                Asked for ceramic coating for a motorbike. Bilal answered that Nuqta coats cars only.
-              </p>
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-                <Status tone="bad">Lost</Status>
-                <span style={{ color: "var(--text-muted)" }}>Not available</span>
-              </div>
-            </div>
-          </Panel>
-
-          {/* Why lost Meter Card */}
-          <Panel>
-            <PanelHeader title={t.whyLostHeader(9)} sub={t.whyLostThisWeek} />
-            <div style={{ padding: "var(--space-3) var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-              {data.whyLost.map((item) => (
-                <div key={item.reason} style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-                  <span style={{ inlineSize: "7.5rem", fontSize: "var(--font-size-xs)" }}>{item.reason}</span>
-                  <div style={{ flex: 1 }}>
-                    <Meter value={Math.round((item.count / 4) * 100)} label={item.reason} />
-                  </div>
-                  <span style={{ fontFamily: "var(--font-ui-mono)", fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>
-                    {item.count}
-                  </span>
+          <div className="ibx-closed-grid">
+            <Panel clip>
+              <div className="ibx-filterbar">
+                <div className="ibx-chips" role="group" aria-label={c.filterLabel}>
+                  <Chip on={outcome === "all"} count={week} onClick={() => setOutcome("all")}>{c.all}</Chip>
+                  {(["sold", "booked", "answered", "lost"] as const).map((o) => (
+                    <Chip key={o} on={outcome === o} count={totals(o)} onClick={() => setOutcome(outcome === o ? "all" : o)}>{t.outcomes[o].label}</Chip>
+                  ))}
                 </div>
-              ))}
-            </div>
-            <PanelFooter>{t.whyLostFooter}</PanelFooter>
-          </Panel>
+                <Search label={t.searchClosed} placeholder={t.searchClosed} clearLabel={t.clearSearch} value={query} onChange={setQuery} />
+              </div>
+              <Table
+                caption={c.tableLabel}
+                columns={columns}
+                rows={rows}
+                rowKey={(r) => r.id}
+                activeKey={selected?.id ?? null}
+                onRowOpen={(r) => setPicked(r.id)}
+                empty={<Empty title={c.empty} />}
+              />
+              <PanelFooter>{c.showing(data.rows.length, week)}</PanelFooter>
+            </Panel>
 
-          {/* First answer Speed Card */}
-          <Panel>
-            <PanelHeader title={t.firstAnswerHeader} />
-            <div style={{ padding: "var(--space-3) var(--space-4)" }}>
-              <KVList>
-                <KV k={t.firstAnswerToday} mono>{data.speed.today}</KV>
-                <KV k={t.firstAnswerMedian} mono>{data.speed.median}</KV>
-                <KV k={t.firstAnswerWaited15m} mono>{data.speed.waited15m}</KV>
-              </KVList>
+            <div className="ibx-closed-side">
+              {selected ? (
+                <Panel clip>
+                  <PanelHeader
+                    level={3}
+                    title={<bdi>{selected.customer ?? selected.phone}</bdi>}
+                    right={
+                      <Button
+                        kind="quiet" size="xs"
+                        onClick={() => toast.push({ text: mode.live ? c.reopenFailed : t.previewNothingSent, tone: mode.live ? "bad" : undefined })}
+                      >{c.reopen}</Button>
+                    }
+                  />
+                  <div className="ibx-closed-card">
+                    {selected.teamNote ? <p dir="auto">{selected.teamNote}</p> : null}
+                    <p className="ibx-closed-line">
+                      <Status tone={TONE[selected.outcome]}>{t.outcomes[selected.outcome].label}</Status>
+                      {selected.reason ? <span className="ibx-muted">{t.reasons[selected.reason]}</span> : null}
+                      {selected.messages ? <span className="ibx-closed-aside u-mono">{c.messagesAndMinutes(selected.messages, selected.minutes ?? 0)}</span> : null}
+                    </p>
+                  </div>
+                </Panel>
+              ) : null}
+
+              <Panel clip>
+                <PanelHeader level={3} title={c.whyLostTitle(lostTotal)} sub={c.whyLostPeriod} />
+                <ul className="ibx-whylost">
+                  {data.whyLost.map((w) => (
+                    <li key={w.reason}>
+                      <span>{t.reasons[w.reason]}</span>
+                      <Meter value={w.count} max={maxLost} label={c.meterLabel(t.reasons[w.reason], w.count)} />
+                      <span className="u-mono">{w.count}</span>
+                    </li>
+                  ))}
+                </ul>
+                <PanelFooter>{c.whyLostFooter}</PanelFooter>
+              </Panel>
+
+              <Panel clip>
+                <PanelHeader level={3} title={c.firstAnswer} />
+                <KVList className="ibx-kv">
+                  <KV k={c.today} mono>{c.minutes(data.firstAnswer.today)}</KV>
+                  <KV k={c.median} mono>{c.minutes(data.firstAnswer.median)}</KV>
+                  <KV k={c.waitedOver15}>{c.conversations(data.firstAnswer.waitedOver15)}</KV>
+                </KVList>
+                <PanelFooter>{c.firstAnswerFooter}</PanelFooter>
+              </Panel>
             </div>
-            <PanelFooter>{t.firstAnswerFooter}</PanelFooter>
-          </Panel>
-        </div>
-      </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

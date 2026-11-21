@@ -1,152 +1,87 @@
 "use client";
 
-import React, { useState } from "react";
-import { Button, Panel, Radio, UiIcon } from "../../../_ui";
+import { useState } from "react";
+import { Banner, Button, Icon, Radio } from "../../../_ui";
 import { copy, type Lang } from "./copy";
+import { pickText } from "./logic";
+import type { Template } from "./types";
 
-export interface InboxWindowClosedProps {
-  customerName: string;
-  onSendTemplate: (templateName: string) => void;
+export type WindowClosedProps = {
   lang: Lang;
-}
+  /** The approved templates that exist for this shop. None: only the notice (the API cannot send one yet). */
+  templates: readonly Template[];
+  /** First name of the customer, for the template's greeting. */
+  first: string;
+  onSend: (templateId: string) => void;
+  /** Something else owns the screen's one Volt button (a dialog is open): this one is drawn dark. */
+  yield?: boolean;
+  /** A template is on its way. */
+  sending?: boolean;
+};
 
-export function InboxWindowClosed({ customerName, onSendTemplate, lang }: InboxWindowClosedProps) {
+/**
+ * The customer's 24 hours ran out: WhatsApp refuses typed replies, so the composer is not drawn. Says why,
+ * and, where the shop can send one, lets a person pick an approved template and see exactly what the
+ * customer would get. The picker lists every template and locks the ones that cannot go to this customer,
+ * with the reason; nothing is sent until the button is pressed.
+ */
+export function InboxWindowClosed({ lang, templates, first, onSend, yield: giveWay = false, sending = false }: WindowClosedProps) {
   const t = copy(lang);
-  const [selectedTemplate, setSelectedTemplate] = useState("slot_free");
-
-  const templates = [
-    {
-      id: "slot_free",
-      name: "Slot still free",
-      sub: "Utility · Arabic and English",
-      locked: false,
-      preview: `Hello ${customerName.split(" ")[0]}, you asked about Interior detail. Thu 12 Nov 18:30 is still free. Reply here and we will hold it for you.`,
-      buttons: "Hold it · No thanks",
-    },
-    {
-      id: "tried_reach",
-      name: "We tried to reach you",
-      sub: "Utility · Arabic and English",
-      locked: false,
-      preview: `Hello ${customerName.split(" ")[0]}, we tried to reach you regarding your inquiry. Please reply when convenient.`,
-      buttons: "Reply · Call us",
-    },
-    {
-      id: "payment_reminder",
-      name: "Payment reminder",
-      sub: "Utility · she owes nothing",
-      locked: true,
-      preview: "",
-      buttons: "",
-    },
-    {
-      id: "november_offer",
-      name: "November offer",
-      sub: "Marketing · no OK to offers",
-      locked: true,
-      preview: "",
-      buttons: "",
-    },
-  ];
-
-  const current = templates.find((tpl) => tpl.id === selectedTemplate) || templates[0];
+  const usable = templates.filter((tpl) => !tpl.blocked);
+  const [choice, setChoice] = useState<string>(usable[0]?.id ?? "");
+  const current = templates.find((tpl) => tpl.id === choice && !tpl.blocked) ?? usable[0];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column" }}>
-      {/* 24h Window Closed Banner */}
-      <div className="ibx-window-closed-bar">
-        <UiIcon name="info" className="u-ico" style={{ color: "var(--warn)" }} />
-        <span>{t.windowClosedBanner}</span>
-      </div>
-
-      {/* Template Chooser Panel */}
-      <div style={{ padding: "var(--space-4) var(--space-5)", background: "var(--surface)", borderTop: "var(--rule-hairline) solid var(--line)" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-3)" }}>
-          <h2 style={{ margin: 0, fontSize: "var(--font-size-sm)", fontWeight: 600 }}>{t.sendTemplateTitle}</h2>
-          <span style={{ fontFamily: "var(--font-ui-mono)", fontSize: "var(--font-size-xs)", color: "var(--text-muted)", letterSpacing: "0.05em" }}>
-            {t.templateCanGoCount(2, 4)}
-          </span>
-        </div>
-
-        <div style={{ display: "flex", gap: "var(--space-4)", alignItems: "flex-start", marginBottom: "var(--space-4)" }}>
-          {/* Template Choices */}
-          <Panel style={{ flex: 1 }}>
-            {templates.map((tpl) => {
-              const isSelected = selectedTemplate === tpl.id;
-              return (
-                <div
+    <section className="ibx-closedpane" aria-label={t.windowClosedBanner}>
+      <Banner tone="warn">{templates.length > 0 ? t.windowClosedBanner : t.windowClosedNoTemplates}</Banner>
+      {templates.length > 0 ? (
+        <div className="ibx-tpl">
+          <div className="ibx-tpl-head">
+            <h2 className="ibx-tpl-title" id="ibx-tpl-title">{t.sendTemplate}</h2>
+            <span className="u-label">{t.templatesCanGo(usable.length, templates.length)}</span>
+          </div>
+          <div className="ibx-tpl-body">
+            <div className="ibx-tpl-list" role="radiogroup" aria-labelledby="ibx-tpl-title">
+              {templates.map((tpl) => (
+                <Radio
                   key={tpl.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-3)",
-                    padding: "var(--space-3) var(--space-4)",
-                    borderBottom: "var(--rule-hairline) solid var(--line)",
-                    background: isSelected ? "var(--surface-subtle)" : "transparent",
-                    cursor: tpl.locked ? "not-allowed" : "pointer",
-                    opacity: tpl.locked ? 0.5 : 1,
-                  }}
-                  onClick={() => {
-                    if (!tpl.locked) setSelectedTemplate(tpl.id);
-                  }}
+                  name="ibx-template"
+                  className={tpl.blocked ? "ibx-tpl-opt ibx-tpl-opt--off" : "ibx-tpl-opt"}
+                  checked={current?.id === tpl.id}
+                  disabled={Boolean(tpl.blocked)}
+                  onChange={() => setChoice(tpl.id)}
                 >
-                  <Radio checked={isSelected} disabled={tpl.locked} onChange={() => {}} />
-                  <div>
-                    <div style={{ fontSize: "var(--font-size-sm)", fontWeight: isSelected ? 600 : 400, color: "var(--text)" }}>
-                      {tpl.name}
-                    </div>
-                    <div style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>
-                      {tpl.sub}
-                    </div>
-                  </div>
-                  {tpl.locked && (
-                    <span style={{ marginInlineStart: "auto", fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>
-                      (Locked)
+                  <span className="ibx-opt">
+                    <span className="ibx-opt-name">{pickText(tpl.name, lang)}</span>
+                    <span className="ibx-opt-sub">
+                      {t.templateCategory[tpl.category]}
+                      {tpl.blocked ? ` · ${pickText(tpl.blocked, lang)}` : ""}
                     </span>
-                  )}
-                </div>
-              );
-            })}
-          </Panel>
-
-          {/* Template Live Preview */}
-          <div style={{ inlineSize: "16rem", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-            <div
-              style={{
-                background: "var(--wa-out)",
-                color: "var(--wa-ink)",
-                borderRadius: "var(--radius-sm)",
-                padding: "var(--space-2) var(--space-3)",
-                display: "flex",
-                flexDirection: "column",
-                gap: "var(--space-1)",
-              }}
-            >
-              <span style={{ fontSize: "var(--font-size-xs)", fontWeight: 600, color: "var(--wa-soft)" }}>
-                Template · {current.name}
-              </span>
-              <p style={{ margin: 0, fontSize: "var(--font-size-sm)", lineHeight: 1.45 }}>
-                {current.preview}
-              </p>
+                  </span>
+                  {tpl.blocked ? <Icon name="lock" /> : null}
+                </Radio>
+              ))}
             </div>
-            {current.buttons && (
-              <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>
-                {t.buttonsCues(current.buttons)}
-              </span>
-            )}
+            <div className="ibx-tpl-view" aria-live="polite">
+              {current ? (
+                <>
+                  <div className="ibx-bubble ibx-bubble--out">
+                    <span className="ibx-sender">{t.templatePreview} · {pickText(current.name, lang)}</span>
+                    <p className="ibx-text" dir="auto">{pickText(current.preview, lang).replace("{first}", first)}</p>
+                  </div>
+                  {current.buttons ? <p className="ibx-cue">{t.buttonsCue(pickText(current.buttons, lang))}</p> : null}
+                </>
+              ) : null}
+            </div>
+          </div>
+          <div className="ibx-tpl-foot">
+            <p className="ibx-tpl-note">{t.metaCharges}</p>
+            <Button kind={giveWay ? "dark" : "volt"} disabled={!current} loading={sending} onClick={() => current && onSend(current.id)}>
+              {t.btnSendTemplate}
+            </Button>
           </div>
         </div>
-
-        {/* Footer Actions */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "var(--rule-hairline) solid var(--line)", paddingTop: "var(--space-3)" }}>
-          <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>
-            {t.metaBillingDisclaimer}
-          </span>
-          <Button kind="volt" size="sm" onClick={() => onSendTemplate(current.name)}>
-            {t.btnSendTemplate}
-          </Button>
-        </div>
-      </div>
-    </div>
+      ) : null}
+    </section>
   );
 }

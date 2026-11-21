@@ -1,330 +1,141 @@
 "use client";
 
-import React from "react";
-import { Avatar, Button, KV, KVList, Status, Tag, UiIcon } from "../../../_ui";
+import { Avatar, Button, Icon, IconButton, KV, KVList, SkeletonText, Status } from "../../../_ui";
+import { formatDate, formatTime, money } from "../../../_ui/format";
 import { copy, type Lang } from "./copy";
-import type { CustomerContextData } from "./fixtures";
+import { daysBetween, pickText } from "./logic";
+import type { Agreement, CustomerContext } from "./types";
 
-export interface InboxContextPaneProps {
-  data: CustomerContextData;
+export type ContextProps = {
+  data: CustomerContext | null;
   lang: Lang;
+  now: number;
+  loading: boolean;
+  /** A phone shows this pane as a screen of its own, with a way back to the conversation. */
+  onBack?: () => void;
+  /** Where "Credit account", "Open booking" and "All orders" go: the workspace's own sections. */
+  hrefs: { credit: string; bookings: string; orders: string };
+};
+
+function agreementText(a: Agreement, lang: Lang): string {
+  const t = copy(lang);
+  if (a.state === "agreed") return t.agreed(a.at ? formatDate(a.at, lang, { weekday: false, year: "always" }) : null);
+  return a.state === "not_agreed" ? t.notAgreed : t.notAsked;
 }
 
-export function InboxContextPane({ data, lang }: { data: CustomerContextData; lang: Lang }) {
+export function InboxContextPane({ data, lang, now, loading, onBack, hrefs }: ContextProps) {
   const t = copy(lang);
+  if (loading || !data) {
+    return (
+      <div className="ibx-ctx" aria-busy="true">
+        <div className="ibx-ctx-sec"><SkeletonText lines={3} /></div>
+      </div>
+    );
+  }
+
+  const owes = data.balanceOwed;
+  const days = data.owedSince ? Math.max(0, daysBetween(data.owedSince, now)) : 0;
+  const booking = data.nextBooking;
 
   return (
-    <aside className="ibx-pane-context" aria-label={t.profileLink}>
-      {/* Section 1: Customer Identity & Stats */}
-      <div className="ibx-ctx-sec">
-        <div className="ibx-ctx-header">
+    <div className="ibx-ctx">
+      {onBack ? (
+        <div className="ibx-ctx-back">
+          <IconButton bare icon={<Icon name="left" />} label={t.backToConversation} onClick={onBack} />
+          <span className="ibx-ctx-backtitle">{t.contextLabel}</span>
+        </div>
+      ) : null}
+
+      <section className="ibx-ctx-sec" aria-label={data.name}>
+        <div className="ibx-ctx-id">
           <Avatar name={data.name} size={44} />
-          <div>
-            <div className="ibx-ctx-name">{data.name}</div>
-            <div className="ibx-ctx-phone">{data.phone}</div>
-          </div>
-          <button
-            type="button"
-            style={{
-              marginInlineStart: "auto",
-              background: "none",
-              border: "none",
-              textDecoration: "underline",
-              fontSize: "var(--font-size-xs)",
-              fontWeight: 500,
-              cursor: "pointer",
-            }}
-          >
-            {t.profileLink}
-          </button>
-        </div>
-
-        {/* Tags */}
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", flexWrap: "wrap", marginBlock: "var(--space-1)" }}>
-          {data.tags.map((tag) => (
-            <Tag key={tag} tone="n">
-              {lang === "ar"
-                ? tag === "Regular"
-                  ? "دائم"
-                  : tag === "Ceramic"
-                  ? "سيراميك"
-                  : tag === "New this year"
-                  ? "جديد هذا العام"
-                  : tag
-                : tag}
-            </Tag>
-          ))}
-          <button
-            type="button"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "var(--space-1)",
-              padding: "0 var(--space-2)",
-              height: "1.375rem",
-              borderRadius: "var(--radius-sm)",
-              border: "var(--rule-hairline) dashed var(--line-strong)",
-              background: "transparent",
-              fontSize: "var(--font-size-xs)",
-              color: "var(--text-muted)",
-              cursor: "pointer",
-            }}
-          >
-            <UiIcon name="plus" className="u-ico" style={{ width: 10, height: 10 }} />
-            <span>{t.addLabel}</span>
-          </button>
-        </div>
-
-        {/* 3 Stats */}
-        <div className="ibx-ctx-stats">
-          <div className="ibx-ctx-stat">
-            <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>{t.visitsStat}</span>
-            <span className="ibx-ctx-stat-val">{data.visits}</span>
-          </div>
-          <div className="ibx-ctx-stat">
-            <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>{t.spentStat}</span>
-            <span className="ibx-ctx-stat-val">
-              {lang === "ar" ? data.spent.replace("QAR ", "").trim() + "\u00a0ر.ق" : data.spent}
-            </span>
-          </div>
-          <div className="ibx-ctx-stat">
-            <span style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>{t.sinceStat}</span>
-            <span className="ibx-ctx-stat-val">
-              {lang === "ar" && data.since === "Mar 2025"
-                ? "مارس 2025"
-                : lang === "ar" && data.since === "Jun 2026"
-                ? "يونيو 2026"
-                : data.since}
-            </span>
+          <div className="ibx-ctx-who">
+            <h2 className="ibx-ctx-name"><bdi>{data.name}</bdi></h2>
+            <p className="ibx-ctx-phone u-mono"><bdi>{data.phone}</bdi></p>
           </div>
         </div>
-      </div>
+        <dl className="ibx-stats">
+          <div><dt>{t.stats.visits}</dt><dd className="u-mono">{data.visits}</dd></div>
+          {data.spent12mo !== undefined ? <div><dt>{t.stats.spent}</dt><dd className="u-mono"><bdi>{money(data.spent12mo, lang)}</bdi></dd></div> : null}
+          {data.since ? <div><dt>{t.stats.since}</dt><dd className="u-mono"><bdi>{formatDate(data.since, lang, { weekday: false, year: "always" })}</bdi></dd></div> : null}
+        </dl>
+      </section>
 
-      {/* Section 2: Owes */}
-      <div className="ibx-ctx-sec">
-        <div className="ibx-ctx-sec-title">
-          <span>{t.owesTitle}</span>
-          {data.credit && (
-            <button
-              type="button"
-              style={{
-                background: "none",
-                border: "none",
-                textDecoration: "underline",
-                fontSize: "var(--font-size-xs)",
-                fontWeight: 500,
-                cursor: "pointer",
-                color: "inherit",
-              }}
-            >
-              {t.creditAccountLink}
-            </button>
-          )}
-        </div>
-
-        {data.owesAmount ? (
-          <div>
-            <div style={{ fontSize: "1.25rem", fontWeight: 600, color: "var(--text)" }}>
-              {t.owesDays(
-                lang === "ar"
-                  ? data.owesAmount.replace("QAR ", "").trim() + "\u00a0ر.ق"
-                  : data.owesAmount,
-                data.owesDays || 0
-              )}
-            </div>
-            <p style={{ margin: "var(--space-1) 0 0", fontSize: "var(--font-size-xs)", color: "var(--text-muted)", lineHeight: 1.4 }}>
-              {data.owesNote
-                ? lang === "ar"
-                  ? data.owesNote
-                      .replace("Ceramic top-up on account, 28 Oct. Limit QAR 500. No promise to pay yet.", "طلاء سيراميك إضافي على الحساب، 28 أكتوبر. الحد 500\u00a0ر.ق. لا يوجد وعد بالسداد بعد.")
-                      .replace("QAR 500", "500\u00a0ر.ق")
-                  : data.owesNote
-                : t.limitAndPromise(lang === "ar" ? "500\u00a0ر.ق" : "QAR 500")}
+      {owes !== undefined ? (
+        <section className="ibx-ctx-sec" aria-labelledby="ibx-owes">
+          <div className="ibx-ctx-sechead">
+            <h3 className="u-label" id="ibx-owes">{t.owes}</h3>
+            <a className="u-link ibx-ctx-link" href={hrefs.credit}>{t.creditAccount}</a>
+          </div>
+          {owes > 0 ? (
+            <p className="ibx-owes">
+              <span className="ibx-owes-amount u-fig"><bdi>{money(owes, lang)}</bdi></span>
+              {days > 0 ? <span className="ibx-owes-for">{t.owesFor(days)}</span> : null}
             </p>
-          </div>
+          ) : (
+            <p className="ibx-ctx-strong">{t.nothingOwed}</p>
+          )}
+        </section>
+      ) : null}
+
+      <section className="ibx-ctx-sec" aria-labelledby="ibx-next">
+        <div className="ibx-ctx-sechead">
+          <h3 className="u-label" id="ibx-next">{t.nextBooking}</h3>
+          {booking ? <span className="ibx-ctx-aside u-mono">{t.bookingNo(booking.number)}</span> : null}
+        </div>
+        {booking ? (
+          <>
+            <div className="ibx-booking">
+              <p className="ibx-booking-top">
+                <span className="ibx-booking-when u-mono"><bdi>{formatDate(booking.startsAt, lang, { now })} {formatTime(booking.startsAt, lang)}</bdi></span>
+                <Status tone={booking.status === "pending" ? "warn" : "ok"}>{t.bookingStatus[booking.status]}</Status>
+              </p>
+              <p className="ibx-booking-line">{pickText(booking.service, lang)}{booking.length ? ` · ${t.lengthHours(booking.length)}` : ""}</p>
+              {booking.depositPaid ? <p className="ibx-booking-dep u-mono"><bdi>{t.depositPaid(money(booking.depositPaid, lang), booking.receipt)}</bdi></p> : null}
+            </div>
+            <div className="ibx-ctx-actions"><Button kind="quiet" size="xs" href={hrefs.bookings}>{t.openBooking}</Button></div>
+          </>
         ) : (
-          <div>
-            <div style={{ fontSize: "var(--font-size-sm)", fontWeight: 500, color: "var(--text)" }}>
-              {t.nothingOwed}
-            </div>
-            <p style={{ margin: "var(--space-1) 0 0", fontSize: "var(--font-size-xs)", color: "var(--text-muted)", lineHeight: 1.4 }}>
-              {t.noCreditAccountSub}
-            </p>
-          </div>
+          <>
+            <p className="ibx-ctx-strong">{t.noBookingAhead}</p>
+            {data.lastVisit ? <p className="ibx-ctx-note">{t.lastVisit(pickText(data.lastVisit.service, lang), formatDate(data.lastVisit.at, lang, { now }))}</p> : null}
+            <div className="ibx-ctx-actions"><Button kind="line" size="xs" href={hrefs.bookings}>{t.bookForThem}</Button></div>
+          </>
         )}
-      </div>
+      </section>
 
-      {/* Section 3: Next Booking */}
-      <div className="ibx-ctx-sec">
-        <div className="ibx-ctx-sec-title">
-          <span>{t.nextBookingTitle}</span>
-          {data.booking && (
-            <span style={{ fontFamily: "var(--font-ui-mono)", fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>
-              {lang === "ar" ? `الحجز ${data.booking.number}` : `Booking ${data.booking.number}`}
-            </span>
-          )}
+      <section className="ibx-ctx-sec" aria-labelledby="ibx-orders">
+        <div className="ibx-ctx-sechead">
+          <h3 className="u-label" id="ibx-orders">{t.lastOrders}</h3>
+          {data.ordersTotal && data.ordersTotal > data.orders.length ? <a className="u-link ibx-ctx-link" href={hrefs.orders}>{t.allOrders(data.ordersTotal)}</a> : null}
         </div>
-
-        {data.booking ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-            <div
-              style={{
-                padding: "var(--space-3)",
-                borderRadius: "var(--radius-sm)",
-                border: "var(--rule-hairline) solid var(--line)",
-                background: "var(--surface-subtle)",
-                display: "flex",
-                flexDirection: "column",
-                gap: "var(--space-1)",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={{ fontFamily: "var(--font-ui-mono)", fontSize: "var(--font-size-sm)", fontWeight: 600 }}>
-                  {lang === "ar" && data.booking.time === "Sat 14 Nov 08:00"
-                    ? "السبت 14 نوفمبر 08:00"
-                    : data.booking.time}
+        {data.orders.length === 0 ? (
+          <p className="ibx-ctx-note">{t.noOrders}</p>
+        ) : (
+          <ul className="ibx-orders">
+            {data.orders.map((o) => (
+              <li key={o.number}>
+                <span className="ibx-order-main">
+                  <span className="ibx-order-name">{o.items ? pickText(o.items, lang) : `#${o.number}`}</span>
+                  <span className="ibx-order-sub u-mono"><bdi>{t.orderLine(o.number, formatDate(o.at, lang, { weekday: false, now }), o.paid)}</bdi></span>
                 </span>
-                <Status tone="ok">
-                  {lang === "ar" && data.booking.sub === "Booked" ? "مؤكد" : data.booking.sub}
-                </Status>
-              </div>
-              <div style={{ fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>
-                {lang === "ar" && data.booking.title === "Ceramic coating · 4 h · Ceramic · Bilal"
-                  ? "طلاء سيراميك · 4 س · سيراميك · بلال"
-                  : data.booking.title}
-              </div>
-              <div style={{ fontFamily: "var(--font-ui-mono)", fontSize: "var(--font-size-xs)", color: "var(--text-muted)" }}>
-                {lang === "ar" && data.booking.deposit.includes("Deposit QAR 300 paid")
-                  ? `عربون 300\u00a0ر.ق مدفوع · ${data.booking.deposit.split("· ")[1] || "R-2026-1893"}`
-                  : data.booking.deposit}
-              </div>
-            </div>
-
-            <div style={{ display: "flex", gap: "var(--space-2)" }}>
-              <Button kind="line" size="xs">
-                {t.btnMove}
-              </Button>
-              <Button kind="quiet" size="xs">
-                {t.btnOpenBooking}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div>
-            <div style={{ fontSize: "var(--font-size-sm)", fontWeight: 500, color: "var(--text)" }}>
-              {t.noBookingAhead}
-            </div>
-            <p style={{ margin: "var(--space-1) 0 var(--space-2)", fontSize: "var(--font-size-xs)", color: "var(--text-muted)", lineHeight: 1.4 }}>
-              {t.lastVisitSub("Full wash, Mon 2 Nov")}
-            </p>
-            <Button kind="line" size="xs">
-              {t.btnBookForHer}
-            </Button>
-          </div>
+                <span className="ibx-order-total u-mono"><bdi>{money(o.total, lang)}</bdi></span>
+              </li>
+            ))}
+          </ul>
         )}
-      </div>
+      </section>
 
-      {/* Section 4: Last Orders */}
-      <div className="ibx-ctx-sec">
-        <div className="ibx-ctx-sec-title">
-          <span>{t.lastOrdersTitle}</span>
-          <button
-            type="button"
-            style={{
-              background: "none",
-              border: "none",
-              textDecoration: "underline",
-              fontSize: "var(--font-size-xs)",
-              fontWeight: 500,
-              cursor: "pointer",
-              color: "inherit",
-            }}
-          >
-            {t.allOrdersLink(7)}
-          </button>
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-          {data.orders.map((o) => (
-            <div
-              key={o.number}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                fontSize: "var(--font-size-xs)",
-              }}
-            >
-              <div>
-                <div style={{ color: "var(--text)", fontWeight: 500 }}>
-                  {lang === "ar"
-                    ? o.name
-                        .replace("Tyre shine", "ملمع إطارات")
-                        .replace("Air freshener", "معطر جو")
-                        .replace("Carnauba wax 500 ml", "شمع كارنوبا 500 مل")
-                        .replace("Microfibre cloth pack × 2", "عبوة مناشف مايكروفايبر × 2")
-                    : o.name}
-                </div>
-                <div style={{ fontFamily: "var(--font-ui-mono)", color: "var(--text-muted)" }}>
-                  {lang === "ar"
-                    ? o.number
-                        .replace("Order", "الطلب")
-                        .replace("3 Nov", "3 نوفمبر")
-                        .replace("21 Oct", "21 أكتوبر")
-                        .replace("6 Oct", "6 أكتوبر")
-                        .replace("paid", "مدفوع")
-                    : o.number}
-                </div>
-              </div>
-              <div style={{ fontFamily: "var(--font-ui-mono)", fontWeight: 600, color: "var(--text)" }}>
-                {lang === "ar" ? o.total.replace("QAR ", "").trim() + "\u00a0ر.ق" : o.total}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Section 5: Messages Allowed Compliance */}
-      <div className="ibx-ctx-sec" style={{ borderBlockEnd: "none" }}>
-        <div className="ibx-ctx-sec-title">
-          <span>{t.messagesAllowedTitle}</span>
-        </div>
-
+      <section className="ibx-ctx-sec" aria-labelledby="ibx-allowed">
+        <h3 className="u-label" id="ibx-allowed">{t.messagesAllowed}</h3>
         <KVList>
-          {data.allow.map((a) => (
-            <KV
-              key={a.purpose}
-              k={
-                lang === "ar"
-                  ? a.purpose === "Bookings and receipts"
-                    ? "الحجوزات والإيصالات"
-                    : a.purpose === "Offers"
-                    ? "العروض"
-                    : a.purpose === "Back in stock"
-                    ? "توفر المنتجات"
-                    : a.purpose === "Price group"
-                    ? "فئة السعر"
-                    : a.purpose === "Writes in"
-                    ? "لغة المحادثة"
-                    : a.purpose
-                  : a.purpose
-              }
-              className={a.off ? "u-text-muted" : undefined}
-            >
-              {lang === "ar"
-                ? a.status
-                    .replace("Agreed · 14 Mar 2025", "موافق · 14 مارس 2025")
-                    .replace("Agreed · 2 Jun 2025", "موافق · 2 يونيو 2025")
-                    .replace("Agreed · 8 Jun 2026", "موافق · 8 يونيو 2026")
-                    .replace("Not agreed", "غير موافق")
-                    .replace("Not asked", "لم يُطلب")
-                    .replace("Standard", "قياسي")
-                    .replace("Arabic, English", "العربية، الإنجليزية")
-                : a.status}
-            </KV>
-          ))}
+          <KV k={t.purposeService}>{agreementText(data.consent.service, lang)}</KV>
+          <KV k={t.purposeOffers}>{agreementText(data.consent.offers, lang)}</KV>
+          {data.consent.backInStock ? <KV k={t.purposeBackInStock}>{agreementText(data.consent.backInStock, lang)}</KV> : null}
+          {data.priceGroup ? <KV k={t.priceGroup}>{pickText(data.priceGroup, lang)}</KV> : null}
+          {data.writesIn?.length ? <KV k={t.writesInLabel}>{t.languageNames(data.writesIn.includes("ar"), data.writesIn.includes("en"))}</KV> : null}
         </KVList>
-      </div>
-    </aside>
+      </section>
+    </div>
   );
 }
