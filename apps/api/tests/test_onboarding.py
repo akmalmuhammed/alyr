@@ -85,7 +85,7 @@ def test_the_types_list_offers_every_trade_with_its_way_of_working(client):
     types = {t["key"]: t for t in client.get(f"{BASE}/types").json()["types"]}
     assert types["salon"]["way"] == "appointments"
     assert types["restaurant"]["way"] == "assisted"
-    assert types["salon"]["name"]["ar"] == "صالون وحلاقة"
+    assert types["salon"]["name"]["ar"] == "صالون وتجميل"
 
 
 def test_a_new_owner_creates_a_salon_with_its_starting_setup(client):
@@ -95,8 +95,8 @@ def test_a_new_owner_creates_a_salon_with_its_starting_setup(client):
     assert slug.startswith("al-sadd-barbers")
     assert state["owner"]["name"] == "Hamad"
     assert (state["way"], state["step"], state["finished"]) == ("appointments", "services", False)
-    assert [s["name"] for s in state["services"]][:2] == ["Haircut", "Beard trim & shape"]
-    assert state["services"][0]["price_text"] == "QAR 60"
+    assert [s["name"] for s in state["services"]][:2] == ["Haircut & blow-dry", "Blow-dry"]
+    assert state["services"][0]["price_text"] == "QAR 120"
     assert {"weekday": 5, "opens": "14:00", "closes": "22:00"} in state["hours"]
     me = client.get("/api/auth/me").json()
     assert (me["signed_in"], me["role"]) == (True, "owner")
@@ -221,7 +221,7 @@ def test_the_test_line_answers_like_a_customer_would_see_it(client):
         "Book a visit", "My booking", "Prices",
     ]
     prices = client.post(f"{BASE}/test-chat", json={"reply_id": "prices"}).json()["messages"][-1]
-    assert "Haircut: QAR 60 (45 min)" in prices["body"]
+    assert "Haircut & blow-dry: QAR 120 (60 min)" in prices["body"]
     link = client.post(f"{BASE}/test-chat", json={"reply_id": "book"}).json()["messages"][-1]
     assert f"/b/{slug}?t=" in link["body"] and "?c=" not in link["body"]
 
@@ -231,7 +231,7 @@ def test_the_test_lines_suggested_price_question_gets_the_price_list(client):
     # answer the real chat did not give).
     new_business(client)
     english = client.post(f"{BASE}/test-chat", json={"text": "What are your prices?"})
-    assert "Haircut: QAR 60 (45 min)" in english.json()["messages"][-1]["body"]
+    assert "Haircut & blow-dry: QAR 120 (60 min)" in english.json()["messages"][-1]["body"]
     arabic = client.post(f"{BASE}/test-chat", json={"text": "كم الأسعار؟"})
     assert arabic.json()["messages"][-1]["body"].startswith("خدماتنا:")
 

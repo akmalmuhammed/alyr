@@ -21,6 +21,7 @@ from uuid import UUID
 
 import asyncpg
 
+from alyr import presets
 from alyr.core import jobs, team, templates
 from alyr.core.normalise import fmt_qar
 from alyr.core.outbound import Outbound
@@ -171,11 +172,15 @@ async def update_service(
     The deposit is checked against the price the service will have, so a price cannot be
     lowered under a fixed deposit."""
     current = await conn.fetchrow(
-        "select price, deposit_kind, deposit_value from services where id = $1 for update",
+        "select name, name_ar, price, deposit_kind, deposit_value from services "
+        "where id = $1 for update",
         service_id,
     )
     if current is None:
         return False
+    if name is not None and name_ar is None:
+        # Renamed without an Arabic name: a sample's Arabic would now describe another service.
+        name_ar = presets.kept_arabic(current["name"], current["name_ar"], name)
     final_price = price if price is not None else current["price"]
     kind = deposit_kind if deposit_kind is not None else current["deposit_kind"]
     value = _check_deposit(
@@ -605,6 +610,12 @@ async def update_resource(
     conn: asyncpg.Connection, resource_id: UUID, name: str | None, name_ar: str | None,
     kind: str | None = None,
 ) -> bool:
+    if name is not None and name_ar is None:
+        before = await conn.fetchrow(
+            "select name, name_ar from booking_resources where id = $1", resource_id
+        )
+        if before is not None:
+            name_ar = presets.kept_arabic(before["name"], before["name_ar"], name)
     updated = await conn.execute(
         "update booking_resources set name = coalesce(nullif(btrim($2), ''), name), "
         "name_ar = coalesce($3, name_ar), kind = coalesce($4, kind) where id = $1",

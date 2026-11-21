@@ -99,6 +99,29 @@ async def _free_slug(conn: asyncpg.Connection, name: str) -> str:
     return f"{base}-{secrets.token_hex(3)}"
 
 
+async def seed_bookings_setup(conn: asyncpg.Connection, preset: presets.Preset) -> None:
+    """Write what a type starts its bookings with: its services, its opening hours and the
+    people (or chairs) who serve at the same time. `conn` is tenant-scoped. Used by sign-up and by
+    the back office, so a business of the type starts the same either way."""
+    for sort, s in enumerate(preset.services):
+        await conn.execute(
+            "insert into services (name, name_ar, duration_minutes, price, sort) "
+            "values ($1, $2, $3, $4, $5)",
+            s.name, s.name_ar, s.minutes, s.price, sort,
+        )
+    for weekday, opens, closes in preset.hours:
+        await conn.execute(
+            "insert into business_hours (weekday, opens, closes) "
+            "values ($1, $2::text::time, $3::text::time)",
+            weekday, opens, closes,
+        )
+    for sort, person in enumerate(preset.people):
+        await conn.execute(
+            "insert into booking_resources (name, name_ar, kind, sort) values ($1, $2, $3, $4)",
+            person.name, person.name_ar, person.kind, sort,
+        )
+
+
 async def create_business(
     db: Database, token: str, owner_name: str, name: str, name_ar: str, type_key: str,
     area: str, accepted_terms: list[UUID] | None = None, ip: str = "", user_agent: str = "",
@@ -158,18 +181,7 @@ async def create_business(
             await terms.accept(
                 conn, [UUID(t) for t in sorted(required)], owner, owner_name, ip, user_agent
             )
-        for sort, s in enumerate(preset.services):
-            await conn.execute(
-                "insert into services (name, name_ar, duration_minutes, price, sort) "
-                "values ($1, $2, $3, $4, $5)",
-                s.name, s.name_ar, s.minutes, s.price, sort,
-            )
-        for weekday, opens, closes in preset.hours:
-            await conn.execute(
-                "insert into business_hours (weekday, opens, closes) "
-                "values ($1, $2::text::time, $3::text::time)",
-                weekday, opens, closes,
-            )
+        await seed_bookings_setup(conn, preset)
         await pricing.create_first_quote(
             conn, pricing.Business(tenant_id, name, frozenset(modules)), price_list
         )
@@ -212,6 +224,11 @@ async def state(conn: asyncpg.Connection, staff: Staff) -> dict:
     hours = await conn.fetch(
         "select weekday, opens, closes from business_hours order by weekday, opens"
     )
+    # The people (or chairs) who serve at once: a salon starts with several (`presets.people`)
+    # and the hours step asks the owner to name them. Empty is one customer at a time.
+    people = await conn.fetch(
+        "select id, name, name_ar from booking_resources where active order by sort, created_at"
+    )
     return {
         "business": {
             "name": shop["name"], "name_ar": shop["name_ar"], "slug": shop["slug"],
@@ -235,6 +252,9 @@ async def state(conn: asyncpg.Connection, staff: Staff) -> dict:
             {"weekday": r["weekday"], "opens": r["opens"].strftime("%H:%M"),
              "closes": r["closes"].strftime("%H:%M")}
             for r in hours
+        ],
+        "people": [
+            {"id": str(r["id"]), "name": r["name"], "name_ar": r["name_ar"]} for r in people
         ],
         "quote": await pricing.own_quote(conn),
         "areas": list(presets.AREAS),
