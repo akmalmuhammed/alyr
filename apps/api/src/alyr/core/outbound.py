@@ -16,7 +16,7 @@ SEND = "send_message"
 class SendResult:
     """What the outbound layer did with a message. `blocked` is the reason it was
     refused (window_closed, no_consent, opted_out, no_marketing_consent, billing_paused,
-    template_not_approved), or None."""
+    template_not_approved, imported_history), or None."""
 
     message_id: UUID
     blocked: str | None = None
@@ -66,13 +66,19 @@ class Outbound:
         `conn` must be tenant-scoped."""
         contact = await conn.fetchrow(
             "select consent_service, consent_marketing, consent_back_in_stock, number_id, "
-            "coalesce(last_inbound_at > now() - interval '24 hours', false) as window_open "
+            "coalesce(last_inbound_at > now() - interval '24 hours', false) as window_open, "
+            "(history_import_id is not null and last_inbound_at is null) as imported_only "
             "from contacts where id = $1",
             message.to,
         )
         if contact is None:
             raise LookupError("no such contact for this tenant")
         blocked = consent.refusal(contact, message)
+        # A client that a visits import made, and who has never written to the shop, is a line in
+        # a file and not someone who agreed to be messaged: nothing goes to them, whatever the
+        # consent column says (D-197). Once they write, they are an ordinary customer.
+        if contact["imported_only"]:
+            blocked = "imported_history"
         # ALYR has paused what it sends for this client, who is overdue or cancelled (ALY-218,
         # D-082): automatic replies and templates wait. A reply someone typed in the inbox
         # still goes, inside the customer's window, so a shop can still answer by hand.
@@ -155,12 +161,21 @@ class Outbound:
         async with self._db.tenant(tenant_id) as conn:
             row = await conn.fetchrow(
                 "select m.contact_id, m.kind, m.body, m.payload, m.status, "
-                "       c.phone, c.wa_user_id, c.number_id "
+                "       c.phone, c.wa_user_id, c.number_id, "
+                "       (c.history_import_id is not null and c.last_inbound_at is null) "
+                "         as imported_only "
                 "from messages m join contacts c on c.id = m.contact_id where m.id = $1",
                 message_id,
             )
             if row is None or row["status"] != "queued":
                 return  # already sent, or the message is gone: nothing to do
+            if row["imported_only"]:
+                # Backstop to the check in `send`: if a job was ever queued for such a client,
+                # it is not delivered (D-197).
+                await conn.execute(
+                    "update messages set status = 'blocked', error = 'imported_history' "
+                    "where id = $1 and status = 'queued'", message_id)
+                return
             # Use the number this contact already talks to; otherwise the tenant's first.
             number = await conn.fetchrow(
                 "select number_id, channel from channel_numbers "

@@ -46,12 +46,16 @@ async def after_visit(
     if not shop["on"] or not shop["link"]:
         return None
     contact = await conn.fetchrow(
-        "select id, lang, role, wa_user_id from contacts where id = $1", contact_id
+        "select id, lang, role, wa_user_id, "
+        "(history_import_id is not null and last_inbound_at is null) as imported_only "
+        "from contacts where id = $1", contact_id
     )
     if contact is None or contact["role"] != "customer" or identity.is_test_user(
         contact["wa_user_id"]
     ):
         return None  # staff, and the owner's own test chat, are never asked
+    if contact["imported_only"]:
+        return None  # a client from an imported file never agreed to be asked (D-197)
     # One decision per customer at a time, so two visits marked together send one message.
     await conn.execute("select pg_advisory_xact_lock(hashtext($1))", f"review:{contact_id}")
     if await conn.fetchval(
