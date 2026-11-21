@@ -57,7 +57,8 @@ def test_a_real_shop_is_offered_no_source_and_a_demo_shop_the_sample(client_fact
     real = discovery_shop(client_factory, monkeypatch, demo=False)
     demo = discovery_shop(client_factory, monkeypatch)
     assert real.owner.get(f"{BASE}/connection").json() == {
-        "kind": None, "status": None, "available": [], "demo": False, "connections": []}
+        "kind": None, "status": None, "available": [], "demo": False, "observed_on": None,
+        "days_old": None, "old": False, "connections": []}
     assert demo.owner.get(f"{BASE}/connection").json()["available"] == ["sample"]
     assert real.owner.get(f"{BASE}/overview").json()["demo"] is False
     assert demo.owner.get(f"{BASE}/overview").json()["demo"] is True
