@@ -136,17 +136,20 @@ def client(client_factory):
 
 # --- Sharding (CI only) -----------------------------------------------------------------------
 # `ci` runs the suite as several jobs, each on its own runner with its own PostgreSQL, so that the
-# whole run is as long as the slowest slice and not the sum (ALY-fc-ci). Without these options
-# nothing here does anything: `pytest` on a laptop runs everything, as before.
+# whole run is as long as the slowest slice and not the sum (docs/runbooks/ci-shards.md). Without
+# these options nothing here does anything: `pytest` on a laptop runs everything, as before.
 #
 #   pytest --shard=2/6 --shard-report=out.json
 #
-# A shard is a set of WHOLE test files, picked by weight (seconds per file from
-# tests/shard_durations.json, kept by `scripts/ci/shards.py durations`; a file that is not in the
-# list weighs the average, so a new test file is never left out). Whole files, never single
-# tests, so the order inside a file, and every module-scoped fixture, is what it is on a laptop.
-# The report says how many tests were collected, how many this shard chose and how many it ran;
-# `scripts/ci/shards.py check` fails the `api` job unless the slices add up to the whole suite.
+# A shard is a set of WHOLE test files, and the files whose names start with the same word
+# (test_catalog_*, test_documents_*, test_demo_*...) always go together, in their usual order:
+# those files share fixed demo shops and tenant rows in the one test database, and some of them
+# only pass because a neighbour ran first (the first sliced runs found two such cases, both in
+# test_catalog_*). Groups are picked by weight (seconds per file from tests/shard_durations.json,
+# kept by `scripts/ci/shards.py durations`; a file that is not in the list weighs the average, so
+# a new test file is never left out). The report says how many tests were collected, how many this
+# shard chose and how many it ran; `scripts/ci/shards.py check` fails the `api` job unless the
+# slices add up to the whole suite.
 
 SHARD_DURATIONS = os.path.join(os.path.dirname(__file__), "shard_durations.json")
 
@@ -158,16 +161,26 @@ def pytest_addoption(parser):
                     help="write what this slice collected, chose and ran, as JSON")
 
 
+def shard_group(name: str) -> str:
+    """The first word of a test file's name: tests/test_catalog_cards.py is in group "catalog"."""
+    return os.path.basename(name).removeprefix("test_").split("_")[0].removesuffix(".py")
+
+
 def shard_plan(weights: dict[str, float], total: int) -> list[list[str]]:
-    """Split files into `total` slices, heaviest first onto the lightest slice (LPT), with ties
-    broken by name so every job computes the same plan. Pure, so the CI script can test it."""
+    """Split files into `total` slices: whole groups (see above), heaviest first onto the lightest
+    slice, ties broken by name so every job computes the same plan. Pure, so the CI script's test
+    can use it. Each slice lists its files in name order."""
+    groups: dict[str, list[str]] = {}
+    for name in weights:
+        groups.setdefault(shard_group(name), []).append(name)
+    weight = {g: sum(weights[n] for n in names) for g, names in groups.items()}
     slices: list[list[str]] = [[] for _ in range(total)]
     load = [0.0] * total
-    for name in sorted(weights, key=lambda n: (-weights[n], n)):
+    for group in sorted(groups, key=lambda g: (-weight[g], g)):
         lightest = min(range(total), key=lambda i: (load[i], i))
-        slices[lightest].append(name)
-        load[lightest] += weights[name]
-    return slices
+        slices[lightest].extend(groups[group])
+        load[lightest] += weight[group]
+    return [sorted(part) for part in slices]
 
 
 # What this run collected, chose and ran, for the report. One process, so a plain dict will do.
