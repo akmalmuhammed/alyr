@@ -55,6 +55,17 @@ def as_production(monkeypatch) -> None:
     get_settings.cache_clear()
 
 
+def pay_links_and_releases() -> tuple[int, int]:
+    """How many deposit pay links and queued releases the database holds (the suite shares one
+    database, so a test compares before and after rather than with zero)."""
+    return (
+        owner_sql("select count(*) as n from payment_requests "
+                  "where booking_id is not null")[0]["n"],
+        owner_sql("select count(*) as n from jobs where kind = 'booking_deposit_expiry' "
+                  "and status = 'queued'")[0]["n"],
+    )
+
+
 def held_for(contact_id: str) -> int:
     return owner_sql("select count(*) as n from bookings where contact_id = $1",
                      UUID(contact_id))[0]["n"]
@@ -70,6 +81,7 @@ def test_a_service_with_a_deposit_cannot_be_booked_where_the_shop_cannot_take_it
     start = free(client, sid)[0]
     before = held_for(me["id"])
     messages = len(sent_to(me["id"]))
+    links_before = pay_links_and_releases()
 
     refused = book_as(client, me["id"], sid, start)
     assert refused.status_code == 409, refused.text
@@ -80,10 +92,7 @@ def test_a_service_with_a_deposit_cannot_be_booked_where_the_shop_cannot_take_it
     # and no release waiting, and the customer was not messaged.
     assert held_for(me["id"]) == before
     assert start in free(client, sid)
-    assert owner_sql("select count(*) as n from payment_requests where booking_id is not null"
-                     )[0]["n"] == 0
-    assert owner_sql("select count(*) as n from jobs where kind = 'booking_deposit_expiry' "
-                     "and status = 'queued'")[0]["n"] == 0
+    assert pay_links_and_releases() == links_before
     assert len(sent_to(me["id"])) == messages
 
 

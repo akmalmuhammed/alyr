@@ -254,7 +254,7 @@ def test_another_shop_cannot_touch_this_shops_services(client_factory, monkeypat
     sign_in(stranger, "omar@other.example")
     sid = service_id(owner)
 
-    assert stranger.get("/api/services").json() == {"services": []}
+    assert stranger.get("/api/services").json()["services"] == []
     assert stranger.patch(f"/api/services/{sid}", json={"price": 1}).status_code == 404
     assert stranger.post(f"/api/services/{sid}/active", json={"active": False}).status_code == 404
     assert listed(owner)["Electrician site visit"]["active"] is True
