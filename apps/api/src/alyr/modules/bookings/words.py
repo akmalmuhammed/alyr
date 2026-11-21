@@ -30,36 +30,51 @@ def with_whom(resource: dict | None, arabic: bool) -> str:
     return f" مع {name}" if arabic else f" with {name}"
 
 
+def hours_ar(hours: int, by: bool = False) -> str:
+    """The cancel window's hours as Arabic counts them after "من" or "بـ", where the dual is
+    «ساعتين»: «ساعة واحدة», «ساعتين», «3 ساعات», «24 ساعة». `by` joins «بـ» to it («بساعتين»)."""
+    if hours == 1:
+        text = "ساعة واحدة"
+    elif hours == 2:
+        text = "ساعتين"
+    else:
+        text = f"{hours} ساعات" if 3 <= hours <= 10 else f"{hours} ساعة"
+        return f"بـ{text}" if by else text
+    return f"ب{text}" if by else text
+
+
 def terms_sentence(terms: dict, arabic: bool) -> str:
     """The shop's rule for a paid deposit, in one or two sentences, as the customer is shown
     it before paying. `terms` is a booking's `deposit_terms` (or the shop's current rule)."""
     hours = terms.get("cancel_hours", 24)
     no_show, late = terms.get("no_show", "keep"), terms.get("late_cancel", "keep")
+    hrs = "1 hour" if hours == 1 else f"{hours} hours"
     if arabic:
+        h, by = hours_ar(hours), hours_ar(hours, by=True)
         if no_show == "keep" and late == "keep":
-            rule = (f"إذا لم تحضر، أو ألغيت قبل الموعد بأقل من {hours} ساعة، "
+            rule = (f"إذا لم تحضر، أو ألغيت قبل الموعد بأقل من {h}، "
                     "يحتفظ المحل بالعربون.")
         elif no_show == "keep":
             rule = (f"إذا لم تحضر يحتفظ المحل بالعربون. وإذا ألغيت قبل الموعد بأقل من "
-                    f"{hours} ساعة يُرد إليك.")
+                    f"{h} يُرد إليك.")
         elif late == "keep":
-            rule = (f"إذا ألغيت قبل الموعد بأقل من {hours} ساعة يحتفظ المحل بالعربون. "
+            rule = (f"إذا ألغيت قبل الموعد بأقل من {h} يحتفظ المحل بالعربون. "
                     "وإذا لم تحضر يُرد إليك.")
         else:
             rule = "يُرد العربون إليك إذا ألغيت أو لم تحضر."
-        return rule + f" إذا ألغيت قبل الموعد بـ{hours} ساعة أو أكثر يُرد إليك العربون."
+        return rule + f" إذا ألغيت قبل الموعد {by} أو أكثر يُرد إليك العربون."
     if no_show == "keep" and late == "keep":
-        rule = (f"If you do not come, or cancel less than {hours} hours before, "
+        rule = (f"If you do not come, or cancel less than {hrs} before, "
                 "the shop keeps the deposit.")
     elif no_show == "keep":
         rule = (f"If you do not come, the shop keeps the deposit. If you cancel less than "
-                f"{hours} hours before, it is refunded.")
+                f"{hrs} before, it is refunded.")
     elif late == "keep":
-        rule = (f"If you cancel less than {hours} hours before, the shop keeps the deposit. "
+        rule = (f"If you cancel less than {hrs} before, the shop keeps the deposit. "
                 "If you do not come, it is refunded.")
     else:
         rule = "The deposit is refunded if you cancel or do not come."
-    return rule + f" Cancel {hours} hours or more before and it is refunded."
+    return rule + f" Cancel {hrs} or more before and it is refunded."
 
 
 def deposit_due(number: int, shop: str, what: str, when: str, amount: int, minutes: int,
