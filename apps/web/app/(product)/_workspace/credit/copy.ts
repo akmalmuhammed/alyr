@@ -8,7 +8,10 @@ export type Lang = "en" | "ar";
 
 /** A noun in both languages: English one and many; Arabic one, two, three to ten, eleven and up. */
 function noun(one: string, many: string, a1: string, a2: string, a3: string, a4: string): Noun {
-  return { en: [one, many], ar: [a1, a2, a3, a4] };
+  const out = {} as Noun;
+  out.en = [one, many];
+  out.ar = [a1, a2, a3, a4];
+  return out;
 }
 
 const nounDay = noun("day", "days", "يوم واحد", "يومان", "أيام", "يوماً");
