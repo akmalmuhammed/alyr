@@ -24,14 +24,18 @@ WA = "https://wa.me/97455550150"
 
 
 def discovery_shop(client_factory, monkeypatch, *, module: bool = True, gap: int = 0,
-                   roles: tuple = ("owner",)) -> Shop:
+                   roles: tuple = ("owner",), demo: bool = True) -> Shop:
     """A new shop with its three roles signed in. Discovery is on unless said otherwise. The
     ten-minute limit between manual runs is off (`gap=0`) so a test can run several in a row; the
     tests of the limit pass `gap=600`. Each signed-in client builds an app, so only the roles a test
-    uses are signed in (`roles=`)."""
+    uses are signed in (`roles=`). The shop is marked as a demo shop, as ALYR staff mark one in
+    `/ops`, because only a marked shop may turn the fictional sample on (D-169); `demo=False` is a
+    real shop, for the tests of that guard."""
     monkeypatch.setenv("ALYR_DEMO_OPEN", "false")
     monkeypatch.setenv("ALYR_DISCOVERY_RUN_GAP_SECONDS", str(gap))
     shop = make_shop(documents=False)
+    if demo:
+        owner_sql("update tenants set demo_data_allowed = true where id = $1", shop.tenant_id)
     if module:
         owner_sql(
             "insert into tenant_modules (tenant_id, module_key) values ($1, 'discovery')",
@@ -45,6 +49,9 @@ def discovery_shop(client_factory, monkeypatch, *, module: bool = True, gap: int
 
 
 def turn_on_sample(shop: Shop) -> dict:
+    """Turn the fictional sample on for a shop, which ALYR staff would have to mark as a demo shop
+    first (D-169): so the helper marks it, as `/ops` does."""
+    owner_sql("update tenants set demo_data_allowed = true where id = $1", shop.tenant_id)
     answer = shop.owner.put("/api/discovery/connection", json={"kind": "sample", "on": True})
     assert answer.status_code == 200, answer.text
     return answer.json()

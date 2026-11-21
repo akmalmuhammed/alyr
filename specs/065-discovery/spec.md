@@ -289,3 +289,25 @@ addition is a new key, never a changed one.**
 
 Scheduled runs (only the `schedule` value of `trigger` exists), `places`, Google writes, proposals and
 approvals, the MCP tools, the admin console, the web screens (another session), a WhatsApp command.
+
+## As built (Discovery on a real business, D-169, first client, 21 Nov 2026)
+
+The first client wants only Discovery and Insights, and Google's Business Profile access has no
+published timeframe. The audit found a trap and a gap; this section is what changed. Branch
+`aly-fc-disc-guard` is the first half.
+
+1. **The sample is only for demo shops.** `tenants.demo_data_allowed` (set by ALYR staff in `/ops`,
+   audited, never by the shop) is the one flag. `engine.is_demo(conn)` reads it.
+   - `PUT /connection` with `{kind: "sample", on: true}` for a shop without it answers 409
+     `sample_not_allowed` (English and Arabic words) and writes nothing: no connection, no place,
+     no fact. Turning a connection off is always allowed.
+   - `GET /connection` lists in `available` only what this shop may turn on (`connectors.available_for`)
+     and says `demo`; `GET /overview` says `demo`. A missing `demo` is read as "no".
+   - `engine.start_run` refuses a sample connection left on a shop that is not marked (409
+     `sample_not_allowed`), and a run that was queued before the mark came off fails with the same
+     code and finds nothing, so no check-up is ever about the made-up business for a real shop.
+   - Home draws "Turn on Discovery" only where `demo`, with a sentence that says the business is made
+     up; any other shop reads "Discovery is not connected to your business yet. ALYR sets this up
+     with you." and has nothing to press, whatever its role.
+   - `python -m alyr.discovery_demo` (local only) marks the demo shop as the back office does.
+
