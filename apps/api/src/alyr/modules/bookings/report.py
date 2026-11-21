@@ -6,6 +6,8 @@ from datetime import datetime, timedelta
 import asyncpg
 
 from alyr.core.words import VISITS, counted
+from alyr.modules.agent.words import data_from, plain
+from alyr.modules.history import imports as history_imports
 
 TITLE = {"en": "Bookings", "ar": "الحجوزات"}
 DAYS = {
@@ -31,6 +33,12 @@ async def numbers(conn: asyncpg.Connection, start: datetime, end: datetime, tz: 
     )
     if not current:
         return out
+    # Where the visits come from when a file was imported, and whether anything was booked in
+    # ALYR itself: without it "booked for next week" and "reminders sent" would be a 0 that
+    # is not ALYR's to count (spec 070, task I5).
+    out["from"] = await history_imports.data_from(conn)
+    out["live"] = bool(await conn.fetchval(
+        "select exists (select 1 from bookings where history_import_id is null)"))
     out["reminders"] = await conn.fetchval(
         "select count(*) from bookings where reminded_at >= $1 and reminded_at < $2",
         start, end,
@@ -63,14 +71,29 @@ def headline(n: dict, lang: str) -> str:
     return f"{came}, {n['no_shows']} no-shows"
 
 
+def _imported_only(n: dict) -> bool:
+    return bool(n.get("from")) and not n.get("live", True)
+
+
 def lines(n: dict, before: dict | None, lang: str) -> list[str]:
+    out = _lines(n, before, lang)
+    if n.get("from"):  # what the numbers are made of, and how far they go
+        out.append(plain(data_from(n["from"], lang)))
+    return out
+
+
+def _lines(n: dict, before: dict | None, lang: str) -> list[str]:
     ar = lang == "ar"
+    imported = _imported_only(n)  # a file's visits: nothing booked or reminded by ALYR to count
     if not active(n):
         return [
-            "لا زيارات ولا حجوزات جديدة هذا الأسبوع." if ar
+            "لا زيارات هذا الأسبوع." if imported and ar
+            else "No visits this week." if imported
+            else "لا زيارات ولا حجوزات جديدة هذا الأسبوع." if ar
             else "No visits and no new bookings this week.",
-            f"محجوز للأسبوع القادم: {n['next_week']}" if ar
-            else f"Booked for next week: {n['next_week']}",
+            *([] if imported else [
+                f"محجوز للأسبوع القادم: {n['next_week']}" if ar
+                else f"Booked for next week: {n['next_week']}"]),
         ]
     first = f"حضروا: {n['came']}" if ar else f"Customers who came: {n['came']}"
     if before is not None:
@@ -83,15 +106,16 @@ def lines(n: dict, before: dict | None, lang: str) -> list[str]:
             f"لم تُسجَّل بعد: {n['unmarked']} (سجّلها في تبويب الحجوزات)" if ar
             else f"Not marked yet: {n['unmarked']} (mark them in the Bookings tab)"
         )
-    out.append(f"حجوزات جديدة: {n['made']}" if ar else f"New bookings made: {n['made']}")
-    out.append(
-        f"تذكيرات أرسلتها ALYR نيابة عنك: {n['reminders']}" if ar
-        else f"Reminders ALYR sent for you: {n['reminders']}"
-    )
-    out.append(
-        f"محجوز للأسبوع القادم: {n['next_week']}" if ar
-        else f"Booked for next week: {n['next_week']}"
-    )
+    if not imported:
+        out.append(f"حجوزات جديدة: {n['made']}" if ar else f"New bookings made: {n['made']}")
+        out.append(
+            f"تذكيرات أرسلتها ALYR نيابة عنك: {n['reminders']}" if ar
+            else f"Reminders ALYR sent for you: {n['reminders']}"
+        )
+        out.append(
+            f"محجوز للأسبوع القادم: {n['next_week']}" if ar
+            else f"Booked for next week: {n['next_week']}"
+        )
     if n["busiest"]:
         day = DAYS[lang if ar else "en"][n["busiest"] - 1]
         out.append(f"أكثر الأيام ازدحاماً: {day}" if ar else f"Busiest day: {day}")

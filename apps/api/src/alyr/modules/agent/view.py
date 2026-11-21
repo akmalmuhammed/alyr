@@ -48,6 +48,7 @@ from alyr.modules.agent.words import (
     agree,
     clock,
     count,
+    data_from,
     day_month,
     minutes,
     money,
@@ -118,6 +119,7 @@ def render(f: Facts, lang: str, snoozed: dict | None = None) -> dict:
         "owed": _owed(f, lang),
         "team": None if empty else _team(f, lang),
         "report": _report(f, lang),
+        "data_source": _source(f, lang),
         "comparisons_from": (
             day_month(f.comparisons_from, lang) if state == "first_week" else None
         ),
@@ -323,7 +325,7 @@ def _summary(f: Facts, main: str, state: str, lang: str) -> list[dict]:
             parts.append(muted(rich(T(lang, "By this time last week: {n}.",
                                       "حتى هذا الوقت من الأسبوع الماضي: {n}."),
                                     n=count(last, unit, lang))))
-    if main == "bookings":
+    if main == "bookings" and not f.imported_only:
         parts.append(fact(rich(
             T(lang, "{n} booked for the next 7 days.", "المحجوز للأيام السبعة القادمة: {n}."),
             n=count(f.booked_ahead, noun, lang))))
@@ -407,6 +409,9 @@ NEEDS_MODULE = {
 }
 
 
+ALYR_MADE = {"booked_ahead", "new_bookings"}
+
+
 def kpi_keys(f: Facts, main: str) -> list[str]:
     """Four numbers (C): a single product shows its own four; with several, two from the
     main product, then "Owed to you" if credit accounts are on, then the main product's
@@ -427,6 +432,8 @@ def kpi_keys(f: Facts, main: str) -> list[str]:
             continue
         if key in MONEY_KPIS and not f.money:
             continue
+        if f.imported_only and key in ALYR_MADE:
+            continue  # a file's visits were not booked or reminded by ALYR: not "0", not ours
         keys.append(key)
     return keys[:4]
 
@@ -723,7 +730,8 @@ def _week(f: Facts, main: str, lang: str) -> dict | None:
             data = {d: c for d, (c, _) in f.orders_by_day.items()}
             fmt, key = "count", "orders"
     elif main == "bookings":
-        data, fmt, key, booked = f.visits_by_day, "count", "visits", f.booked_by_day
+        data, fmt, key = f.visits_by_day, "count", "visits"
+        booked = {} if f.imported_only else f.booked_by_day
     elif main == "ledger" and f.money:
         data, fmt, key = f.collected_by_day, "money", "collected"
     elif "inbox" in f.modules:
@@ -942,6 +950,12 @@ NO_SHOWS = (("no-show", "no-shows"), ("غياب واحد", "غيابان", "حا
 
 
 # ── the Sunday report ─────────────────────────────────────
+
+
+def _source(f: Facts, lang: str) -> list | None:
+    """Where an imported file's visits come from and how far they go (spec 070, task I5): one
+    line under the summary for a shop whose records are, in part, a file's. None otherwise."""
+    return data_from(f.data_source, lang) if f.data_source else None
 
 
 def _to(n: int, noun, lang: str) -> str:

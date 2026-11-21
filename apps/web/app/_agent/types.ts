@@ -126,5 +126,7 @@ export type AgentView = {
     everyone: boolean;
   } | null;
   report: Rich | null;
+  /** Where an imported visit file's numbers come from and how far they go; absent or null for a shop whose records ALYR made itself. */
+  data_source?: Rich | null;
   comparisons_from: string | null;
 };

@@ -90,6 +90,28 @@ def day_month(day: date, lang: str) -> str:
     return f"{day.day} {MONTHS[lang][day.month - 1]}"
 
 
+def long_date(day: date, lang: str) -> str:
+    return f"{day.day} {MONTHS[lang][day.month - 1]} {day.year}"
+
+
+def data_from(data: dict, lang: str) -> list:
+    """Where an imported shop's numbers come from, as one sentence (spec 070, "Data from"): what
+    the file is (the label staff typed, else "your file"), the first and last visit it holds and
+    the day it was cut. `data` is `history.imports.data_from`. It says nothing about live data:
+    nothing after the last visit is in it."""
+    label = (data.get("source") or "").strip()
+    first, last, cut = (date.fromisoformat(data[k]) for k in
+                        ("first_visit_on", "last_visit_on", "exported_on"))
+    if lang == "ar":
+        template = "من {source}: زيارات من {first} إلى {last}، وصُدِّر الملف في {cut}."
+        source = B(label) if label else "ملفك"
+    else:
+        template = "From {source}: visits {first} to {last}, file exported {cut}."
+        source = B(label) if label else "your file"
+    return rich(template, source=source, first=B(long_date(first, lang)),
+                last=B(long_date(last, lang)), cut=B(long_date(cut, lang)))
+
+
 def clock(moment: datetime) -> str:
     return moment.strftime("%H:%M")
 

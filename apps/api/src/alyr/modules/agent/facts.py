@@ -20,6 +20,7 @@ from alyr.config import get_settings
 from alyr.core import not_sent, team, template_approval
 from alyr.core.auth import Staff
 from alyr.modules import report
+from alyr.modules.history import imports as history_imports
 from alyr.modules.ledger import service as ledger
 
 WAITING_MINUTES = team.WAITING_MINUTES
@@ -147,11 +148,8 @@ class Facts:
     # 24-hour window the WhatsApp copy is refused (D-194): the numbers are not a sure destination
     report_whatsapp_held: bool = False
     report_at: datetime | None = None
-    # Where the numbers come from when it is not ALYR's own chat, orders or bookings: None for
-    # a shop whose records ALYR made itself. The hook for "from your <system> export, up to
-    # <date>" (task I5, docs/lanes/product.md): the importer's reader sets
-    # {"name": <system>, "as_of": <date>} in `gather`, `view.render` says it, and nothing else
-    # about a rule changes. Nothing sets it yet.
+    # Where the visits come from when a file was imported (`history.imports.data_from`: source,
+    # exported_on, first_visit_on, last_visit_on); None for a shop whose records ALYR made itself.
     data_source: dict | None = None
     # Busiest hours: (Sunday-first day, hour) -> count over 28 days
     hours_grid: dict = field(default_factory=dict)
@@ -174,6 +172,12 @@ class Facts:
     # "low_stock", ...). None when the shop does not have the Catalog module; read by
     # `view.build` and not by `gather`, which the weekly report also uses for a past moment.
     stock: dict | None = None
+
+    @property
+    def imported_only(self) -> bool:
+        """The visits are a file's and nothing is booked in ALYR: "booked ahead" and "reminders
+        sent" are not zero, they are not ALYR's to count."""
+        return self.data_source is not None and not self.live_bookings
 
     @property
     def zone(self) -> ZoneInfo:
@@ -318,6 +322,7 @@ async def gather(conn: asyncpg.Connection, staff: Staff, now: datetime | None = 
             (row["opens"].hour + row["opens"].minute / 60,
              row["closes"].hour + row["closes"].minute / 60)
         )
+    f.data_source = await history_imports.data_from(conn)
     await _last_by_now(conn, f)
     if f.money:
         await _setup(conn, f, staff)

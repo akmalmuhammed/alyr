@@ -71,7 +71,7 @@ Only ALYR staff, through the back office's own door: `/api/admin/businesses/{id}
 - **Comparisons from the first day.** A business's start is the earlier of when it began in ALYR and its first imported visit, so a week is compared with the week before as soon as there is one.
 - **Nothing is "thin ahead" when nothing is booked ahead in ALYR.** `thin_days` stays silent for a shop with no booking made in ALYR (`Facts.live_bookings`).
 - **A customer with no WhatsApp ID is still a customer.** Eight of the Agent's customer filters (the quiet regulars, new customers, customers who wrote, what ALYR did this week) read `wa_user_id not like 'TEST.%'`, which is NULL for any contact with no WhatsApp ID, so phone-only customers (and every imported client) were left out of quiet regulars, new customers and the rest. They now read `coalesce(wa_user_id, '')`.
-- **Not done here (task I5):** the "from your export up to <date>" strip, the weekly report's "Booked for next week: 0" and "Reminders ALYR sent: 0" lines and the "Booked, next 7 days" card for a shop with no live bookings, and the line that says nobody receives the report.
+- **Task I5 (done after the importer):** the Agent's `data_source` line, no booked-ahead, new-bookings or reminders figure for a shop with a file's visits and nothing booked in ALYR (`Facts.imported_only`), the report's source line, and a Sunday line that names the owner's email (`tests/test_agent_data_source.py`).
 
 ## Data
 

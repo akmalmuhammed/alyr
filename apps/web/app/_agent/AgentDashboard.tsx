@@ -376,6 +376,8 @@ export function AgentDashboard({
             ))}
           </div>
         ) : summary}
+        {/* Where an imported file's visits come from and how far they go (spec 070). */}
+        {!showcase && view.data_source && <p className="ag-caption ag-source"><Rich parts={view.data_source} /></p>}
       </header>
 
       {!showcase && hasSetup && <div className="ag-slot">{setup}</div>}
