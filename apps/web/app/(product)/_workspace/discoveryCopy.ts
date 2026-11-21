@@ -48,6 +48,25 @@ const en = {
     tag: "Sample data",
     text: "A made-up business, so you can see how Discovery works. Nothing here is about your shop.",
   },
+  // A source ALYR recorded by hand (D-169): whose look it was and which day, never "connected" and never "the next check-up looks again".
+  recorded: {
+    tag: "Recorded by ALYR",
+    text: (day: string) => `ALYR looked at public pages${day ? ` on ${day}` : ""} and wrote down what it saw. It does not read Google by itself.`,
+    old: (days: number) => `That was ${days} days ago, so some of it may be out of date.`,
+  },
+  recordedNext: "ALYR runs the next check-up after it looks again and writes down what it sees.",
+  noRunRecordedTitle: "Waiting for ALYR's first look",
+  noRunRecordedText: "ALYR looks at your listing, your website and your reviews, writes down what it sees, then runs the first check-up. Nothing is changed or sent.",
+  caughtUpRecorded: "The next recording shows what changed.",
+  statusLineRecorded: {
+    open: "",
+    skipped: "You skipped this. It stays here until you put it back.",
+    owner_done: "You marked this done. It is confirmed when ALYR records a new look and the check-up no longer finds it.",
+    verified: "A later recording no longer showed this.",
+    gone: "A later recording no longer showed this.",
+  } as Record<FindingStatus, string>,
+  stepSnapshotRecorded: (day: string) => `Took in what ALYR recorded about your listings and website${day ? `, seen on ${day}` : ""}`,
+  reviewNoWords: "Only the stars, the date and whether it was answered are kept. A reviewer's words and name are not.",
 
   // ── Home: the score line ─────────────────────────────
   scoreOf: "of 100",
@@ -381,6 +400,24 @@ const ar: typeof en = {
     tag: "بيانات توضيحية",
     text: "نشاط غير حقيقي لتشاهد كيف يعمل الاكتشاف. لا شيء هنا يخص محلك.",
   },
+  recorded: {
+    tag: "سجّلته ALYR",
+    text: (day) => `نظرت ALYR في صفحات عامة${day ? ` بتاريخ ${day}` : ""} ودوّنت ما رأته. هي لا تقرأ Google من تلقاء نفسها.`,
+    old: (days) => `مضى على ذلك ${days} يوماً، لذلك قد يكون بعضه قديماً.`,
+  },
+  recordedNext: "تُجري ALYR الفحص التالي بعد أن تنظر من جديد وتدوّن ما تراه.",
+  noRunRecordedTitle: "بانتظار أول نظرة من ALYR",
+  noRunRecordedText: "تنظر ALYR في صفحتك على الخرائط وموقعك ومراجعاتك، وتدوّن ما تراه، ثم تُجري أول فحص. لا يتغيّر شيء ولا يُرسل شيء.",
+  caughtUpRecorded: "يُظهر التسجيل التالي ما تغيّر.",
+  statusLineRecorded: {
+    open: "",
+    skipped: "تخطّيت هذا الأمر. يبقى هنا حتى تعيده.",
+    owner_done: "علّمته منجزاً. يتأكد ذلك حين تسجّل ALYR نظرة جديدة ولا يجده الفحص بعدها.",
+    verified: "لم يُظهر تسجيل لاحق هذا الأمر.",
+    gone: "لم يُظهر تسجيل لاحق هذا الأمر.",
+  },
+  stepSnapshotRecorded: (day) => `قُرئ ما دوّنته ALYR عن قوائمك وموقعك${day ? `، وقد نُظر إليه بتاريخ ${day}` : ""}`,
+  reviewNoWords: "تُحفظ النجوم والتاريخ وهل رُدّ عليها فقط. لا تُحفظ كلمات أصحاب المراجعات ولا أسماؤهم.",
 
   // ── Home: the score line ─────────────────────────────
   scoreOf: "من 100",

@@ -13,12 +13,13 @@ import { FactForm } from "./DiscoveryFacts";
 import { discovery, FACT_KEYS, type Fact, type FactKey, type Manager, type Place, type Settings, type TeamMember } from "./discoveryApi";
 import { T, type Lang } from "./discoveryCopy";
 import { formatDay, hoursText, placeName, sayError } from "./discoveryLogic";
-import { Loading, Problem, useLoad } from "./discoveryUi";
+import { Loading, Problem, useLoad, useRecorded } from "./discoveryUi";
 
 type Push = (text: string, options?: { tone?: "ok" | "bad" | "warn"; undo?: () => void }) => number;
 
 export function DiscoverySettings({ lang, push }: { lang: Lang; push: Push }) {
   const t = T[lang];
+  const recorded = useRecorded();
   const [settings, reload] = useLoad<Settings>(() => discovery.settings(lang), lang);
   const [places] = useLoad<Place[]>(() => discovery.places(), "places");
   const [team] = useLoad<TeamMember[]>(() => discovery.team().catch(() => []), "team");
@@ -97,14 +98,17 @@ export function DiscoverySettings({ lang, push }: { lang: Lang; push: Push }) {
         {everyPlace.map((place) => <PlaceFacts key={place.id} lang={lang} place={place} push={push} />)}
       </section>
 
-      <section className="dv-block dv-setsec" aria-labelledby="dv-set-week">
-        <h2 id="dv-set-week">{t.weeklyTitle}</h2>
-        <div className="ct-switchrow dv-weekly">
-          <Switch on={s.weekly_run} disabled={busy} label={t.weeklyLabel} onChange={(on) => void save({ weekly_run: on })} />
-          <span>{t.weeklyLabel}</span>
-        </div>
-        <p className="dv-setintro">{t.weeklyHint}</p>
-      </section>
+      {/* A recorded source is run by ALYR staff, never on a schedule (D-169): there is no weekly check-up to switch. */}
+      {!recorded && (
+        <section className="dv-block dv-setsec" aria-labelledby="dv-set-week">
+          <h2 id="dv-set-week">{t.weeklyTitle}</h2>
+          <div className="ct-switchrow dv-weekly">
+            <Switch on={s.weekly_run} disabled={busy} label={t.weeklyLabel} onChange={(on) => void save({ weekly_run: on })} />
+            <span>{t.weeklyLabel}</span>
+          </div>
+          <p className="dv-setintro">{t.weeklyHint}</p>
+        </section>
+      )}
     </div>
   );
 }

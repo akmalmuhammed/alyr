@@ -355,6 +355,19 @@ published timeframe. The audit found a trap and a gap; this section is what chan
 15. **The form** is `/ops/discovery?business=<id>` (`ops/Discovery.tsx`, rules in `discoveryOpsLogic.ts`,
     words in `discoveryOpsCopy.ts`), linked from the business's row under Clients; English, like the console.
 16. **Tests:** `tests/test_discovery_manual.py` (55), `ops/discoveryOps.test.mjs` (10).
-17. **Not built:** the owner's own entering of observations, the screens' banner and wording for a recorded
-    source (the next pull request), hand-fed answers, Google Business Profile.
-
+17. **Not built:** the owner's own entering of observations, hand-fed answers, Google Business Profile.
+18. **What the owner reads about a recorded source** (branch `aly-fc-disc-words`; English and Arabic, the
+    Arabic a draft until ALY-66). `GET /overview` and `GET /connection` say `source` / `observed_on`,
+    `days_old` and `old` (older than `STALE_AFTER_DAYS`, 14, in the shop's own days). The frame draws a banner
+    beside the sample's: "Recorded by ALYR · ALYR looked at public pages on 20 Nov and wrote down what it
+    saw. It does not read Google by itself." and, when old, "That was 20 days ago, so some of it may be out of
+    date." A finding's "what happens" says for such a source that it closes only when ALYR records a new look
+    that shows it fixed (`words.HAND_WHAT_HAPPENS`); its evidence reads "Google listing (recorded by ALYR on
+    20 Nov 2026)" and says `day_only` (a day, not a moment: the screen draws no time of day for it); the log's first step reads "Took 1 place as recorded by ALYR staff, seen on 20 Nov 2026." and
+    the Arabic screen words it itself (`stepSnapshotRecorded`). Home never draws the owner's "Run check-up" (it
+    would be refused): it says "ALYR runs the next check-up after it looks again and writes down what it sees."
+    and, before the first run, "Waiting for ALYR's first look"; its caught-up line and the finding sheet's
+    status lines say "recording", not "check-up"; the sheet leaves out "first seen" and "last seen" (they are
+    the days a check-up found it, not days anything was looked at); the weekly switch in Settings is not drawn.
+    A review the screens show carries `source`, and a recorded one says only its stars, its date and whether it
+    was answered are kept, never an empty quote.

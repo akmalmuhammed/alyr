@@ -22,8 +22,8 @@ import { DiscoverySettings } from "./DiscoverySettings";
 import { DiscoveryTodo } from "./DiscoveryTodo";
 import { discovery, type Connection } from "./discoveryApi";
 import { T, type Lang } from "./discoveryCopy";
-import { isSample, readView, viewHref, viewsFor } from "./discoveryLogic";
-import { useLoad } from "./discoveryUi";
+import { formatDay, isRecorded, isSample, readView, viewHref, viewsFor } from "./discoveryLogic";
+import { RecordedContext, useLoad } from "./discoveryUi";
 import "./discovery.css";
 
 export function Discovery({ lang, canManage }: { lang: Lang; canManage: boolean }) {
@@ -36,6 +36,8 @@ export function Discovery({ lang, canManage }: { lang: Lang; canManage: boolean 
   // sees no note; the answer never blocks the screen.
   const [connection, reloadConnection] = useLoad<Connection | null>(() => discovery.connection().catch(() => null), "connection");
   const sample = isSample(connection.data ?? null);
+  const recorded = isRecorded(connection.data ?? null);
+  const recordedDay = connection.data?.observed_on ? formatDay(`${connection.data.observed_on}T12:00:00Z`, lang) : "";
 
   // A new view takes the focus on its heading and starts at the top, so a keyboard or a screen
   // reader lands on what changed; the first view of a visit does neither.
@@ -75,12 +77,21 @@ export function Discovery({ lang, canManage }: { lang: Lang; canManage: boolean 
         </p>
       )}
 
-      {view === "home" && <DiscoveryHome lang={lang} canManage={canManage} push={push} onConnection={() => void reloadConnection(true)} />}
-      {view === "todo" && <DiscoveryTodo lang={lang} canManage={canManage} push={push} />}
-      {view === "proposals" && <DiscoveryProposals lang={lang} canManage={canManage} />}
-      {view === "reviews" && <DiscoveryReviews lang={lang} />}
-      {view === "reports" && <DiscoveryReports lang={lang} />}
-      {view === "settings" && <DiscoverySettings lang={lang} push={push} />}
+      {recorded && (
+        <p className="dv-sample">
+          <span className="dv-sample-tag">{t.recorded.tag}</span>
+          <span>{t.recorded.text(recordedDay)}{connection.data?.old && connection.data.days_old !== null ? ` ${t.recorded.old(connection.data.days_old)}` : ""}</span>
+        </p>
+      )}
+
+      <RecordedContext.Provider value={recorded}>
+        {view === "home" && <DiscoveryHome lang={lang} canManage={canManage} push={push} onConnection={() => void reloadConnection(true)} />}
+        {view === "todo" && <DiscoveryTodo lang={lang} canManage={canManage} push={push} />}
+        {view === "proposals" && <DiscoveryProposals lang={lang} canManage={canManage} />}
+        {view === "reviews" && <DiscoveryReviews lang={lang} />}
+        {view === "reports" && <DiscoveryReports lang={lang} />}
+        {view === "settings" && <DiscoverySettings lang={lang} push={push} />}
+      </RecordedContext.Provider>
 
       <ToastLayer toasts={toasts} dismiss={dismiss} lang={lang} undoWord={t.undo} dismissWord={t.dismiss} />
     </div>

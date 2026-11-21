@@ -314,7 +314,31 @@ WHERE: dict[str, tuple[str, str]] = {
     "reviews": ("Google reviews", "مراجعات Google"),
     "business": ("The business's details in ALYR", "بيانات المنشأة في ALYR"),
 }
-# "(sample data)": said beside where a fact came from when the source is the fictional sample.
+# What happens next, for a finding that came from a source ALYR staff recorded by hand (D-169). A
+# check-up of such a source only re-reads what was recorded, so no sentence may say "the next
+# check-up looks again" or "closes this item": the item closes when ALYR records a new look that
+# shows it fixed.
+HAND_WHAT_HAPPENS = (
+    "Nothing changes by itself. Mark it done after the change is made; this item closes only when "
+    "ALYR records a new look that shows it fixed.",
+    "لا يتغير شيء من تلقاء نفسه. علّمه منجزاً بعد إجراء التعديل، ولا يُغلق هذا البند إلا حين "
+    "تسجّل ALYR نظرة جديدة تُظهر أنه عولج.",
+)
+HAND_WHAT_HAPPENS_BY_RULE: dict[str, tuple[str, str]] = {
+    "review_unanswered": (
+        "Nothing is sent for you. Mark it done after the replies are written; this item closes "
+        "only when ALYR records a new look that shows them.",
+        "لا يُرسل شيء نيابةً عنك. علّمه منجزاً بعد كتابة الردود، ولا يُغلق هذا البند إلا حين "
+        "تسجّل ALYR نظرة جديدة تُظهرها.",
+    ),
+    "rating_low": (
+        "Nothing changes by itself. The rating moves only as new reviews come in; ALYR measures it "
+        "again each time it records a new look.",
+        "لا يتغير شيء من تلقاء نفسه. يتحرك التقييم بوصول مراجعات جديدة، وتقيسه ALYR من جديد كلما "
+        "سجّلت نظرة جديدة.",
+    ),
+}
+# Said beside where a fact came from when the source is the fictional sample, or ALYR's own look.
 # rule id -> what passing looks like, in a few words: the heading of its column where every place is
 # set against every check (spec 065, "Checks per place"). (English, Arabic.)
 CHECK_NAMES: dict[str, tuple[str, str]] = {
@@ -333,6 +357,7 @@ CHECK_NAMES: dict[str, tuple[str, str]] = {
 }
 
 SAMPLE_NOTE = ("sample data", "بيانات تجريبية")
+MANUAL_NOTE = ("recorded by ALYR on {day}", "سجّلته ALYR بتاريخ {day}")
 VALUES: dict[str, tuple[str, str]] = {
     "~not_found": ("Not found", "غير موجودة"),
     "~no": ("No", "لا"),
@@ -495,7 +520,12 @@ def pick(pair: tuple[str, str], lang: str) -> str:
     return pair[1] if lang == "ar" else pair[0]
 
 
-def rule_text(rule_id: str, field: str, lang: str) -> str:
+def rule_text(rule_id: str, field: str, lang: str, by_hand: bool = False) -> str:
+    """A rule's words in the reader's language. For a finding from a source ALYR staff recorded,
+    what happens next is said for that source (`HAND_WHAT_HAPPENS`): nothing there looks again by
+    itself."""
+    if by_hand and field == "what_happens":
+        return pick(HAND_WHAT_HAPPENS_BY_RULE.get(rule_id, HAND_WHAT_HAPPENS), lang)
     return pick(RULE_WORDS[rule_id][field], lang)
 
 
@@ -524,12 +554,25 @@ def evidence_view(item: dict, lang: str) -> dict:
     where = pick(WHERE.get(item["where"], (item["where"], item["where"])), lang)
     if item.get("source") == "sample":
         where = f"{where} ({pick(SAMPLE_NOTE, lang)})"
+    elif item.get("source") == "manual":
+        # Whose look it was and which day: "Google listing (recorded by ALYR on 20 Nov 2026)".
+        where = f"{where} ({pick(MANUAL_NOTE, lang).format(day=date_text(item['seen_at'], lang))})"
     return {
         "label": pick(LABELS.get(item["label"], (item["label"], item["label"])), lang),
         "value": value_text(item["value"], lang),
         "where": where,
         "seen_at": item["seen_at"],
+        # A recorded observation is a day, not a moment (its `seen_at` is noon of that day): the
+        # screen shows the day in `where` and never a time of day nobody looked.
+        "day_only": item.get("source") == "manual",
     }
+
+
+def date_text(iso: str, lang: str) -> str:
+    """The day of an ISO date or timestamp as the reader writes it: "20 Nov 2026", «20 نوفمبر 2026»;
+    Western digits in both."""
+    year, number, day = iso[:10].split("-")
+    return f"{int(day)} {MONTHS[lang][int(number) - 1]} {year}"
 
 
 def month_label(month: str, lang: str) -> str:
@@ -618,5 +661,9 @@ def all_texts() -> list[str]:
     for pair in CHECK_NAMES.values():
         out.extend(pair)
     out.extend(SAMPLE_NOTE)
+    out.extend(MANUAL_NOTE)
+    out.extend(HAND_WHAT_HAPPENS)
+    for pair in HAND_WHAT_HAPPENS_BY_RULE.values():
+        out.extend(pair)
     out.extend(STEP_SUMMARIES.values())
     return out

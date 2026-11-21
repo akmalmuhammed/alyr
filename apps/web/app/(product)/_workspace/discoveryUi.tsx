@@ -5,11 +5,17 @@
 // time. They take the workspace's own parts (`Icon`, the sheet and the toasts of `CatalogUi.tsx`)
 // and hold no words: every sentence comes from `discoveryCopy.ts`.
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Icon } from "./CatalogUi";
 import { T, type Lang } from "./discoveryCopy";
 import type { DiscoveryError, Evidence, Finding, Proposal } from "./discoveryApi";
 import { appliedNoteKey, formatDay, formatWhen, isNumeric, proposalPillClass, proposalWhen, sayError, waitingProposals } from "./discoveryLogic";
+
+// ── where the facts came from ───────────────────────────
+
+/** True while the source is what ALYR staff recorded (D-169): the screens then never say a check-up looks again. */
+export const RecordedContext = createContext(false);
+export const useRecorded = (): boolean => useContext(RecordedContext);
 
 // ── loading ─────────────────────────────────────────────
 
@@ -128,7 +134,7 @@ export function EvidenceList({ items, lang }: { items: Evidence[]; lang: Lang })
         <li key={i}>
           <span className="dv-ev-label">{e.label}</span>
           <span className="dv-ev-value"><bdi dir={isNumeric(e.value) ? "ltr" : "auto"}>{e.value}</bdi></span>
-          <span className="dv-ev-where">{e.where}{e.seen_at && <> · <When iso={e.seen_at} lang={lang} /></>}</span>
+          <span className="dv-ev-where">{e.where}{e.seen_at && !e.day_only && <> · <When iso={e.seen_at} lang={lang} /></>}</span>
         </li>
       ))}
     </ul>

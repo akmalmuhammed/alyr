@@ -252,6 +252,18 @@ export const placeName = (place: { name: string; name_ar: string }, lang: Lang):
 /** Whether what the screens show comes from the sample business (and must say so, once). */
 export const isSample = (connection: Connection | null): boolean => !!connection && connection.on && connection.kind === "sample";
 
+/** Whether what the screens show was recorded by ALYR staff (D-169): then no sentence says a check-up looked again. */
+export const isRecorded = (connection: { kind: string; on?: boolean } | null | undefined): boolean => !!connection && connection.on !== false && connection.kind === "manual";
+
+const MONTHS_EN = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+
+/** "20 Nov 2026" in the log's English sentence, as the day it names ("2026-11-20"), or null. */
+export function dayInSentence(sentence: string): string | null {
+  const hit = /seen on (\d{1,2}) ([A-Za-z]{3}) (\d{4})/.exec(sentence);
+  const month = hit ? MONTHS_EN.indexOf(hit[2].toLowerCase()) : -1;
+  return hit && month >= 0 ? `${hit[3]}-${String(month + 1).padStart(2, "0")}-${hit[1].padStart(2, "0")}` : null;
+}
+
 /** The steps of a run in the order they were logged. */
 export const inOrder = (steps: readonly Step[]): Step[] => [...steps].sort((a, b) => a.seq - b.seq);
 
@@ -274,6 +286,11 @@ export function sayError(error: unknown, lang: Lang): string {
 export function stepText(step: Step, lang: Lang): { text: string; foreign: boolean } {
   const t = T[lang];
   const k = stepKind(step.tool);
+  // The first step of a recorded source says whose look it was; the Arabic screen words it itself, with the day it names.
+  if (lang === "ar" && k.kind === "snapshot" && /recorded by ALYR staff/.test(step.summary)) {
+    const day = dayInSentence(step.summary);
+    return { text: t.stepSnapshotRecorded(day ? formatDay(`${day}T12:00:00Z`, lang) : ""), foreign: false };
+  }
   const known = k.kind === "snapshot" ? t.stepSnapshot : k.kind === "rules" ? t.stepRules(k.family) : k.word ? t.stepOther[k.word] : "";
   if (lang === "en") return { text: step.summary || known || step.tool, foreign: false };
   return known ? { text: known, foreign: false } : { text: step.summary || step.tool, foreign: true };

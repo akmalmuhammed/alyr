@@ -12,13 +12,13 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import {
-  DiscoveryError, errorFrom, parseChecks, parseConnection, parseFact, parseFacts, parseFinding, parseFindings, parseManagers, parseOverview, parsePlaces,
+  DiscoveryError, errorFrom, parseChecks, parseConnection, parseFact, parseSource, parseFacts, parseFinding, parseFindings, parseManagers, parseOverview, parsePlaces,
   parseProposal, parseProposalDetail, parseProposals, parseReport, parseReviews, parseRun, parseSettings, parseTeam,
 } from "./discoveryApi.ts";
 import { T } from "./discoveryCopy.ts";
 import {
   MAX_POLLS, VIEWS, appliedNoteKey, averageText, bandParts, eventAt, formatDay, formatDayLong, formatWhen, groupByKind, homeState, hoursDraft, hoursText,
-  hoursValue, isLive, isNumeric, isSample, lastMonths, liveProposals, markOf, matrixColumns, mayApprove, minutesFrom, monthName, normalizeTime, phoneValue,
+  dayInSentence, hoursValue, isLive, isNumeric, isRecorded, isSample, lastMonths, liveProposals, markOf, matrixColumns, mayApprove, minutesFrom, monthName, normalizeTime, phoneValue,
   pollDecision, proposalPillClass, proposalPollDecision, proposalWhen, readView, reviewQuery, rowCounts, rulerSide, sayError, scoreBefore, stepKind,
   stepText, subItems,
   tabCount, textFact, verifiedAt, viewHref, viewsFor, waitingProposals, withChange,
@@ -66,7 +66,7 @@ function lines(object, path = "") {
 const keysOf = (object, path = "") => Object.entries(object).flatMap(([k, v]) => (v && typeof v === "object" ? keysOf(v, `${path}${k}.`) : [`${path}${k}`])).sort();
 
 // Lines that are empty on purpose: the part nobody draws yet, and the status that has no sentence.
-const EMPTY_ON_PURPOSE = new Set(["partNames.ai", "partHints.ai", "statusLine.open"]);
+const EMPTY_ON_PURPOSE = new Set(["partNames.ai", "partHints.ai", "statusLine.open", "statusLineRecorded.open"]);
 
 test("every line is in English and Arabic, and none is empty", () => {
   assert.deepEqual(keysOf(T.ar), keysOf(T.en));
@@ -264,10 +264,12 @@ test("the overview, findings, reviews, report, places and connection are read as
 
   assert.deepEqual(parsePlaces([{ id: "p1", name: "Al Wakra", name_ar: "الوكرة", area: "x" }, { name: "no id" }]).map((p) => p.id), ["p1"]);
   assert.equal(parsePlaces({ items: [{ id: "p2", name: "B" }] })[0].name, "B");
-  assert.deepEqual(parseConnection({ kind: "sample", on: true }), { kind: "sample", on: true });
-  assert.deepEqual(parseConnection({ kind: "sample", status: "off" }), { kind: "", on: false });
-  assert.deepEqual(parseConnection({ items: [{ kind: "places", status: "off" }, { kind: "sample", status: "on" }] }), { kind: "sample", on: true });
-  assert.deepEqual(parseConnection({}), { kind: "", on: false });
+  // which day a recorded source was seen is part of what it answers; the others have none
+  const plain = (kind, on) => ({ kind, on, observed_on: null, days_old: null, old: false });
+  assert.deepEqual(parseConnection({ kind: "sample", on: true }), plain("sample", true));
+  assert.deepEqual(parseConnection({ kind: "sample", status: "off" }), plain("", false));
+  assert.deepEqual(parseConnection({ items: [{ kind: "places", status: "off" }, { kind: "sample", status: "on" }] }), plain("sample", true));
+  assert.deepEqual(parseConnection({}), plain("", false));
 });
 
 test("a refusal carries its code, its words in both languages and when to try again", () => {
@@ -323,6 +325,55 @@ test("only a demo shop is offered the sample; any other shop is told ALYR sets i
   assert.match(home, /state === "noConnection" && o\.demo/);
   assert.match(home, /state === "noConnection" && !o\.demo/);
   assert.equal((home.match(/setConnection\(/g) ?? []).length, 1);
+});
+
+test("a source ALYR recorded by hand says whose look it was and which day, and never that a check-up looks again (D-169)", () => {
+  // the API says which source is on and, for a recorded one, the day it was seen and whether that is old
+  assert.deepEqual(parseSource({ kind: "manual", observed_on: "2026-11-20", days_old: 3, old: false }), { kind: "manual", observed_on: "2026-11-20", days_old: 3, old: false });
+  assert.equal(parseSource(null), null);
+  assert.equal(parseOverview({ has_connection: true, source: { kind: "manual", observed_on: "2026-11-01", days_old: 20, old: true } }).source.old, true);
+  assert.equal(parseOverview({ has_connection: true }).source, null);
+  const connection = parseConnection({ kind: "manual", status: "on", observed_on: "2026-11-20", days_old: 20, old: true, connections: [] });
+  assert.deepEqual([connection.kind, connection.observed_on, connection.days_old, connection.old], ["manual", "2026-11-20", 20, true]);
+  assert.equal(isRecorded(connection), true);
+  assert.equal(isRecorded({ kind: "sample", on: true }), false);
+  assert.equal(isRecorded({ kind: "manual", on: false }), false);
+  assert.equal(isRecorded(null), false);
+  for (const lang of ["en", "ar"]) {
+    const t = T[lang];
+    const said = [t.recorded.tag, t.recorded.text("20 Nov"), t.recorded.text(""), t.recorded.old(20), t.recordedNext, t.noRunRecordedTitle, t.noRunRecordedText, t.caughtUpRecorded, t.reviewNoWords, t.stepSnapshotRecorded("20 Nov"), t.stepSnapshotRecorded(""), ...Object.values(t.statusLineRecorded)];
+    for (const text of said) assert.doesNotMatch(text, /undefined|NaN|\[object/);
+    assert.match(t.recorded.text("20 Nov"), /20 Nov/);
+    assert.doesNotMatch(t.recorded.text("20 Nov"), /\.\.\.$|…/);
+    // no sentence about a recorded source promises that a check-up looks again, or that anything is live or connected
+    for (const text of [t.recordedNext, t.statusLineRecorded.owner_done, t.statusLineRecorded.verified, t.caughtUpRecorded, t.recorded.text("20 Nov")]) {
+      assert.doesNotMatch(text, /next check-up (looks|confirms|shows)|connected|live|متصل|مباشر/i, text);
+    }
+  }
+  // evidence from a recorded source is a day: it says so, and the list draws no time of day for it
+  const finding = parseFinding({ id: "f1", rule_id: "hours_missing", kind: "owner", severity: "high", status: "open", title: "t", evidence: [{ label: "Hours", value: "None", where: "Google listing (recorded by ALYR on 20 Nov 2026)", seen_at: "2026-11-20T12:00:00+00:00", day_only: true }, { label: "Hours", value: "None", where: "Google listing", seen_at: "2026-11-20T12:00:00+00:00" }] });
+  assert.deepEqual(finding.evidence.map((e) => e.day_only), [true, false]);
+  assert.match(read(join(HERE, "discoveryUi.tsx")), /e\.seen_at && !e\.day_only/);
+  // the log's English sentence names the day; the Arabic screen words the step itself with that day
+  assert.equal(dayInSentence("Took 1 place as recorded by ALYR staff, seen on 3 Nov 2026."), "2026-11-03");
+  assert.equal(dayInSentence("Got 1 place from the sample business."), null);
+  const step = { seq: 1, tool: "connector.snapshot", summary: "Took 1 place as recorded by ALYR staff, seen on 20 Nov 2026.", ok: true, started_at: null, ended_at: null };
+  assert.equal(stepText(step, "en").text, step.summary);
+  const ar = stepText(step, "ar");
+  assert.equal(ar.foreign, false);
+  assert.match(ar.text, /دوّنته ALYR/);
+  assert.match(ar.text, /20/);
+  // a sample's step is untouched
+  assert.equal(stepText({ ...step, summary: "Got 1 place from the sample business." }, "ar").text, T.ar.stepSnapshot);
+  // the screens take it from one place: Home does not draw the run button, the sheet reads one status line, reviews draw no empty quote
+  const home = read(join(HERE, "DiscoveryHome.tsx"));
+  assert.match(home, /const runButton = recorded/);
+  assert.match(home, /recorded \? t\.caughtUpRecorded/);
+  const sheet = read(join(HERE, "DiscoverySheet.tsx"));
+  assert.doesNotMatch(sheet, /t\.statusLine\[/);
+  assert.match(sheet, /recorded \? t\.statusLineRecorded : t\.statusLine/);
+  assert.match(read(join(HERE, "DiscoveryReviews.tsx")), /r\.source === "manual"/);
+  assert.match(read(join(HERE, "DiscoverySettings.tsx")), /!recorded && \(/);
 });
 
 test("a run is followed every 1.5 s and never forever", () => {

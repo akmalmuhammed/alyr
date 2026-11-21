@@ -26,12 +26,14 @@ from alyr.config import get_settings
 from alyr.core import consent, team
 from alyr.core.actions import ADMIN, ALL_ROLES, ENGINE, OWNER, Caller, register
 from alyr.modules.discovery import apply as applying
-from alyr.modules.discovery import connectors, engine, proposals, rules
+from alyr.modules.discovery import connectors, engine, observations, proposals, rules
 from alyr.modules.discovery import facts as facts_module
 from alyr.modules.discovery import words as w
 from alyr.modules.discovery.answers import service as answers_service
 from alyr.modules.discovery.connectors import Location, sample
+from alyr.modules.discovery.connectors.manual import STALE_AFTER_DAYS
 from alyr.modules.discovery.errors import DiscoveryError
+from alyr.modules.items import clock as shop_clock
 
 MODULE = "discovery"
 CHANGERS = frozenset({OWNER, ADMIN})
@@ -77,6 +79,8 @@ def _place(row, lang: str) -> dict | None:
 def finding_view(row: asyncpg.Record, lang: str) -> dict:
     """A finding: its words in the reader's language, the rule behind it, its evidence."""
     rule_id = row["rule_id"]
+    # Evidence from a source ALYR staff recorded says so, and what happens next is said for it.
+    by_hand = any(item.get("source") == "manual" for item in row["evidence"])
     return {
         "id": str(row["id"]),
         "rule_id": rule_id,
@@ -86,7 +90,7 @@ def finding_view(row: asyncpg.Record, lang: str) -> dict:
         "title": w.rule_text(rule_id, "title", lang),
         "rule": w.rule_text(rule_id, "rule", lang),
         "why": w.rule_text(rule_id, "why", lang),
-        "what_happens": w.rule_text(rule_id, "what_happens", lang),
+        "what_happens": w.rule_text(rule_id, "what_happens", lang, by_hand),
         "what_is_needed": w.rule_text(rule_id, "what_is_needed", lang),
         "evidence": [w.evidence_view(item, lang) for item in row["evidence"]],
         "location": _place(row, lang),
@@ -172,6 +176,26 @@ async def record_change(
     await _record(conn, caller, subject_id, action, detail)
 
 
+async def source_of(conn: asyncpg.Connection) -> dict:
+    """Where the facts of the source that is on come from. For the one ALYR staff recorded, the day
+    it was seen (the newest of its places), how many days ago that was in the shop's own days, and
+    whether that is old: the screens say so, and never that a check-up looked today (D-169)."""
+    kind = await conn.fetchval(
+        "select kind from discovery_connections where status = 'on' "
+        "order by created_at desc limit 1"
+    )
+    if kind != "manual":
+        return {"kind": kind, "observed_on": None, "days_old": None, "old": False}
+    seen = [o.observed_on for o in (await observations.latest(conn)).values()]
+    if not seen:
+        return {"kind": kind, "observed_on": None, "days_old": None, "old": False}
+    newest = max(seen)
+    today = (await shop_clock.load(conn)).local.date()
+    days = max(0, (today - newest).days)
+    return {"kind": kind, "observed_on": newest.isoformat(), "days_old": days,
+            "old": days > STALE_AFTER_DAYS}
+
+
 async def _counts(conn: asyncpg.Connection, location_id: UUID | None = None) -> dict:
     rows = await conn.fetch(
         "select status, count(*) as n from discovery_findings "
@@ -220,6 +244,7 @@ async def get_overview(conn: asyncpg.Connection, caller: Caller, args: dict) -> 
         "has_connection": has_connection,
         # Whether the shop is a demo shop: only then may it turn the sample on (D-169).
         "demo": await engine.is_demo(conn),
+        "source": await source_of(conn),
         "has_run": last is not None,
         "last_run": run_view(last, lang) if last else None,
         "score": scored[0]["score"] if scored else None,
@@ -335,6 +360,7 @@ async def list_reviews(conn: asyncpg.Connection, caller: Caller, args: dict) -> 
             {
                 "id": str(r["id"]),
                 "location": {"id": str(r["location_id"]), "name": name},
+                "source": r["source"],
                 "rating": r["rating"],
                 "posted_at": _iso(r["posted_at"]),
                 "author_name": r["author_name"],
@@ -530,11 +556,15 @@ async def get_connection(conn: asyncpg.Connection, caller: Caller, args: dict) -
     )
     on = next((r for r in rows if r["status"] == "on"), None)
     demo = await engine.is_demo(conn)
+    source = await source_of(conn)
     return {
         "kind": on["kind"] if on else None,
         "status": "on" if on else None,
         "available": list(connectors.available_for(demo)),
         "demo": demo,
+        "observed_on": source["observed_on"],
+        "days_old": source["days_old"],
+        "old": source["old"],
         "connections": [
             {"kind": r["kind"], "status": r["status"], "created_at": _iso(r["created_at"])}
             for r in rows

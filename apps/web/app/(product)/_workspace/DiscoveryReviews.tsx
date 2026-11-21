@@ -96,11 +96,13 @@ export function DiscoveryReviews({ lang }: { lang: Lang }) {
                   <span className="dv-review-place">{r.location?.name ?? t.wholeBusiness}</span>
                   <span className="ct-quiet dv-review-date"><When iso={r.posted_at} lang={lang} day /></span>
                 </div>
-                {/* Somebody else's words: text only, in its own language and direction. */}
-                <blockquote className="dv-quote" lang={r.language || undefined} dir="auto">
-                  <p>{r.body}</p>
-                  {r.author_name && <footer><cite dir="auto">{r.author_name}</cite></footer>}
-                </blockquote>
+                {/* Somebody else's words: text only, in its own language and direction. A recorded review has none: only its stars, its date and whether it was answered are kept. */}
+                {r.body || r.author_name ? (
+                  <blockquote className="dv-quote" lang={r.language || undefined} dir="auto">
+                    <p>{r.body}</p>
+                    {r.author_name && <footer><cite dir="auto">{r.author_name}</cite></footer>}
+                  </blockquote>
+                ) : r.source === "manual" && <p className="ct-quiet">{t.reviewNoWords}</p>}
                 <div className="dv-review-foot">
                   <span className={`sh-pill dv-pill ${r.replied ? "active" : "wait"}`}>{r.replied ? t.replied : t.noReply}</span>
                   {todo && <Link className="dv-link" href={viewHref("todo", { finding: todo.id })}>{t.seeTodo}</Link>}
