@@ -26,7 +26,6 @@ function sample(name, index, lang) {
   if (name === "pagerRange") return [1, 14, 14];
   if (name === "showingOf") return [6, 14];
   if (name === "itemsInLines") return [4, 3];
-  if (name === "qtyTimes") return ["1", money(lang, 65)];
   if (name === "windowOpenNote") return ["Yousef", "09:10"];
   if (name === "cancelTileConfirmedBy") return ["Salma", "09:20"];
   if (name === "cancelTileDelivery") return ["Al Gharafa", "today"];
@@ -40,7 +39,7 @@ function sample(name, index, lang) {
 function call(name, fn, lang) {
   const given = sample(name, 0, lang);
   if (given) return fn(...given);
-  const args = Array.from({ length: fn.length }, (_, i) => (i === 0 && /^(openOrders|sectionItems|timelineSteps|whStockBack|replyWindowHours|orderTitle|markPaidTitle|cancelTitle|noteConfirm|noteReady|noteDone|toastPaid|toastStepFailed|errAlreadyPaid|waCancelled|pagerRange|showingOf|itemsInLines|qtyTimes)/.test(name) ? 12 : i === 0 ? "Aisha" : i === 1 ? 1042 : money(lang, 110)));
+  const args = Array.from({ length: fn.length }, (_, i) => (i === 0 && /^(openOrders|sectionItems|timelineSteps|whStockBack|replyWindowHours|orderTitle|markPaidTitle|cancelTitle|noteConfirm|noteReady|noteDone|toastPaid|toastStepFailed|errAlreadyPaid|waCancelled|pagerRange|showingOf|itemsInLines)/.test(name) ? 12 : i === 0 ? "Aisha" : i === 1 ? 1042 : money(lang, 110)));
   return fn(...args);
 }
 

@@ -70,7 +70,7 @@ export function ItemRow({ line, lang }: { line: OrderLine; lang: Lang }) {
       </div>
       <div className="ord-item-money u-mono">
         <span className="ord-item-each">
-          <bdi>{t.qtyTimes(itemQty(line, lang), money(line.unit_price, lang))}</bdi>
+          <bdi>{itemQty(line, lang)}</bdi> × <bdi>{money(line.unit_price, lang)}</bdi>
         </span>
         <bdi>{money(line.line_total, lang)}</bdi>
       </div>
