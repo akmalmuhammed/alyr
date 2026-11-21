@@ -123,7 +123,7 @@ const en = {
   savedMenu: "Saved replies",
   replyKept: "Your reply is kept here.",
   closedToast: (name: string) => `Closed the conversation with ${name}`,
-  couldNotReach: "Cannot reach ALYR. Your text is kept here; send it again once the connection is back.",
+  couldNotReach: "Cannot reach ALYR. Send it again once the connection is back.",
   previewNothingSent: "Preview only. Nothing was sent.",
 
   // Customer pane
@@ -409,7 +409,7 @@ const ar: typeof en = {
   savedMenu: "الردود المحفوظة",
   replyKept: "ردك محفوظ هنا.",
   closedToast: (name) => `أُغلقت المحادثة مع ${name}`,
-  couldNotReach: "لا يمكن الوصول إلى ALYR. نصك محفوظ هنا؛ أرسله عندما يعود الاتصال.",
+  couldNotReach: "لا يمكن الوصول إلى ALYR. أرسله عندما يعود الاتصال.",
   previewNothingSent: "معاينة فقط. لم يُرسل شيء.",
 
   stats: { visits: "الزيارات", spent: "الإنفاق، 12 شهراً", since: "عميل منذ" },

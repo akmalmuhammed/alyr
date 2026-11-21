@@ -108,7 +108,7 @@ export function InboxNotDelivered({ lang, now, mode, canSendTemplates, onOpenCon
       cell: (r) => <span className="ibx-goes">{goes(r)}</span>,
     },
     {
-      key: "action", header: "", label: t.openConversation, width: "var(--ibx-col-s)", align: "end", phone: "foot-end",
+      key: "action", header: <span className="u-sr">{t.openConversation}</span>, label: t.openConversation, width: "var(--ibx-col-s)", align: "end", phone: "foot-end",
       cell: (r) => r.reason === "window_closed" ? (
         <Button kind="line" size="xs" onClick={() => onOpenConversation(r.contactId)}>{canSendTemplates ? t.sendTemplate : t.openConversation}</Button>
       ) : (
@@ -124,7 +124,7 @@ export function InboxNotDelivered({ lang, now, mode, canSendTemplates, onOpenCon
       cell: (r) => <span className="ibx-goes">{r.reason === "gave_up" ? t.gaveUpSaid : r.whatsappSaid ?? ""}</span>,
     },
     {
-      key: "action", header: "", label: t.sendAgain, width: "var(--ibx-col-s)", align: "end", phone: "foot-end",
+      key: "action", header: <span className="u-sr">{t.sendAgain}</span>, label: t.sendAgain, width: "var(--ibx-col-s)", align: "end", phone: "foot-end",
       cell: (r) => r.canRetry ? (
         <Button kind="line" size="xs" loading={busy === r.id} loadingLabel={t.retrying} onClick={() => retry(r)}>{t.sendAgain}</Button>
       ) : (
