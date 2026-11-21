@@ -22,14 +22,17 @@ class Assignment(BaseModel):
     user_id: UUID | None = Field(description="A team member, or null for nobody")
 
 
-@router.get("/summary")
+# What customers owe, and every entry on their accounts, is shop-wide money: owners and
+# admins only, and the server refuses an agent rather than leaving the screen to hide it
+# (D-035, ui-rules section 16).
+@router.get("/summary", dependencies=[Depends(require_manager)])
 async def summary(request: Request, tenant_id: UUID = Depends(current_tenant)) -> dict:
     async with request.app.state.db.tenant(tenant_id) as conn:
         shop = await conn.fetchrow("select name, name_ar from tenants where id = $1", tenant_id)
         return {"shop": dict(shop), **await service.summary(conn)}
 
 
-@router.get("/customers/{contact_id}/entries")
+@router.get("/customers/{contact_id}/entries", dependencies=[Depends(require_manager)])
 async def entries(
     contact_id: UUID, request: Request, tenant_id: UUID = Depends(current_tenant)
 ) -> dict:

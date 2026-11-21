@@ -308,7 +308,7 @@ MODULES: tuple[Module, ...] = (
     Module(
         "ledger",
         Text("Credit accounts", "الحسابات الآجلة"),
-        screens=(Screen("ledger", Text("Credit accounts", "الحسابات الآجلة"), "book"),),
+        screens=(Screen("ledger", Text("Credit accounts", "الحسابات الآجلة"), "book", MANAGERS),),
         cards=(
             Card(
                 "outstanding",

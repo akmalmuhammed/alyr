@@ -5,6 +5,7 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- Staff with the agent role are no longer sent the shop's money by the server (D-035; no migration, no new dependency): `GET /api/team/performance` gives an agent their own counts only (no sales or settled amount, and totals worked out from their own row), `GET /api/ledger/summary` and `/api/ledger/customers/{id}/entries` answer an agent 403, the Credit accounts screen leaves an agent's navigation, and the home no longer sends an agent the riyal cards (owed to you, paid by link today). Owners and admins see what they saw. The legacy Team screen draws no sales figure when none is sent.
 
 ## v0.3.23 (17 Nov 2026)
 - opentelemetry-api 1.45.2 for CVE-2026-126360 (no migration; a patch version of a package we get through another): CI's dependency audit is green again, so releases can pass the gate.
