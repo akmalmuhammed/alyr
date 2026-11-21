@@ -161,7 +161,13 @@ def test_the_customer_can_see_and_cancel_their_booking_in_the_chat(client):
     assert "Booking 101: Electrician site visit" in shown["body"]
     button = shown["payload"]["choices"][0]
     assert button["title"] == "Cancel booking"
-    answer = say(client, AHMED_PHONE, reply_id=button["id"])[-1]
+    # Cancelling takes two taps: the first one only asks.
+    asked = say(client, AHMED_PHONE, reply_id=button["id"])[-1]
+    assert asked["body"].startswith("Cancel booking 101: Electrician site visit, ")
+    assert [c["title"] for c in asked["payload"]["choices"]] == [
+        "Yes, cancel it", "Keep my booking"]
+    assert start not in times(client, sid)  # still booked
+    answer = say(client, AHMED_PHONE, reply_id=asked["payload"]["choices"][0]["id"])[-1]
     assert answer["body"] == "Your booking has been cancelled."
     assert start in times(client, sid)
     assert "no upcoming booking" in say(client, AHMED_PHONE, "my booking")[-1]["body"]
