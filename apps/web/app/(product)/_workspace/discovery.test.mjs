@@ -304,6 +304,27 @@ test("Home is in one of four states, from the overview alone", () => {
   assert.equal(homeState(overviewOf({})), "content");
 });
 
+test("only a demo shop is offered the sample; any other shop is told ALYR sets it up, and nothing is turned on from the screen (D-169)", () => {
+  // the API says which shop is a demo shop; a missing answer is "no"
+  assert.equal(parseOverview({ has_connection: false, demo: true }).demo, true);
+  assert.equal(parseOverview({ has_connection: false, demo: false }).demo, false);
+  assert.equal(parseOverview({ has_connection: false }).demo, false);
+  assert.equal(parseOverview({ has_connection: false, demo: "yes" }).demo, false);
+  for (const lang of ["en", "ar"]) {
+    const t = T[lang];
+    assert.ok(t.notConnectedTitle && t.notConnectedText && t.noConnectionText);
+    // what a real shop reads says nothing of a sample or a demo, and promises no source
+    assert.doesNotMatch(t.notConnectedText, /sample|demo|made-up|توضيحي|تجريبي|وهمي|غير حقيقي/i);
+    // what a demo shop reads says plainly that the business is made up
+    assert.match(t.noConnectionText, lang === "en" ? /made-up sample business/ : /نشاطاً توضيحياً غير حقيقي/);
+  }
+  // Home draws the sample button only for a demo shop, and never calls setConnection with anything but the sample
+  const home = read(join(HERE, "DiscoveryHome.tsx"));
+  assert.match(home, /state === "noConnection" && o\.demo/);
+  assert.match(home, /state === "noConnection" && !o\.demo/);
+  assert.equal((home.match(/setConnection\(/g) ?? []).length, 1);
+});
+
 test("a run is followed every 1.5 s and never forever", () => {
   const run = (status) => parseRun({ id: "r", status });
   assert.equal(pollDecision(run("queued"), 0), "poll");

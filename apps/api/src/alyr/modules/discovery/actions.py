@@ -210,6 +210,8 @@ async def get_overview(conn: asyncpg.Connection, caller: Caller, args: dict) -> 
         }
     return {
         "has_connection": has_connection,
+        # Whether the shop is a demo shop: only then may it turn the sample on (D-169).
+        "demo": await engine.is_demo(conn),
         "has_run": last is not None,
         "last_run": run_view(last, lang) if last else None,
         "score": scored[0]["score"] if scored else None,
@@ -519,10 +521,12 @@ async def get_connection(conn: asyncpg.Connection, caller: Caller, args: dict) -
         "select kind, status, created_at from discovery_connections order by created_at"
     )
     on = next((r for r in rows if r["status"] == "on"), None)
+    demo = await engine.is_demo(conn)
     return {
         "kind": on["kind"] if on else None,
         "status": "on" if on else None,
-        "available": list(connectors.AVAILABLE),
+        "available": list(connectors.available_for(demo)),
+        "demo": demo,
         "connections": [
             {"kind": r["kind"], "status": r["status"], "created_at": _iso(r["created_at"])}
             for r in rows
@@ -717,10 +721,14 @@ async def _ensure_places(conn: asyncpg.Connection, kind: str) -> None:
 
 @register("discovery.set_connection", CHANGERS, MODULE)
 async def set_connection(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
-    """Turn a connector on or off. One is on at a time: turning one on turns the others off."""
+    """Turn a connector on or off. One is on at a time: turning one on turns the others off. The
+    sample (a made-up business) is turned on only in a shop ALYR marked as a demo (D-169); turning
+    anything off is always allowed."""
     kind, on = args["kind"], bool(args["on"])
     if kind not in connectors.AVAILABLE:
         raise DiscoveryError("bad_connector")
+    if on and kind not in connectors.available_for(await engine.is_demo(conn)):
+        raise DiscoveryError("sample_not_allowed", 409)
     if on:
         await conn.execute(
             "update discovery_connections set status = 'off', updated_at = now() "

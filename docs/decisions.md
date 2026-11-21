@@ -6,6 +6,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 
 | # | Decision | Status |
 |---|---|---|
+| D-169 | Discovery on a real business before Google is connected: the made-up sample is only for a shop ALYR staff marked as a demo or test business (the flag the back office already sets); a real shop is offered nothing to turn on and is told ALYR sets it up; ALYR staff record what a remote audit finds in a `manual` source (dated, no review text, no reviewer names), scored by the same twelve rules, with no proposals, no asks and no outside call | Proposed, 21 Nov 2026 |
 | D-194 | A message that cannot go fails where the shop can see it: a template Meta has not approved is refused when queued, a message Meta refuses is failed at once in Meta's words, and a refused reminder or review request is not counted as sent | Accepted, 21 Nov 2026 |
 | D-195 | A customer's voice note, photo or other message that is not text is labelled in the inbox, left to a person and acknowledged once; a reaction is shown and never answered | Accepted, 21 Nov 2026 |
 | D-001 | One deployable service (modular monolith) | Accepted |
@@ -2937,3 +2938,22 @@ The "Salon & barber" starting setup began a new owner with five barber services 
 **Revisit when** a real salon has signed up and shows whether the three placeholders get renamed.
 
 **Migrations.** 0148 (`admin_create_business` adds the test line).
+
+## D-169 · Discovery on a real business before Google is connected
+
+**Date** 21 Nov 2026 · **Status** Proposed (the founder's brief for the first client, who wants only Discovery and Insights) · Audit `discovery-real` (private) · Builds on D-160, D-166 and D-168; spec 065 and 066.
+
+**Decision.**
+- **The fictional sample is only for demo shops.** `tenants.demo_data_allowed` (the mark ALYR staff already set in `/ops` for a test business, audited, written by a back-office function the app role can only call as staff) is the one flag. `PUT /api/discovery/connection` refuses to turn the sample on for a shop without it (409 `sample_not_allowed`, in both languages), a sample connection left on such a shop never produces a check-up (the start and a queued run both refuse), and `GET /connection` and the overview say `demo` so the screen draws the button only where it works. A shop that is not marked is shown "Discovery is not connected to your business yet. ALYR sets this up with you." and nothing to press. Turning anything off is always allowed.
+- **A real business gets a `manual` source, recorded by ALYR staff.** ALYR staff record, at the back office and for exactly one business at a time, what a remote audit sees: the listing's facts, the site's facts and, for each review, a rating, a date and whether the owner replied. Each round has the date it was seen and who recorded it. The same twelve rules, scoring, findings and screens read it. Nothing is read from Google or any other outside source, no model is used, no scheduled check-up runs, nothing is sent.
+- **What is never stored from a review:** its text and the reviewer's name. They are third-party personal data and Google's content; the rules need a rating, a date and whether it was answered.
+- **A hand source makes no proposals and no asks.** Proposals exist only where a connector declares `writes`; the manual source declares none, so nothing can be approved, applied or asked on WhatsApp. A finding is closed with "I did this" and confirmed only by a new observation recorded after it.
+- **The screens say where the facts came from and when:** "Recorded by ALYR on <date>", never "connected", "live" or "the next check-up looks again" while no one has looked again.
+
+**Why.** Pressing the one Home button on a real shop would have shown it invented hours, phones and reviews under its own name. The first client's real source (Google Business Profile) needs Google's approval, which has no published timeframe; a hand-recorded source is the honest way to give a real business a real check-up this month without claiming a connection that does not exist.
+
+**Rejected.** *A new "demo" flag on the shop owner's side* (the back office's mark already exists and is audited). *Hiding the button with CSS or a flag in the web only* (the route would still accept it). *Storing review text and reviewer names for the Reviews screen* (third-party personal data; the rule does not need them; the audit recommends no). *Letting the owner record observations* (week one is ALYR staff only, in the workspace of one business, every write audited). *A 13th rule for reply rate in this decision* (see the pull request: the one rule that is a gap is closed by reading the reviews it was given).
+
+**Revisit when** Google grants Business Profile access (ALY-325), the lawyer answers ALY-51 on keeping dated observations, or an owner should record their own.
+
+**Taken from the reserved range:** D-169 and migration 0126.

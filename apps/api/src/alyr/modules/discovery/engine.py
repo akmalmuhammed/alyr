@@ -66,6 +66,19 @@ class RunFailed(Exception):
 # ── starting ────────────────────────────────────────────────────────────────────────────
 
 
+async def is_demo(conn: asyncpg.Connection) -> bool:
+    """Whether ALYR staff marked this shop as a demo or test business (`/ops`, audited). Only such
+    a shop may use the fictional `sample` source (D-169): it is the one flag the back office
+    already sets for made-up data, and a shop never sets it for itself (the app role cannot write
+    `tenants`)."""
+    return bool(
+        await conn.fetchval(
+            "select demo_data_allowed from tenants "
+            "where id = nullif(current_setting('app.tenant_id', true), '')::uuid"
+        )
+    )
+
+
 async def start_run(
     conn: asyncpg.Connection, user_id: UUID | None, trigger: str = "manual"
 ) -> tuple[asyncpg.Record, bool]:
@@ -91,6 +104,10 @@ async def start_run(
     )
     if kind is None:
         raise DiscoveryError("no_connection", 409)
+    if kind == "sample" and not await is_demo(conn):
+        # A sample connection left on a shop that is not a demo shop (the mark was taken off, or it
+        # was switched on before the guard): it must never produce a check-up about invented data.
+        raise DiscoveryError("sample_not_allowed", 409)
     if not await conn.fetchval("select exists (select 1 from discovery_locations)"):
         raise DiscoveryError("no_locations", 409)
     if trigger == "manual":
@@ -283,8 +300,11 @@ async def _carry_out(db, tenant_id, run, log_, get_connector) -> None:
         # What the sample business's owner changed by approving proposals: loaded here, so the
         # connector still does no I/O. A real source has none.
         overrides = await load_overrides(conn) if run["connector_kind"] == "sample" else {}
+        demo = await is_demo(conn)
     if not connected:
         raise RunFailed("no_connection")
+    if run["connector_kind"] == "sample" and not demo:
+        raise RunFailed("sample_not_allowed")  # the mark came off after the run was queued
     locations = [
         Location(
             r["id"],
