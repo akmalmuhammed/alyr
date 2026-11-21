@@ -9,11 +9,14 @@ import type { Role } from "./logic.ts";
 
 export type { Lang };
 
-const PERSON: Noun = { en: ["person", "people"], ar: ["شخص واحد", "شخصان", "أشخاص", "شخصاً"] };
-const CONVERSATION: Noun = { en: ["conversation", "conversations"], ar: ["محادثة واحدة", "محادثتان", "محادثات", "محادثة"] };
-const CUSTOMER: Noun = { en: ["customer", "customers"], ar: ["عميل واحد", "عميلان", "عملاء", "عميلاً"] };
-const ORDER: Noun = { en: ["order", "orders"], ar: ["طلب واحد", "طلبان", "طلبات", "طلباً"] };
-const REPLY: Noun = { en: ["reply", "replies"], ar: ["رد واحد", "ردان", "ردود", "رداً"] };
+/** A counted noun: English one and many, Arabic one, two, three to ten, eleven and up (see `counted` in the format helpers). */
+const noun = (english: Noun["en"], arabic: Noun["ar"]): Noun => ({ en: english, ar: arabic });
+
+const PERSON = noun(["person", "people"], ["شخص واحد", "شخصان", "أشخاص", "شخصاً"]);
+const CONVERSATION = noun(["conversation", "conversations"], ["محادثة واحدة", "محادثتان", "محادثات", "محادثة"]);
+const CUSTOMER = noun(["customer", "customers"], ["عميل واحد", "عميلان", "عملاء", "عميلاً"]);
+const ORDER = noun(["order", "orders"], ["طلب واحد", "طلبان", "طلبات", "طلباً"]);
+const REPLY = noun(["reply", "replies"], ["رد واحد", "ردان", "ردود", "رداً"]);
 
 /** An Arabic verb that agrees with a count: one, two, more. */
 const verb = (n: number, one: string, two: string, many: string) => (n === 1 ? one : n === 2 ? two : many);
