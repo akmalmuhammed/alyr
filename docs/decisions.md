@@ -2957,3 +2957,44 @@ The "Salon & barber" starting setup began a new owner with five barber services 
 **Revisit when** Google grants Business Profile access (ALY-325), the lawyer answers ALY-51 on keeping dated observations, or an owner should record their own.
 
 **Taken from the reserved range:** D-169 and migration 0126.
+## D-197 · A visits history lives in the bookings tables, marked, and never contacts anyone
+
+**Date** 21 Nov 2026 · **Status** Accepted (the founder chose the place, option A of D1, on 21 Nov; the guards are the Product lane's, for the founder to review in the pull request) · Task I3 of the first client's Insights audit · Builds on D-084 (bookings), D-012 and D-170 (no model), CLAUDE.md hard rules 1, 2 and 5, spec 016 (the sales import), spec 070
+
+**Problem.** The first client uses only Discovery and Insights, so the Agent, the weekly report and the MCP read tools have nothing to read: they read ALYR's own booking tables, and the Connect API writes documents, which nothing in Insights reads. The client's visit history is in another system. A file of it can be read, but a line in a customer's file is not someone who agreed to be messaged, and the booking tables are the ones that send reminders and review requests.
+
+**What was decided.**
+1. **The history is written into `bookings`, `contacts`, `services` and `booking_resources`**, every row marked by `history_import_id`, one `history_imports` row per file. Every reader of bookings reads it with no change.
+2. **Final states only.** An imported booking is `completed`, `no_show` or `cancelled`. The database refuses `booked` for it (`bookings_history_final`), so a past visit is never "not marked yet", never reminded, never holds a time. A visit still to come, or marked came while in the future, is a problem in the file.
+3. **Nothing is queued.** The import writes no message, reminder, review request, consent record, job or event. `core/outbound.py` also refuses every message to a client an import made who has never written to the shop (`imported_history`), for every kind and whatever the consent column says; the delivering job refuses; `reviews.after_visit` never asks one. When the person writes to the shop they are an ordinary customer. There is no broadcast or win-back path in the product to guard; the MCP connector only reads.
+4. **No name or phone is needed.** A client is a key: an HMAC of the shop's client number, else phone, else name, with a secret of that business. By default neither name nor phone is stored or shown; staff may choose to keep them. A forgotten client loses their key. This is pseudonymisation, not anonymisation: the secret is in the same business's rows, so it keeps names and numbers off screens, logs and other businesses, and does not stop someone who can read those rows from testing a guess.
+5. **History is not something to book.** Its services and stylists are switched off, `has_resources` ignores history stylists, so a shop's booking page and its one-lane rule are as they were.
+6. **An import is one transaction with a hash-checked preview, and the newest one can be undone whole** (not when a receipt, invoice or payment was recorded against one of its visits). One applied import per file; a second file that overlaps adds only what is new.
+7. **Only ALYR staff run it**, through the back office's door, every step audited with counts and the file's hash. A business without Bookings is refused unless staff switch it on as part of the import, after everything that could refuse has been checked.
+
+**Why.** The existing readers are the value: eight booking rules, the busiest-hours grid, the weekly report's bookings section and the MCP tools all work on the first import. Doing it in the tables, with the guards in the database and the outbound layer, means no later code path can message a client from a file by forgetting a check.
+
+**Rejected.** *Separate history tables* (nothing reads them: every card, report section and MCP tool would be new; revisit if the lawyer says no names may be held at all: the key-only mode is the step toward it, but `contacts` still holds a row per client). *The Connect CSV import* (every row becomes an issued document with a number and a hosted link, after the owner accepts terms that promise "no reminders, no marketing" for those documents only). *Importing a visit still to come as `booked`* (it would be reminded). *Keeping the file* (only what was read from it, only while it is a preview).
+
+**Revisit when** the lawyer answers ALY-51 (whether a customer file may be held with names), a client wants to upload their own file (task I4), or a client moves their bookings into ALYR (the history is then the start of their own).
+
+**Not checked.** A real export (the fixture is invented, shaped like a salon's booking or POS export; the client's own system and its columns are not known to ALYR yet); the Arabic wording (ALY-66); a file of 20,000 rows on production.
+
+**Taken from the reserved range:** D-197, migrations 0150 and 0151.
+
+## D-198 · What the Agent says of a shop whose bookings come from a file, and how staff run an import
+
+**Date** 21 Nov 2026 · **Status** Accepted (Product lane, for the first client; the founder reviews it with the pull request) · Task I3 of the Insights audit · Builds on D-197, D-135 and D-136 (the back office), D-151 (how a staff-run load is done)
+
+**Decided.**
+1. **A shop's start is the earlier of its start in ALYR and its first imported visit.** `facts.started` decides "first week" and the first Sunday with a week to compare against; without this a client with six weeks of history waited a fortnight for its first comparison.
+2. **A shop with no booking made in ALYR has no "thin days".** Nothing is booked ahead in ALYR for it, so "Tuesday is 0% booked" would be false. `Facts.live_bookings` is true once any booking is not from an import.
+3. **A customer with no WhatsApp ID is a customer.** The Agent's customer filters compared `wa_user_id not like 'TEST.%'`, which is NULL when there is no ID, so a phone-only customer (a desk booking, a Connect sale) and every imported client were left out of quiet regulars, new customers and the counts beside them. They compare `coalesce(wa_user_id, '')`. This changes numbers for shops that already have such customers: they go up, to what is true.
+4. **The report day stays Sunday, 9:00** (the founder's default, 21 Nov): nothing here touches it.
+5. **Staff run an import through `POST /api/admin/businesses/{id}/visits-imports`** (docs/runbooks/visits-import.md): upload is the dry run, apply carries the preview's hash, undo takes back the newest. Signed in within 12 hours, past the second factor, audited (`history.previewed`, `history.applied`, `history.undone`, `history.discarded`, `module.on`). The commands use the staff member's own session; nothing is stored; there is no screen. A Cloud Run job like the demo-data load was rejected: the file would have to travel to it.
+
+**Not done (task I5).** The Agent does not yet say "from your export up to <date>" (the date is recorded: `imports.data_from`), and for a shop with no live bookings its "Booked, next 7 days", the weekly report's "Booked for next week: 0" and "Reminders ALYR sent: 0" lines and the line "No number receives the Sunday report yet" still say what the database says. They must be fixed before the client is shown the dashboard.
+
+**Revisit when** a client uploads their own file (I4) or the founder moves the report day.
+
+**Taken from the reserved range:** D-198.

@@ -39,7 +39,7 @@ export type AgentView = {
   now: string;
   state: "empty" | "first_week" | "quiet" | "normal";
   money: boolean;
-  lead: "orders" | "bookings" | "ledger" | "inbox";
+  lead: "orders" | "bookings" | "ledger" | "inbox" | "none";
   header: {
     greeting: string;
     date: string;
@@ -126,5 +126,7 @@ export type AgentView = {
     everyone: boolean;
   } | null;
   report: Rich | null;
+  /** Where an imported visit file's numbers come from and how far they go; absent or null for a shop whose records ALYR made itself. */
+  data_source?: Rich | null;
   comparisons_from: string | null;
 };

@@ -16,9 +16,11 @@ from zoneinfo import ZoneInfo
 import asyncpg
 
 from alyr import catalog
-from alyr.core import not_sent, team
+from alyr.config import get_settings
+from alyr.core import not_sent, team, template_approval
 from alyr.core.auth import Staff
 from alyr.modules import report
+from alyr.modules.history import imports as history_imports
 from alyr.modules.ledger import service as ledger
 
 WAITING_MINUTES = team.WAITING_MINUTES
@@ -107,6 +109,10 @@ class Facts:
     no_shows_30: int = 0
     repeat_no_shows: list = field(default_factory=list)
     thin_days: list = field(default_factory=list)  # (date, share booked) under 30%
+    # Whether any booking in the shop was made in ALYR (not read from an imported file). A shop
+    # whose visits all came from an import has no bookings ahead in ALYR, so "next week is thin"
+    # would be false for it (D-198).
+    live_bookings: bool = True
     open_days_ahead: int = 0
     late_cancellations: int = 0
     due_back: list = field(default_factory=list)
@@ -134,7 +140,17 @@ class Facts:
     team: dict | None = None
     report_on: bool = True
     report_numbers: int = 0
+    # Owners' email addresses the emailed copy goes to; 0 when ALYR's mail is not set up
+    report_emails: int = 0
+    # Whether any product the report covers is switched on (without one it is not sent)
+    report_covers: bool = True
+    # Meta has not approved the report's template on this shop's account, so outside a number's
+    # 24-hour window the WhatsApp copy is refused (D-194): the numbers are not a sure destination
+    report_whatsapp_held: bool = False
     report_at: datetime | None = None
+    # Where the visits come from when a file was imported (`history.imports.data_from`: source,
+    # exported_on, first_visit_on, last_visit_on); None for a shop whose records ALYR made itself.
+    data_source: dict | None = None
     # Busiest hours: (Sunday-first day, hour) -> count over 28 days
     hours_grid: dict = field(default_factory=dict)
     hours_range: tuple = (7, 22)
@@ -156,6 +172,12 @@ class Facts:
     # "low_stock", ...). None when the shop does not have the Catalog module; read by
     # `view.build` and not by `gather`, which the weekly report also uses for a past moment.
     stock: dict | None = None
+
+    @property
+    def imported_only(self) -> bool:
+        """The visits are a file's and nothing is booked in ALYR: "booked ahead" and "reminders
+        sent" are not zero, they are not ALYR's to count."""
+        return self.data_source is not None and not self.live_bookings
 
     @property
     def zone(self) -> ZoneInfo:
@@ -197,6 +219,30 @@ def _rows(records, label: str = "name", **detail_keys) -> list[Row]:
     ]
 
 
+async def holds_records(conn: asyncpg.Connection, modules: frozenset, now: datetime) -> bool:
+    """Whether ALYR holds anything it could count for this shop, in the products the shop
+    uses: an order that is not a test, a visit, a ledger entry, or a customer's message in the
+    chat. A table whose product is off does not count (a Discovery-only shop has nothing to
+    count here, and a bookings shop whose chat is not in ALYR has no chat to read), and the
+    weekly report is not sent for a shop with nothing (`report.WeeklyReports`)."""
+    parts = []
+    if "orders" in modules:
+        parts.append("exists (select 1 from orders where not is_test and created_at <= $1)")
+    if "bookings" in modules:
+        parts.append("exists (select 1 from bookings where created_at <= $1)")
+    if "ledger" in modules:
+        parts.append("exists (select 1 from ledger_entries where created_at <= $1)")
+    if "inbox" in modules:
+        parts.append(
+            "exists (select 1 from messages m join contacts c on c.id = m.contact_id "
+            "where c.role = 'customer' and coalesce(c.wa_user_id, '') not like 'TEST.%' "
+            "and m.direction = 'in' and m.created_at <= $1)"
+        )
+    if not parts:
+        return False
+    return bool(await conn.fetchval("select " + " or ".join(parts), now))
+
+
 async def gather(conn: asyncpg.Connection, staff: Staff, now: datetime | None = None) -> Facts:
     now = now or datetime.now(UTC)
     shop = await conn.fetchrow(
@@ -209,6 +255,13 @@ async def gather(conn: asyncpg.Connection, staff: Staff, now: datetime | None = 
             "select module_key from tenant_modules where enabled"
         )
     )
+    # A shop's history can be longer than its time in ALYR: a visits import (D-197) brings visits
+    # from before it started, and a week compares with the week before only if there is one.
+    first_visit = await conn.fetchval(
+        "select min(starts_at) from bookings where history_import_id is not null"
+    ) if "bookings" in modules else None
+    if first_visit is not None and (shop["started"] is None or first_visit < shop["started"]):
+        shop = {**dict(shop), "started": first_visit}
     f = Facts(
         now=now,
         tz=shop["timezone"] or "Asia/Qatar",
@@ -224,15 +277,7 @@ async def gather(conn: asyncpg.Connection, staff: Staff, now: datetime | None = 
     last = (ws - timedelta(days=7), now - timedelta(days=7))
     chart = (ws - timedelta(days=7), now)  # last week and this week, by day
 
-    f.has_records = bool(await conn.fetchval(
-        "select exists (select 1 from orders where not is_test and created_at <= $1) "
-        "or exists (select 1 from bookings where created_at <= $1) "
-        "or exists (select 1 from ledger_entries where created_at <= $1) "
-        "or exists (select 1 from messages m join contacts c on c.id = m.contact_id "
-        "           where c.role = 'customer' and c.wa_user_id not like 'TEST.%' and m.direction "
-        "= 'in' and m.created_at <= $1)",
-        now,
-    ))
+    f.has_records = await holds_records(conn, modules, now)
     f.not_sent = [
         Row(str(r["id"]), r["name"] or "",
             {"minutes": int((now - r["created_at"]).total_seconds() // 60)})
@@ -277,6 +322,7 @@ async def gather(conn: asyncpg.Connection, staff: Staff, now: datetime | None = 
             (row["opens"].hour + row["opens"].minute / 60,
              row["closes"].hour + row["closes"].minute / 60)
         )
+    f.data_source = await history_imports.data_from(conn)
     await _last_by_now(conn, f)
     if f.money:
         await _setup(conn, f, staff)
@@ -299,7 +345,8 @@ async def _inbox(conn, f: Facts, span, last, chart) -> None:
             "  where m.contact_id = c.id and coalesce(m.status, '') <> 'blocked' "
             "    and m.created_at <= $1 order by created_at desc limit 1) l on true "
             "left join users u on u.id = c.assigned_to "
-            "where c.role = 'customer' and c.wa_user_id not like 'TEST.%' and c.inbox_status = "
+            "where c.role = 'customer' and coalesce(c.wa_user_id, '')"
+            " not like 'TEST.%' and c.inbox_status = "
             "'open' and l.direction = 'in' "
             f"  and l.created_at < $1::timestamptz - interval '{WAITING_MINUTES} minutes' "
             "order by l.created_at",
@@ -312,7 +359,8 @@ async def _inbox(conn, f: Facts, span, last, chart) -> None:
         "count(distinct m.contact_id) filter (where m.created_at >= $3 and m.created_at < $4) as "
         "wrote_last "
         "from messages m join contacts c on c.id = m.contact_id "
-        "where c.role = 'customer' and c.wa_user_id not like 'TEST.%' and m.direction = 'in' and "
+        "where c.role = 'customer' and coalesce(c.wa_user_id, '')"
+        " not like 'TEST.%' and m.direction = 'in' and "
         "m.created_at >= $3 and m.created_at "
         "< $2",
         *span, *last,
@@ -321,7 +369,7 @@ async def _inbox(conn, f: Facts, span, last, chart) -> None:
     row = await conn.fetchrow(
         "select count(*) filter (where created_at >= $1 and created_at < $2) as new, "
         "count(*) filter (where created_at >= $3 and created_at < $4) as new_last "
-        "from contacts where role = 'customer' and wa_user_id not like 'TEST.%'",
+        "from contacts where role = 'customer' and coalesce(wa_user_id, '') not like 'TEST.%'",
         *span, *last,
     )
     f.new_customers, f.new_customers_last = row["new"], row["new_last"]
@@ -344,7 +392,8 @@ async def _inbox(conn, f: Facts, span, last, chart) -> None:
             "select (m.created_at at time zone $3::text)::date as d, "
             "count(distinct m.contact_id)::int as n from messages m "
             "join contacts c on c.id = m.contact_id "
-            "where c.role = 'customer' and c.wa_user_id not like 'TEST.%' and m.direction = 'in' "
+            "where c.role = 'customer' and coalesce(c.wa_user_id, '')"
+            " not like 'TEST.%' and m.direction = 'in' "
             "and m.created_at >= $1 and m.created_at < $2 group by 1",
             *chart, f.tz,
         )
@@ -616,7 +665,10 @@ async def _bookings(conn, f: Facts, span, last, chart) -> None:
             f.open_days_ahead += 1
             if share < 0.3:
                 thin.append((day, share))
-    f.thin_days = thin
+    f.live_bookings = bool(await conn.fetchval(
+        "select exists (select 1 from bookings where history_import_id is null)"))
+    # An import-only shop has nothing booked ahead in ALYR, so no day is "thin" (D-198).
+    f.thin_days = thin if f.live_bookings else []
     f.booked_share_by_day = shares
     f.visits_by_day = {
         r["d"]: r["n"]
@@ -717,7 +769,8 @@ async def _quiet_regulars(conn, f: Facts) -> None:
             "select c.id, c.name, count(*) filter (where ev.at >= $1 and ev.at < $2)::int as "
             "times, "
             "max(ev.at) as last from ev join contacts c on c.id = ev.contact_id "
-            "where c.role = 'customer' and c.wa_user_id not like 'TEST.%' group by c.id, c.name "
+            "where c.role = 'customer' and coalesce(c.wa_user_id, '')"
+            " not like 'TEST.%' group by c.id, c.name "
             "having count(*) filter (where ev.at >= $1 and ev.at < $2) >= 3 and max(ev.at) < $2 "
             "order by max(ev.at) desc",
             f.now - timedelta(days=120), f.now - timedelta(days=30), f.now,
@@ -730,7 +783,8 @@ async def _done(conn, f: Facts, span) -> None:
     paid through its links."""
     f.sent_for_you = await conn.fetchval(
         "select count(*) from messages m join contacts c on c.id = m.contact_id "
-        "where c.role = 'customer' and c.wa_user_id not like 'TEST.%' and m.direction = 'out' and "
+        "where c.role = 'customer' and coalesce(c.wa_user_id, '')"
+        " not like 'TEST.%' and m.direction = 'out' and "
         "m.sent_by = '' "
         "and m.status in ('sent', 'delivered', 'read') and m.created_at >= $1 and m.created_at < "
         "$2",
@@ -769,12 +823,15 @@ async def _hours(conn, f: Facts) -> None:
             "select starts_at as at from bookings "
             "where status in ('completed', 'booked', 'no_show')"
         )
-    else:
+    elif "inbox" in f.modules:
         source = (
             "select m.created_at as at from messages m join contacts c on c.id = m.contact_id "
-            "where c.role = 'customer' and c.wa_user_id not like 'TEST.%' and m.direction = 'in'"
+            "where c.role = 'customer' and coalesce(c.wa_user_id, '')"
+            " not like 'TEST.%' and m.direction = 'in'"
         )
-    f.hours_grid = {
+    else:
+        source = None  # no product that counts: chats are read only for a shop that has the inbox
+    f.hours_grid = {} if source is None else {
         (r["dow"], r["hour"]): r["n"]
         for r in await conn.fetch(
             f"select extract(dow from at at time zone $3::text)::int as dow, "
@@ -794,7 +851,15 @@ async def _hours(conn, f: Facts) -> None:
 
 async def _report(conn, f: Facts) -> None:
     f.report_on = await report.enabled(conn)
-    f.report_numbers = len(await report.recipients(conn))
+    people = await report.recipients(conn)
+    f.report_numbers = len(people)
+    f.report_emails = len(await report.email_recipients(conn))
+    if people:
+        template = "weekly_report_card" if get_settings().report_card_template else "weekly_report"
+        for lang in {"ar" if p["lang"] == "ar" else "en" for p in people}:
+            if await template_approval.refusal(conn, None, template, lang):
+                f.report_whatsapp_held = True
+    f.report_covers = bool(f.modules & report.PARTS.keys())
     _, f.report_at = report.next_send(f.now, f.tz)
 
 

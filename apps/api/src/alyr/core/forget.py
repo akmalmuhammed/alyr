@@ -37,7 +37,8 @@ TABLES = {
     "discovery_asks": "only staff have these; a team member cannot be forgotten here",
     "staff_changes": "only staff have these",
     "orders": "kept, without the delivery address and note",
-    "bookings": "kept, without the note",
+    "bookings": "kept, without the note (a visit an import made keeps its mark and its row "
+                "key, a keyed hash of the visit)",
     "ledger_entries": "kept: the credit account's record",
     "ledger_accounts": "kept: the credit account",
     "payment_requests": "kept: references and statuses only",

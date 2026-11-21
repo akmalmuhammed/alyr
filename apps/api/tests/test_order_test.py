@@ -214,6 +214,9 @@ def test_a_test_order_cannot_be_marked_paid_and_makes_no_document(client):
 # file and the start of the query, so moving code never breaks it but changing a query asks
 # for the decision again.
 FINE_WITHOUT = {
+    ("modules/history/imports.py",
+     "with gone as (delete from contacts c where c.history_import_id"):
+        "an undo keeps a client who has any record of their own, a test order included",
     ("core/forget.py", "select (select count(*) from messages where contact_id = $1) as messages"):
         "one customer's own records, counted before they are forgotten; every order of theirs "
         "is kept without them, a test one too",

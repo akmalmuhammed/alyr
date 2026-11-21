@@ -35,6 +35,7 @@ from alyr.modules.agent.words import (
     DAY_SHORT,
     MONTHS,
     agree,
+    data_from,
     money,
     noun_after,
     plain,
@@ -242,11 +243,13 @@ def _facts_by_module(w: Week, lang: str) -> dict[str, list[dict]]:
             "key": "no_shows", "label": T(lang, "No-shows", "الغياب"),
             "value": f"{f.no_shows_week:,}",
             "note": T(lang, f"of {booked:,} due", f"من أصل {booked:,}"),
-        }, {
-            "key": "booked_ahead", "label": T(lang, "Booked ahead", "المحجوز القادم"),
-            "value": f"{f.booked_ahead:,}",
-            "note": T(lang, "next 7 days", "خلال 7 أيام"),
         }]
+        if not f.imported_only:
+            rows.append({
+                "key": "booked_ahead", "label": T(lang, "Booked ahead", "المحجوز القادم"),
+                "value": f"{f.booked_ahead:,}",
+                "note": T(lang, "next 7 days", "خلال 7 أيام"),
+            })
         if w.main != "bookings":
             label = {"visits": T(lang, "Visits", "الزيارات"),
                      "appointments": T(lang, "Appointments", "المواعيد"),
@@ -420,8 +423,10 @@ def _line(w: Week, product: str, lang: str) -> list[str]:
         out = [T(lang, f"{counted(f.visits, noun, lang)}, "
                        f"{counted(f.no_shows_week, NO_SHOWS, lang)}",
                  f"{counted(f.visits, noun, lang)}، والغياب {f.no_shows_week}"),
-               T(lang, f"{f.booked_ahead:,} booked for this week",
-                 f"المحجوز لهذا الأسبوع: {f.booked_ahead}")]
+               ]
+        if not f.imported_only:  # a file's visits were not booked in ALYR: not "0 booked"
+            out.append(T(lang, f"{f.booked_ahead:,} booked for this week",
+                         f"المحجوز لهذا الأسبوع: {f.booked_ahead}"))
         if f.unmarked:
             n = len(f.unmarked)
             out.append(T(lang, f"{n:,} not marked yet",
@@ -529,6 +534,8 @@ def message(w: Week, lang: str) -> dict:
     done = _done(w, lang)
     if done:
         lines.append(T(lang, f"*Done for you* · {done}", f"*أنجزته ALYR* · {done}"))
+    if w.f.data_source:  # say what the numbers are made of and how far they go
+        lines.append("_" + plain(data_from(w.f.data_source, lang)) + "_")
     step = next_step(w, lang)
     heading = (T(lang, "*Worth knowing*", "*للعلم*") if step["kind"] == "info"
                else T(lang, "*Next step*", "*الخطوة التالية*"))

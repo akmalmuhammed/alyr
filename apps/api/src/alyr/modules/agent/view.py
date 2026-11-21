@@ -16,7 +16,16 @@ import asyncpg
 from alyr import catalog as shop_catalog
 from alyr.core import workspace
 from alyr.core.auth import Staff
-from alyr.core.words import DAYS, MESSAGES, NUMBERS, ORDERS, REMINDERS, REQUESTS, STEPS
+from alyr.core.words import (
+    DAYS,
+    EMAIL_ADDRESSES,
+    MESSAGES,
+    NUMBERS,
+    ORDERS,
+    REMINDERS,
+    REQUESTS,
+    STEPS,
+)
 from alyr.modules.agent import facts as facts_
 from alyr.modules.agent.facts import Facts
 from alyr.modules.agent.insights import (
@@ -39,6 +48,7 @@ from alyr.modules.agent.words import (
     agree,
     clock,
     count,
+    data_from,
     day_month,
     minutes,
     money,
@@ -109,6 +119,7 @@ def render(f: Facts, lang: str, snoozed: dict | None = None) -> dict:
         "owed": _owed(f, lang),
         "team": None if empty else _team(f, lang),
         "report": _report(f, lang),
+        "data_source": _source(f, lang),
         "comparisons_from": (
             day_month(f.comparisons_from, lang) if state == "first_week" else None
         ),
@@ -118,15 +129,20 @@ def render(f: Facts, lang: str, snoozed: dict | None = None) -> dict:
 # ── what the business mainly runs on, and its state ──────
 
 
+NOTHING = "none"  # no product that ALYR counts is switched on: there is nothing to lead with
+
+
 def lead(f: Facts) -> str:
-    """The product whose numbers come first: by type of business, else the first one on."""
+    """The product whose numbers come first: by type of business, else the first one on.
+    "none" for a shop with none of them (a Discovery-only shop, say): it is not the inbox,
+    and nothing on this page is about chats."""
     preferred = TYPE_LEAD.get(f.business_type)
     if preferred in f.modules:
         return preferred
-    for module in ("orders", "bookings", "ledger"):
+    for module in ("orders", "bookings", "ledger", "inbox"):
         if module in f.modules:
             return module
-    return "inbox"
+    return NOTHING
 
 
 def _measure(f: Facts, main: str) -> tuple[int, int]:
@@ -139,7 +155,7 @@ def _measure(f: Facts, main: str) -> tuple[int, int]:
 
 
 def state_of(f: Facts, main: str) -> str:
-    if not f.has_records:
+    if main == NOTHING or not f.has_records:
         return "empty"
     if f.first_week:
         return "first_week"
@@ -232,6 +248,15 @@ def _summary(f: Facts, main: str, state: str, lang: str) -> list[dict]:
     def muted(parts):
         return {"muted": True, "text": parts}
 
+    if state == "empty" and main == NOTHING:
+        # No product that counts is on, so the usual "fills in as customers write" would
+        # promise what this shop does not use. Say what the page counts, and that it has none.
+        return [fact(rich(T(
+            lang,
+            "Nothing to count here yet. This page counts the orders, visits, chats and money "
+            "owed that happen in ALYR.",
+            "لا شيء للعدّ هنا بعد. تعدّ هذه الصفحة الطلبات والزيارات والمحادثات والمبالغ "
+            "المستحقة التي تجري في ALYR.")))]
     if state == "empty":
         verb = {"orders": ("order", "يطلبون"), "bookings": ("book", "يحجزون")}.get(main)
         if verb:
@@ -300,7 +325,7 @@ def _summary(f: Facts, main: str, state: str, lang: str) -> list[dict]:
             parts.append(muted(rich(T(lang, "By this time last week: {n}.",
                                       "حتى هذا الوقت من الأسبوع الماضي: {n}."),
                                     n=count(last, unit, lang))))
-    if main == "bookings":
+    if main == "bookings" and not f.imported_only:
         parts.append(fact(rich(
             T(lang, "{n} booked for the next 7 days.", "المحجوز للأيام السبعة القادمة: {n}."),
             n=count(f.booked_ahead, noun, lang))))
@@ -384,6 +409,9 @@ NEEDS_MODULE = {
 }
 
 
+ALYR_MADE = {"booked_ahead", "new_bookings"}
+
+
 def kpi_keys(f: Facts, main: str) -> list[str]:
     """Four numbers (C): a single product shows its own four; with several, two from the
     main product, then "Owed to you" if credit accounts are on, then the main product's
@@ -404,6 +432,8 @@ def kpi_keys(f: Facts, main: str) -> list[str]:
             continue
         if key in MONEY_KPIS and not f.money:
             continue
+        if f.imported_only and key in ALYR_MADE:
+            continue  # a file's visits were not booked or reminded by ALYR: not "0", not ours
         keys.append(key)
     return keys[:4]
 
@@ -700,7 +730,8 @@ def _week(f: Facts, main: str, lang: str) -> dict | None:
             data = {d: c for d, (c, _) in f.orders_by_day.items()}
             fmt, key = "count", "orders"
     elif main == "bookings":
-        data, fmt, key, booked = f.visits_by_day, "count", "visits", f.booked_by_day
+        data, fmt, key = f.visits_by_day, "count", "visits"
+        booked = {} if f.imported_only else f.booked_by_day
     elif main == "ledger" and f.money:
         data, fmt, key = f.collected_by_day, "money", "collected"
     elif "inbox" in f.modules:
@@ -921,17 +952,68 @@ NO_SHOWS = (("no-show", "no-shows"), ("غياب واحد", "غيابان", "حا
 # ── the Sunday report ─────────────────────────────────────
 
 
+def _source(f: Facts, lang: str) -> list | None:
+    """Where an imported file's visits come from and how far they go (spec 070, task I5): one
+    line under the summary for a shop whose records are, in part, a file's. None otherwise."""
+    return data_from(f.data_source, lang) if f.data_source else None
+
+
+def _to(n: int, noun, lang: str) -> str:
+    """A count after «إلى»: two takes the genitive dual («رقمين», «عنواني بريد»), which
+    `count` (the nominative, as a subject) does not give. One and three or more are the same."""
+    text = count(n, noun, lang)
+    if lang == "ar" and n == 2:
+        text = text.replace("رقمان", "رقمين").replace("عنوانا", "عنواني")
+    return text
+
+
 def _report(f: Facts, lang: str) -> list | None:
+    """Where the Sunday report goes, said only as `report.WeeklyReports.send` does it: nothing
+    goes for a shop with no product the report covers or no records to report; a WhatsApp
+    message goes to each number linked for it, and the emailed copy to each owner's address
+    when ALYR's mail is set up. Never "no number" while an email goes, never "goes to" while
+    nothing does."""
     if not f.money:
         return None
     if not f.report_on:
         return rich(T(lang, "The Sunday report is off.", "تقرير الأحد متوقف."))
-    if not f.report_numbers:
-        return rich(T(lang, "No number receives the Sunday report yet.",
-                      "لا يصل تقرير الأحد إلى أي رقم بعد."))
+    if not f.report_covers:
+        return rich(T(lang, "The Sunday report has nothing to cover yet: none of the products "
+                            "it reports on is switched on.",
+                      "ليس في تقرير الأحد ما يغطيه بعد: لم يُفعَّل أي من المنتجات التي يغطيها."))
+    if not f.has_records:
+        return rich(T(lang, "The Sunday report starts once ALYR holds orders, visits, chats or "
+                            "money records for you.",
+                      "يبدأ تقرير الأحد حين تصبح لدى ALYR طلبات أو زيارات أو محادثات أو مبالغ "
+                      "مسجَّلة لك."))
     at = f.report_at.astimezone(f.zone) if f.report_at else None
     when = f"{at.hour}:{at.minute:02d}" if at else "9:00"
+    if not f.report_numbers and not f.report_emails:
+        return rich(T(lang, "No number or email address receives the Sunday report yet.",
+                      "لا يصل تقرير الأحد إلى أي رقم أو بريد إلكتروني بعد."))
+    if f.report_numbers and f.report_whatsapp_held:
+        # Outside a number's 24-hour window the WhatsApp copy needs a template Meta has
+        # approved on this shop's account (D-194); until then it reaches only a number that
+        # wrote to ALYR within a day, so it is not named as a destination.
+        held = T(lang, "On WhatsApp it reaches a number only if that number has written to ALYR "
+                       "in the last 24 hours: {meta} has not approved the report's wording.",
+                 "وعلى واتساب لا يصل إلى أي رقم إلا إذا راسل هذا الرقم ALYR خلال آخر 24 ساعة: "
+                 "لم تعتمد {meta} صياغة التقرير.")
+        if f.report_emails:
+            return rich(T(lang, "Your report goes to {e} on Sunday at {t}. ",
+                          "يصل تقريرك إلى {e} يوم الأحد الساعة {t}. ") + held,
+                        e=_to(f.report_emails, EMAIL_ADDRESSES, lang), t=B(when), meta=B("Meta"))
+        return rich(T(lang, "The Sunday report is set for {t}. ",
+                      "موعد تقرير الأحد الساعة {t}. ") + held, t=B(when), meta=B("Meta"))
+    if f.report_numbers and f.report_emails:
+        return rich(T(lang, "Your report goes to {n} and {e} on Sunday at {t}.",
+                      "يصل تقريرك إلى {n} وإلى {e} يوم الأحد الساعة {t}."),
+                    n=_to(f.report_numbers, NUMBERS, lang),
+                    e=_to(f.report_emails, EMAIL_ADDRESSES, lang), t=B(when))
+    if f.report_emails:
+        return rich(T(lang, "Your report goes to {e} on Sunday at {t}.",
+                      "يصل تقريرك إلى {e} يوم الأحد الساعة {t}."),
+                    e=_to(f.report_emails, EMAIL_ADDRESSES, lang), t=B(when))
     return rich(T(lang, "Your report goes to {n} on Sunday at {t}.",
                   "يصل تقريرك إلى {n} يوم الأحد الساعة {t}."),
-                n=count(f.report_numbers, NUMBERS, lang), t=B(when))
-
+                n=_to(f.report_numbers, NUMBERS, lang), t=B(when))
