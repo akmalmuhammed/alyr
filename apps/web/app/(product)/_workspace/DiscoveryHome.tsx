@@ -209,7 +209,8 @@ export function DiscoveryHome({ lang, canManage, push, onConnection }: {
     <div className="dv-home">
       <p className="ct-sr" role="status" aria-live="polite">{announce}</p>
 
-      {state === "noConnection" && (
+      {/* A demo shop may turn the made-up sample on. Any other shop is offered nothing to turn on: ALYR sets its source up (D-169). */}
+      {state === "noConnection" && o.demo && (
         <>
           <Empty title={t.noConnectionTitle} text={t.noConnectionText}
             action={canManage
@@ -218,6 +219,8 @@ export function DiscoveryHome({ lang, canManage, push, onConnection }: {
           <Slots lang={lang} />
         </>
       )}
+
+      {state === "noConnection" && !o.demo && <Empty title={t.notConnectedTitle} text={t.notConnectedText} />}
 
       {state !== "noConnection" && (
         <>
@@ -510,7 +513,7 @@ function NextCard({ lang, f, busy, canMark, headingRef, onDone, onSkip, onOpen, 
 
 // ── empty: a real screen, with its structure drawn as slots ─
 
-function Empty({ title, text, action }: { title: string; text: string; action: React.ReactNode }) {
+function Empty({ title, text, action }: { title: string; text: string; action?: React.ReactNode }) {
   return (
     <section className="sh-tile raised folded ct-empty dv-empty" aria-labelledby="dv-empty-h">
       <span className="sh-glyph"><Icon name="search" /></span>

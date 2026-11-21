@@ -113,7 +113,10 @@ export type Run = {
 export type Counts = { open: number; skipped: number; owner_done: number; verified: number };
 
 export type Overview = {
-  has_connection: boolean; has_run: boolean; last_run: Run | null; score: number | null;
+  has_connection: boolean;
+  /** ALYR marked this shop as a demo shop in the back office: only then may the sample business be turned on (D-169). Absent means no. */
+  demo: boolean;
+  has_run: boolean; last_run: Run | null; score: number | null;
   /** One sentence by rule, built by the API in the reader's language. Not in the spec's shape; the backend sends it. */
   headline: string;
   score_parts: ScoreParts | null; counts: Counts; next: Finding | null; up_next: Finding[]; done: Finding[];
@@ -452,7 +455,7 @@ export function parseOverview(raw: unknown): Overview {
   const delta = rec(r.delta);
   const change = num(delta.score_change);
   return {
-    has_connection: r.has_connection === true, has_run: r.has_run === true,
+    has_connection: r.has_connection === true, demo: r.demo === true, has_run: r.has_run === true,
     last_run: r.last_run ? parseRun(r.last_run) : null, score: num(r.score), headline: str(r.headline), score_parts: parseParts(r.score_parts),
     counts: parseCounts(r.counts), next: r.next ? parseFinding(r.next) : null,
     up_next: arr(r.up_next).map(parseFinding), done: arr(r.done).map(parseFinding),
