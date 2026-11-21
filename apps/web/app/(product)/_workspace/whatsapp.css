@@ -61,6 +61,17 @@
   .wa-pair .wa-choice { grid-template-columns: 1fr; }
 }
 
+/* what ALYR sends you: a switch for each */
+.wa-alerts { margin: 0; padding: 0; list-style: none; border-radius: 12px; box-shadow: 0 0 0 1px var(--hair) inset; overflow: hidden; }
+.wa-toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 10px 14px; }
+.wa-toggle + .wa-toggle { border-top: 1px solid var(--hair); }
+.wa-toggle-text { display: grid; gap: 2px; min-width: 0; }
+.wa-toggle-text b { font-size: var(--ui-body-sm); font-weight: 600; }
+.wa-toggle-text small { font-size: var(--ui-caption); color: var(--ink-2); line-height: 1.4; }
+.wa-hit { position: relative; }
+.wa-hit::before { content: ""; position: absolute; inset: -10px -6px; }
+.sh .wa-hit:disabled { opacity: 0.5; cursor: default; }
+
 /* what you can send */
 .wa-cmds { margin: 0; padding: 0; list-style: none; border-radius: 12px; box-shadow: 0 0 0 1px var(--hair) inset; overflow: hidden; }
 .wa-cmds li { display: grid; grid-template-columns: minmax(6.5rem, 9rem) 1fr; align-items: center; gap: 12px; padding: 10px 14px; }

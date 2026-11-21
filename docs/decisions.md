@@ -6,6 +6,7 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 
 | # | Decision | Status |
 |---|---|---|
+| D-194 | A message that cannot go fails where the shop can see it: a template Meta has not approved is refused when queued, a message Meta refuses is failed at once in Meta's words, and a refused reminder or review request is not counted as sent | Accepted, 21 Nov 2026 |
 | D-001 | One deployable service (modular monolith) | Accepted |
 | D-002 | PostgreSQL with forced row-level security for tenant separation | Accepted |
 | D-003 | Plain SQL migrations, never edited after they are applied | Accepted |
@@ -120,6 +121,8 @@ Status: **Accepted** (in force), **Proposed** (waiting for the founder), **Super
 | D-155 | The light page is pure white, with cool Carbon-family greys for wells and lines, instead of the yellow-green off-white Paper | Accepted |
 | D-153 | The homepage's headline and sub line use the founder's AI wording, with one word taking turns on a pale Volt block, and a statement before the products keeps the plain line | Accepted |
 | D-154 | The homepage is trimmed: no film beside the headline (ends D-062), the sub line's word takes turns between discover, manage and scale with its own Pause, and How we work's lead, "What we need from you" and the order flow's tally go | Accepted |
+| D-192 | The owner is told about bookings: a new booking and a customer's cancellation reach the staff numbers marked for them on WhatsApp (inside the 24-hour window; the two templates are written and held, so nothing goes outside it) and each owner by email, with no customer details | Accepted, 21 Nov 2026 |
+| D-193 | The weekly report reaches the owner (linking an owner's or admin's phone and registering a number on purpose switch it on, with switches on the Team screen) and stops when a person leaves the team or becomes an agent; the day stays Sunday until the founder decides | Accepted, 21 Nov 2026 |
 
 ---
 
@@ -2793,3 +2796,62 @@ The product's screens (the workspace, the back office, sign-in, sign-up and the 
 
 **Reserved.** Decisions D-180 to D-199 belong to the product UI redesign (rules, kit, tokens, areas). Migrations: none.
 
+## D-194 · A message that cannot go fails where the shop can see it
+
+**Date** 21 Nov 2026 · **Status** Accepted (a decision of the product lane for the first client; the founder reviews it with the pull request) · T6 of the first client's product audit · Builds on D-077 (jobs), spec 036 (the "Not sent" screen), spec 061 (templates per business), CLAUDE.md hard rule 5
+
+**Problem.** A message ALYR starts outside the customer's 24-hour window can go only as a template Meta has approved on the shop's account. Nothing checked that when the message was queued. It was tried six times in about two and a half minutes and then marked failed, while the booking was already stamped as reminded and the customer had already used up their 30 days of the review request. The only place the failure showed was `/app/unsent`, which no menu linked to. For a salon, whose customers book days ahead, most reminders and every review request go outside the window.
+
+**What was decided.**
+1. **The outbound layer asks first.** When a message must go as a template, `core/template_approval.py` looks at what Meta said about that template on the account of the number the customer talks to (`whatsapp_templates`, spec 061). A template with a status other than `approved`, or one the account does not have after its list was read in full, is recorded as blocked with the reason `template_not_approved` and is never queued. When nothing is known (a number with no account ID saved, or an account whose list was never read), the message goes as before: refusing on a guess would stop every message of a shop whose templates nobody has read. The simulator is never checked.
+2. **A refusal is not a send.** A booking whose reminder was refused is not marked as reminded. A review request whose message was refused, or failed after it was queued, does not count toward the customer's 30 days.
+3. **A message Meta refuses is failed at once.** A 4xx answer about the message itself (a template Meta does not have, a number it will not write to) is marked failed on the first try with Meta's own words; a rate limit, a busy Meta and a wrong or expired access token are still tried again.
+4. **"Not sent" is in the menu**, under the account group, for every member of staff, and says the new reason in both languages (the Arabic a draft until ALY-66). The reason can be sent again once Meta has approved the template.
+
+**Rejected.** *Refusing whenever a template is not listed as approved* (a shop whose templates were never read would send nothing). *Checking again when the job runs* (the queue time is where the reason can be shown against the message). *Putting "Not sent" among the products or the core group* (the phone's tab bar shows the first four and a salon's Bookings would drop off it).
+
+**Revisit when** templates are read automatically after a number is attached (T19), so that "nothing is known" stops being a normal state; or when an approved template can be sent from the inbox (T7).
+
+**Not covered.** A reminder that was let through and then failed at Meta after being queued still has its time stamped; the message is on the "Not sent" screen and can be sent again. A reminder refused for lack of consent (a booking made by staff for a customer who never wrote) is now unstamped and shown as not sent, but the consent question (D-142) is the founder's.
+## D-192 · The owner is told about bookings
+
+**Date** 21 Nov 2026 · **Status** Accepted (the founder asked for the product to be ready for the first client, a Qatar salon; audit task T5) · Builds on D-079 (new-order alerts), D-065 (linking a staff number), D-064 (the owner's own test) · Spec `specs/069-owner-alerts` · Migration 0142
+
+A salon's owner learned of a booking only by opening the Bookings tab, typing BOOKINGS or reading Sunday's report. Alerts existed for orders only.
+
+**Decision.**
+1. **A new booking a customer makes, and one a customer cancels, is told** to the staff numbers marked for it (`contacts.booking_alerts`) and to each owner who wants it by email (`memberships.booking_emails`, on for owners, switched off by the owner). Not for a booking made by staff, a cancellation by staff, a deposit hold running out, or the owner's own test booking.
+2. **WhatsApp goes only inside the number's 24-hour window until Meta has approved the wording.** The templates `booking_new_staff` and `booking_cancelled_staff` are written in English and Arabic and **held** (`held=HELD`): not submitted. While held, a number whose window is closed is sent nothing, so there is no late failure in the Not sent list. The hold is the founder's to lift, as for every held template.
+3. **The email carries the booking's number, the service with who does it and the time, never the customer's name or phone number.** Resend is in the EU (hard rule 2); the email is an interim door so an owner learns of a booking with no WhatsApp at all.
+4. **Nobody is marked until an owner or admin links their phone** (which marks it) or marks a number: a busy shop is never sent a message per booking it did not ask for (as D-079).
+
+**Why.** "Did anyone book?" is the signal a salon owner wants most, and at 11 pm nothing reached any phone. An email needs no Meta approval and no 24-hour window; the WhatsApp message is better where the window is open and costs nothing there.
+
+**Rejected.** *Submitting the templates now* (the founder's go). *Sending outside the window and letting it fail* (a failure shows late, quietly, and in a list not in the navigation: audit risk 5). *A customer's name and phone in the email* (not listed for that in the data-residency register; the owner has the workspace for it). *Alerts for staff-made bookings* (the person making it knows).
+
+**Not decided.** Whether an admin is emailed, a per-shop (rather than per-owner) email switch, a daily summary instead of one per booking for a very busy shop.
+
+**Revisit when** Meta has approved the templates, a shop is busy enough that an email per booking is noise, or an owner asks for the customer's name in the email.
+
+**Taken from the reserved range:** D-192 and migration 0142.
+
+## D-193 · The weekly report reaches the owner, and stops when a person leaves
+
+**Date** 21 Nov 2026 · **Status** Accepted (audit tasks T3 and T27 of the first client's readiness audit; the day is T4 and stays Sunday) · Builds on D-030 (the weekly report), D-065 (linking a staff number), D-035 (agents see no money)
+
+`contacts.weekly_report` defaults to false and nothing set it, so no real owner was ever sent the WhatsApp report (the emailed copy worked). A person taken off the team kept their linked number as a staff number, still on the report's list and the alerts.
+
+**Decision.**
+1. **Linking a number that was a customer's, as an owner or an admin, switches the weekly report and the booking alerts on** for it and records the agreement to the shop's messages; a number that said STOP stays stopped, a number the shop already listed as staff keeps the owner's settings, and **an agent is never given the report** (it holds the shop's money).
+2. **Registering a staff number takes the report and booking switches**; not said means off for a new number and unchanged for a number registered again.
+3. **The owner switches them on the Team screen** ("What ALYR sends you": Weekly report for owners and admins, New bookings and Booking emails where Bookings is on) and per number in the staff numbers list.
+4. **A person taken off the team, or a number taken off the staff list, stops being staff's** (`staff_link.stand_down`: customer role, login unlinked, report and every alert off, history kept), and an admin made an agent stops receiving the report.
+5. **The report's day stays Sunday, 9:00, shop time.** The words (card, text, the home's line, the switches) say Sunday; a test fails if the places that name the day say Monday. Moving the day is the founder's decision and touches the places listed in the pull request.
+
+**Why.** The report is the one message every owner is promised. Switching it on where the person proves their own phone, and letting them switch it off, is the honest default; leaving it to a column nobody could reach was the bug. An ex-colleague's phone receiving the shop's figures is a leak.
+
+**Rejected.** *Switching it on for every registered staff number* (the registration form is also how a stylist's number is added; revenue is not hers). *Moving the report to Monday here* (the proposal says Monday, the code says Sunday: the founder decides which is true).
+
+**Revisit when** the founder chooses a different report day, or a shop wants the report on a second phone by default.
+
+**Taken from the reserved range:** D-193.

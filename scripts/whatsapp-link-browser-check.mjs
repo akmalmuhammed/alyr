@@ -12,7 +12,10 @@
 // message and the countdown, sends the message from a simulated phone, sees the card turn to
 // linked with the last four digits, picks each place to work (and reads each back from the
 // API), unlinks with the confirm step, lets a code run out, then signs in as the agent and
-// checks the agent's list of commands has no OWED and no amounts. It also checks nothing
+// checks the agent's list of commands has no OWED and no amounts. It also checks the card "What
+// ALYR sends you" (D-193): the owner's three switches (weekly report, new bookings, booking
+// emails), the two WhatsApp ones off until a phone is linked, each read back from the API, an
+// agent offered no report and no email. It also checks nothing
 // scrolls sideways at 375 px, light and dark, and looks at a laptop. Exits with an error if
 // anything is wrong.
 //
@@ -140,6 +143,8 @@ async function click(find, wait = 250) {
 const wa = "document.querySelector('.wa')";
 const pressText = (text, wait) => click(`[...${wa}.querySelectorAll('button')].filter(${visible}).find(e => ${norm}(e) === ${JSON.stringify(text)})`, wait);
 const waText = () => js(`${wa} ? ${norm}(${wa}) : ''`);
+const alertsRows = () => js(`[...${wa}.querySelectorAll('.wa-alerts .wa-toggle')].map(li => ({ name: li.querySelector('b').textContent, on: li.querySelector('[role=switch]').getAttribute('aria-checked') === 'true', disabled: li.querySelector('[role=switch]').disabled, h: Math.round(li.getBoundingClientRect().height) }))`);
+const flipAlert = (name) => click(`${wa}.querySelector('.wa-alerts [role=switch][aria-label=${JSON.stringify(name)}]')`, 500);
 const sideways = () => js("document.documentElement.scrollWidth - document.documentElement.clientWidth");
 
 // The API is asked through the page's own origin, so it carries the sign-in cookie.
@@ -183,6 +188,14 @@ try {
   check(!/coming|soon|beta|قريباً/i.test(await waText()), "no coming-soon label");
   check(await sideways() <= 0, "nothing scrolls sideways (unlinked)");
   check((await js(`getComputedStyle(${wa}).direction`)) === (LANG === "ar" ? "rtl" : "ltr"), "reading direction follows the language");
+  {
+    const rows = await alertsRows();
+    check(rows.map((r) => r.name).join("|") === [t.alertReport, t.alertBookings, t.alertEmail].join("|"), `unlinked owner: the card lists ${rows.map((r) => r.name).join(", ")}`);
+    check(rows[0].disabled && rows[1].disabled && !rows[2].disabled, "unlinked: the two WhatsApp switches wait for a phone, the email does not");
+    check((await waText()).includes(t.alertsNeedLink), "unlinked: the card says to link a phone first");
+    check(rows.every((r) => r.h >= 44), "every alert row is 44 px or more tall");
+    check(rows[2].on === true, "booking emails start on for an owner");
+  }
   await shot("1-unlinked");
 
   // ── a code ──
@@ -211,6 +224,28 @@ try {
   const status = await page("GET", "/api/owner/whatsapp");
   check(status.body.linked && status.body.number_ends === "2345", "the API agrees");
   await shot("3-linked");
+
+  // ── what ALYR sends you ──
+  {
+    let rows = await alertsRows();
+    check(rows.every((r) => !r.disabled), "linked: every alert switch can be pressed");
+    check(rows[0].on && rows[1].on, "linking an owner's phone switched the report and the booking messages on");
+    let me = (await page("GET", "/api/owner/whatsapp")).body;
+    check(me.weekly_report === true && me.booking_alerts === true && me.booking_email === true, "the API agrees: all three are on");
+    await flipAlert(t.alertReport);
+    me = (await page("GET", "/api/owner/whatsapp")).body;
+    check(me.weekly_report === false && me.booking_alerts === true, "switching the report off is saved and leaves the others");
+    await flipAlert(t.alertReport);
+    await flipAlert(t.alertBookings);
+    await flipAlert(t.alertEmail);
+    me = (await page("GET", "/api/owner/whatsapp")).body;
+    check(me.weekly_report === true && me.booking_alerts === false && me.booking_email === false, "switching the report on, and the bookings and the email off, is saved");
+    rows = await alertsRows();
+    check(rows[0].on && !rows[1].on && !rows[2].on, "the switches show what is saved");
+    await shot("3b-alerts");
+    await flipAlert(t.alertBookings);
+    await flipAlert(t.alertEmail);
+  }
 
   // ── where you work ──
   for (const [pref, name] of [["whatsapp", t.workOptions.whatsapp.name], ["portal", t.workOptions.portal.name], ["both", t.workOptions.both.name]]) {
@@ -271,6 +306,13 @@ try {
   check(JSON.stringify(agentShown) === JSON.stringify(commandsFor("agent", modules).map((c) => c.toUpperCase())), "an agent's list matches the permission table");
   check(!!t.commandNotes.today && (await waText()).includes(t.commandNotes.today.agent), "an agent's list says there are no amounts");
   check(await sideways() <= 0, "nothing scrolls sideways (agent)");
+  {
+    const rows = await alertsRows();
+    check(rows.map((r) => r.name).join("|") === t.alertBookings, `an agent is offered only ${rows.map((r) => r.name).join(", ")}: no report, no booking email`);
+    check(rows[0].disabled, "an agent's booking switch waits for a phone");
+    const refused = await page("PUT", "/api/owner/alerts", { weekly_report: true });
+    check(refused.status === 403, `the API refuses an agent the report (${refused.status})`);
+  }
   await shot("9-agent");
 
   // ── not signed in ──

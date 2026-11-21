@@ -92,7 +92,7 @@ export type Role = "owner" | "admin" | "agent";
 /** One row of `GET /api/messages/not-sent`. */
 export type NotSentReason =
   | "window_closed" | "opted_out" | "no_consent" | "no_marketing_consent" | "no_back_in_stock_consent"
-  | "billing_paused" | "gave_up" | "whatsapp";
+  | "billing_paused" | "template_not_approved" | "gave_up" | "whatsapp";
 
 export type NotSentRow = {
   id: string;

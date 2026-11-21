@@ -9,7 +9,7 @@ export type { Lang };
 /** Why a message did not reach the customer, as the API names it (`core/not_sent.py`). */
 export type Reason =
   | "gave_up" | "whatsapp" | "window_closed" | "no_consent" | "opted_out"
-  | "no_marketing_consent" | "no_back_in_stock_consent";
+  | "no_marketing_consent" | "no_back_in_stock_consent" | "template_not_approved";
 
 /** Why it cannot go again now: a reason above, or its picture or file was never kept. */
 export type WhyNot = Exclude<Reason, "gave_up" | "whatsapp"> | "file_lost";
@@ -51,6 +51,7 @@ export const NS: Record<Lang, Words> = {
       opted_out: "Held back: the customer asked for no more messages.",
       no_marketing_consent: "Held back: the customer has not agreed to offers.",
       no_back_in_stock_consent: "Held back: the customer did not ask to hear when this is back.",
+      template_not_approved: "Held back: WhatsApp has not approved the wording of this message for the shop's number yet, so it cannot go after 24 hours.",
     },
     whyNot: {
       window_closed: "It can go once the customer writes to you again.",
@@ -58,6 +59,7 @@ export const NS: Record<Lang, Words> = {
       opted_out: "It can go only if the customer writes START.",
       no_marketing_consent: "It can go only to a customer who agreed to offers.",
       no_back_in_stock_consent: "It can go only to a customer who asked about this item.",
+      template_not_approved: "It can go once WhatsApp has approved its wording. Then send it again.",
       file_lost: "Its picture or file was not kept. Send it again from where you made it.",
     },
   },
@@ -81,6 +83,7 @@ export const NS: Record<Lang, Words> = {
       opted_out: "أُوقفت: طلب العميل عدم مراسلته.",
       no_marketing_consent: "أُوقفت: لم يوافق العميل على تلقي العروض.",
       no_back_in_stock_consent: "أُوقفت: لم يطلب العميل إبلاغه بعودة هذا الصنف.",
+      template_not_approved: "أُوقفت: لم تعتمد واتساب بعد صيغة هذه الرسالة لرقم المتجر، لذا لا يمكن إرسالها بعد مرور 24 ساعة.",
     },
     whyNot: {
       window_closed: "يمكن إرسالها حين يراسلك العميل من جديد.",
@@ -88,6 +91,7 @@ export const NS: Record<Lang, Words> = {
       opted_out: "لا يمكن إرسالها إلا إذا كتب العميل «ابدأ» أو START.",
       no_marketing_consent: "تُرسل فقط إلى عميل وافق على تلقي العروض.",
       no_back_in_stock_consent: "تُرسل فقط إلى عميل سأل عن هذا الصنف.",
+      template_not_approved: "يمكن إرسالها بعد أن تعتمد واتساب صيغتها. ثم أعد الإرسال.",
       file_lost: "لم تُحفظ صورتها أو ملفها. أرسلها من جديد من حيث أنشأتها.",
     },
   },
