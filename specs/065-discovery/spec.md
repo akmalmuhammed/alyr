@@ -334,7 +334,7 @@ published timeframe. The audit found a trap and a gap; this section is what chan
 10. **Dates.** `Snapshot.taken_at` is the newest observation's day (noon UTC), so "older than 7 days" counts
     from when it was looked at; each `PlaceSnapshot` has `observed_at` (the day) and `recorded_at`; a
     finding's evidence `seen_at` is the place's `observed_at`, never the check-up's date. The log says
-    "Read 1 place as recorded by ALYR staff, seen on 20 Nov 2026." and, when it is true, "Nothing is
+    "Took 1 place as recorded by ALYR staff, seen on 20 Nov 2026." and, when it is true, "Nothing is
     recorded yet for 1 place." and "The newest observation is 20 days old." (`STALE_AFTER_DAYS` 14).
 11. **"I did this" is confirmed by a later observation only** (`engine._save_findings`, `by_hand`): a finding
     marked done stays marked while no observation was recorded after it was marked; the next one verifies it

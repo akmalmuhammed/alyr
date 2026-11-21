@@ -469,7 +469,7 @@ STEP_SUMMARIES = {
     "run.start": "Started the check-up.",
     "connector.snapshot": "Got {places} from {source}.",
     # A hand-recorded source (D-169): who recorded it and which day, never "got from".
-    "connector.snapshot.manual": "Read {places} as recorded by ALYR staff, seen on {day}.",
+    "connector.snapshot.manual": "Took {places} as recorded by ALYR staff, seen on {day}.",
     "connector.snapshot.manual.missing": "Nothing is recorded yet for {others}.",
     "connector.snapshot.manual.old": "The newest observation is {days} days old.",
     "rules.presence": "Checked the listings: " + _TALLY,

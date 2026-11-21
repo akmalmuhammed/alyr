@@ -312,7 +312,7 @@ def test_the_log_says_it_was_recorded_by_staff_and_which_day_not_that_it_was_got
     record(staff, biz, place)
     done = run(staff, biz)
     first = biz.owner.get(f"/api/discovery/runs/{done['id']}").json()["steps"][0]["summary"]
-    assert first.startswith("Read 1 place as recorded by ALYR staff, seen on ")
+    assert first.startswith("Took 1 place as recorded by ALYR staff, seen on ")
     assert "Got " not in first and "old" not in first
 
 
