@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ForgetCustomer } from "../Forget";
+import { inboundText } from "../inboxKinds";
 import { usePolling } from "../poll";
 import { shopNameShown } from "../shopLedger";
 import { BLOCK_REASON, T, type Activity } from "../screensCopy";
@@ -216,7 +217,7 @@ export function InboxScreen({ lang, intro, show = null, onClearShow, modules, bu
                 {r.unread > 0 && <span className="pill p1 num">{r.unread}</span>}
               </span>
               <span className="conv-last" dir="auto">
-                {r.last.direction === "out" ? "↩ " : ""}{r.last.body}
+                {r.last.direction === "out" ? "↩ " : ""}{(r.last.direction === "in" && inboundText(r.last.kind, r.last.body)?.[lang]) || r.last.body}
               </span>
               <span className="conv-flags">
                 {r.assigned && <span className="pill p0">{r.assigned.name}</span>}
@@ -313,7 +314,7 @@ export function InboxScreen({ lang, intro, show = null, onClearShow, modules, bu
                     <span className="who" dir={lang === "ar" ? "rtl" : "ltr"}>
                       {m.direction === "in" ? t.customerSays : m.sent_by || t.assistant}
                     </span>
-                    <Linked text={m.body} />
+                    <Linked text={(m.direction === "in" && inboundText(m.kind, m.body)?.[lang]) || m.body} />
                     {m.payload.choices && (
                       <span className="tag" dir="ltr">Buttons: {m.payload.choices.map((c) => c.title).join(" · ")}</span>
                     )}

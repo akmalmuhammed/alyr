@@ -26,6 +26,10 @@ def verify_signature(app_secret: str, raw_body: bytes, header: str | None) -> bo
     return hmac.compare_digest(expected, header.removeprefix("sha256="))
 
 
+# The kinds of message that carry a file Meta holds for us, by Meta's own type name.
+MEDIA_KINDS = ("image", "audio", "video", "document", "sticker")
+
+
 def parse_webhook(payload: dict) -> list[InboundMessage]:
     """Pull customer messages out of a Cloud API webhook payload.
 
@@ -48,11 +52,21 @@ def parse_webhook(payload: dict) -> list[InboundMessage]:
                 text, reply_id, media_id, mime_type = "", "", "", ""
                 if kind == "text":
                     text = msg.get("text", {}).get("body", "")
-                elif kind == "image":
-                    # A photo: its caption is the text, and the file is fetched by its ID.
-                    image = msg.get("image", {})
-                    text, media_id = image.get("caption", ""), image.get("id", "")
-                    mime_type = image.get("mime_type", "")
+                elif kind in MEDIA_KINDS:
+                    # A photo, a voice note or audio, a video, a file or a sticker: its caption,
+                    # if it has one, is the text, and the file is fetched by its ID. Nothing here
+                    # downloads it (storing media is a later job); the kind is kept so the inbox
+                    # can say what arrived. A voice note is Meta's audio type with `voice: true`
+                    # (webhook reference for incoming messages, checked 21 Nov 2026).
+                    item = msg.get(kind, {})
+                    text, media_id = item.get("caption", ""), item.get("id", "")
+                    mime_type = item.get("mime_type", "")
+                    if kind == "audio" and item.get("voice"):
+                        kind = "voice"
+                elif kind == "reaction":
+                    # A heart or a thumbs-up on one of our messages: the emoji is the text. It is
+                    # not a question, so nothing answers it (modules/router.py).
+                    text = msg.get("reaction", {}).get("emoji", "")
                 elif kind == "interactive":
                     inter = msg.get("interactive", {})
                     reply = inter.get("button_reply") or inter.get("list_reply") or {}
