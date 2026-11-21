@@ -430,7 +430,9 @@ def _working(day: str) -> str:
 
 async def has_resources(conn: asyncpg.Connection) -> bool:
     """Whether this shop lists resources at all. If not, it has one lane, as it always had."""
-    return bool(await conn.fetchval("select exists (select 1 from booking_resources)"))
+    # The stylists a visits import wrote for the shop's history are not lanes to book (D-197).
+    return bool(await conn.fetchval(
+        "select exists (select 1 from booking_resources where history_import_id is null)"))
 
 
 async def free_times(
@@ -583,7 +585,9 @@ async def add_resource(
     """Add a resource. The first one a shop adds takes over the bookings still to come, so
     they keep blocking it (until now they were all in the shop's one lane)."""
     name = _clean_name(name)
-    if await conn.fetchval("select count(*) from booking_resources") >= MAX_RESOURCES:
+    if await conn.fetchval(
+            "select count(*) from booking_resources where history_import_id is null"
+    ) >= MAX_RESOURCES:
         raise BookingError(
             "too_many_resources", f"A shop can list up to {MAX_RESOURCES} people or chairs."
         )

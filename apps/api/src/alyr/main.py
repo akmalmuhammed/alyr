@@ -55,6 +55,7 @@ from alyr.modules.orders.service import EXPIRE_JOB
 from alyr.routes import account as account_routes
 from alyr.routes import admin as admin_routes
 from alyr.routes import admin_factor as admin_factor_routes
+from alyr.routes import admin_history as admin_history_routes
 from alyr.routes import admin_media as admin_media_routes
 from alyr.routes import admin_templates as admin_template_routes
 from alyr.routes import admin_whatsapp as admin_whatsapp_routes
@@ -431,6 +432,7 @@ def create_app() -> FastAPI:
     app.include_router(agent_routes.router)
     app.include_router(reports_routes.router)
     app.include_router(admin_routes.router)
+    app.include_router(admin_history_routes.router)
     app.include_router(admin_factor_routes.router)
     app.include_router(billing_routes.router)
     app.include_router(admin_media_routes.router)

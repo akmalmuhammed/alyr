@@ -58,7 +58,8 @@ def test_finished_jobs_and_handled_message_ids_go_when_their_time_is_up(client):
     )}
     assert handled == {new_id}
     # A second pass finds nothing more to do.
-    assert client.portal.call(retention.purge, client.app.state.db) == {"jobs": 0, "seen": 0}
+    assert client.portal.call(retention.purge, client.app.state.db) == {
+        "jobs": 0, "seen": 0, "history_previews": 0}
 
 
 def test_a_parked_job_can_be_seen_and_sent_again_until_it_goes(client):
