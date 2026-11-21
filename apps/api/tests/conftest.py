@@ -132,3 +132,94 @@ def _forget_fastapi_route_caches() -> None:
 @pytest.fixture
 def client(client_factory):
     return client_factory()
+
+
+# --- Sharding (CI only) -----------------------------------------------------------------------
+# `ci` runs the suite as several jobs, each on its own runner with its own PostgreSQL, so that the
+# whole run is as long as the slowest slice and not the sum (ALY-fc-ci). Without these options
+# nothing here does anything: `pytest` on a laptop runs everything, as before.
+#
+#   pytest --shard=2/6 --shard-report=out.json
+#
+# A shard is a set of WHOLE test files, picked by weight (seconds per file from
+# tests/shard_durations.json, kept by `scripts/ci/shards.py durations`; a file that is not in the
+# list weighs the average, so a new test file is never left out). Whole files, never single
+# tests, so the order inside a file, and every module-scoped fixture, is what it is on a laptop.
+# The report says how many tests were collected, how many this shard chose and how many it ran;
+# `scripts/ci/shards.py check` fails the `api` job unless the slices add up to the whole suite.
+
+SHARD_DURATIONS = os.path.join(os.path.dirname(__file__), "shard_durations.json")
+
+
+def pytest_addoption(parser):
+    group = parser.getgroup("shard", "run one slice of the suite (CI)")
+    group.addoption("--shard", default=None, metavar="I/N", help="run slice I of N (1-based)")
+    group.addoption("--shard-report", default=None, metavar="FILE",
+                    help="write what this slice collected, chose and ran, as JSON")
+
+
+def shard_plan(weights: dict[str, float], total: int) -> list[list[str]]:
+    """Split files into `total` slices, heaviest first onto the lightest slice (LPT), with ties
+    broken by name so every job computes the same plan. Pure, so the CI script can test it."""
+    slices: list[list[str]] = [[] for _ in range(total)]
+    load = [0.0] * total
+    for name in sorted(weights, key=lambda n: (-weights[n], n)):
+        lightest = min(range(total), key=lambda i: (load[i], i))
+        slices[lightest].append(name)
+        load[lightest] += weights[name]
+    return slices
+
+
+# What this run collected, chose and ran, for the report. One process, so a plain dict will do.
+_SHARD = {"collected": 0, "selected": 0, "ran": set(), "index": None, "total": None, "files": []}
+
+
+def _rel(item, root: str) -> str:
+    return os.path.relpath(str(item.path), root).replace(os.sep, "/")
+
+
+def pytest_collection_modifyitems(config, items):
+    import json
+    import statistics
+
+    _SHARD["collected"] = _SHARD["selected"] = len(items)
+    spec = config.getoption("--shard")
+    if not spec:
+        return
+    index, _, total = spec.partition("/")
+    index, total = int(index), int(total)
+    if not 1 <= index <= total:
+        raise pytest.UsageError(f"--shard={spec}: need 1 <= I <= N")
+    root = str(config.rootpath)
+    files = sorted({_rel(item, root) for item in items})
+    try:
+        with open(SHARD_DURATIONS, encoding="utf-8") as handle:
+            known = {k: float(v) for k, v in json.load(handle).items() if k in files}
+    except (OSError, ValueError):
+        known = {}
+    fallback = statistics.mean(known.values()) if known else 1.0
+    weights = {name: known.get(name, fallback) for name in files}
+    mine = set(shard_plan(weights, total)[index - 1])
+    chosen = [item for item in items if _rel(item, root) in mine]
+    keep = {id(item) for item in chosen}
+    config.hook.pytest_deselected(items=[item for item in items if id(item) not in keep])
+    items[:] = chosen
+    _SHARD.update(selected=len(chosen), index=index, total=total, files=sorted(mine))
+
+
+def pytest_runtest_logreport(report):
+    # A test counts as run when its call phase reported, or when its setup was skipped or failed
+    # (then there is no call phase).
+    if report.when == "call" or (report.when == "setup" and not report.passed):
+        _SHARD["ran"].add(report.nodeid)
+
+
+def pytest_sessionfinish(session):
+    path = session.config.getoption("--shard-report")
+    if not path:
+        return
+    import json
+
+    report = {**_SHARD, "ran": len(_SHARD["ran"]), "exitstatus": int(session.exitstatus)}
+    with open(path, "w", encoding="utf-8") as handle:
+        json.dump(report, handle, indent=1)
