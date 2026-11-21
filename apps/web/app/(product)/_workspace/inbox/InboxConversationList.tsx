@@ -1,6 +1,6 @@
 "use client";
 
-import { Avatar, Banner, Button, Chip, Icon, Search, SkeletonRows, Status, Tabs } from "../../../_ui";
+import { Avatar, Banner, Button, Chip, Icon, Search, Skeleton, Status, Tabs } from "../../../_ui";
 import { copy, type Lang } from "./copy";
 import { InboxFilteredEmpty, InboxNoOpen } from "./InboxStates";
 import { phoneGroups, pickText, rowMark, rowStamp, type Chip as ChipId, type ConversationItem, type InboxCounts, type InboxFilters } from "./logic";
@@ -65,6 +65,24 @@ function Row({ item, selected, onSelect, lang, now }: { item: ConversationItem; 
   );
 }
 
+/** The list while it loads: a row's own shape (an avatar and two lines), so nothing moves when the rows arrive. */
+function RowSkeleton({ label }: { label: string }) {
+  return (
+    <div role="status" aria-busy="true" className="ibx-skel">
+      <span className="u-sr">{label}</span>
+      {Array.from({ length: 8 }, (_, i) => (
+        <div key={i} className="ibx-skel-row" aria-hidden="true">
+          <Skeleton round width="calc(var(--ui-space-32) + var(--ui-space-4))" height="calc(var(--ui-space-32) + var(--ui-space-4))" />
+          <div className="ibx-skel-lines">
+            <Skeleton width={i % 2 ? 56 : 72} />
+            <Skeleton width={i % 3 ? 88 : 64} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function InboxConversationList(props: ListProps) {
   const { items, selectedId, onSelect, filters, onFilters, counts, lang, now, loading, error, onRetry, onSeeClosed, grouped } = props;
   const t = copy(lang);
@@ -81,11 +99,11 @@ export function InboxConversationList(props: ListProps) {
     <div className="ibx-list">
       <header className="ibx-list-head">
         <h1 className="ibx-title">{t.title}</h1>
-        {counts.unread > 0 ? <span className="ibx-unread u-mono" aria-live="polite">{t.unreadCount(counts.unread)}</span> : null}
+        {!loading && counts.unread > 0 ? <span className="ibx-unread u-mono" aria-live="polite">{t.unreadCount(counts.unread)}</span> : null}
         <Tabs
           className="ibx-tabs"
           label={t.tabsLabel}
-          items={[{ id: "open", label: t.tabOpen, count: counts.open }, { id: "closed", label: t.tabClosed }]}
+          items={[{ id: "open", label: t.tabOpen, count: loading ? undefined : counts.open }, { id: "closed", label: t.tabClosed }]}
           value={filters.tab}
           onChange={(id) => onFilters({ tab: id as "open" | "closed", chip: null })}
         />
@@ -101,7 +119,7 @@ export function InboxConversationList(props: ListProps) {
         />
         <div className="ibx-chips" role="group" aria-label={t.chipsLabel}>
           {CHIPS.map((chip) => (
-            <Chip key={chip.id} on={filters.chip === chip.id} count={chip.count(counts)} onClick={() => onFilters({ chip: filters.chip === chip.id ? null : chip.id })}>
+            <Chip key={chip.id} on={filters.chip === chip.id} count={loading ? undefined : chip.count(counts)} onClick={() => onFilters({ chip: filters.chip === chip.id ? null : chip.id })}>
               {t[chip.key]}
             </Chip>
           ))}
@@ -114,7 +132,7 @@ export function InboxConversationList(props: ListProps) {
 
       <div className="ibx-rows">
         {loading ? (
-          <SkeletonRows rows={8} columns={3} label={t.states.loading} />
+          <RowSkeleton label={t.states.loading} />
         ) : items.length === 0 ? (
           filtered ? (
             <InboxFilteredEmpty lang={lang} query={q} onClear={() => onFilters({ chip: null, q: "" })} />

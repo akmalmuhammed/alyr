@@ -30,6 +30,8 @@
 .ibx-chips { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ui-space-8); }
 .ibx-rows { flex: 1; min-block-size: 0; overflow-y: auto; }
 .ibx-rowlist { list-style: none; margin: 0; padding: 0; }
+.ibx-skel-row { display: flex; align-items: center; gap: var(--ui-space-12); box-sizing: border-box; min-block-size: var(--ui-size-row-tall); padding: var(--ui-space-10) var(--ui-space-20); border-block-end: var(--rule-hairline) solid var(--line); }
+.ibx-skel-lines { display: flex; flex-direction: column; flex: 1; gap: var(--ui-space-8); min-inline-size: 0; }
 .ibx-group {
   display: flex; align-items: center; gap: var(--ui-space-8); margin: 0; padding: var(--ui-space-8) var(--ui-space-20);
   background: var(--surface-subtle); border-block-end: var(--rule-hairline) solid var(--line);
