@@ -23,6 +23,8 @@ export const TEAM = [
 
 const who = (name: string) => TEAM.find((m) => m.name === name) ?? null;
 const qar = (riyals: number) => riyals * 100;
+/** Orders print with a hash: Order #1028. */
+const HASH = "Order #";
 
 function row(
   id: string, name: string, phone: string, balance: number, oldestDays: number, buckets: Partial<Buckets>,
@@ -98,7 +100,7 @@ export const BLUEFIN_ENTRIES: CreditEntry[] = [
   entry("e-3", "sale", 1620, "2026-10-02T09:12:00+03:00", "INV-2026-0358", "Omar", "6 × Interior detail, 8 × Full wash, 3 × Engine bay clean"),
   entry("e-4", "reversal", 80, "2026-10-06T11:15:00+03:00", "CN-2026-0009", "Omar", "1 × Engine bay clean was not done · taken off INV-2026-0358", { against: "INV-2026-0358" }),
   entry("e-5", "payment", 500, "2026-10-14T18:02:00+03:00", "PL-2026-100782", "Your provider", "Paid by pay link, credit card · receipt R-2026-1688", { method: "link" }),
-  entry("e-6", "sale", 224, "2026-11-12T09:26:00+03:00", "Order #1028", "Yusuf", "12 × Air freshener · New car, 2 × Glass cleaner · handed over"),
+  entry("e-6", "sale", 224, "2026-11-12T09:26:00+03:00", HASH + "1028", "Yusuf", "12 × Air freshener · New car, 2 × Glass cleaner · handed over"),
 ];
 
 export const ACCOUNT_DETAILS: Record<string, { entries: CreditEntry[]; since: string; promise: PromiseRecord | null }> = {

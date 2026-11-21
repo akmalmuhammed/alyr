@@ -6,13 +6,18 @@ import { counted, isolate, type Noun } from "../../../_ui/format.ts";
 
 export type Lang = "en" | "ar";
 
-const nounDay: Noun = { en: ["day", "days"], ar: ["يوم واحد", "يومان", "أيام", "يوماً"] };
-const nounCustomer: Noun = { en: ["customer", "customers"], ar: ["عميل واحد", "عميلان", "عملاء", "عميلاً"] };
-const nounSale: Noun = { en: ["sale", "sales"], ar: ["عملية بيع واحدة", "عمليتا بيع", "عمليات بيع", "عملية بيع"] };
-const nounPayment: Noun = { en: ["payment", "payments"], ar: ["دفعة واحدة", "دفعتان", "دفعات", "دفعة"] };
-const nounOrder: Noun = { en: ["order", "orders"], ar: ["طلب واحد", "طلبان", "طلبات", "طلباً"] };
-const nounReminder: Noun = { en: ["reminder", "reminders"], ar: ["تذكير واحد", "تذكيران", "تذكيرات", "تذكيراً"] };
-const nounLine: Noun = { en: ["line", "lines"], ar: ["سطر واحد", "سطران", "أسطر", "سطراً"] };
+/** A noun in both languages: English one and many; Arabic one, two, three to ten, eleven and up. */
+function noun(one: string, many: string, a1: string, a2: string, a3: string, a4: string): Noun {
+  return { en: [one, many], ar: [a1, a2, a3, a4] };
+}
+
+const nounDay = noun("day", "days", "يوم واحد", "يومان", "أيام", "يوماً");
+const nounCustomer = noun("customer", "customers", "عميل واحد", "عميلان", "عملاء", "عميلاً");
+const nounSale = noun("sale", "sales", "عملية بيع واحدة", "عمليتا بيع", "عمليات بيع", "عملية بيع");
+const nounPayment = noun("payment", "payments", "دفعة واحدة", "دفعتان", "دفعات", "دفعة");
+const nounOrder = noun("order", "orders", "طلب واحد", "طلبان", "طلبات", "طلباً");
+const nounReminder = noun("reminder", "reminders", "تذكير واحد", "تذكيران", "تذكيرات", "تذكيراً");
+const nounLine = noun("line", "lines", "سطر واحد", "سطران", "أسطر", "سطراً");
 
 /** Up to three names, then "and N more". */
 function listNames(names: readonly string[], and: string, more: (n: number) => string): string {
