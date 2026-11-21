@@ -105,6 +105,10 @@
 .cx-radio svg { width: 12px; height: 12px; opacity: 0; stroke: var(--on-volt); stroke-width: 2.4; fill: none; }
 .cx-choice[aria-checked="true"] .cx-radio { background: var(--volt); box-shadow: none; }
 .cx-choice[aria-checked="true"] .cx-radio svg { opacity: 1; }
+/* a service that asks a deposit the shop cannot take here (D-190): shown, not chosen */
+.cx-choice[aria-disabled="true"] { cursor: not-allowed; }
+.cx-choice[aria-disabled="true"] b { color: var(--ink-2); }
+.cx-choice[aria-disabled="true"] .cx-radio { display: none; }
 .cx-days { display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px; padding: 2px 16px 6px; scrollbar-width: none; scroll-snap-type: x proximity; scroll-padding-inline: 16px; }
 .cx-days::-webkit-scrollbar { display: none; }
 .cx-day { flex: none; width: 62px; height: 74px; display: grid; place-content: center; gap: 2px; border: 0; border-radius: 16px; background: var(--card); box-shadow: var(--lift); scroll-snap-align: start; transition: transform 0.2s var(--spring-product); }

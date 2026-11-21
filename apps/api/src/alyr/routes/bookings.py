@@ -35,7 +35,8 @@ router = APIRouter(prefix="/api", tags=["bookings"])
 _STATUS_FOR = {
     "unknown_customer": 404, "unknown_service": 404, "not_free": 409,
     "unknown_resource": 404, "last_resource": 409, "bad_deposit": 422, "bad_time": 422,
-    "service_needs_someone": 409,
+    "service_needs_someone": 409, "deposit_unavailable": 409, "deposit_closed": 409,
+    "deposit_recorded": 409, "unknown_booking": 404, "bad_reference": 422,
 }
 
 
@@ -149,6 +150,11 @@ class Cancel(BaseModel):
     )
 
 
+class DepositReceived(BaseModel):
+    amount: int = Field(ge=1, le=10_000_000, description="Dirhams the customer paid the shop")
+    reference: str = Field(default="", max_length=80, description="A transfer reference, if any")
+
+
 class WalkInCustomer(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     phone: str = Field(default="", max_length=30)
@@ -228,8 +234,12 @@ async def booking_page(
         # Who does each service, so the page offers only them (a service the shop limited to
         # one chair is not offered with the others).
         by_service = await service.doers(conn)
+        # A deposit is only asked where the shop can take it (D-190): until then the page shows
+        # the service with what the customer should do, and the API refuses the booking.
+        open_ = await deposits.can_take(conn)
         for one in services:
             one["doers"] = by_service.get(one["id"], [])
+            one["deposit_open"] = open_ or not one["deposit"]
         terms = await deposits.shop_terms(conn)
         customer = None
         if link is not None:
@@ -257,6 +267,8 @@ async def booking_page(
         # Card payments go live with the shop's own payment provider; until then the pay link
         # opens ALYR's test page, and the page says so.
         "payments_live": False,
+        # Whether a deposit can be paid here at all (D-190). False in production today.
+        "deposits_open": open_,
         "customer": customer,
         "link": customer_link.view(state, links.BOOKING),
     }
@@ -451,6 +463,25 @@ async def deposit_refunded(
     return {"deposit_state": "refunded"}
 
 
+@router.post("/bookings/{booking_id}/deposit-received")
+async def deposit_received(
+    booking_id: UUID, body: DepositReceived, request: Request,
+    staff: Staff = Depends(current_staff),
+) -> dict:
+    """The customer paid the shop a deposit by bank transfer, and staff write it down (D-191).
+    It counts against the bill and follows the shop's rule for a no-show or a late cancel;
+    ALYR never moves the money. Owners and admins, like marking a refund."""
+    _managers_only(staff)
+    try:
+        async with request.app.state.db.tenant(staff.tenant_id) as conn:
+            return await deposits.record_received(
+                conn, request.app.state.outbound, team.actor_of(staff), booking_id,
+                body.amount, body.reference,
+            )
+    except service.BookingError as error:
+        raise _refuse(error) from error
+
+
 @router.get("/bookings/settings")
 async def booking_settings(request: Request, tenant_id: UUID = Depends(current_tenant)) -> dict:
     """The shop's rule for deposits and its review request."""
@@ -547,9 +578,14 @@ async def remove_closure(
 
 @router.get("/services")
 async def services(request: Request, tenant_id: UUID = Depends(current_tenant)) -> dict:
-    """Every service, hidden ones too, each with who does it and the bookings still to come."""
+    """Every service, hidden ones too, each with who does it and the bookings still to come.
+    `deposits_open` says whether a deposit can be paid online at this shop (D-190): when it is
+    false, a customer cannot book a service that asks one, and the screen says so."""
     async with request.app.state.db.tenant(tenant_id) as conn:
-        return {"services": await service.list_services(conn, detail=True)}
+        return {
+            "services": await service.list_services(conn, detail=True),
+            "deposits_open": await deposits.can_take(conn),
+        }
 
 
 @router.post("/services", dependencies=[Depends(require_manager)])

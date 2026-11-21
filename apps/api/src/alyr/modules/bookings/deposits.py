@@ -18,7 +18,11 @@ A payment and a release cannot both win: both claim the pay link first (`payment
 only while it is still pending), then the booking, so whichever claims the link decides.
 
 The payment link opens ALYR's stand-in payment page until the shop's own payment provider is
-connected (hard rule 3, D-044).
+connected (hard rule 3, D-044). Only a developer machine has that page, so in production a
+service that asks a deposit is not bookable by a customer until the shop can take it (`can_take`,
+D-190). Meanwhile staff can write down a deposit the customer paid by bank transfer
+(`record_received`, D-191); it counts against the bill and follows the same rule as a deposit
+paid by link.
 """
 
 import logging
@@ -32,10 +36,24 @@ from alyr.core.normalise import fmt_qar
 from alyr.core.outbound import Outbound
 from alyr.db import Database
 from alyr.modules.bookings import service, words
+from alyr.modules.orders import pay_ways
 
 log = logging.getLogger("alyr.bookings")
 
 EXPIRE_JOB = "booking_deposit_expiry"
+MAX_REFERENCE = 80
+
+
+async def can_take(conn: asyncpg.Connection) -> bool:
+    """Can a customer pay a deposit by link at this shop? The one rule for every payment link:
+    only through the shop's own connected account, or the stand-in on a developer machine
+    (`pay_ways.online_possible`, ALY-271). Anything else sends the customer to a page that
+    cannot be paid, and the time is held for nothing (D-190).
+
+    When a real provider is connected, `ask` must make its link through `payments.request`
+    (as orders do) so the link goes to the provider; today it makes the stand-in's, which is
+    why nothing but the stand-in can answer yes."""
+    return await pay_ways.online_possible(conn)
 
 
 async def shop_terms(conn: asyncpg.Connection) -> dict:
@@ -96,6 +114,80 @@ async def expire_link(conn: asyncpg.Connection, booking_id: UUID) -> bool:
         booking_id,
     )
     return claimed is not None
+
+
+async def record_received(
+    conn: asyncpg.Connection, outbound: Outbound, actor: team.Actor, booking_id: UUID,
+    amount: int, reference: str = "",
+) -> dict:
+    """Staff write down a deposit the customer paid the shop by bank transfer (D-191). The
+    booking's deposit becomes paid, so it counts against what is left to pay, the shop's rule for
+    a no-show or a late cancel applies to it, and a deposit receipt is made where Documents is
+    on. A link still waiting for the same booking stops working (claimed first, like a payment).
+    Returns the deposit's state and whether the customer was told. ALYR moves no money."""
+    from alyr.modules.documents import sales as documents_sales
+
+    reference = (reference or "").strip()
+    if len(reference) > MAX_REFERENCE:
+        raise service.BookingError("bad_reference", "The reference is up to 80 characters.")
+    if amount < 1:
+        raise service.BookingError("bad_deposit", "Write the amount of the deposit received.")
+    row = await conn.fetchrow(
+        "select b.number, b.status, b.contact_id, b.starts_at, b.price, b.deposit_state, "
+        "b.walk_in, c.lang from bookings b join contacts c on c.id = b.contact_id "
+        "where b.id = $1", booking_id,
+    )
+    if row is None:
+        raise service.BookingError("unknown_booking", "That booking was not found.")
+    if row["status"] != "booked":
+        raise service.BookingError(
+            "deposit_closed", "Only a booking still to come can take a deposit.")
+    if row["deposit_state"] not in ("none", "due"):
+        raise service.BookingError(
+            "deposit_recorded", "This booking's deposit has already been dealt with.")
+    if row["price"] and amount > row["price"]:
+        raise service.BookingError(
+            "bad_deposit", "A deposit cannot be more than the service's price.")
+    waiting = row["deposit_state"] == "due"
+    if waiting and not await expire_link(conn, booking_id):
+        # The link was paid, or the time released, a moment ago.
+        raise service.BookingError(
+            "deposit_recorded", "This booking's deposit has already been dealt with.")
+    terms = await shop_terms(conn)
+    done = await conn.fetchval(
+        "update bookings set deposit = $2, deposit_state = 'paid', hold_until = null, "
+        "deposit_method = 'transfer', deposit_reference = $3, deposit_received_at = now(), "
+        "deposit_terms = case when deposit_terms = '{}'::jsonb then $4::jsonb "
+        "else deposit_terms end "
+        "where id = $1 and status = 'booked' and deposit_state in ('none', 'due') returning id",
+        booking_id, amount, reference, terms,
+    )
+    if done is None:
+        raise service.BookingError(
+            "deposit_recorded", "This booking's deposit has already been dealt with.")
+    await team.record(
+        conn, "booking", booking_id, "deposit_paid", actor, row["contact_id"],
+        {"number": row["number"], "amount": fmt_qar(amount), "method": "bank_transfer",
+         "recorded_by_hand": True},
+    )
+    await documents_sales.booking_deposit_paid(conn, booking_id)
+    told = None
+    if not row["walk_in"]:
+        arabic = row["lang"] == "ar"
+        when = await service.when_text(conn, row["starts_at"], arabic)
+        what = await service.service_words(conn, booking_id, arabic)
+        sent = await outbound.send(conn, templates.notice(
+            row["contact_id"], "booking_deposit_paid", row["lang"],
+            words.deposit_paid(row["number"], amount, what, when, arabic),
+            words.money(amount, arabic), row["number"],
+            f"{what}, {when}" if not arabic else f"{what}، {when}",
+        ))
+        told = await service.customer_told(conn, row["contact_id"], sent)
+    if waiting:
+        # A held booking had no reminder yet: it is confirmed now (`paid` does the same).
+        await service.schedule_reminder(conn, booking_id, row["starts_at"])
+    return {"deposit_state": "paid", "amount": amount, "amount_text": fmt_qar(amount),
+            "told": told}
 
 
 def on_cancel(row: asyncpg.Record, refund: bool | None) -> str:

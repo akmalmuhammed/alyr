@@ -401,15 +401,19 @@ async def from_order(conn: asyncpg.Connection, staff: Staff, order_id: UUID, kin
 
 async def booking_payments(conn: asyncpg.Connection, booking_id: UUID,
                            upto: datetime | None = None) -> list[dict]:
-    """What a booking has been paid so far: payments staff recorded by hand, and a deposit
-    paid by link (D-084), which counts against the final bill."""
+    """What a booking has been paid so far: payments staff recorded by hand, a deposit
+    paid by link (D-084) and a deposit staff wrote down as received by bank transfer (D-191),
+    which count against the final bill."""
     rows = await conn.fetch(
         "select method, reference, amount_minor from ("
         "  select method, reference, amount_minor, recorded_at as at, id from manual_payments "
         "  where subject = 'booking' and subject_id = $1 "
         "  union all "
         "  select 'link', '', amount, paid_at, id from payment_requests "
-        "  where booking_id = $1 and status = 'paid'"
+        "  where booking_id = $1 and status = 'paid' "
+        "  union all "
+        "  select 'bank_transfer', deposit_reference, deposit, deposit_received_at, id "
+        "  from bookings where id = $1 and deposit_method = 'transfer'"
         ") p where ($2::timestamptz is null or at <= $2) order by at, id", booking_id, upto,
     )
     return [{"method": PAPER_METHOD.get(r["method"], r["method"]),

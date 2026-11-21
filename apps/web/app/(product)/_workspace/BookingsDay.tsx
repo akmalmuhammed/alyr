@@ -2,7 +2,8 @@
 
 // The Bookings day view (ALY-27, D-084, spec 033): one column per person or chair (one list
 // for a shop with none), each booking a card with what staff do next: came, didn't come,
-// move, cancel, and a deposit to mark refunded. A walk-in or a booking taken by phone is
+// move, cancel, a deposit the customer paid by bank transfer to write down (D-191), and a
+// deposit to mark refunded. A walk-in or a booking taken by phone is
 // added from the same screen (the forms are in `BookingsDeskForms.tsx`), and after each one the
 // screen says what became of the message to the customer. Owners and admins open the setup
 // (services, hours, people and chairs, deposits and reviews) from the bar; it takes the place of
@@ -13,9 +14,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatPrice } from "../_customer/price";
 import { BookingsSetup, type Part } from "./BookingsSetup";
 import { BOOKINGS, type BookingsCopy, type Lang } from "./bookingsCopy";
-import { AddBooking, CancelBooking, MoveBooking } from "./BookingsDeskForms";
+import { AddBooking, CancelBooking, DepositReceived, MoveBooking } from "./BookingsDeskForms";
 import {
-  answerFor, clock, resourceName, type DayBooking, type Period, type Resource, type Service, type Told,
+  answerFor, canWriteDeposit, clock, resourceName, type DayBooking, type Period, type Resource, type Service, type Told,
 } from "./bookingsDeskLogic";
 import { shift } from "./bookingsTime";
 import "./bookings.css";
@@ -24,7 +25,7 @@ type DayView = {
   day: string; today: string; timezone: string; hours: Period[]; resources: Resource[];
   bookings: DayBooking[]; services: Service[]; closed: { reason: string; reason_ar: string } | null;
 };
-type Panel = { kind: "move" | "cancel"; id: string } | null;
+type Panel = { kind: "move" | "cancel" | "deposit"; id: string } | null;
 
 const LANE = "lane";
 
@@ -62,7 +63,9 @@ function DepositLine({ b, t, lang, zone }: { b: DayBooking; t: BookingsCopy; lan
   const words = b.deposit_state === "due"
     ? t.deposit.due(amount, b.hold_until ? clock(b.hold_until, zone) : "")
     : b.deposit_state === "paid"
-      ? (b.left_to_pay > 0 ? t.deposit.paid(amount, formatPrice(b.left_to_pay, lang)) : t.deposit.paidAll(amount))
+      ? (b.deposit_method === "transfer"
+        ? (b.left_to_pay > 0 ? t.deposit.transfer(amount, formatPrice(b.left_to_pay, lang)) : t.deposit.transferAll(amount))
+        : (b.left_to_pay > 0 ? t.deposit.paid(amount, formatPrice(b.left_to_pay, lang)) : t.deposit.paidAll(amount)))
       : (t.deposit[b.deposit_state as "kept" | "refund_due" | "refunded" | "expired"] ?? (() => ""))(amount);
   return <p className={`bk-deposit is-${b.deposit_state}`}><bdi>{words}</bdi></p>;
 }
@@ -124,7 +127,10 @@ export function BookingsDay({ lang, canManage }: { lang: Lang; canManage: boolea
     setError("");
     const result = await call(url, body);
     if (!result.ok) {
-      setError(t.errors[result.code] ?? t.errors.generic);
+      // Writing a deposit down: the API's amount check has its own words, not the service form's.
+      setError(url.endsWith("/deposit-received") && result.code === "bad_deposit"
+        ? t.errors.bad_received
+        : t.errors[result.code] ?? t.errors.generic);
       return false;
     }
     setPanel(null);
@@ -225,6 +231,9 @@ export function BookingsDay({ lang, canManage }: { lang: Lang; canManage: boolea
                           {started && <button type="button" className="btn small" onClick={() => act(`/api/bookings/${b.id}/outcome`, { status: "no_show" }, t.status.no_show)}>{t.noShow}</button>}
                           <button type="button" className="btn small" onClick={() => { setPanel({ kind: "move", id: b.id }); setError(""); }}>{t.move}</button>
                           <button type="button" className="btn small" onClick={() => { setPanel({ kind: "cancel", id: b.id }); setError(""); }}>{t.cancel}</button>
+                          {canManage && canWriteDeposit(b) && (
+                            <button type="button" className="btn small" onClick={() => { setPanel({ kind: "deposit", id: b.id }); setError(""); }}>{t.depositByTransfer}</button>
+                          )}
                         </div>
                       )}
                       {b.deposit_state === "refund_due" && canManage && (
@@ -235,6 +244,10 @@ export function BookingsDay({ lang, canManage }: { lang: Lang; canManage: boolea
                       {open === "move" && (
                         <MoveBooking t={t} lang={lang} b={b} active={active} zone={zone} error={error}
                           onDone={(body) => act(`/api/bookings/${b.id}/move`, body, t.moved)} onClose={() => setPanel(null)} />
+                      )}
+                      {open === "deposit" && (
+                        <DepositReceived t={t} b={b} error={error} onClose={() => setPanel(null)}
+                          onDone={(body) => act(`/api/bookings/${b.id}/deposit-received`, body, t.depositWritten(formatPrice(body.amount, lang)))} />
                       )}
                       {open === "cancel" && (
                         <CancelBooking t={t} b={b} error={error}
@@ -248,7 +261,7 @@ export function BookingsDay({ lang, canManage }: { lang: Lang; canManage: boolea
           </section>
         ))}
       </div>
-      {view.bookings.some((b) => b.deposit) && <p className="bk-quiet">{t.standIn}</p>}
+      {view.bookings.some((b) => b.deposit_state === "due") && <p className="bk-quiet">{t.standIn}</p>}
     </section>
   );
 }

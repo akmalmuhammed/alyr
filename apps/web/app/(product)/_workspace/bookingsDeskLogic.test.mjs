@@ -6,7 +6,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { BOOKINGS } from "./bookingsCopy.ts";
-import { addMinutes, answerFor, reasonFor, warningFor } from "./bookingsDeskLogic.ts";
+import { addMinutes, answerFor, canWriteDeposit, checkReceived, reasonFor, warningFor } from "./bookingsDeskLogic.ts";
 
 const en = BOOKINGS.en;
 const ar = BOOKINGS.ar;
@@ -61,4 +61,47 @@ test("the warning before an action is for a customer who cannot be messaged, and
   assert.match(warningFor("unknown", "97455500001", ar), /هذا العميل لم يوافق بعد/);
   assert.equal(reasonFor("revoked"), "opted_out");
   assert.equal(reasonFor("unknown"), "no_consent");
+});
+
+// ── a deposit received by bank transfer, written down by staff (D-191) ──
+
+test("the amount received is typed in QAR and read as dirhams, never through a float", () => {
+  assert.deepEqual(checkReceived("30", 15000), { amount: 3000 });
+  assert.deepEqual(checkReceived("12.55", 15000), { amount: 1255 });
+  assert.deepEqual(checkReceived("١٢٫٥", 15000), { amount: 1250 }, "Arabic-Indic digits and a comma");
+  assert.deepEqual(checkReceived("150", 15000), { amount: 15000 }, "the whole price is allowed");
+});
+
+test("an amount that is not one, is under QAR 1 or over the price is refused", () => {
+  for (const text of ["", "abc", "0", "0.5", "-5", "1,2,3", "151"]) {
+    assert.deepEqual(checkReceived(text, 15000), { error: "bad_received" }, text);
+  }
+  // A service with no price has no ceiling: the API still refuses nothing it cannot judge.
+  assert.deepEqual(checkReceived("500", 0), { amount: 50000 });
+});
+
+test("the button is for a booking still to come whose deposit has not been dealt with", () => {
+  assert.equal(canWriteDeposit({ status: "booked", deposit_state: "none" }), true);
+  assert.equal(canWriteDeposit({ status: "booked", deposit_state: "due" }), true);
+  for (const state of ["paid", "kept", "refund_due", "refunded", "expired"]) {
+    assert.equal(canWriteDeposit({ status: "booked", deposit_state: state }), false, state);
+  }
+  for (const status of ["cancelled", "completed", "no_show"]) {
+    assert.equal(canWriteDeposit({ status, deposit_state: "none" }), false, status);
+  }
+});
+
+test("every sentence about a deposit by transfer and a deposit that cannot be paid exists in both languages", () => {
+  for (const t of [en, ar]) {
+    assert.ok(t.depositByTransfer && t.depositHint && t.depositSave && t.depositsClosed);
+    assert.ok(t.depositsClosedRow && t.depositsClosedField && t.depositsClosedRules);
+    assert.match(t.deposit.transfer("QAR 30", "QAR 120"), /30/);
+    assert.match(t.deposit.transferAll("QAR 30"), /30/);
+    assert.match(t.depositWritten("QAR 30"), /30/);
+    assert.ok(t.errors.bad_received && t.errors.deposit_recorded && t.errors.deposit_closed);
+  }
+  // No "AI" words, no ellipsis (honesty.md), and ALYR does not say it holds or moves the money.
+  const all = JSON.stringify([en.depositHint, ar.depositHint, en.depositsClosed, ar.depositsClosed]);
+  assert.doesNotMatch(all, /AI|smart|assistant|…/i);
+  assert.match(en.depositHint, /does not hold or move/);
 });

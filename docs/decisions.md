@@ -2797,6 +2797,48 @@ The product's screens (the workspace, the back office, sign-in, sign-up and the 
 
 **Reserved.** Decisions D-180 to D-199 belong to the product UI redesign (rules, kit, tokens, areas). Migrations: none.
 
+
+---
+
+## D-190 · A service that asks a deposit is bookable only where the shop can take it
+
+**Date** 21 Nov 2026 · **Status** Accepted by the founder's instruction of 21 Nov 2026 (the first client's readiness work; the audit of the same day found the defect) · Linear: none given · Builds on D-084 (deposits), D-044 (each shop's own payment account), ALY-271 (a payment link only where it can take money); spec 043 "Stage 5"
+
+**The defect.** In production a service with a deposit held the customer's time for 30 minutes and sent a pay link to ALYR's stand-in page. The stand-in's Pay button calls a route that answers 404 outside a developer machine, so the customer saw "failed" and the time was given back, with nobody told. No payment provider is connected anywhere yet, and the founder has the pay-ALYR and bank path on hold, so no shop could take a deposit by link. Every deposit test ran as a developer machine, so CI could not see it.
+
+**Decision.**
+1. **One rule, `deposits.can_take`,** the rule every payment link already follows (`pay_ways.online_possible`): the shop's own connected account, or the stand-in on a developer machine. Where it is false, a service that asks a deposit is **not bookable by a customer**: the API refuses it (409 `deposit_unavailable`) before anything is held, queued, sent or written, and the booking page shows the service with "Deposit needed: message the shop", does not let it be chosen, and offers the shop's WhatsApp button. It never draws a Pay button that cannot work.
+2. **The pay page and its route** follow the same rule: no Pay button unless the stand-in exists, and `POST /api/pay/{slug}/complete` answers 404 unless it does.
+3. **The owner is told** in the Services list, on the service and in its form that customers cannot book a service that asks a deposit until it is removed (or until the shop can take deposits). Saving a deposit is still allowed.
+4. **Staff bookings are unchanged** (the desk writes a visit down with no deposit).
+
+**Chosen over** booking such a service **without** its deposit (the shop asked for one for a reason, usually no-shows, and a booking that silently drops the rule is the opposite of what the owner set); hiding the service from the page (the customer would not know why a service they saw on the shop's menu is missing); refusing to save a deposit (an owner may prepare one before the shop can take it); building a real gateway or the pay-ALYR path (on hold, and not ours to start).
+
+**Open for the founder.** Whether a salon that wants deposits before a provider is connected should take them by bank transfer **outside ALYR** and write them down (D-191), which is what the first client can do today, or wait for a provider. Also: when the first real provider lands, `deposits.ask` must make its link through `payments.request` (as orders do) so the link goes to the provider; today it makes the stand-in's, which is why `can_take` can only say yes on a developer machine.
+
+**Revisit when** the first payment provider is connected for a shop (`catalog.py` gives the payments connection its `connected` rule and `deposits.ask` uses `payments.request`).
+
+---
+
+## D-191 · Staff write down a deposit paid by bank transfer; it is the shop's record, never ALYR's money
+
+**Date** 21 Nov 2026 · **Status** Accepted by the founder's instruction of 21 Nov 2026 · Linear: none given · Builds on D-084, D-190, hard rule 3 (non-custodial payments); migration 0140; spec 043 "Stage 5"
+
+**Decision.**
+1. **An owner or admin can write down, on a booking still to come, a deposit the customer paid the shop by bank transfer** (`POST /api/bookings/{id}/deposit-received`: the amount, an optional reference). The booking's deposit becomes paid, with `deposit_method` `transfer`, the reference and when it was written down (three columns on `bookings`, migration 0140; no new table).
+2. **It behaves as a deposit paid by link:** it counts against what is left to pay, the shop's rule for a no-show or a late cancel applies to it (the rule as it stands that moment, copied onto a booking that had none), a deposit receipt is made where Documents is on, the customer gets the same "we received the deposit" notice through the outbound layer, and a booking whose link was still waiting takes the transfer instead (the link expires).
+3. **ALYR holds and moves no money.** The screen says so; the record is the shop's note that it received the money in its own account.
+
+**Chosen over** recording it as a payment by hand in Documents' payments (it would not set the deposit's state, so the shop's no-show rule and the day view's deposit line would not know about it, and it needs Documents on); sending the customer the shop's bank details (not stored anywhere ALYR sends them, and the bank path is on hold); letting every member of staff do it (money: like marking a refund, it is for an owner or admin until the founder says otherwise).
+
+**Not decided.** Correcting or voiding a deposit written down wrongly (today a refund marked by hand); a stylist-role member of staff writing one down (Documents has a setting for payments by hand, `agents_may_record_payments`, that this does not read); a QAR 30 deposit on a QAR 100 service for the first client is the owner's own setting under Services.
+
+**Revisit when** the pay-ALYR or bank path resumes, or the first salon asks to take the deposit through the page.
+
+**Reserved.** D-190 and D-191 were taken from the product UI redesign's range (D-180 to D-199) at the founder's instruction of 21 Nov 2026; migration 0140 from the range 0140 to 0141.
+
+---
+
 ## D-194 · A message that cannot go fails where the shop can see it
 
 **Date** 21 Nov 2026 · **Status** Accepted (a decision of the product lane for the first client; the founder reviews it with the pull request) · T6 of the first client's product audit · Builds on D-077 (jobs), spec 036 (the "Not sent" screen), spec 061 (templates per business), CLAUDE.md hard rule 5
