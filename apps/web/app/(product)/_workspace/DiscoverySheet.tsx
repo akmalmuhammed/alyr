@@ -17,7 +17,7 @@ import { FactForm } from "./DiscoveryFacts";
 import { discovery, DiscoveryError, type Finding, type FindingStatus, type Proposal } from "./discoveryApi";
 import { T, type Lang } from "./discoveryCopy";
 import { formatDayLong, inOrder, liveProposals, mayApprove, sayError, stepText, waitingProposals } from "./discoveryLogic";
-import { BeforeAfter, EvidenceList, FindingMeta, When, announceChange } from "./discoveryUi";
+import { BeforeAfter, EvidenceList, FindingMeta, When, announceChange, useRecorded } from "./discoveryUi";
 
 export type Change = { finding: Finding; from: FindingStatus };
 
@@ -27,6 +27,8 @@ export function FindingSheet({ lang, id, initial, canMark, onClose, onChanged, o
   onReview: (proposal: Proposal) => void; onLoaded?: (finding: Finding) => void;
 }) {
   const t = T[lang];
+  const recorded = useRecorded();
+  const line = recorded ? t.statusLineRecorded : t.statusLine;
   const [finding, setFinding] = useState<Finding | null>(initial);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -184,11 +186,14 @@ export function FindingSheet({ lang, id, initial, canMark, onClose, onChanged, o
             </section>
           )}
 
-          <p className="dv-seen ct-quiet">
-            {finding.first_seen_at && <span>{t.firstSeen("")}<When iso={finding.first_seen_at} lang={lang} /></span>}
-            {finding.last_seen_at && <span>{t.lastSeen("")}<When iso={finding.last_seen_at} lang={lang} /></span>}
-          </p>
-          {t.statusLine[finding.status] && <p className="dv-statusline" role="note">{t.statusLine[finding.status]}</p>}
+          {/* A recorded source's evidence carries the day it was seen; the days a check-up found it are not the days anything was looked at. */}
+          {!recorded && (
+            <p className="dv-seen ct-quiet">
+              {finding.first_seen_at && <span>{t.firstSeen("")}<When iso={finding.first_seen_at} lang={lang} /></span>}
+              {finding.last_seen_at && <span>{t.lastSeen("")}<When iso={finding.last_seen_at} lang={lang} /></span>}
+            </p>
+          )}
+          {line[finding.status] && <p className="dv-statusline" role="note">{line[finding.status]}</p>}
           {!canMark && (status === "open" || status === "skipped" || status === "owner_done") && <p className="ct-quiet">{t.ownerMarks}</p>}
         </div>
       )}

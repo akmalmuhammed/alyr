@@ -286,7 +286,8 @@ def test_before_anything_is_set_up_the_overview_says_so(client_factory, monkeypa
     assert overview["headline"] == "No check-up has run yet."
     assert shop.owner.get("/api/discovery/runs/latest").json() is None
     assert shop.owner.get("/api/discovery/connection").json() == {
-        "kind": None, "status": None, "available": ["sample"], "demo": True, "connections": []}
+        "kind": None, "status": None, "available": ["sample"], "demo": True,
+        "observed_on": None, "days_old": None, "old": False, "connections": []}
 
 
 def test_the_overview_after_a_run_has_the_next_card_the_list_and_the_score(ran):
@@ -555,7 +556,7 @@ def test_reviews_filters_and_summary(ran):
     assert mine and {r["location"]["id"] for r in mine} == {place}
     assert ran.owner.get("/api/discovery/reviews?max_rating=6").status_code == 422
     first = everything["items"][0]
-    assert set(first) == {"id", "location", "rating", "posted_at", "author_name", "body",
+    assert set(first) == {"id", "location", "source", "rating", "posted_at", "author_name", "body",
                           "language", "replied", "reply_text"}
     assert everything["summary"]["average"] == pytest.approx(
         sum(r["rating"] for r in everything["items"]) / 14, abs=0.05)

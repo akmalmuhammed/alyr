@@ -30,7 +30,8 @@ export const STATUSES: readonly FindingStatus[] = ["open", "skipped", "owner_don
 /** The parts the screens draw. `ai` is not measured in Phase 1 and is not drawn at all (D-039). */
 export const PARTS_SHOWN: readonly PartKey[] = ["presence", "reviews", "website", "whatsapp"];
 
-export type Evidence = { label: string; value: string; where: string; seen_at: string | null };
+/** `day_only`: the evidence is a day (a recorded observation), and `where` already says which; no time of day is drawn. */
+export type Evidence = { label: string; value: string; where: string; seen_at: string | null; day_only: boolean };
 export type Step = { seq: number; tool: string; summary: string; ok: boolean; started_at: string | null; ended_at: string | null };
 export type PlaceRef = { id: string; name: string };
 
@@ -112,8 +113,13 @@ export type Run = {
 
 export type Counts = { open: number; skipped: number; owner_done: number; verified: number };
 
+/** Where the facts come from, and for a recorded source which day they were seen (D-169). */
+export type Source = { kind: string; observed_on: string | null; days_old: number | null; old: boolean };
+
 export type Overview = {
   has_connection: boolean;
+  /** The source that is on. Absent from an older API: then it is read as nothing special. */
+  source: Source | null;
   /** ALYR marked this shop as a demo shop in the back office: only then may the sample business be turned on (D-169). Absent means no. */
   demo: boolean;
   has_run: boolean; last_run: Run | null; score: number | null;
@@ -142,6 +148,8 @@ export type ChecksAnswer = {
 export type Review = {
   id: string; location: PlaceRef | null; rating: number; posted_at: string | null; author_name: string;
   body: string; language: string; replied: boolean; reply_text: string;
+  /** Where the review came from: a recorded one carries a rating, a date and whether it was answered, and no words. */
+  source: string;
 };
 export type ReviewsAnswer = {
   items: Review[];
@@ -163,7 +171,7 @@ export type Place = {
    */
   managers: Manager[] | null;
 };
-export type Connection = { kind: string; on: boolean };
+export type Connection = { kind: string; on: boolean; observed_on: string | null; days_old: number | null; old: boolean };
 
 // ── errors ──────────────────────────────────────────────
 
@@ -241,7 +249,7 @@ function parsePlace(raw: unknown): PlaceRef | null {
 
 function parseEvidence(raw: unknown): Evidence {
   const r = rec(raw);
-  return { label: str(r.label), value: str(r.value), where: str(r.where), seen_at: strOrNull(r.seen_at) };
+  return { label: str(r.label), value: str(r.value), where: str(r.where), seen_at: strOrNull(r.seen_at), day_only: r.day_only === true };
 }
 
 export function parseStep(raw: unknown, index = 0): Step {
@@ -450,12 +458,18 @@ export function parseRun(raw: unknown): Run {
   };
 }
 
+export function parseSource(raw: unknown): Source | null {
+  const r = rec(raw);
+  const kind = str(r.kind);
+  return kind ? { kind, observed_on: strOrNull(r.observed_on), days_old: num(r.days_old), old: r.old === true } : null;
+}
+
 export function parseOverview(raw: unknown): Overview {
   const r = rec(raw);
   const delta = rec(r.delta);
   const change = num(delta.score_change);
   return {
-    has_connection: r.has_connection === true, demo: r.demo === true, has_run: r.has_run === true,
+    has_connection: r.has_connection === true, source: parseSource(r.source), demo: r.demo === true, has_run: r.has_run === true,
     last_run: r.last_run ? parseRun(r.last_run) : null, score: num(r.score), headline: str(r.headline), score_parts: parseParts(r.score_parts),
     counts: parseCounts(r.counts), next: r.next ? parseFinding(r.next) : null,
     up_next: arr(r.up_next).map(parseFinding), done: arr(r.done).map(parseFinding),
@@ -477,7 +491,7 @@ export function parseReview(raw: unknown): Review {
   return {
     id, location: parsePlace(r.location), rating: Math.min(5, Math.max(0, rating)), posted_at: strOrNull(r.posted_at),
     author_name: str(r.author_name), body: str(r.body), language: str(r.language), replied: r.replied === true,
-    reply_text: str(r.reply_text),
+    reply_text: str(r.reply_text), source: str(r.source),
   };
 }
 
@@ -559,7 +573,8 @@ export function parseConnection(raw: unknown): Connection {
   const source = mine ?? r;
   const kind = str(source.kind);
   const on = source.on === true || source.status === "on" || (kind !== "" && source.on !== false && source.status !== "off");
-  return { kind: on ? kind : "", on };
+  const days = num(r.days_old);
+  return { kind: on ? kind : "", on, observed_on: strOrNull(r.observed_on), days_old: days, old: r.old === true };
 }
 
 // ── calling ─────────────────────────────────────────────

@@ -73,7 +73,7 @@ A registry like `modules/agent/insights.py`. A rule is a pure function of `(Snap
 | `photos_few` | presence | fewer than 5 photos |
 | `website_location_missing` | website | a location is not on the website, or has no page of its own |
 | `whatsapp_link_missing` | whatsapp | the website or listing has no WhatsApp link, or it points to a different number |
-| `review_unanswered` | reviews | 3 or more reviews of 3 stars or fewer, older than 7 days, have no reply |
+| `review_unanswered` | reviews | 3 or more reviews of 3 stars or fewer, older than 7 days, have no reply, **or** 10 or more reviews older than 7 days and not one of them has a reply (first-client audit T9, D-169) |
 | `rating_low` | reviews | a listing's rating is below 4.0 with at least 10 reviews |
 
 Rules measure; they do not guess. A rule that cannot tell (the connector did not return the field) returns **no finding and marks its check `not_measured`**, it never fires on missing data.
@@ -355,6 +355,28 @@ published timeframe. The audit found a trap and a gap; this section is what chan
 15. **The form** is `/ops/discovery?business=<id>` (`ops/Discovery.tsx`, rules in `discoveryOpsLogic.ts`,
     words in `discoveryOpsCopy.ts`), linked from the business's row under Clients; English, like the console.
 16. **Tests:** `tests/test_discovery_manual.py` (55), `ops/discoveryOps.test.mjs` (10).
-17. **Not built:** the owner's own entering of observations, the screens' banner and wording for a recorded
-    source (the next pull request), hand-fed answers, Google Business Profile.
-
+17. **Not built:** the owner's own entering of observations, hand-fed answers, Google Business Profile.
+18. **What the owner reads about a recorded source** (branch `aly-fc-disc-words`; English and Arabic, the
+    Arabic a draft until ALY-66). `GET /overview` and `GET /connection` say `source` / `observed_on`,
+    `days_old` and `old` (older than `STALE_AFTER_DAYS`, 14, in the shop's own days). The frame draws a banner
+    beside the sample's: "Recorded by ALYR · ALYR looked at public pages on 20 Nov and wrote down what it
+    saw. It does not read Google by itself." and, when old, "That was 20 days ago, so some of it may be out of
+    date." A finding's "what happens" says for such a source that it closes only when ALYR records a new look
+    that shows it fixed (`words.HAND_WHAT_HAPPENS`); its evidence reads "Google listing (recorded by ALYR on
+    20 Nov 2026)" and says `day_only` (a day, not a moment: the screen draws no time of day for it); the log's first step reads "Took 1 place as recorded by ALYR staff, seen on 20 Nov 2026." and
+    the Arabic screen words it itself (`stepSnapshotRecorded`). Home never draws the owner's "Run check-up" (it
+    would be refused): it says "ALYR runs the next check-up after it looks again and writes down what it sees."
+    and, before the first run, "Waiting for ALYR's first look"; its caught-up line and the finding sheet's
+    status lines say "recording", not "check-up"; the sheet leaves out "first seen" and "last seen" (they are
+    the days a check-up found it, not days anything was looked at); the weekly switch in Settings is not drawn.
+    A review the screens show carries `source`, and a recorded one says only its stars, its date and whether it
+    was answered are kept, never an empty quote.
+19. **A page nobody ever answered no longer reads 100 for Reviews** (branch `aly-fc-disc-t9`; the rule gap in
+    the audit, closed in the rule and not by a caveat; still twelve rules). `review_unanswered` also fails when
+    10 or more reviews older than 7 days (`SILENT_NEEDS_REVIEWS`) have not had a single reply, of any stars.
+    Its evidence says "Reviews over 7 days old that have a reply from the business: 0 of 20" (`~of:` marker,
+    «0 من 20») beside the oldest, counted from the day it was seen; the matrix column is "Reviews answered".
+    With a five-star page of 40 reviews and no reply the Reviews part reads 50 (the rating passes, the answers
+    do not), not 100. A place with fewer than 10 old reviews, or one reply, or only new reviews, passes as
+    before; the sample's places never reach 10 old unanswered reviews, so its scores are unchanged (tested).
+    The rule counts the reviews it was given: a hand source should record at least the newest 10 to 20.

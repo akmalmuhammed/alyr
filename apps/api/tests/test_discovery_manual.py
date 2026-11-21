@@ -14,6 +14,7 @@ same twelve rules, the same score and the same screens read it. These tests hold
 
 import asyncio
 import json
+import re
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from uuid import UUID, uuid4
@@ -22,15 +23,23 @@ import asyncpg
 import pytest
 
 from alyr.modules.discovery import observations, rules, scoring
+from alyr.modules.discovery import words as w
 from alyr.modules.discovery.connectors import ConnectorError, ManualConnector, RunContext
 from alyr.modules.discovery.connectors.manual import day_start
 from alyr.seed import DEMO_TENANT_ID
-from discovery_support import by_rule, discovery_shop, findings, location
+from discovery_support import by_rule, discovery_shop, findings, location, turn_on_sample
 from test_consent import owner_sql
 from test_sign_in import sign_in
 
 STAFF = "ops-discovery@alyr.example"
 TODAY = datetime.now(UTC).date()
+
+
+def shop_days(day: str) -> int:
+    """Days since a day, on the shop's own calendar (Doha), which is what the screens say."""
+    from zoneinfo import ZoneInfo
+
+    return (datetime.now(ZoneInfo("Asia/Qatar")).date() - datetime.fromisoformat(day).date()).days
 
 
 def iso(days_ago: int) -> str:
@@ -713,3 +722,134 @@ def test_the_observations_table_says_what_the_module_says():
     owner_sql("delete from discovery_locations where id = $1", place)
     assert owner_sql("select count(*) from discovery_observations where tenant_id = $1",
                      tenant)[0]["count"] == 0
+
+# ── what the business reads about it (the words branch, D-169) ────────────────────────────
+#
+# Whose look it was and which day, in English and Arabic, and never that a check-up looks again; the
+# sample's own words must stay exactly as they were.
+
+
+def a_run(staff, biz, **more):
+    place = start(staff, biz)
+    record(staff, biz, place, seen(**more))
+    return place, run(staff, biz)
+
+
+def test_what_happens_next_never_says_a_check_up_looks_again_for_a_recorded_source(staff, biz):
+    a_run(staff, biz)
+    for lang in ("en", "ar"):
+        items = findings(biz.owner, lang=lang)
+        assert items
+        for item in items:
+            said = item["what_happens"]
+            assert said and "…" not in said
+            if lang == "en":
+                assert not re.search(r"next check-up|check-up (looks|counts|measures)", said), said
+                assert "records a new look" in said
+            else:
+                assert "الفحص التالي" not in said and "نظرة جديدة" in said
+    # the two rules whose sentence says more than "mark it done"
+    by = by_rule(findings(biz.owner))
+    assert "Nothing is sent for you" in by["review_unanswered"][0]["what_happens"]
+
+
+def test_the_sample_keeps_its_own_words(client_factory, monkeypatch):
+    from discovery_support import discovery_shop, run_check_up
+
+    shop = discovery_shop(client_factory, monkeypatch)
+    turn_on_sample(shop)
+    run_check_up(shop.owner)
+    said = {i["rule_id"]: i["what_happens"] for i in findings(shop.owner)}
+    assert "the next check-up looks again" in said["hours_missing"].replace("\n", " ")
+    assert "records a new look" not in " ".join(said.values())
+    assert not any(e["day_only"] for i in findings(shop.owner) for e in i["evidence"])
+    source = shop.owner.get("/api/discovery/overview").json()["source"]
+    assert source == {"kind": "sample", "observed_on": None, "days_old": None, "old": False}
+
+
+def test_the_evidence_says_whose_look_and_which_day_in_both_languages(staff, biz):
+    a_run(staff, biz)
+    day = w.date_text(iso(2), "en")
+    day_ar = w.date_text(iso(2), "ar")
+    for lang, expected in (("en", f"(recorded by ALYR on {day})"),
+                           ("ar", f"(سجّلته ALYR بتاريخ {day_ar})")):
+        items = findings(biz.owner, lang=lang)
+        wheres = {e["where"] for i in items for e in i["evidence"]}
+        assert wheres and all(expected in where for where in wheres), wheres
+        # a recorded observation is a day, not a moment: no time of day is drawn
+        assert all(e["day_only"] is True for i in items for e in i["evidence"])
+    # the day is the day it was seen, in Western digits
+    assert re.fullmatch(r"\d{1,2} [^\d\s]+ \d{4}", day_ar)
+    assert w.date_text("2026-11-20T12:00:00+00:00", "ar") == "20 نوفمبر 2026"
+    assert w.date_text("2026-11-03", "en") == "3 Nov 2026"
+
+
+def test_the_overview_and_the_connection_say_which_day_and_when_it_is_old(staff, biz):
+    place = start(staff, biz)
+    record(staff, biz, place, seen(observed_on=iso(3)))
+    run(staff, biz)
+    for path in ("/api/discovery/overview", "/api/discovery/connection"):
+        body = biz.owner.get(path).json()
+        source = body["source"] if "source" in body else body
+        assert (source["observed_on"], source["days_old"], source["old"]) == (
+            iso(3), shop_days(iso(3)), False)
+    record(staff, biz, place, seen(observed_on=iso(20), reviews=None))
+    run(staff, biz)
+    source = biz.owner.get("/api/discovery/overview").json()["source"]
+    assert (source["kind"], source["observed_on"], source["days_old"], source["old"]) == (
+        "manual", iso(20), shop_days(iso(20)), True)
+    assert biz.owner.get("/api/discovery/connection").json()["old"] is True
+
+
+def test_the_reviews_say_where_they_came_from(staff, biz):
+    a_run(staff, biz)
+    shown = biz.owner.get("/api/discovery/reviews").json()["items"]
+    assert shown and {r["source"] for r in shown} == {"manual"}
+
+
+def test_the_new_sentences_are_whole_in_both_languages_and_say_no_ai():
+    sentences = [*w.HAND_WHAT_HAPPENS, *w.MANUAL_NOTE]
+    for pair in w.HAND_WHAT_HAPPENS_BY_RULE.values():
+        sentences.extend(pair)
+    for key in ("connector.snapshot.manual", "connector.snapshot.manual.missing",
+                "connector.snapshot.manual.old"):
+        sentences.append(w.STEP_SUMMARIES[key])
+    for key in ("manual_staff_runs", "nothing_recorded"):
+        sentences.extend(w.ERRORS[key])
+    for text in sentences:
+        assert text.strip() and "…" not in text and "..." not in text
+        banned = r"\b(AI|smart|intelligen\w*|assistant|learns?|predicts?|live|connected)\b"
+        assert not re.search(banned, text, re.I), text
+    for pair in (w.HAND_WHAT_HAPPENS, w.MANUAL_NOTE, *w.HAND_WHAT_HAPPENS_BY_RULE.values()):
+        assert re.search("[؀-ۿ]", pair[1]) and not re.search("[٠-٩]", pair[1])
+    # the sample's wording is untouched
+    assert "the next check-up looks again" in w.RULE_WORDS["hours_missing"]["what_happens"][0]
+
+
+# ── a page nobody ever answered does not read 100 for reviews (first-client audit T9) ─────
+
+
+def test_forty_reviews_and_no_reply_is_a_finding_and_not_a_hundred_for_reviews(staff, biz):
+    place = start(staff, biz)
+    reviews = [{"rating": 5, "posted_on": iso(10 + n), "replied": False} for n in range(20)]
+    record(staff, biz, place, seen(reviews=reviews))  # five stars each: no low review waits
+    done = run(staff, biz)
+    silent = by_rule(findings(biz.owner))["review_unanswered"][0]
+    shown = {e["label"]: e["value"] for e in silent["evidence"]}
+    assert shown == {
+        "Reviews over 7 days old that have a reply from the business": "0 of 20",
+        "The oldest, in days": "27",  # counted from the day it was seen, two days ago
+    }
+    ar = by_rule(findings(biz.owner, lang="ar"))["review_unanswered"][0]
+    assert "0 من 20" in {e["value"] for e in ar["evidence"]}
+    # the part reads what it counted: the rating passes, the answers do not
+    assert done["score_parts"]["reviews"]["value"] == 50
+    overview = biz.owner.get("/api/discovery/overview").json()
+    assert overview["score_parts"]["reviews"]["value"] == 50
+    names = {c["id"]: c["label"] for c in biz.owner.get("/api/discovery/checks").json()["rules"]}
+    assert names["review_unanswered"] == "Reviews answered"
+    # one reply, in a later look, and it passes
+    reviews[0]["replied"] = True
+    record(staff, biz, place, seen(observed_on=iso(0), reviews=reviews))
+    run(staff, biz)
+    assert "review_unanswered" not in by_rule(findings(biz.owner))

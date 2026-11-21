@@ -34,6 +34,10 @@ PARTS = ("presence", "reviews", "website", "whatsapp", "ai")
 
 MIN_PHOTOS = 5
 LOW_REVIEWS_NEEDED = 3
+# A place whose reviews, old enough to have been answered, number this many and have not had one
+# reply is as silent as one with three unanswered complaints (first-client audit T9, D-169): "no low
+# review waits" must not read as "healthy" for a business that has never answered anyone.
+SILENT_NEEDS_REVIEWS = 10
 LOW_STARS = 3
 UNANSWERED_AFTER = timedelta(days=7)
 RATING_FLOOR = 4.0
@@ -322,20 +326,27 @@ def _whatsapp_link_missing(location, place, ctx):
 
 
 def _review_unanswered(location, place, ctx):
+    """Fails when 3 or more reviews of 3 stars or fewer, older than 7 days, have no reply, or when
+    10 or more reviews older than 7 days have not had a single reply (of any stars). The second is
+    what a five-star page that nobody ever answered looked like before: passing."""
     if place.reviews is None:
         return None
-    cutoff = (ctx.now or ctx.snapshot.taken_at) - UNANSWERED_AFTER
-    waiting = [
-        r for r in place.reviews if r.rating <= LOW_STARS and not r.replied and r.posted_at < cutoff
-    ]
-    if len(waiting) < LOW_REVIEWS_NEEDED:
-        return PASS, ()
     now = ctx.now or ctx.snapshot.taken_at
-    oldest = max((now - r.posted_at).days for r in waiting)
-    return FAIL, (
-        Evidence("unanswered_reviews", str(len(waiting)), "reviews"),
-        Evidence("oldest_unanswered", str(oldest), "reviews"),
-    )
+    cutoff = now - UNANSWERED_AFTER
+    settled = [r for r in place.reviews if r.posted_at < cutoff]  # old enough to have been answered
+    waiting = [r for r in settled if r.rating <= LOW_STARS and not r.replied]
+    silent = len(settled) >= SILENT_NEEDS_REVIEWS and not any(r.replied for r in settled)
+    if len(waiting) < LOW_REVIEWS_NEEDED and not silent:
+        return PASS, ()
+    evidence: list[Evidence] = []
+    if len(waiting) >= LOW_REVIEWS_NEEDED:
+        evidence.append(Evidence("unanswered_reviews", str(len(waiting)), "reviews"))
+    if silent:
+        evidence.append(Evidence("replies_seen", f"~of:0:{len(settled)}", "reviews"))
+    pending = settled if silent else waiting
+    oldest = max((now - r.posted_at).days for r in pending)
+    evidence.append(Evidence("oldest_unanswered", str(oldest), "reviews"))
+    return FAIL, tuple(evidence)
 
 
 def _rating_low(location, place, ctx):

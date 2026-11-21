@@ -32,7 +32,7 @@ import {
   POLL_MS, bandParts, homeState, inOrder, isFinished, isRunning, markOf, matrixColumns, minutesFrom, pollDecision, rowCounts, rulerSide,
   sayError, scoreBefore, stepText, viewHref, waitingProposals,
 } from "./discoveryLogic";
-import { FindingMeta, FindingRow, Loading, Problem, ProposalRow, When, announceChange, useLoad } from "./discoveryUi";
+import { FindingMeta, FindingRow, Loading, Problem, ProposalRow, When, announceChange, useLoad, useRecorded } from "./discoveryUi";
 import { usePolling } from "./poll";
 
 type Push = (text: string, options?: { tone?: "ok" | "bad" | "warn"; undo?: () => void }) => number;
@@ -41,6 +41,7 @@ export function DiscoveryHome({ lang, canManage, push, onConnection }: {
   lang: Lang; canManage: boolean; push: Push; onConnection: () => void;
 }) {
   const t = T[lang];
+  const recorded = useRecorded();
   const [overview, reload] = useLoad(() => discovery.overview(lang), lang);
   const o = overview.data;
   // The waiting changes, for the strip. A person who may not list them gets nothing, and nothing is drawn.
@@ -192,7 +193,10 @@ export function DiscoveryHome({ lang, canManage, push, onConnection }: {
   // (Before a first check-up there is nothing to review, and the one Volt button is the check-up.)
   const waitingN = state === "noRun" ? 0 : (o.proposals?.waiting ?? 0);
   const runMain = waitingN === 0;
-  const runButton = tooSoon !== null
+  // A recorded source is run by ALYR staff, never from here: the owner is told when the next one comes (D-169).
+  const runButton = recorded
+    ? <p className="ct-quiet dv-recordednext">{t.recordedNext}</p>
+    : tooSoon !== null
     ? <p className="dv-toosoon" role="status">{t.tooSoon(tooSoon)}</p>
     : <button type="button" className={`btn ${runMain ? "volt" : ""} ct-btn`} disabled={busy} onClick={() => void runNow()}>{failed ? t.runAgain : t.runCheckup}</button>;
   const scoreAction = running ? null : waitingN > 0
@@ -232,7 +236,7 @@ export function DiscoveryHome({ lang, canManage, push, onConnection }: {
 
           {state === "noRun" && !running && (
             <>
-              <Empty title={t.noRunTitle} text={t.noRunText} action={runButton} />
+              <Empty title={recorded ? t.noRunRecordedTitle : t.noRunTitle} text={recorded ? t.noRunRecordedText : t.noRunText} action={recorded ? undefined : runButton} />
               <Slots lang={lang} />
             </>
           )}
@@ -240,7 +244,7 @@ export function DiscoveryHome({ lang, canManage, push, onConnection }: {
           {state === "caughtUp" && !running && (
             <section className="sh-tile raised dv-caught" aria-labelledby="dv-caught-h">
               <h2 id="dv-caught-h">{t.caughtUpTitle}</h2>
-              <p>{t.caughtUpText}</p>
+              <p>{recorded ? t.caughtUpRecorded : t.caughtUpText}</p>
             </section>
           )}
 
