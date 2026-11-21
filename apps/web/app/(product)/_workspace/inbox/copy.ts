@@ -9,12 +9,14 @@ import { counted, type Noun } from "../../../_ui/format.ts";
 
 export type Lang = "en" | "ar";
 
-const HOURS: Noun = { en: ["hour", "hours"], ar: ["ساعة واحدة", "ساعتان", "ساعات", "ساعة"] };
-const MINUTES: Noun = { en: ["minute", "minutes"], ar: ["دقيقة واحدة", "دقيقتان", "دقائق", "دقيقة"] };
-const DAYS: Noun = { en: ["day", "days"], ar: ["يوم واحد", "يومان", "أيام", "يوماً"] };
-const MESSAGES: Noun = { en: ["message", "messages"], ar: ["رسالة واحدة", "رسالتان", "رسائل", "رسالة"] };
-const ORDERS: Noun = { en: ["order", "orders"], ar: ["طلب واحد", "طلبان", "طلبات", "طلباً"] };
-const CONVERSATIONS: Noun = { en: ["conversation", "conversations"], ar: ["محادثة واحدة", "محادثتان", "محادثات", "محادثة"] };
+/** A noun the kit's `counted()` agrees with: English one and many; Arabic one, two, three to ten, eleven and up. */
+const noun = (en: Noun["en"], ar: Noun["ar"]): Noun => ({ en, ar });
+const HOURS = noun(["hour", "hours"], ["ساعة واحدة", "ساعتان", "ساعات", "ساعة"]);
+const MINUTES = noun(["minute", "minutes"], ["دقيقة واحدة", "دقيقتان", "دقائق", "دقيقة"]);
+const DAYS = noun(["day", "days"], ["يوم واحد", "يومان", "أيام", "يوماً"]);
+const MESSAGES = noun(["message", "messages"], ["رسالة واحدة", "رسالتان", "رسائل", "رسالة"]);
+const ORDERS = noun(["order", "orders"], ["طلب واحد", "طلبان", "طلبات", "طلباً"]);
+const CONVERSATIONS = noun(["conversation", "conversations"], ["محادثة واحدة", "محادثتان", "محادثات", "محادثة"]);
 
 const en = {
   // Panes and tabs
