@@ -245,7 +245,11 @@ def test_order_detail_route_does_not_shadow_margins(client_factory, monkeypatch)
     c = client_factory()
     sign_in(c, OWNER_EMAIL)
     res = c.get("/api/orders/margins")
-    # 200 when the shop keeps costs, the costs route's own refusal when it does not: never 422.
-    assert res.status_code != 422
-    assert "margins" in res.json() or "detail" in res.json()
+    # 200 when the shop keeps costs; when it does not, the costs route's own refusal is a 422
+    # with the code `feature_off`. What must never happen is the detail route taking "margins"
+    # for an order's ID (a 422 whose detail is a list of path-validation errors).
+    if res.status_code == 422:
+        assert res.json()["detail"]["code"] == "feature_off"
+    else:
+        assert "margins" in res.json()
     assert c.get("/api/orders/not-an-id").status_code == 404

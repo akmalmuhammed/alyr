@@ -116,7 +116,11 @@ async def list_orders_filtered(
     total = await conn.fetchval(count_sql, *params)
 
     order_dir = "asc" if sort == "oldest" else "desc"
-    row_limit = min(max(1, limit), 200) if limit is not None else ORDERS_SHOWN
+    from alyr.modules.orders import service as _service  # late: the service imports this module
+    row_limit = (
+        min(max(1, limit), 200, _service.ORDERS_SHOWN)
+        if limit is not None else _service.ORDERS_SHOWN
+    )
     row_offset = max(0, offset)
 
     params_with_paging = list(params)
@@ -196,7 +200,7 @@ async def list_orders_filtered(
             }
         )
 
-    made = await doc_refs.by_source(conn, "order", ids) if ids else {}
+    made = await doc_refs.by_source(conn, "order", [str(i) for i in ids]) if ids else {}
 
     result_orders = []
     for o in orders:
@@ -229,8 +233,8 @@ async def list_orders_filtered(
         }
         if o["payment"] == "unpaid" and o["id"] in pending_reqs:
             entry["pay_link"] = "open"
-        if staff.role in MANAGERS and o["id"] in made:
-            entry["document"] = made[o["id"]]
+        if staff.role in MANAGERS and str(o["id"]) in made:
+            entry["document"] = made[str(o["id"])]
         result_orders.append(entry)
 
     # Counts over the standard window (ignoring filters, excluding test orders)
@@ -501,9 +505,9 @@ async def order_detail(
     }
 
     if staff.role in MANAGERS:
-        made = await doc_refs.by_source(conn, "order", [order_id])
-        if order_id in made:
-            res["document"] = made[order_id]
-            order_row["document"] = made[order_id]
+        made = await doc_refs.by_source(conn, "order", [str(order_id)])
+        if str(order_id) in made:
+            res["document"] = made[str(order_id)]
+            order_row["document"] = made[str(order_id)]
 
     return res
