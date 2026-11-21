@@ -21,6 +21,7 @@ from uuid import UUID
 
 import asyncpg
 
+from alyr import presets
 from alyr.core import jobs, team, templates
 from alyr.core.normalise import fmt_qar
 from alyr.core.outbound import Outbound
@@ -171,11 +172,15 @@ async def update_service(
     The deposit is checked against the price the service will have, so a price cannot be
     lowered under a fixed deposit."""
     current = await conn.fetchrow(
-        "select price, deposit_kind, deposit_value from services where id = $1 for update",
+        "select name, name_ar, price, deposit_kind, deposit_value from services "
+        "where id = $1 for update",
         service_id,
     )
     if current is None:
         return False
+    if name is not None and name_ar is None:
+        # Renamed without an Arabic name: a sample's Arabic would now describe another service.
+        name_ar = presets.kept_arabic(current["name"], current["name_ar"], name)
     final_price = price if price is not None else current["price"]
     kind = deposit_kind if deposit_kind is not None else current["deposit_kind"]
     value = _check_deposit(
@@ -605,6 +610,12 @@ async def update_resource(
     conn: asyncpg.Connection, resource_id: UUID, name: str | None, name_ar: str | None,
     kind: str | None = None,
 ) -> bool:
+    if name is not None and name_ar is None:
+        before = await conn.fetchrow(
+            "select name, name_ar from booking_resources where id = $1", resource_id
+        )
+        if before is not None:
+            name_ar = presets.kept_arabic(before["name"], before["name_ar"], name)
     updated = await conn.execute(
         "update booking_resources set name = coalesce(nullif(btrim($2), ''), name), "
         "name_ar = coalesce($3, name_ar), kind = coalesce($4, kind) where id = $1",
@@ -1303,12 +1314,29 @@ async def day_view(conn: asyncpg.Connection, day: date) -> dict:
             "resources": resources, "bookings": bookings}
 
 
+_BOOKING_FIELDS = (
+    "id, number, service_name, starts_at, resource_id, deposit, deposit_state, deposit_terms"
+)
+
+
 async def next_booking(conn: asyncpg.Connection, contact_id: UUID) -> asyncpg.Record | None:
     return await conn.fetchrow(
-        "select id, number, service_name, starts_at, resource_id from bookings "
+        f"select {_BOOKING_FIELDS} from bookings "
         "where contact_id = $1 and status = 'booked' and starts_at > now() "
         "order by starts_at limit 1",
         contact_id,
+    )
+
+
+async def booking_of(
+    conn: asyncpg.Connection, contact_id: UUID, booking_id: UUID
+) -> asyncpg.Record | None:
+    """One booking of this customer that is still to come, or None (someone else's, cancelled,
+    done, or in the past)."""
+    return await conn.fetchrow(
+        f"select {_BOOKING_FIELDS} from bookings "
+        "where id = $1 and contact_id = $2 and status = 'booked' and starts_at > now()",
+        booking_id, contact_id,
     )
 
 

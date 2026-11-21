@@ -177,7 +177,7 @@ _NAMES = {
     "fashion": Text("Fashion & gifts", "أزياء وهدايا"),
     "shop": Text("Shop & retail", "متجر"),
     "wholesale": Text("Wholesale & trading", "جملة وتجارة"),
-    "salon": Text("Salon & barber", "صالون وحلاقة"),
+    "salon": Text("Salon & beauty", "صالون وتجميل"),
     "spa": Text("Spa & wellness", "سبا وعناية"),
     "clinic": Text("Clinic", "عيادة"),
     "home": Text("Home services", "خدمات منزلية"),

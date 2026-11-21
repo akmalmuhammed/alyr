@@ -167,6 +167,21 @@
 .ob-x:hover { background: var(--hair); color: var(--ink); }
 .ob-add { grid-template-columns: minmax(0, 1fr) auto; background: var(--raise); padding: 8px; }
 .ob-add input { background: var(--sheet); }
+/* A row's name in the other language (T9, D-196): a second line under the row, labelled, so the
+   Arabic and the English of a service or a person are both in front of the owner. */
+.ob-tr .ob-alt { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 7rem) minmax(0, 1fr); align-items: center; gap: 6px; padding-inline: 2px; }
+.ob-alt > span { font-size: var(--ui-small); color: var(--ink-2); }
+.ob-tr .ob-alt input { background: var(--raise); }
+/* The people card: a name, the name in the other language, remove. */
+.ob-people > .ob-muted { margin: 4px 0 12px; font-size: var(--ui-body-sm); color: var(--ink-2); }
+.ob-people .ob-table { box-shadow: none; border: 1px solid var(--hair); }
+.ob-people .ob-tr:not(.ob-add) { grid-template-columns: minmax(0, 1fr) 2.75rem; }
+.ob-people .ob-tr:not(.ob-add) > input { grid-column: 1; grid-row: 1; }
+.ob-people .ob-tr:not(.ob-add) > .ob-x { grid-column: 2; grid-row: 1; width: 44px; height: 44px; }
+.ob-people .ob-x:disabled { opacity: 0.35; cursor: not-allowed; }
+.ob-people .ob-alt { grid-row: 2; }
+.ob-people .ob-add { grid-template-columns: minmax(0, 1fr) auto; }
+.ob-people .ob-note { margin: 12px 0 0; }
 
 /* ── hours and rules ─────────────────────────────────── */
 .ob-split { display: grid; gap: 14px; }

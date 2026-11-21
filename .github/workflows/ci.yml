@@ -23,7 +23,67 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  api:
+  # The API's checks, in three parts so that the run is as long as the slowest part and not the
+  # sum: the tests in slices (`api-shard`), everything else that is not a test (`api-image`), and
+  # `api`, which passes only when both did and the slices together ran every test exactly once.
+  # `api` keeps its name on purpose: it is the required check in branch protection
+  # (docs/runbooks/release.md), and the release gate reads the conclusion of the whole run.
+
+  # The test suite, cut into slices of whole test files by weight (tests/conftest.py,
+  # "Sharding"). Each slice runs on its own runner with its own PostgreSQL, so the suite's one
+  # `alyr_test` database is never shared. To add a slice, add its number to the list.
+  api-shard:
+    name: api-shard ${{ matrix.shard }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: alyr
+          # No password: the database lives for this job only, on the runner (the `coverage`
+          # and `e2e` workflows do the same). The settings the tests connect with are unchanged.
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: alyr
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U alyr"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      ALYR_ENV: local
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+      # --locked: fail if uv.lock does not match pyproject.toml, so CI tests what we ship.
+      - run: uv sync --locked
+      - name: Tests, one slice of the suite
+        run: |
+          mkdir -p shard-out
+          uv run pytest \
+            --shard="${{ matrix.shard }}/${{ strategy.job-total }}" \
+            --shard-report="shard-out/shard-${{ matrix.shard }}.json" \
+            --junitxml="shard-out/junit-${{ matrix.shard }}.xml"
+      # What each slice ran, and how long each file took (to rebalance: scripts/ci/shards.py).
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: api-shard-${{ matrix.shard }}
+          path: apps/api/shard-out
+          retention-days: 7
+
+  # Everything about the API that is not a test: lint, the image built, started with production
+  # settings and asked for /health, and the audit of the locked dependencies. Once, not per slice.
+  api-image:
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -74,13 +134,40 @@ jobs:
           # The API docs are off in production.
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/docs)" = "404"
           docker rm -f api
-      - run: uv run pytest
       # Known vulnerabilities in the locked Python dependencies. `uvx pip-audit` alone would
       # audit pip-audit's own environment, not ours (ALY-243), so the lock file is exported
       # and audited by name.
       - run: |
           uv export --frozen --no-emit-project --no-hashes > /tmp/locked.txt
           uvx pip-audit -r /tmp/locked.txt --no-deps --disable-pip --progress-spinner off
+
+  # The one check that stands for the API. Passes only when every slice and the image job passed
+  # AND the slices between them ran every test of the suite exactly once (a slice that was
+  # skipped, cancelled, lost or left tests out cannot read as green). `if: always()` so that a
+  # failed slice makes this job red rather than skipped.
+  api:
+    needs: [api-shard, api-image]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: The slices and the image job passed
+        env:
+          SHARDS: ${{ needs.api-shard.result }}
+          IMAGE: ${{ needs.api-image.result }}
+        run: |
+          echo "api-shard: $SHARDS; api-image: $IMAGE"
+          if [ "$SHARDS" != success ] || [ "$IMAGE" != success ]; then
+            echo "::error::A part of the API checks did not pass (api-shard: $SHARDS, api-image: $IMAGE)."
+            exit 1
+          fi
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: api-shard-*
+          merge-multiple: true
+          path: shard-out
+      - name: The slices ran the whole suite, once
+        run: python3 scripts/ci/shards.py check shard-out
 
   web:
     runs-on: ubuntu-latest

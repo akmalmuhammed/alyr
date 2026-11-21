@@ -430,13 +430,14 @@ def _optional(
 
 
 SALON = _optional(
-    (("Hair care", "العناية بالشعر"), ("Beard care", "العناية باللحية")),
+    (("Hair care", "العناية بالشعر"), ("Skin & nails", "العناية بالبشرة والأظافر")),
     (
         Sample("hair-oil", "Argan hair oil, 100 ml", "زيت الأرغان للشعر، 100 مل", "Hair care",
                _qar(65)),
         Sample("shampoo", "Nourishing shampoo, 250 ml", "شامبو مغذٍّ، 250 مل", "Hair care",
                _qar(48)),
-        Sample("beard-balm", "Beard balm", "بلسم اللحية", "Beard care", _qar(40)),
+        Sample("hand-cream", "Hand cream, 75 ml", "كريم اليدين، 75 مل", "Skin & nails",
+               _qar(35)),
     ),
     (
         Text("A place for the products you sell at the counter, with photos and prices.",

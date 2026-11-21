@@ -5,19 +5,18 @@ from uuid import UUID
 import asyncpg
 
 from alyr.channels.base import Choice, InboundMessage, OutboundMessage
-from alyr.core import links
+from alyr.core import links, team
 from alyr.core.normalise import has_arabic
 from alyr.core.outbound import Outbound
 from alyr.core.words import MINUTES, counted
 from alyr.modules.bookings import service, words
+from alyr.modules.bookings import intent, service, words
 
-# Checked before "book": a customer asking about a booking they have must not be sent
-# the link to make a new one.
-MINE_WORDS = ("my booking", "my appointment", "cancel booking", "cancel my",
-              "حجزي", "موعدي", "الغاء الحجز", "إلغاء الحجز")
-BOOK_WORDS = ("book", "appointment", "reserve", "reservation", "schedule",
-              "حجز", "احجز", "أحجز", "موعد")
+# The buttons. Cancelling takes two taps: the first asks, the second does it (T10 of the first
+# client's audit): a customer who touches "Cancel booking" by mistake keeps the booking.
 CANCEL_PREFIX = "booking_cancel:"
+CANCEL_YES = "booking_cancel_yes:"
+KEEP_PREFIX = "booking_keep:"
 # "What are your prices?" gets the price list, as the Prices button does (ALY-273: the sign-up
 # page suggests it on the test line). Only once nothing else took the message, so an item the
 # shop sells, named with its price, still finds the item.
@@ -57,9 +56,9 @@ async def maybe_handle(
         return None
     arabic = await _arabic(conn, contact, message)
 
-    if message.reply_id.startswith(CANCEL_PREFIX):
+    if message.reply_id.startswith(CANCEL_YES):
         try:
-            booking_id = UUID(message.reply_id.removeprefix(CANCEL_PREFIX))
+            booking_id = UUID(message.reply_id.removeprefix(CANCEL_YES))
         except ValueError:
             return None
         mine = await conn.fetchval(
@@ -78,28 +77,46 @@ async def maybe_handle(
             if outcome:
                 body += " " + outcome
         else:
-            body = (
-                "لم نجد حجزاً قائماً لإلغائه." if arabic
-                else "There is no active booking to cancel."
-            )
+            body = _none_to_cancel(arabic)
         return [OutboundMessage(to=contact["id"], body=body)]
+
+    if message.reply_id.startswith((CANCEL_PREFIX, KEEP_PREFIX)):
+        keeping = message.reply_id.startswith(KEEP_PREFIX)
+        try:
+            booking_id = UUID(message.reply_id.removeprefix(
+                KEEP_PREFIX if keeping else CANCEL_PREFIX))
+        except ValueError:
+            return None
+        booking = await service.booking_of(conn, contact["id"], booking_id)
+        if booking is None:
+            return [OutboundMessage(to=contact["id"], body=_none_to_cancel(arabic))]
+        if keeping:
+            return [await _kept(conn, contact, booking, arabic)]
+        return [await _confirm_cancel(conn, contact, booking, arabic)]
 
     if message.reply_id == "prices":
         return [await _prices(conn, contact, arabic)]
     if message.reply_id and message.reply_id not in ("book", "my_booking"):
         return None
-    text = message.text.lower()
+    tokens = intent.words(message.text) if not message.reply_id else []
 
-    if message.reply_id == "my_booking" or (
-        not message.reply_id and any(word in text for word in MINE_WORDS)
-    ):
+    if intent.cancel(tokens):
+        # "cancel my appointment": not a new booking link. Ask once before anything is cancelled.
         upcoming = await service.next_booking(conn, contact["id"])
         if upcoming is None:
-            body = (
-                "لا يوجد لديك حجز قادم. أرسل «حجز» لحجز موعد." if arabic
-                else "You have no upcoming booking. Send \"book\" to make one."
-            )
-            return [OutboundMessage(to=contact["id"], body=body)]
+            return [OutboundMessage(to=contact["id"], body=_no_upcoming(arabic))]
+        return [await _confirm_cancel(conn, contact, upcoming, arabic)]
+
+    if intent.change(tokens):
+        upcoming = await service.next_booking(conn, contact["id"])
+        if upcoming is None:
+            return [OutboundMessage(to=contact["id"], body=_no_upcoming(arabic))]
+        return [await _change_help(conn, tenant_id, contact, upcoming, arabic)]
+
+    if message.reply_id == "my_booking" or intent.mine(tokens):
+        upcoming = await service.next_booking(conn, contact["id"])
+        if upcoming is None:
+            return [OutboundMessage(to=contact["id"], body=_no_upcoming(arabic))]
         when = await service.when_text(conn, upcoming["starts_at"], arabic)
         # "Blow-dry with Reem": the service and who it is with (D-084).
         what = await service.service_words(conn, upcoming["id"], arabic)
@@ -115,7 +132,7 @@ async def maybe_handle(
             ),),
         )]
 
-    if message.reply_id == "book" or any(word in text for word in BOOK_WORDS):
+    if message.reply_id == "book" or intent.book(tokens):
         slug = await conn.fetchval("select slug from tenants where id = $1", tenant_id)
         if not slug or not await service.list_services(conn, only_active=True):
             return None
@@ -126,6 +143,99 @@ async def maybe_handle(
         )
         return [OutboundMessage(to=contact["id"], body=body)]
     return None
+
+
+def _no_upcoming(arabic: bool) -> str:
+    return (
+        "لا يوجد لديك حجز قادم. أرسل «حجز» لحجز موعد." if arabic
+        else "You have no upcoming booking. Send \"book\" to make one."
+    )
+
+
+def _none_to_cancel(arabic: bool) -> str:
+    return "لم نجد حجزاً قائماً لإلغائه." if arabic else "There is no active booking to cancel."
+
+
+async def _described(
+    conn: asyncpg.Connection, booking: asyncpg.Record, arabic: bool
+) -> tuple[str, str]:
+    """What a booking is and when, as the customer is told: ("Blow-dry with Reem", "Tue 13 Oct,
+    8:30 AM")."""
+    return (await service.service_words(conn, booking["id"], arabic),
+            await service.when_text(conn, booking["starts_at"], arabic))
+
+
+async def _confirm_cancel(
+    conn: asyncpg.Connection, contact: asyncpg.Record, booking: asyncpg.Record, arabic: bool
+) -> OutboundMessage:
+    """The question before a cancellation: which booking, and what the shop's deposit rule
+    says when one was paid, with two buttons. Nothing is cancelled until "Yes" is pressed."""
+    what, when = await _described(conn, booking, arabic)
+    number = booking["number"]
+    body = (
+        f"هل تريد إلغاء الحجز رقم {number}: {what}، {when}؟" if arabic
+        else f"Cancel booking {number}: {what}, {when}?"
+    )
+    if booking["deposit_state"] == "paid":
+        body += " " + words.terms_sentence(booking["deposit_terms"] or {}, arabic)
+    return OutboundMessage(
+        to=contact["id"], kind="buttons", body=body,
+        choices=(
+            Choice(f"{CANCEL_YES}{booking['id']}",
+                   "نعم، ألغِ الحجز" if arabic else "Yes, cancel it"),
+            Choice(f"{KEEP_PREFIX}{booking['id']}",
+                   "أبقِ الحجز" if arabic else "Keep my booking"),
+        ),
+    )
+
+
+async def _kept(
+    conn: asyncpg.Connection, contact: asyncpg.Record, booking: asyncpg.Record, arabic: bool
+) -> OutboundMessage:
+    what, when = await _described(conn, booking, arabic)
+    number = booking["number"]
+    body = (
+        f"حجزك رقم {number} باقٍ كما هو: {what}، {when}." if arabic
+        else f"Your booking {number} stays as it is: {what}, {when}."
+    )
+    return OutboundMessage(to=contact["id"], body=body)
+
+
+async def _change_help(
+    conn: asyncpg.Connection, tenant_id: UUID, contact: asyncpg.Record,
+    booking: asyncpg.Record, arabic: bool,
+) -> OutboundMessage:
+    """A customer who wants to change a booking: there is no way to move it from the chat, so
+    a person is asked, the booking is named, and cancelling and booking again stays one tap away.
+    Said once in ten minutes, as the other hand-offs are."""
+    what, when = await _described(conn, booking, arabic)
+    shop = await conn.fetchrow("select name, name_ar from tenants where id = $1", tenant_id)
+    name = shop["name_ar"] if arabic and shop["name_ar"] else shop["name"]
+    recent = await conn.fetchval(
+        "select true from activity where subject = 'conversation' and subject_id = $1 "
+        "and action = 'asked_person' and created_at > now() - interval '10 minutes'",
+        contact["id"],
+    )
+    if not recent:
+        await team.record(
+            conn, "conversation", contact["id"], "asked_person", team.CUSTOMER, contact["id"],
+            {"why": "change_booking", "number": booking["number"]},
+        )
+    number = booking["number"]
+    body = (
+        f"الحجز رقم {number}: {what}، {when}. لتغييره، سيرد عليك أحد موظفي {name} هنا. "
+        "ويمكنك أيضاً إلغاؤه وحجز وقت جديد." if arabic
+        else f"Booking {number}: {what}, {when}. To change it, a person from {name} will reply "
+             "here. You can also cancel it and book a new time."
+    )
+    return OutboundMessage(
+        to=contact["id"], kind="buttons", body=body,
+        choices=(
+            Choice(f"{CANCEL_PREFIX}{booking['id']}",
+                   "إلغاء الحجز" if arabic else "Cancel booking"),
+            Choice("book", "احجز موعداً" if arabic else "Book a visit"),
+        ),
+    )
 
 
 async def _prices(
