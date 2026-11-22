@@ -5,6 +5,7 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- The homepage's film window no longer waits for the page's scripts before it appears, so the first screen paints sooner on a phone: it arrives by CSS alone from the first paint (it rises 1.5rem and settles from 60% opacity), where it used to start invisible until the framework's scripts ran. On the built site with Lighthouse mobile, 10 to 13 runs each: `/` 80 to 91 and its largest contentful paint 5.1 s to 3.4 s, `/ar` 80 to 89 and 5.2 s to 3.6 s (the lane budget is 90 and 2.5 s; Arabic is still under it). The film, its poster and every word are unchanged; with reduced motion the window is simply there (Arabic audit of 22 Nov, P1-5).
 
 ## v0.3.27 (22 Nov 2026)
 - A business with many reviews and no reply to any of them no longer passes Discovery's review check or reads 100 for Reviews (the first client's audit, T9, D-169; no migration, no new dependency, English and Arabic): the existing rule "reviews waiting for an answer" now also fires when 10 or more reviews older than a week have not had a single reply, of any stars (it fired only for 3 or more unanswered reviews of 3 stars or fewer), with the evidence "Reviews over 7 days old that have a reply from the business: 0 of 20". Still twelve rules. A five-star page of 40 reviews with no reply now reads 50 for Reviews, not 100; the sample business's scores do not change.
