@@ -38,19 +38,22 @@
 /* the chats, as WhatsApp lists them */
 .dc-top, .do-top { display: flex; align-items: center; gap: .625rem; height: 3rem; padding-inline: 1rem; }
 .dc-top { background: var(--wa-head); border-bottom: 1px solid var(--wa-head-line); }
+/* The drawn WhatsApp text meets AA in both themes with tokens that already exist (design QA F-07): the
+   time and the voice or photo mark are the status green (--ok-text), the unread chips carry dark ink
+   like the dark theme's (--on-volt on WhatsApp's green), the preview line is the field ink. */
 .dc-top b, .do-top b { font-size: 1rem; font-weight: 600; }
-.dc-unread { display: inline-flex; align-items: center; gap: .25rem; min-height: 1.5rem; padding: 0 .5rem; border-radius: .75rem; background: var(--wa-green); color: var(--wa-on-green); font-size: .75rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.dc-unread { display: inline-flex; align-items: center; gap: .25rem; min-height: 1.5rem; padding: 0 .5rem; border-radius: .75rem; background: var(--wa-green); color: var(--on-volt); font-size: .75rem; font-weight: 600; font-variant-numeric: tabular-nums; }
 .dc-row, .do-row { height: 3.5rem; display: grid; align-items: center; column-gap: .75rem; padding-inline: 1rem; }
 .dc-row { grid-template-columns: 2.25rem minmax(0, 1fr) auto; border-bottom: 1px solid var(--wa-rule); }
 .dc-av { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: 50%; background: var(--wa-avatar); color: var(--wa-avatar-ink); font-size: .875rem; font-weight: 600; }
 .dc-main, .do-main { display: grid; min-width: 0; line-height: 1.3; }
 .dc-main b, .do-main b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .875rem; font-weight: 600; }
-.dc-prev { display: flex; align-items: center; gap: .25rem; min-width: 0; color: var(--wa-soft); font-size: .8125rem; }
+.dc-prev { display: flex; align-items: center; gap: .25rem; min-width: 0; color: var(--wa-field-ink); font-size: .8125rem; }
 .dc-prev > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dc-prev svg { flex: none; width: .9375rem; height: .9375rem; color: var(--wa-green); }
+.dc-prev svg { flex: none; width: .9375rem; height: .9375rem; color: var(--ok-text); }
 .dc-side { display: grid; justify-items: end; gap: .25rem; }
-.dc-at { color: var(--wa-green); font-size: .6875rem; white-space: nowrap; }
-.dc-n { display: grid; place-items: center; min-width: 1.25rem; height: 1.25rem; padding-inline: .3125rem; border-radius: .625rem; background: var(--wa-green); color: var(--wa-on-green); font-size: .6875rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.dc-at { color: var(--ok-text); font-size: .6875rem; white-space: nowrap; }
+.dc-n { display: grid; place-items: center; min-width: 1.25rem; height: 1.25rem; padding-inline: .3125rem; border-radius: .625rem; background: var(--wa-green); color: var(--on-volt); font-size: .6875rem; font-weight: 600; font-variant-numeric: tabular-nums; }
 
 /* the same customers, as ALYR keeps them */
 .do-top { border-bottom: 1px solid var(--dark-line); justify-content: flex-end; }
