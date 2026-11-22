@@ -41,7 +41,11 @@ for page in $plain; do
   cp "$app/$page.html" "out-site/$page.html"
   cp "$app/ar/$page.html" "out-site/ar/$page.html"
 done
-cp "$app/_not-found.html" out-site/404.html
+# The page for an address with nothing behind it (_site/NotFoundPage.tsx). Cloudflare answers with the
+# nearest 404.html up the path, so an address under /ar gets the Arabic one. Its route, not-found-page,
+# is not published under its own address: only these two copies are.
+cp "$app/not-found-page.html" out-site/404.html
+cp "$app/ar/not-found-page.html" out-site/ar/404.html
 cp "$app/robots.txt.body" out-site/robots.txt
 cp "$app/sitemap.xml.body" out-site/sitemap.xml
 cp "$app/icon.svg.body" out-site/icon.svg
@@ -61,7 +65,7 @@ cp -r .next/static out-site/_next/static
 
 # The pages are drawn first and the framework's scripts start after the first paint
 # (scripts/site-defer-scripts.mjs says why). It fails the build if Next's markup changes.
-node "$root/scripts/site-defer-scripts.mjs" out-site/index.html out-site/ar.html out-site/404.html \
+node "$root/scripts/site-defer-scripts.mjs" out-site/index.html out-site/ar.html out-site/404.html out-site/ar/404.html \
   $(for page in $pages $plain; do echo "out-site/$page.html out-site/ar/$page.html"; done)
 
 # Cloudflare Pages reads these two files. The link-preview image has no file extension,
