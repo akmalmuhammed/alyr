@@ -19,10 +19,10 @@ main .ag { font-weight: 400; }
 .al-js .af-switch { display: flex; }
 .af-switch-k { font-family: var(--mono); font-size: .75rem; font-weight: 500; letter-spacing: .09em; text-transform: uppercase; color: var(--text-muted); }
 [lang="ar"] .af-switch-k { font-family: var(--arabic); letter-spacing: 0; text-transform: none; font-size: .875rem; }
-.af-switch-row { display: inline-flex; gap: .25rem; padding: .25rem; border: 1px solid var(--line); border-radius: .75rem; background: var(--surface); max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.af-switch-row { display: inline-flex; gap: .25rem; padding: .25rem; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); max-width: 100%; overflow-x: auto; scrollbar-width: none; }
 .af-switch-row::-webkit-scrollbar { display: none; }
 .af-opt {
-  flex: none; min-height: 2.75rem; padding: 0 1.125rem; border: 0; border-radius: .5rem; background: transparent;
+  flex: none; min-height: 2.75rem; padding: 0 1.125rem; border: 0; border-radius: var(--radius-md); background: transparent;
   color: var(--text-muted); font: inherit; font-size: .9375rem; font-weight: 600; cursor: pointer; white-space: nowrap;
   transition: color var(--fast) var(--ease), background var(--fast) var(--ease);
 }
@@ -50,12 +50,12 @@ main .ag { font-weight: 400; }
   font-family: var(--mono); font-size: .6875rem; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--on-band);
 }
 [lang="ar"] .af-status { font-family: var(--arabic); letter-spacing: 0; text-transform: none; font-size: .8125rem; }
-.af-dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--volt); flex: none; }
+.af-dot { width: .5rem; height: .5rem; border-radius: var(--radius-round); background: var(--volt); flex: none; }
 .af-view { margin-top: .875rem; overflow: hidden; }
 .af-list { position: relative; display: grid; border-bottom: 1px solid var(--dark-line); }
 .af-item { display: grid; grid-template-columns: 2.875rem 1.25rem minmax(0, 1fr); column-gap: .75rem; align-items: start; padding-block: .875rem .9375rem; border-top: 1px solid var(--dark-line); }
 .af-at { padding-top: .1875rem; font-family: var(--mono); font-size: .75rem; color: var(--concrete); font-variant-numeric: tabular-nums; }
-.af-tick { display: grid; place-items: center; width: 1.25rem; height: 1.25rem; margin-top: .0625rem; border-radius: 50%; background: var(--volt); color: var(--on-volt); }
+.af-tick { display: grid; place-items: center; width: 1.25rem; height: 1.25rem; margin-top: .0625rem; border-radius: var(--radius-round); background: var(--volt); color: var(--on-volt); }
 .af-tick svg { width: .75rem; height: .75rem; }
 /* a flag is something that needs you, not something done: the tick is drawn, not filled */
 .af-item.is-flag .af-tick { background: transparent; color: var(--volt); box-shadow: inset 0 0 0 1.5px var(--volt); }
@@ -93,7 +93,7 @@ main .ag { font-weight: 400; }
      its faded lower edge, so "Done for you" above stays in view as it counts */
   .afig-hero .af-stage { grid-template-columns: minmax(0, 1fr); padding: 2rem 2rem 2rem; }
   .afig-hero .aw { --crop: 31rem; }
-  .afig-hero .af-feed { grid-column: 1; margin-top: -3.5rem; padding: 1rem 1.25rem .25rem; border-radius: 12px; background: var(--band); box-shadow: 0 0 0 1px var(--dark-line), 0 24px 60px -30px rgb(0 0 0 / .8); }
+  .afig-hero .af-feed { grid-column: 1; margin-top: -3.5rem; padding: 1rem 1.25rem .25rem; border-radius: var(--radius-lg); background: var(--band); box-shadow: 0 0 0 1px var(--dark-line), 0 24px 60px -30px rgb(0 0 0 / .8); }
   .afig-hero .af-list { grid-template-columns: repeat(auto-fill, minmax(9.25rem, 1fr)); column-gap: 1.25rem; border-bottom: 0; }
   .afig-hero .af-item { grid-template-columns: 1.25rem minmax(0, 1fr); grid-template-areas: "tick at" "what what"; row-gap: .5rem; align-content: start; }
   .afig-hero .af-tick { grid-area: tick; }
