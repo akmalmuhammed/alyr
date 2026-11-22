@@ -76,6 +76,21 @@ export function siteMetadata(locale: Locale, page: PageKey = "home"): Metadata {
   };
 }
 
+/** The metadata of the page for an address with nothing behind it (NotFoundPage.tsx): its own title,
+ * no canonical or alternates (it is no address of the site), and never indexed. */
+export function notFoundMetadata(locale: Locale): Metadata {
+  const title = copy[locale].notFound.title;
+  return {
+    metadataBase: new URL(SITE_URL),
+    title,
+    description: copy[locale].notFound.lead,
+    alternates: {},
+    openGraph: { type: "website", siteName: "ALYR", title, locale: locale === "ar" ? "ar_QA" : "en_US" },
+    twitter: { card: "summary", title },
+    robots: { index: false, follow: true },
+  };
+}
+
 // Runs in <head> before the first paint.
 // `al-js`: scripts run, so sections that animate in never flash (the ALYR Chat page).
 // `motion`: the homepage's start states apply. Only when the visitor has not asked for
