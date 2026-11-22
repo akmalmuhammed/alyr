@@ -16,7 +16,13 @@
 @media (max-width: 47.99rem) {
   .vw { margin-top: var(--space-5); }
 }
+/* The window arrives once, by CSS alone, from the first paint. It used to start hidden and wait for
+   the framework's scripts to add .is-in (SiteMotion); the film is the first screen's largest element,
+   so that wait was the page's largest contentful paint (measured on a phone profile: 5.1 s down to
+   3.5 s). It rises 1.5rem and settles from 60% opacity, not from nothing: a window that starts fully
+   transparent is not counted as painted until a later frame, which put 0.5 to 1.4 s back in about
+   half the runs. Plays once; with reduced motion the window is simply there. */
 @media (prefers-reduced-motion: no-preference) {
-  .motion .vw { transition: translate var(--play-4) var(--ease), opacity var(--play-4) var(--ease); }
-  .motion .vw:not(.is-in) { translate: 0 1.5rem; opacity: 0; }
+  .motion .vw { animation: vw-arrive var(--play-4) var(--ease) backwards; }
+  @keyframes vw-arrive { from { translate: 0 1.5rem; opacity: .6; } to { translate: none; opacity: 1; } }
 }
