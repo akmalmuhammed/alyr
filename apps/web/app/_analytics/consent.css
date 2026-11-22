@@ -27,21 +27,40 @@
 .ph-consent-text a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
 .ph-consent-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
 .ph-consent button, .ph-consent-change {
-  min-height: 40px;
-  padding: 0 16px;
+  min-height: 44px;
+  padding: 0 18px;
   border: 0;
   border-radius: 8px;
   font: inherit;
   font-weight: 600;
   cursor: pointer;
 }
-.ph-consent-deny { background: transparent; color: var(--ph-fg); box-shadow: 0 0 0 1px var(--ph-line) inset; }
-.ph-consent-allow { background: var(--volt); color: var(--on-volt); }
+/* "Allow" and "No thanks" are one control twice: the same size, the same outline, the same ink, the
+   same hover. Neither is Volt (the page's one Volt button is its action) and the privacy-preserving
+   choice is never smaller or fainter than the other (design QA of the live site, F-03). */
+.ph-consent-deny, .ph-consent-allow { background: transparent; color: var(--ph-fg); box-shadow: 0 0 0 1px var(--line-strong) inset; }
+.ph-consent-deny:hover, .ph-consent-allow:hover { background: var(--surface-subtle); }
+.ph-consent-deny:active, .ph-consent-allow:active { background: var(--line); }
 .ph-consent button:focus-visible, .ph-consent-change:focus-visible { outline: 2px solid var(--ph-fg); outline-offset: 2px; }
 .ph-consent-change { background: transparent; color: inherit; box-shadow: 0 0 0 1px currentColor inset; }
 @media (prefers-reduced-motion: no-preference) {
   .ph-consent { animation: ph-consent-in 0.3s ease-out; }
   @keyframes ph-consent-in { from { opacity: 0; transform: translateY(8px); } }
+}
+/* On the public site, from a tablet up, the card sits in the bottom corner on the reading side, narrow,
+   so the hero's film is left alone (design QA, F-03). It is the end of the line in Arabic. Phones keep
+   the bottom sheet, and the buttons share its width. */
+@media (min-width: 48rem) {
+  .ph-consent[data-surface="site"] {
+    inset-inline: max(16px, env(safe-area-inset-left, 0px)) auto;
+    width: min(21rem, calc(100vw - 32px));
+    margin-inline: 0;
+  }
+  .ph-consent[data-surface="site"] .ph-consent-actions { justify-content: stretch; }
+  .ph-consent[data-surface="site"] .ph-consent-actions button { flex: 1 1 0; }
+}
+@media (max-width: 47.99rem) {
+  .ph-consent-actions button { flex: 1 1 0; }
 }
 /* The workspace's tab bar sits at the bottom on a phone: stay above it. */
 @media (max-width: 56rem) {
