@@ -24,6 +24,7 @@ import { sectorMeta, sectorsAr, sectorsEn, type SectorsCopy } from "./copySector
 import { privacyAr, privacyEn, type PrivacyPage } from "./copyPrivacy";
 import { refundAr, refundEn, termsAr, termsEn, type LegalPage } from "./copyLegal";
 import { pricingAr, pricingEn, type PricingPage } from "./copyPricing";
+import { notFoundAr, notFoundEn, type NotFoundPage } from "./copyNotFound";
 
 export type Locale = "en" | "ar";
 
@@ -531,6 +532,8 @@ export type Copy = {
   terms: LegalPage;
   refund: LegalPage;
   pricing: PricingPage;
+  /** The page for an address with nothing behind it (404; copyNotFound.ts). */
+  notFound: NotFoundPage;
   skip: string;
   nav: {
     products: string; business: string; how: string; workspace: string; questions: string; pricing: string;
@@ -672,6 +675,7 @@ const en: Copy = {
   terms: termsEn,
   refund: refundEn,
   pricing: pricingEn,
+  notFound: notFoundEn,
   company: {
     eyebrow: "Company details",
     title: "Who is behind ALYR",
@@ -3023,6 +3027,7 @@ const ar: Copy = {
   terms: termsAr,
   refund: refundAr,
   pricing: pricingAr,
+  notFound: notFoundAr,
   company: {
     eyebrow: "بيانات الشركة",
     title: "من وراء ALYR",

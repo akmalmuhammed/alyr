@@ -17,9 +17,13 @@ export function contactHref(): string {
   return CONTACT_EMAIL ? `mailto:${CONTACT_EMAIL}` : "#contact";
 }
 
+/** The pages the shell frames: every page in PATHS, and the page for an address with nothing behind it
+ * (NotFoundPage.tsx), which is no page of the sitemap and has no language twin to switch to. */
+export type ShellPage = PageKey | "not-found";
+
 /** The suite, as the Products menu lists it: every product in its fixed order, with its
  * one line; the two that come with every product say so ("With every product"). */
-function ProductsMenu({ locale, page }: { locale: Locale; page: PageKey }) {
+function ProductsMenu({ locale, page }: { locale: Locale; page: ShellPage }) {
   const t = copy[locale];
   return (
     <details className="pm" data-menu>
@@ -57,7 +61,7 @@ export function Shell({
   locale, page, cta, children,
 }: {
   locale: Locale;
-  page: PageKey;
+  page: ShellPage;
   /** The closing call. Its button, the header's and the phone bar's all say the one action,
    * "Book a check-up" (founder, 24 Oct 2026: one name on every page), from `home.final`
    * unless a page names its own; `short` is the header's on a phone. */
@@ -78,7 +82,7 @@ export function Shell({
     [PATHS.pricing[locale], t.nav.pricing],
   ] as const;
   const contact = contactLink(locale);
-  const other = PATHS[page][otherLocale];
+  const other = page === "not-found" ? PATHS.home[otherLocale] : PATHS[page][otherLocale];
   const name = (key: ProductKey) => t.products.items[key].name;
   const action = cta.action ?? t.home.final.action;
   const short = cta.short ?? t.home.final.short;
@@ -89,7 +93,7 @@ export function Shell({
   // (`data-hero`), so its button is the outlined twin from the first paint and without
   // scripts (site.css). site:check holds the header's mark and the opening's button together
   // (scripts/site/has-check.mjs).
-  const { kind } = pageKind(page);
+  const { kind } = page === "not-found" ? { kind: "plain" as const } : pageKind(page);
   const product = kind === "product";
   const hero = kind === "home" || kind === "sector" || (product && CONTACT_STATE !== "pending");
   // While "Try it free" is on (site.ts), the pages that have an opening button lead with it and
@@ -104,8 +108,8 @@ export function Shell({
 
   return (
     <>
-      {/* what the page is, for search and assistants, from the page's own words (structuredData.ts) */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: structuredDataJson(locale, page) }} />
+      {/* what the page is, for search and assistants, from the page's own words (structuredData.ts); an address with nothing behind it is no page to describe */}
+      {page !== "not-found" && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: structuredDataJson(locale, page) }} />}
       <a className="skip" href="#main">{t.skip}</a>
 
       <header className="top" data-header data-hero={hero || undefined}>

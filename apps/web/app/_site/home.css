@@ -39,7 +39,7 @@ main[data-page="home"] .link:hover { text-decoration-thickness: 2px; }
 /* The text on the start side: the headline, the promise, the check-up and who replies (since
    7 Nov 2026 with nothing beside it: the founder took the film out). */
 .hero-text { display: grid; justify-items: center; text-align: center; padding-top: clamp(1.5rem, 4vw, 3.5rem); }
-.hero .hero-title { font-size: var(--display); line-height: 1; letter-spacing: -.04em; font-weight: var(--weight-hero); }
+.hero .hero-title { font-size: var(--display); line-height: 1; letter-spacing: var(--tracking-heading); font-weight: var(--weight-hero); }
 [lang="ar"] .hero .hero-title { line-height: 1.25; letter-spacing: 0; font-weight: 600; }
 .hl { display: block; overflow-x: visible; overflow-y: clip; padding-block-end: .1em; margin-block-end: -.1em; }
 .hl > span { display: inline-block; }
