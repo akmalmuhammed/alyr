@@ -36,7 +36,7 @@
 .d-main > * { flex-shrink: 0; }
 .d-hero { display: grid; gap: 7px; }
 .d-eyebrow { font-family: var(--mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: var(--d-ink-3); }
-.d-cx:lang(ar) .d-eyebrow { font-family: var(--arabic); letter-spacing: 0; font-size: 10.5px; }
+.d-cx:lang(ar) .d-eyebrow { font-family: var(--arabic); letter-spacing: 0; text-transform: none; font-size: 10.5px; }
 .d-h1 { font-size: 22px; line-height: 1.08; font-weight: 600; letter-spacing: -.03em; }
 .d-cx:lang(ar) .d-h1 { line-height: 1.35; letter-spacing: 0; }
 .d-who-chip { justify-self: start; display: inline-flex; gap: 4px; padding: 4px 10px; border-radius: 14px; background: var(--d-card); box-shadow: var(--d-lift); font-size: 10.5px; color: var(--d-ink-2); }
