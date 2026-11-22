@@ -160,7 +160,8 @@
 .sf-age > span { display: grid; flex-basis: 0; min-width: 4px; overflow: hidden; background: var(--d-raise); box-shadow: inset 0 0 0 1px var(--hair); }
 .sf-age i { display: block; transform-origin: 0 50%; }
 [dir="rtl"] .sf-age i { transform-origin: 100% 50%; }
-.sf-legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .375rem var(--space-3); margin-top: .625rem; }
+/* two columns while a cell holds its label and amount on one line (9.5rem), one column in a narrower card (the tablet mosaic, 1024 px) instead of the amount running into the next label (design QA F-04) */
+.sf-legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr)); gap: .375rem var(--space-3); margin-top: .625rem; }
 .sf-legend > span { display: flex; align-items: center; gap: .375rem; min-width: 0; color: var(--text-muted); font-size: var(--ui-caption); white-space: nowrap; }
 .sf-legend i { width: .5rem; height: .5rem; flex: none; }
 .sf-legend b { color: var(--text); font-weight: var(--weight-regular); font-variant-numeric: tabular-nums; }
