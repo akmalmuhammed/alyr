@@ -1,6 +1,7 @@
 // Serve the built site (apps/web/out-site) on this machine, the way Cloudflare does, for
 // screenshots, axe and Lighthouse:
-// - clean addresses (/chat is chat.html, /ar is ar.html), 404.html for anything else;
+// - clean addresses (/chat is chat.html, /ar is ar.html), the nearest 404.html for anything else
+//   (an address under /ar gets ar/404.html);
 // - the content types and headers of out-site/_headers;
 // - brotli or gzip, because without compression Lighthouse read an LCP of 6.2 s for a page
 //   that is 2.3 s behind Cloudflare (alyr-design/verify.md).
@@ -66,6 +67,17 @@ function resolveFile(out, pathname) {
   return null;
 }
 
+/** Cloudflare's "404-page" handling: the nearest 404.html up the address's folders, so an address
+ * under /ar gets the Arabic one (out-site/ar/404.html) and anything else the English one. */
+function nearest404(out, pathname) {
+  const parts = normalize(pathname).split(/[\\/]+/).filter(Boolean);
+  for (let depth = parts.length - 1; depth >= 0; depth--) {
+    const candidate = join(out, ...parts.slice(0, depth), "404.html");
+    if (existsSync(candidate)) return candidate;
+  }
+  return join(out, "404.html");
+}
+
 /** Start the server; resolves to { url, port, close }. */
 export async function serveSite({ port, out = join(WEB, "out-site"), quiet = false } = {}) {
   if (!existsSync(join(out, "index.html"))) throw new Error(`${out} is not built. Run pnpm site:build first.`);
@@ -79,7 +91,7 @@ export async function serveSite({ port, out = join(WEB, "out-site"), quiet = fal
     let file = resolveFile(out, url.pathname);
     let status = 200;
     if (!file) {
-      file = join(out, "404.html");
+      file = nearest404(out, url.pathname);
       status = 404;
     }
     const type = TYPES[extname(file)] ?? "application/octet-stream";
