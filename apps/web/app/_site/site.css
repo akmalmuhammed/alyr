@@ -489,11 +489,11 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 .foot-lang:hover { text-decoration: underline; text-underline-offset: .25em; }
 /* The Doha Corniche in line, under the footer's last row, edge to edge, ending the page (D-162).
    The drawing is an alpha mask (white lines on nothing), so one file serves both themes: the
-   colour is --footer-art (moss on light, Volt on dark). Nothing fades and no text sits on it. It
+   colour is --footer-art (moss on light, Volt on dark). Nothing fades and no text sits on it: it starts one space step below the legal row, so the mast and the towers never cross the line or the language link (audit F-01). It
    is a real place, so it is not mirrored in Arabic (a mask does not flip with the direction).
    The 2x file is for screens that can show it. On a phone it is cropped to the towers. */
 .foot-art {
-  width: 100%; aspect-ratio: 1440 / 664; margin-top: calc(-1 * clamp(1.5rem, 5vw, 4.5rem)); margin-bottom: env(safe-area-inset-bottom, 0px);
+  width: 100%; aspect-ratio: 1440 / 664; margin-top: var(--space-3); margin-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--footer-art);
   -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
   -webkit-mask-position: center; mask-position: center;
@@ -505,7 +505,7 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
   :root:not(.al-js) .foot-art, .foot-art[data-near] { -webkit-mask-image: url("./art/corniche-line-2x.webp"); mask-image: url("./art/corniche-line-2x.webp"); }
 }
 @media (max-width: 47.99rem) {
-  .foot-art { margin-top: -1.5rem; aspect-ratio: 1 / .8; -webkit-mask-size: auto 100%; mask-size: auto 100%; -webkit-mask-position: 52% 0; mask-position: 52% 0; }
+  .foot-art { margin-top: var(--space-3); aspect-ratio: 1 / .8; -webkit-mask-size: auto 100%; mask-size: auto 100%; -webkit-mask-position: 52% 0; mask-position: 52% 0; }
 }
 
 /* ----------------------------------------------- shared by every public page */
