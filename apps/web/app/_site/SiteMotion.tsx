@@ -95,22 +95,35 @@ export function SiteMotion() {
     const heroButton = document.querySelector<HTMLElement>("[data-hero-cta]");
     const closing = document.getElementById("contact");
     let watchBar: IntersectionObserver | null = null;
+    let watchClosing: IntersectionObserver | null = null;
     if (bar && heroButton && closing) {
       let heroGone = false;
       let closingSeen = false;
-      watchBar = new IntersectionObserver((entries) => {
-        for (const entry of entries) {
-          if (entry.target === heroButton) heroGone = !entry.isIntersecting && entry.boundingClientRect.top < 0;
-          // Reached or passed: the footer below it stays clear too.
-          if (entry.target === closing) closingSeen = entry.isIntersecting || entry.boundingClientRect.top < 0;
-        }
+      const sync = () => {
         const up = heroGone && !closingSeen;
         bar.toggleAttribute("data-show", up);
         root.toggleAttribute("data-bar-up", up);
         root.toggleAttribute("data-hero-gone", heroGone);
+      };
+      watchBar = new IntersectionObserver((entries) => {
+        for (const entry of entries) heroGone = !entry.isIntersecting && entry.boundingClientRect.top < 0;
+        sync();
       });
+      // "Reached or passed": the closing call, and the footer below it, keep the bar down. The
+      // viewport is stretched far upward for this observer, so the call counts as intersecting
+      // from the moment its top is above the bottom of the screen and for good after it has
+      // scrolled out. An observer on the plain viewport reports only a crossing, so a jump past
+      // the call (the End key, an anchor, a restored scroll position) never reported it and the
+      // bar came up over the footer's art.
+      watchClosing = new IntersectionObserver(
+        (entries) => {
+          closingSeen = entries[entries.length - 1].isIntersecting;
+          sync();
+        },
+        { rootMargin: "100000px 0px 0px 0px" },
+      );
       watchBar.observe(heroButton);
-      watchBar.observe(closing);
+      watchClosing.observe(closing);
     }
 
     // While the closing call is on screen, its Volt button is the page's one: the header's
@@ -172,6 +185,7 @@ export function SiteMotion() {
       stopLoops();
       dark?.disconnect();
       watchBar?.disconnect();
+      watchClosing?.disconnect();
       atClosing?.disconnect();
       root.removeAttribute("data-at-closing");
       root.removeAttribute("data-bar-up");
