@@ -12,6 +12,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
+import mcp_tools_support
 from alyr.db import Database
 from alyr.seed_qirfa import QIRFA_TENANT_ID, ensure_qirfa_tenant, reset_qirfa
 from conftest import APP_DSN, OWNER_DSN
@@ -23,6 +24,7 @@ from mcp_tools_support import (
     credit,
     customer,
     deep_text,
+    just_now,
     keys_of,
     local_at,
     order,
@@ -46,6 +48,34 @@ def world(client_factory, monkeypatch):
 def qar(minor: int) -> str:
     whole, part = divmod(minor, 100)
     return f"QAR {whole:,}" + (f".{part:02d}" if part else "")
+
+
+# ── the clock the seeds use ────────────────────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize("utc", ["20:56:00", "21:00:00", "21:00:30", "21:05:00", "21:11:30",
+                                 "21:30:00", "23:59:59", "00:30:00", "12:00:00"])
+def test_orders_seeded_as_just_now_are_in_the_shops_own_day_at_any_hour(utc, monkeypatch):
+    """Doha is three hours ahead of UTC, so from 21:00 UTC it is already tomorrow there: an order
+    a bare 12 minutes back from 21:05 UTC is yesterday's in Doha and 'today' would not count it
+    (the five tests that failed in that window, 21 Nov 2026)."""
+    moment = datetime.fromisoformat(f"2026-11-22T{utc}").replace(tzinfo=UTC)
+
+    class Clock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return moment.astimezone(tz) if tz else moment.replace(tzinfo=None)
+
+    monkeypatch.setattr(mcp_tools_support, "datetime", Clock)
+    began = moment.astimezone(QATAR).replace(hour=0, minute=0, second=0, microsecond=0)
+    older, newer = mcp_tools_support.just_now(0.2), mcp_tools_support.just_now(0.1)
+    for made in (older, newer):
+        assert began <= made <= moment
+        assert made.astimezone(QATAR).date() == moment.astimezone(QATAR).date()
+    assert older <= newer
+    # Far enough into the day, the age is the plain one.
+    if moment - began > timedelta(hours=2):
+        assert moment - older == timedelta(hours=0.2)
 
 
 # ── what is offered ────────────────────────────────────────────────────────────────────────────
@@ -331,7 +361,7 @@ def test_no_tool_gives_a_full_name_a_full_number_or_an_id_of_a_customer(world):
 def test_a_name_a_customer_chose_reaches_an_app_cleaned_cut_and_marked_in_every_tool(world):
     hostile = "‮" + INJECTION + " " + "x" * 300 + "​"
     liar = customer(world.shop, ("Mallory " + hostile, "+97455500999"))
-    order(world.shop, liar, 30, 1000, hours_ago=0.1)
+    order(world.shop, liar, 30, 1000, at=just_now(0.1))
     # The order is wholly the hostile customer's; the answer must carry their name as data.
     answer = world.ask("orders", {"when": "today"})
     mallory = next(o for o in answer["orders"] if o["number"] == 30)["customer"]
@@ -345,7 +375,7 @@ def test_a_name_a_customer_chose_reaches_an_app_cleaned_cut_and_marked_in_every_
             assert text.startswith("Anything marked untrusted was written by a customer"), tool
     # The name is the customer's even when it is one word of the hostile text: still only data.
     one_word = customer(world.shop, (INJECTION.replace(" ", "_"), "+97455500998"))
-    order(world.shop, one_word, 31, 1000, hours_ago=0.1)
+    order(world.shop, one_word, 31, 1000, at=just_now(0.1))
     seen = [o["customer"] for o in world.ask("orders", {"when": "today"})["orders"]
             if o["number"] == 31][0]["first_name"]
     assert seen["untrusted"] is True and len(seen["text"]) <= 40 and seen["truncated"] is True
@@ -395,7 +425,7 @@ def test_one_business_never_reads_another(client_factory, monkeypatch):
     mine.data = seed_trade(mine.shop)
     other = build(client_factory, monkeypatch, roles=("owner",))
     layla = customer(other.shop, ("Layla Al-Sulaiti", "+97455500111"))
-    order(other.shop, layla, 1, 8800, hours_ago=0.1, lines=(("Maamoul box", 1),))
+    order(other.shop, layla, 1, 8800, at=just_now(0.1), lines=(("Maamoul box", 1),))
     credit(other.shop, layla, 7700, days_ago=80)
     booking(other.shop, layla, 1, local_at(1, 11), service="Facial")
     owner_sql("update tenants set name = 'Dar Al-Hilal' where id = $1", other.tenant_id)
