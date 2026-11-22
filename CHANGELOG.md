@@ -5,6 +5,7 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- The time and ticks on a drawn WhatsApp bubble keep their gap to the text with logical margins (`margin-inline-start`), so one rule serves both directions and the Arabic override is gone (Arabic audit of 22 Nov, P2-5; no visible change: every bubble on 12 pages measured the same margins before and after, and the captures are pixel-identical).
 
 ## v0.3.27 (22 Nov 2026)
 - A business with many reviews and no reply to any of them no longer passes Discovery's review check or reads 100 for Reviews (the first client's audit, T9, D-169; no migration, no new dependency, English and Arabic): the existing rule "reviews waiting for an answer" now also fires when 10 or more reviews older than a week have not had a single reply, of any stars (it fired only for 3 or more unanswered reviews of 3 stars or fewer), with the evidence "Reviews over 7 days old that have a reply from the business: 0 of 20". Still twelve rules. A five-star page of 40 reviews with no reply now reads 50 for Reviews, not 100; the sample business's scores do not change.
