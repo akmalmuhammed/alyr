@@ -45,7 +45,7 @@ export function Consent({ surface }: { surface: "site" | "product" }) {
   const privacy = `${surface === "site" ? "" : SITE}${lang === "ar" ? "/ar/privacy" : "/privacy"}`;
 
   return (
-    <section className="ph-consent" role="region" aria-label={t.title} dir={lang === "ar" ? "rtl" : "ltr"} lang={lang} data-ph-block>
+    <section className="ph-consent" role="region" aria-label={t.title} dir={lang === "ar" ? "rtl" : "ltr"} lang={lang} data-surface={surface} data-ph-block>
       <div className="ph-consent-text">
         <b>{t.title}</b>
         <p>{surface === "site" ? t.site : t.product} <a href={privacy}>{t.more}</a></p>

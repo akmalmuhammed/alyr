@@ -1,0 +1,23 @@
+/* The page for an address with nothing behind it (NotFoundPage.tsx). Tokens only. */
+.nf { padding-block: var(--sec); }
+.nf-eyebrow, .nf-k {
+  margin: 0 0 var(--space-3); font-family: var(--mono); font-size: var(--fs-label); font-weight: var(--weight-medium);
+  line-height: 1.35; letter-spacing: var(--tracking-label-lg); text-transform: uppercase; color: var(--text-muted);
+}
+[lang="ar"] .nf-eyebrow, [lang="ar"] .nf-k { font-family: var(--arabic); font-size: var(--fs-note); letter-spacing: 0; text-transform: none; }
+.nf-title {
+  max-width: 40rem; margin: 0 0 var(--space-3); font-size: var(--h2); font-weight: var(--weight-heading);
+  line-height: var(--leading-heading); letter-spacing: var(--tracking-heading); text-wrap: balance;
+}
+[lang="ar"] .nf-title { line-height: var(--leading-arabic-heading); letter-spacing: 0; }
+.nf-lead { max-width: 40rem; margin: 0 0 var(--space-4); font-size: var(--fs-body); line-height: var(--leading-body); color: var(--text-muted); text-wrap: pretty; }
+[lang="ar"] .nf-lead { line-height: var(--leading-arabic-body); }
+.nf-actions { margin: 0 0 var(--space-5); }
+.nf-products { padding-top: var(--space-4); border-top: 1px solid var(--line); }
+.nf-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 var(--col-gap); margin: 0; padding: 0; list-style: none; }
+@media (min-width: 36rem) { .nf-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 60rem) { .nf-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.nf-link { display: grid; gap: var(--space-1); min-height: 2.75rem; padding-block: var(--space-3); border-bottom: 1px solid var(--line); color: var(--text); }
+.nf-name { font-weight: var(--weight-medium); }
+.nf-line { font-size: var(--fs-note); color: var(--text-muted); }
+.nf-link:hover .nf-name { text-decoration: underline; text-underline-offset: .25em; }
