@@ -578,6 +578,18 @@ a.pm-link[aria-current="page"] .pm-name::after { content: ""; display: inline-bl
 .foot-products a { color: var(--text); font-weight: 600; }
 .foot-products a[aria-current="page"], .foot-sectors a[aria-current="page"], .foot-site a[aria-current="page"] { color: var(--text); text-decoration: underline; text-decoration-thickness: var(--rule-hairline); text-underline-offset: .25em; }
 
+/* Tap targets on a phone are at least 44 x 44 (alyr-design 8) with no change to the look. A short
+   footer link (an Arabic word is 38 px wide) is widened toward its end; the email in the closing
+   call, the "See ALYR ..." link and a guide's title (each 26 to 37 px tall) get a hit area drawn
+   by a pseudo-element that grows only as far as 44 px, inside the gaps around them. */
+@media (max-width: 47.99rem) {
+  .foot-nav a { min-width: 2.75rem; }
+  .cta-address, .who-link, .gd-row-title a { position: relative; }
+  .cta-address::after, .who-link::after, .gd-row-title a::after {
+    content: ""; position: absolute; inset-inline: 0; inset-block: min(0px, calc((100% - 2.75rem) / 2));
+  }
+}
+
 /* The phone's contact bar, on every page with an opening button: in once that button has
    gone, out at the closing call. */
 .bar { display: none; }

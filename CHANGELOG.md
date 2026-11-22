@@ -5,6 +5,7 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- On phones the smallest targets reach 44 px: the short Arabic footer links ("المخابز", "الأسعار" were 38 and 39 px wide) are 44 px wide, and the email address in the closing call (31 to 36 px tall), the "See ALYR ..." link on `/chat` (26 to 30 px) and a guide's title in the guides index (31 to 37 px) have a 44 px hit area drawn around them; nothing moves, the pages are pixel-identical (Arabic audit of 22 Nov, P2-1; phones only, no colour or wording changed).
 
 ## v0.3.27 (22 Nov 2026)
 - A business with many reviews and no reply to any of them no longer passes Discovery's review check or reads 100 for Reviews (the first client's audit, T9, D-169; no migration, no new dependency, English and Arabic): the existing rule "reviews waiting for an answer" now also fires when 10 or more reviews older than a week have not had a single reply, of any stars (it fired only for 3 or more unanswered reviews of 3 stars or fewer), with the evidence "Reviews over 7 days old that have a reply from the business: 0 of 20". Still twelve rules. A five-star page of 40 reviews with no reply now reads 50 for Reviews, not 100; the sample business's scores do not change.
