@@ -16,17 +16,14 @@ type Props = {
   note: string;
 };
 
-const ARABIC_DIGITS = "٠١٢٣٤٥٦٧٨٩";
-
-/** A clock time as WhatsApp shows it: "4:12 PM", or "٤:١٢ م" in Arabic. Formatted by
- * hand so the server and the browser always produce the same text. */
+/** A clock time as WhatsApp shows it: "4:12 PM", or "4:12 م" in Arabic. Formatted by
+ * hand so the server and the browser always produce the same text. The digits are Western in
+ * both languages (the Arabic rule: times, money and counts never use Eastern Arabic digits). */
 function clock(locale: Locale, minutes: number): string {
   const hour = Math.floor(minutes / 60) % 24;
   const text = `${hour % 12 || 12}:${String(minutes % 60).padStart(2, "0")}`;
-  if (locale === "ar") {
-    return `${text.replace(/\d/g, (d) => ARABIC_DIGITS[Number(d)])} ${hour < 12 ? "ص" : "م"}`;
-  }
-  return `${text} ${hour < 12 ? "AM" : "PM"}`;
+  const half = locale === "ar" ? (hour < 12 ? "ص" : "م") : hour < 12 ? "AM" : "PM";
+  return `${text} ${half}`;
 }
 
 /**
@@ -203,7 +200,7 @@ export function ProductDemo({ product, locale, sample, note }: Props) {
                       {line.doc && <WaDoc name={line.doc.name} meta={line.doc.meta} />}
                       <span className="wa-text" dir="auto">{line.text}</span>
                       <span className="wa-meta">
-                        <span dir="ltr">{clock(locale, line.at ?? demo.start + index * 2)}</span>
+                        <bdi>{clock(locale, line.at ?? demo.start + index * 2)}</bdi>
                         {mine && (
                           <svg className="wa-ticks" viewBox="0 0 18 12" aria-hidden="true">
                             <path d="M1 6.5 4.2 9.7 10.6 2.3" />
