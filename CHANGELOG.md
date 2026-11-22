@@ -5,6 +5,7 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- The homepage film and its poster (`/media/*`) can now be kept by a returning visitor's browser for a day, then checked with the server (a 304 when unchanged), where they had no lifetime and were checked with the server on every visit, twice per load (the poster and the film's first megabyte; Arabic audit of 22 Nov, P1-6). Not the one-year rule of `/_next/static/*`: `home.mp4` and `home-poster.jpg` are not versioned, so a replaced film shows within a day, or at once if it is given a new file name. One header block in `scripts/build-site.sh`; nothing else changes.
 
 ## v0.3.27 (22 Nov 2026)
 - A business with many reviews and no reply to any of them no longer passes Discovery's review check or reads 100 for Reviews (the first client's audit, T9, D-169; no migration, no new dependency, English and Arabic): the existing rule "reviews waiting for an answer" now also fires when 10 or more reviews older than a week have not had a single reply, of any stars (it fired only for 3 or more unanswered reviews of 3 stars or fewer), with the evidence "Reviews over 7 days old that have a reply from the business: 0 of 20". Still twelve rules. A five-star page of 40 reviews with no reply now reads 50 for Reviews, not 100; the sample business's scores do not change.

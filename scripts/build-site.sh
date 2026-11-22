@@ -65,7 +65,10 @@ node "$root/scripts/site-defer-scripts.mjs" out-site/index.html out-site/ar.html
   $(for page in $pages $plain; do echo "out-site/$page.html out-site/ar/$page.html"; done)
 
 # Cloudflare Pages reads these two files. The link-preview image has no file extension,
-# so its type is stated; hashed assets never change, so browsers may keep them.
+# so its type is stated; hashed assets never change, so browsers may keep them. The film and its
+# poster (/media/*) are not hashed (home.mp4 stays home.mp4 when the film is replaced), so they get
+# a day, then a check (a 304 when unchanged), not the one-year rule. A film that must change at
+# once gets a new file name (HOME_VIDEO in apps/web/app/_site/site.ts).
 cat > out-site/_headers <<'EOF'
 /opengraph-image
   Content-Type: image/png
@@ -73,6 +76,8 @@ cat > out-site/_headers <<'EOF'
   Cache-Control: no-cache
 /_next/static/*
   Cache-Control: public, max-age=31536000, immutable
+/media/*
+  Cache-Control: public, max-age=86400, must-revalidate
 /*
   Strict-Transport-Security: max-age=31536000
   X-Content-Type-Options: nosniff
