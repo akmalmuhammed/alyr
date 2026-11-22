@@ -5,6 +5,7 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- On a phone, the sticky "Book a check-up" bar no longer comes up over the footer's art when the page is scrolled to its end in one jump (the End key, an anchor, a restored scroll position): it kept the bar down only when it had seen the closing call cross the screen, and a jump never crossed it. The bar now stays down from the moment the closing call is reached, however it is reached, and still comes up between the opening button and the closing call (Arabic audit of 22 Nov, P2-3; phones only, no colour or wording changed).
 
 ## v0.3.27 (22 Nov 2026)
 - A business with many reviews and no reply to any of them no longer passes Discovery's review check or reads 100 for Reviews (the first client's audit, T9, D-169; no migration, no new dependency, English and Arabic): the existing rule "reviews waiting for an answer" now also fires when 10 or more reviews older than a week have not had a single reply, of any stars (it fired only for 3 or more unanswered reviews of 3 stars or fewer), with the evidence "Reviews over 7 days old that have a reply from the business: 0 of 20". Still twelve rules. A five-star page of 40 reviews with no reply now reads 50 for Reviews, not 100; the sample business's scores do not change.
