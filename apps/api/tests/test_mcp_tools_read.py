@@ -274,7 +274,7 @@ def test_on_the_qirfa_sample_shop_the_numbers_match_the_dashboard(client_factory
     environment(monkeypatch, agent_clock=now.isoformat())
 
     async def make():
-        await ensure_qirfa_tenant(OWNER_DSN)
+        await ensure_qirfa_tenant(OWNER_DSN, now)
         db = Database(APP_DSN)
         await db.connect()
         try:
