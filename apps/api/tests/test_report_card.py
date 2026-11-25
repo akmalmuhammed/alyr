@@ -6,6 +6,7 @@ import asyncio
 import json
 import re
 import struct
+import sys
 from datetime import UTC, date, datetime
 from uuid import uuid4
 
@@ -110,6 +111,44 @@ def test_the_captured_report_samples_match_the_engine(samples, key, lang):
     assert saved["caption"] == text["caption"] and saved["card"] == data
     for suffix in ("", ".paper"):
         assert png_size((OUT / f"{key}.{lang}{suffix}.png").read_bytes()) == (1080, 566)
+
+
+def frozen_clock(monkeypatch, real_now: datetime) -> None:
+    """Make every `datetime.now()` in ALYR's code read `real_now`, whatever the argument:
+    the day the sample is built on, as opposed to the day it is drawn for."""
+
+    class Frozen(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return real_now.astimezone(tz) if tz else real_now.replace(tzinfo=None)
+
+    for name, module in list(sys.modules.items()):
+        if name.startswith("alyr.") and getattr(module, "datetime", None) is datetime:
+            monkeypatch.setattr(module, "datetime", Frozen)
+
+
+@pytest.mark.parametrize("real_now", [
+    datetime(2026, 11, 22, 3, 0, tzinfo=UTC),   # a Sunday, the day the samples passed in CI
+    datetime(2026, 11, 25, 6, 39, tzinfo=UTC),  # the Wednesday the nightly run failed
+    datetime(2027, 3, 3, 21, 30, tzinfo=UTC),   # months on, late in the day
+], ids=["22-nov", "25-nov", "3-mar-2027"])
+def test_the_samples_do_not_depend_on_the_date_they_are_built_on(samples, monkeypatch, real_now):
+    """The same three businesses, in both languages, whatever the real date is: the shop's
+    start date, the weeks it compares and every number on the card come from REPORT_NOW."""
+    frozen_clock(monkeypatch, real_now)
+    assert sys.modules["alyr.seed_qirfa"].datetime.now(UTC) == real_now  # the clock is faked
+
+    async def go():
+        db = Database(APP_DSN)
+        await db.connect()
+        try:
+            await seed(db, OWNER_DSN)
+            return {(key, lang): await render_one(db, tenant, lang)
+                    for key, tenant in SAMPLES for lang in ("en", "ar")}
+        finally:
+            await db.close()
+
+    assert asyncio.run(go()) == samples
 
 
 # ── the rules, without a database ────────────────────────

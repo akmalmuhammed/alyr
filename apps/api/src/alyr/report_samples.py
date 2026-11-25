@@ -39,7 +39,7 @@ SAMPLES = (("bakery", QIRFA_TENANT_ID), ("salon", SALON.tenant_id),
 
 
 async def seed(db: Database, owner_dsn: str) -> None:
-    await ensure_qirfa_tenant(owner_dsn)
+    await ensure_qirfa_tenant(owner_dsn, REPORT_NOW)
     await reset_qirfa(db, now=REPORT_NOW, web_url=SITE)
     for sample in (SALON, HOME):
         await ensure_sample_tenant(owner_dsn, sample, REPORT_NOW, 56)

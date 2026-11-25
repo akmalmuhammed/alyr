@@ -16,7 +16,7 @@ NOW = datetime(2026, 10, 15, 9, 30, tzinfo=UTC)
 
 def make_bakery() -> tuple[dict, dict]:
     async def go():
-        await ensure_qirfa_tenant(OWNER_DSN)
+        await ensure_qirfa_tenant(OWNER_DSN, NOW)
         db = Database(APP_DSN)
         await db.connect()
         try:
