@@ -72,10 +72,14 @@ async function media(request, env) {
 
 async function forward(request, url) {
   const assets = url.pathname.startsWith("/ingest/static/");
-  const target = new URL(url.pathname.replace(/^\/ingest/, "") + url.search,
-    assets ? "https://eu-assets.i.posthog.com" : "https://eu.i.posthog.com");
+  const posthog = assets ? "https://eu-assets.i.posthog.com" : "https://eu.i.posthog.com";
+  // Joined as text, never resolved: "/ingest//example.com/" would otherwise name another host
+  // and this Worker would fetch it for anyone (pen test, 25 Nov).
+  const target = new URL(posthog + url.pathname.replace(/^\/ingest/, "") + url.search);
+  if (target.origin !== posthog) return new Response("Not found", { status: 404 });
   const headers = new Headers(request.headers);
   headers.delete("cookie");
+  headers.delete("authorization");
   // The cookieless count needs the visitor's address for a moment; PostHog discards it.
   const ip = request.headers.get("CF-Connecting-IP");
   if (ip) headers.set("X-Forwarded-For", ip);

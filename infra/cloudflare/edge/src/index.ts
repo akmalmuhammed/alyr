@@ -41,7 +41,11 @@ export default {
     const origin = ORIGINS[url.hostname];
     if (!origin) return new Response("Not found", { status: 404 });
     const upstream = new URL(env[origin]);
-    const target = new URL(url.pathname + url.search, upstream);
+    // The path is joined to the service's address as text, never resolved against it: a path
+    // that starts with "//" names another host, and the request would carry the visitor's
+    // cookies there (pen test, 25 Nov). The check after it is a second guard.
+    const target = new URL(upstream.origin + url.pathname + url.search);
+    if (target.origin !== upstream.origin) return new Response("Not found", { status: 404 });
 
     const headers = new Headers(request.headers);
     for (const name of ABOUT_THE_VISITOR) headers.delete(name);
@@ -69,7 +73,9 @@ export default {
     const location = answer.headers.get("Location");
     if (location) {
       const moved = new URL(location, target);
-      if (moved.host === upstream.host) {
+      // Either service's own address, not only the one asked: app.alyr.qa forwards /api to the
+      // API, whose trailing-slash redirect names the API's run.app address.
+      if (moved.host === new URL(env.WEB_ORIGIN).host || moved.host === new URL(env.API_ORIGIN).host) {
         moved.protocol = "https:";
         moved.host = url.hostname;
         response.headers.set("Location", moved.toString());

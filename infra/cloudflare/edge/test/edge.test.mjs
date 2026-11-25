@@ -128,3 +128,19 @@ test("a redirect to the service's own address is pointed back at the public name
   const kept = await through("https://app.alyr.qa/login", { answer: away });
   assert.equal(kept.response.headers.get("location"), "https://example.com/pay");
 });
+
+test("a path that starts with // never leaves the service (pen test, 25 Nov)", async () => {
+  for (const url of ["https://app.alyr.qa//example.com/", "https://api.alyr.qa//example.com/x?y=1",
+    "https://api.alyr.qa///example.com/", "https://app.alyr.qa//user:pass@example.com/"]) {
+    const { calls } = await through(url, { headers: { ...VISITOR, Cookie: "alyr_session=s" } });
+    assert.equal(calls.length, 1, url);
+    const sent = new URL(calls[0].target);
+    assert.ok(sent.origin === WEB || sent.origin === API, `${url} went to ${sent.origin}`);
+  }
+});
+
+test("the API's redirect through app.alyr.qa is pointed back at app.alyr.qa", async () => {
+  const api = new Response(null, { status: 307, headers: { Location: `${API}/api/workspace` } });
+  const { response } = await through("https://app.alyr.qa/api/workspace%2f", { answer: api });
+  assert.equal(response.headers.get("location"), "https://app.alyr.qa/api/workspace");
+});
