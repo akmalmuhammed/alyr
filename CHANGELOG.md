@@ -5,6 +5,7 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- Internal: the sample bakery's start date, and so the report samples' week-on-week bars, no longer depend on the real date (the nightly coverage run of 25 Nov failed on it): `ensure_qirfa_tenant` takes the sample's own `now`, like the salon and home-services samples; no migration, no new dependency, no captured sample file changed
 
 ## v0.3.28 (22 Nov 2026)
 - The homepage film and its poster (`/media/*`) can now be kept by a returning visitor's browser for a day, then checked with the server (a 304 when unchanged), where they had no lifetime and were checked with the server on every visit, twice per load (the poster and the film's first megabyte; Arabic audit of 22 Nov, P1-6). Not the one-year rule of `/_next/static/*`: `home.mp4` and `home-poster.jpg` are not versioned, so a replaced film shows within a day, or at once if it is given a new file name. One header block in `scripts/build-site.sh`; nothing else changes.

@@ -53,7 +53,7 @@ def sample_view(agent_view: dict) -> dict:
 
 
 async def capture(db: Database, owner_dsn: str, out: Path = OUT) -> list[Path]:
-    await ensure_qirfa_tenant(owner_dsn)
+    await ensure_qirfa_tenant(owner_dsn, SAMPLE_NOW)
     await reset_qirfa(db, now=SAMPLE_NOW, web_url=SITE)
     for sample in (SALON, HOME):
         await ensure_sample_tenant(owner_dsn, sample, SAMPLE_NOW, 56)

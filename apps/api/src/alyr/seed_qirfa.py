@@ -860,12 +860,14 @@ class Bakery:
         }
 
 
-async def ensure_qirfa_tenant(owner_dsn: str) -> None:
+async def ensure_qirfa_tenant(owner_dsn: str, now: datetime | None = None) -> None:
     """The business row, its client and its private test line. Needs the owner role: the
-    app role cannot write the global tables."""
+    app role cannot write the global tables. Pass the same `now` as `reset_qirfa`: the shop's
+    start date (`onboarded_at`) is set from it, and the week-on-week comparisons read it, so
+    a sample drawn for a fixed day must not take it from the real clock."""
     conn = await asyncpg.connect(owner_dsn)
     try:
-        started = datetime.now(UTC) - timedelta(days=DAYS + 2)
+        started = (now or datetime.now(UTC)) - timedelta(days=DAYS + 2)
         await conn.execute(
             "insert into tenants (id, name, name_ar, slug, business_type, area, onboarding_way, "
             "onboarding_step, onboarded_at, created_at) "
