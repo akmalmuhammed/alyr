@@ -22,8 +22,8 @@ from test_consent import owner_sql
 
 @pytest.fixture
 def google_sample(monkeypatch):
-    """The sample read as if it were Google's, with its Business Profile connected (so its review
-    replies are measured and proposed, as a connected profile's would be)."""
+    """The sample read as if it were Google's, its Business Profile connected (its review replies
+    are measured and proposed, as a connected profile's would be)."""
     monkeypatch.setattr(base, "GOOGLE_SOURCES", base.GOOGLE_SOURCES | {"sample"})
     monkeypatch.setattr(sample, "BUSINESS_PROFILE", True)
 

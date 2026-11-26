@@ -16,7 +16,7 @@ and the script lets it win for its field, so a later check-up shows the effect o
 
 **Three improvement stages.** Run *n* returns stage `min(n_prior_done_runs, 3)`. Stage 0 is
 deliberately untidy, so every one of the twelve rules fires at least once (`listing_unclaimed`
-and `review_unanswered` only with `BUSINESS_PROFILE` on: they need a connected Business Profile).
+and `review_unanswered` only while `BUSINESS_PROFILE` is on: they need a connected profile).
 Each later stage is the owner having fixed something:
 
 * stage 1: opening hours added at Al Sadd, a category and the right phone on the website for
@@ -59,11 +59,13 @@ WA_LINK = "https://wa.me/97455550150"
 WRONG_WA_LINK = "https://wa.me/97455550999"
 
 BUSINESS = "Nuqta Car Care"
-# The sample stands for a business whose public Google page is read and whose Business Profile is
-# not connected (Discovery decision 9): whether a listing is claimed and whether the owner replied
-# to a review are "not measured" (`rules.owner_side_measured`). A test of the review-reply flow
-# sets this to True, as a business would be once its Business Profile is connected.
-BUSINESS_PROFILE = False
+# Whether the sample stands for a business whose Google Business Profile is connected. It is, by
+# default: its proposals write the listing, which only a connected profile could do, and the review
+# reply flow (spec 066) is shown on it. Off, it is a business whose public page is read and whose
+# profile is not connected (Discovery decision 9): whether a listing is claimed and whether the
+# owner replied are then "not measured" (`rules.owner_side_measured`). Which one a shop's sample
+# shows is the lead's call (a connection setting is the natural home for it).
+BUSINESS_PROFILE = True
 BUSINESS_AR = "نقطة لعناية السيارات"
 
 # key, English, Arabic, the area as Google would show it, the area in Arabic

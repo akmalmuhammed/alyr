@@ -56,3 +56,26 @@ def test_a_round_recorded_by_hand_measures_what_staff_recorded(rule_id):
 def test_the_other_listing_rules_are_still_measured_from_a_public_read():
     ctx, _ = _ctx("places")
     assert _state("listing_missing", ctx) == rules.PASS
+
+
+# ── the sample with its Business Profile not connected (Discovery decision 9) ─────────────────
+
+
+def test_the_sample_not_connected_raises_neither_rule_and_proposes_no_reply(
+        client_factory, monkeypatch):
+    from alyr.modules.discovery.connectors import sample
+    from discovery_proposals_support import prepared_shop, proposals
+    from discovery_support import findings
+
+    monkeypatch.setattr(sample, "BUSINESS_PROFILE", False)
+    shop = prepared_shop(client_factory, monkeypatch)
+    raised = {f["rule_id"] for f in findings(shop.owner, "all")}
+    assert not raised & {"listing_unclaimed", "review_unanswered"}
+    assert {"hours_missing", "phone_conflict", "name_conflict"} <= raised
+    assert all(p["type"] != "reply_to_review" for p in proposals(shop.owner))
+    # On the Checks screen both say "Not measured" for every place, and are left out of counts.
+    places = shop.owner.get("/api/discovery/checks").json()["places"]
+    assert places
+    for row in places:
+        assert row["checks"]["listing_unclaimed"] == rules.NOT_MEASURED
+        assert row["checks"]["review_unanswered"] == rules.NOT_MEASURED
