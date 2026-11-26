@@ -39,6 +39,8 @@ NONE_TEXT: dict[str, tuple[str, str]] = {
     "default": ("none", "لا شيء"),
     "review_reply": ("no reply", "لا رد"),
 }
+# A "before" read from Google, removed after 30 days (`retention.py`): `{"removed": true}`.
+REMOVED_TEXT = ("removed after 30 days (Google's terms)", "حُذف بعد 30 يومًا (وفق شروط Google)")
 CLOSED = ("closed", "مغلق")
 TO = ("to", "إلى")
 DAY_LONG_AR = ("السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة")
@@ -370,6 +372,9 @@ def change_lines(change: dict, lang: str, target: str = "listing") -> dict:
     }
     for side in ("before", "after"):
         value = change.get(side)
+        if isinstance(value, dict) and value.get("removed") is True:
+            out[side] = {"text": pick(REMOVED_TEXT, lang), "lines": []}
+            continue
         out[side] = {
             "text": value_text(field, value, lang),
             "lines": hours_lines(value, lang) if field == "hours" else [],
