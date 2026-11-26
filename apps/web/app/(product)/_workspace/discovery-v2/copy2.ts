@@ -361,9 +361,9 @@ export const T2 = {
     // Answers v2 (G #362): per tool and language, a likely range, and the floor of 30
     notEnoughTitle: "الإجابات أقل من أن تبيّن مدى ثبات هذا الرقم",
     notEnoughBody: (most: number) => `لا تُذكر نسبة ولا تغيّر إلا من 30 إجابة لأداة واحدة بلغة واحدة. وقد عدّ هذا الفحص ${n(most)} على الأكثر، لذا جاء كل نطاق أدناه واسعاً ولا يُذكر أي تغيّر.`,
-    sureRange: (low: number, high: number) => `على الأرجح بين ${n(low)}% و${n(high)}%`,
-    sureShare: (share: number) => `${n(share)}% من الإجابات`,
-    sureAria: (name: string, named: number, total: number, low: number, high: number) => `${name}: ذُكر نشاطك في ${n(named)} من ${n(total)}، على الأرجح بين ${n(low)}% و${n(high)}%`,
+    sureRange: (low: number, high: number) => `على الأرجح بين ${ar(`${n(low)}%`)} و${ar(`${n(high)}%`)}`,
+    sureShare: (share: number) => `${ar(`${n(share)}%`)} من الإجابات`,
+    sureAria: (name: string, named: number, total: number, low: number, high: number) => `${name}: ذُكر نشاطك في ${n(named)} من ${n(total)}، على الأرجح بين ${ar(`${n(low)}%`)} و${ar(`${n(high)}%`)}`,
     groupName: (tool: string, lang: string) => `${tool} · ${lang}`,
     rangeScale: "من 0% إلى 100%",
     citedNoYou: (count: number) => (count === 0 ? "" : `${n(count)} منها لم تذكر نشاطك`),

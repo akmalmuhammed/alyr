@@ -33,6 +33,8 @@ const cap = (value: number) => WORDS_EN[value] || n(value);
 /** A range keeps its two ends together: word joiners round the dash, so a line never breaks inside it. */
 export const keep = (text: string) => text.replace(/–/g, "⁠–⁠");
 const ar = (text: string) => isolate(keep(text));
+/** A label inside an English sentence: plain words in small letters, a name (WhatsApp, Google, ALYR) as it is. */
+export const lowerWords = (text: string) => text.split(" ").map((w) => (/^[A-Z][a-z]*$/.test(w) ? w.toLowerCase() : w)).join(" ");
 
 const DAY_EN: Record<DayKey, [one: string, many: string]> = {
   sat: ["Saturday", "Saturdays"], sun: ["Sunday", "Sundays"], mon: ["Monday", "Mondays"], tue: ["Tuesday", "Tuesdays"],
@@ -72,7 +74,7 @@ export const T = {
     sampleSource: "These are the sample business's pages, not yours.",
     notChecked: "ALYR has not checked your business yet.",
     remaining: (names: string) => `Still waiting: ${names}.`,
-    waitingName: (field: string, where: WhereKey) => `the ${field.toLowerCase()} on ${WHERE.en.mid[where]}`,
+    waitingName: (field: string, where: WhereKey) => `the ${lowerWords(field)} on ${WHERE.en.mid[where]}`,
     ownerName: { whatsapp_link_missing: "the WhatsApp link on your website" } as Record<string, string>,
     onItsWay: (what: string, where: WhereKey) => `${what} is on its way to ${WHERE.en.mid[where]}.`,
     matchOf: (measured: number) => ({ pre: "", of: ` of ${n(measured)}`, post: " checks match" }),
@@ -109,7 +111,7 @@ export const T = {
     barTitle: (date: string, orders: number, bookings: number) => `${date}: ${counted(orders, N.order, "en")}, ${counted(bookings, N.booking, "en")}`,
     onlyDay: (day: DayKey) => `Only ${DAY_EN[day][0]} changes`,
     daysChange: (count: number) => `${n(count)} days change`,
-    onlyField: (field: string) => `Only the ${field.toLowerCase()} changes`,
+    onlyField: (field: string) => `Only the ${lowerWords(field)} changes`,
     whereChip: (where: WhereKey) => WHERE.en.chip[where],
     approve: "Approve",
     approveExact: (exact: string) => `Approve ${exact}`,
@@ -282,7 +284,7 @@ export const T = {
     editHoursLabel: (day: string) => `${day} hours`,
     editPhoneLabel: "New phone number",
     editChoiceLabel: "Choose the value",
-    editFactNote: (field: string) => `It also becomes your confirmed ${field.toLowerCase()} in ALYR.`,
+    editFactNote: (field: string) => `It also becomes your confirmed ${lowerWords(field)} in ALYR.`,
     editInvalid: "Check the value: it cannot be sent as it is.",
     railRejected: (where: WhereKey) => (where === "google" ? "Refused by Google" : "Refused"),
     railChangedBack: "Changed back",

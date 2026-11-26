@@ -266,7 +266,7 @@ export function ThisWeek({ lang, view, actions, now, initial, tabs }: {
           onUndo={(r) => void undo(r.p, r.p.id)} busyId={busy?.id ?? null} />
       </div>
 
-      <AgentBar lang={lang} asks={Math.max(0, leftCount)} latest={latest} nextCheckAt={view.nextCheckAt} onSearch={search} onAsks={focusAsk}
+      <AgentBar lang={lang} asks={view.asks.filter((a) => !decided.has(a.p.id)).length} latest={latest} nextCheckAt={view.nextCheckAt} onSearch={search} onAsks={focusAsk}
         toast={toastShown ? <Toast toast={toastShown} lang={lang} onUndo={toastUndo} onDismiss={() => setToast(null)} /> : null} />
 
       {sheet ? (

@@ -196,7 +196,11 @@ export function buildThisWeek(input: ThisWeekInput): ThisWeekView {
     ? asks.open.flatMap((item) => (item.kind === "proposal" ? [item.proposal] : []))
     : input.waiting).filter((p) => p.status === "proposed");
   const seasons = asks ? asks.open.flatMap((item) => (item.kind === "season" ? [item.finding] : [])) : [];
-  const ownerOpen = [overview.next, ...overview.up_next].filter((f): f is Finding => !!f && f.kind === "owner" && f.status === "open");
+  // An owner's task is one ALYR cannot change itself: a finding with a change waiting (an open ask
+  // or one "Also noticed") is asked as that change, never counted twice.
+  const asked = new Set([...waiting, ...(asks ? asks.alsoNoticed.flatMap((i) => (i.kind === "proposal" ? [i.proposal] : [])) : [])].map((p) => p.finding_id));
+  const ownerOpen = [overview.next, ...overview.up_next]
+    .filter((f): f is Finding => !!f && f.kind === "owner" && f.status === "open" && f.proposals_waiting === 0 && !asked.has(f.id));
   const owner = [...seasons, ...ownerOpen.filter((f) => !seasons.some((s) => s.id === f.id))];
   const total = waiting.length + owner.length;
   const views = waiting.map((p, i) => askView(p, i + 1, total, { ...input, sourceKind }));
