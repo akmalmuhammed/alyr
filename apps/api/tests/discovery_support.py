@@ -121,8 +121,11 @@ def place(loc: Location, *, lst: Listing | None = None, web: Website | None = No
 
 
 def context(*places: tuple[Location, PlaceSnapshot]) -> rules.Context:
+    """A source that measures everything the rules read, the owner's side of the listing included
+    (a connected Business Profile); `test_discovery_owner_side.py` tests a public read."""
     locations = [p[0] for p in places]
-    return rules.Context(Snapshot("sample", NOW, [p[1] for p in places]), locations, {}, NOW)
+    snapshot = Snapshot("sample", NOW, [p[1] for p in places], business_profile=True)
+    return rules.Context(snapshot, locations, {}, NOW)
 
 
 def outcome(rule_id: str, ctx: rules.Context, loc: Location | None = None) -> rules.Outcome:

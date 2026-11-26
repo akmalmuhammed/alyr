@@ -372,6 +372,8 @@ VALUES: dict[str, tuple[str, str]] = {
     "~none": ("None", "لا شيء"),
     "~not_listed": ("Not listed", "غير مذكور"),
     "~no_page": ("Listed, with no page of its own", "مذكور، بلا صفحة خاصة به"),
+    # Google's text is kept at most 30 days (`retention.py`); what was seen is no longer kept.
+    "~removed": ("Removed after 30 days (Google's terms)", "حُذف بعد 30 يومًا (وفق شروط Google)"),
 }
 
 # code -> (English, Arabic). `status` is the route's choice (errors.py).

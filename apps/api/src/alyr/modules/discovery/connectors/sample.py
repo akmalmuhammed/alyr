@@ -15,8 +15,9 @@ fictional owner approved to the state store (`discovery_sample_state`, the busin
 and the script lets it win for its field, so a later check-up shows the effect of an approval.
 
 **Three improvement stages.** Run *n* returns stage `min(n_prior_done_runs, 3)`. Stage 0 is
-deliberately untidy, so every one of the twelve rules fires at least once. Each later stage is the
-owner having fixed something:
+deliberately untidy, so every one of the twelve rules fires at least once (`listing_unclaimed`
+and `review_unanswered` only while `BUSINESS_PROFILE` is on: they need a connected profile).
+Each later stage is the owner having fixed something:
 
 * stage 1: opening hours added at Al Sadd, a category and the right phone on the website for
   Al Wakra, the website's hours at the Industrial Area, two of the four unanswered reviews at
@@ -58,6 +59,13 @@ WA_LINK = "https://wa.me/97455550150"
 WRONG_WA_LINK = "https://wa.me/97455550999"
 
 BUSINESS = "Nuqta Car Care"
+# Whether the sample stands for a business whose Google Business Profile is connected. It is, by
+# default: its proposals write the listing, which only a connected profile could do, and the review
+# reply flow (spec 066) is shown on it. Off, it is a business whose public page is read and whose
+# profile is not connected (Discovery decision 9): whether a listing is claimed and whether the
+# owner replied are then "not measured" (`rules.owner_side_measured`). Which one a shop's sample
+# shows is the lead's call (a connection setting is the natural home for it).
+BUSINESS_PROFILE = True
 BUSINESS_AR = "نقطة لعناية السيارات"
 
 # key, English, Arabic, the area as Google would show it, the area in Arabic
@@ -243,7 +251,7 @@ class SampleConnector:
             _place_at(location, ordinal, stage, ctx, ctx.overrides)
             for ordinal, location in enumerate(locations)
         ]
-        return Snapshot(KIND, ctx.now, places)
+        return Snapshot(KIND, ctx.now, places, business_profile=BUSINESS_PROFILE)
 
     async def read_current(self, change: Change, ctx: WriteContext):
         """What the fictional listing shows now: its script at the stage the last check-up saw,
