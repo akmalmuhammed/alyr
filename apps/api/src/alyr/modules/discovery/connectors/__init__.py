@@ -8,6 +8,11 @@ real business: it reads only, makes no proposal, and only ALYR staff switch it o
 office, for one business. See `specs/065-discovery/spec.md`, "As built", for why `places` is not
 here.
 
+**`website` (Discovery 2.0) is not a connection but an addition** (`extras_for`): for every place
+with a website address, a check-up also reads the business's own site (robots.txt honoured, its own
+host only, at most 20 pages, no form) and joins what it says to the connection's snapshot with
+`merge`. It is the one file of `modules/discovery` that reaches outside ALYR, and it only reads.
+
 **`google_business_profile` (kind `gbp`) is an interface and nothing more.** It will implement
 `WritableConnector` against Google's Business Profile APIs once ALYR has Google's access (ALY-325,
 the founder's application); what it needs is written in `specs/066-discovery-approvals/spec.md`.
@@ -37,6 +42,7 @@ from alyr.modules.discovery.connectors.base import (
 )
 from alyr.modules.discovery.connectors.manual import ManualConnector
 from alyr.modules.discovery.connectors.sample import SampleConnector
+from alyr.modules.discovery.connectors.website import SiteWebsite, WebsiteConnector, merge
 
 # What a shop may turn on, in the order the screen offers them.
 AVAILABLE: tuple[str, ...] = ("sample",)
@@ -67,6 +73,19 @@ def get(kind: str) -> Connector:
     )
 
 
+def extras_for(kind: str, locations: list[Location]) -> tuple[Connector, ...]:
+    """The sources a check-up adds to its connection's snapshot (Discovery 2.0): the business's own
+    website (`website.py`), read for every place that has a website address, whatever the
+    connection. Never for the fictional `sample` business: its addresses are made up, and a made-up
+    address may be someone's real site. The engine reads each one after the connection's snapshot
+    and joins it with `merge`, which keeps what the connection already said."""
+    if kind == "sample":
+        return ()
+    if any((location.website_url or "").strip() for location in locations):
+        return (WebsiteConnector(),)
+    return ()
+
+
 __all__ = [
     "AVAILABLE",
     "STAFF_ONLY",
@@ -84,11 +103,15 @@ __all__ = [
     "Review",
     "RunContext",
     "SampleConnector",
+    "SiteWebsite",
     "Snapshot",
     "StateStore",
+    "WebsiteConnector",
     "WritableConnector",
     "Website",
     "WriteContext",
     "WriteError",
+    "extras_for",
     "get",
+    "merge",
 ]

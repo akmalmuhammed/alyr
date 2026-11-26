@@ -18,6 +18,10 @@ dependencies = [
     "pypdfium2>=4.30",
     # Payment providers' keys are kept sealed (AES-256-GCM; ALY-17, core/payment_keys.py).
     "cryptography>=50,<51",
+    # Discovery reads the owner's own website (connectors/website.py): extruct reads its
+    # LocalBusiness JSON-LD and microdata, protego its robots.txt (both BSD-3-Clause).
+    "extruct>=0.18",
+    "protego>=0.4",
     # Discovery compares phone numbers in any writing (Arabic-Indic digits, GCC formats):
     # Google's libphonenumber, Apache-2.0 (modules/discovery/normalize.py).
     "phonenumbers>=9.0.44,<10",

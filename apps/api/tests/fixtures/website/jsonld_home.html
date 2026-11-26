@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Test Bakery | Fresh bread in Al Sadd</title>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Bakery",
+  "name": "Test Bakery",
+  "telephone": "+974 4444 0101",
+  "url": "https://bakery.example/",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "Building 12, Street 840, Zone 38",
+    "addressLocality": "Al Sadd",
+    "addressRegion": "Doha",
+    "addressCountry": "QA"
+  },
+  "openingHoursSpecification": [
+    {
+      "@type": "OpeningHoursSpecification",
+      "dayOfWeek": ["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"],
+      "opens": "07:00",
+      "closes": "22:00"
+    },
+    {
+      "@type": "OpeningHoursSpecification",
+      "dayOfWeek": "https://schema.org/Friday",
+      "opens": "13:00:00",
+      "closes": "22:00:00"
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<header>
+  <a href="/">Home</a>
+  <a href="/contact">Contact us</a>
+  <a href="/about#story">About</a>
+  <a href="https://other.example/partner">Our partner</a>
+  <a href="https://www.instagram.example/testbakery">Instagram</a>
+  <a href="/files/menu.pdf">Menu (PDF)</a>
+  <a href="mailto:hello@bakery.example">Email</a>
+</header>
+<main>
+  <h1>Fresh bread every morning</h1>
+  <p>Visit us in Al Sadd, or order on WhatsApp.</p>
+  <a class="chat" href="https://wa.me/97455550123?text=Hello">Chat on WhatsApp</a>
+</main>
+<footer>
+  <p>Call <a href="tel:+97444440101">4444 0101</a></p>
+</footer>
+</body>
+</html>
