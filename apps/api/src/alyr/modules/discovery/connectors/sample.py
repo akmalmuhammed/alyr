@@ -15,8 +15,9 @@ fictional owner approved to the state store (`discovery_sample_state`, the busin
 and the script lets it win for its field, so a later check-up shows the effect of an approval.
 
 **Three improvement stages.** Run *n* returns stage `min(n_prior_done_runs, 3)`. Stage 0 is
-deliberately untidy, so every one of the twelve rules fires at least once. Each later stage is the
-owner having fixed something:
+deliberately untidy, so every one of the twelve rules fires at least once (`listing_unclaimed`
+and `review_unanswered` only with `BUSINESS_PROFILE` on: they need a connected Business Profile).
+Each later stage is the owner having fixed something:
 
 * stage 1: opening hours added at Al Sadd, a category and the right phone on the website for
   Al Wakra, the website's hours at the Industrial Area, two of the four unanswered reviews at
@@ -58,6 +59,11 @@ WA_LINK = "https://wa.me/97455550150"
 WRONG_WA_LINK = "https://wa.me/97455550999"
 
 BUSINESS = "Nuqta Car Care"
+# The sample stands for a business whose public Google page is read and whose Business Profile is
+# not connected (Discovery decision 9): whether a listing is claimed and whether the owner replied
+# to a review are "not measured" (`rules.owner_side_measured`). A test of the review-reply flow
+# sets this to True, as a business would be once its Business Profile is connected.
+BUSINESS_PROFILE = False
 BUSINESS_AR = "نقطة لعناية السيارات"
 
 # key, English, Arabic, the area as Google would show it, the area in Arabic
@@ -243,7 +249,7 @@ class SampleConnector:
             _place_at(location, ordinal, stage, ctx, ctx.overrides)
             for ordinal, location in enumerate(locations)
         ]
-        return Snapshot(KIND, ctx.now, places)
+        return Snapshot(KIND, ctx.now, places, business_profile=BUSINESS_PROFILE)
 
     async def read_current(self, change: Change, ctx: WriteContext):
         """What the fictional listing shows now: its script at the stage the last check-up saw,
