@@ -43,6 +43,11 @@ def imports_of(path: Path) -> set[str]:
 # asks the owner's own team, and nothing else does (spec 066).
 ASKS = "asks.py"
 ASKS_MAY_IMPORT = ("alyr.channels", "alyr.core.templates")
+# The one file that reads outside ALYR (Discovery 2.0): the business's own website, by GET only,
+# through the webhook guard's address vetting. What it may do is pinned in
+# test_discovery_website.py; it imports nothing else on this list.
+WEBSITE = "website.py"
+WEBSITE_MAY_IMPORT = ("httpx", "urllib")
 
 
 def test_the_scan_sees_the_module_it_is_meant_to_guard():
@@ -57,6 +62,8 @@ def test_no_file_of_discovery_imports_anything_that_reaches_outside(path):
     for name in imports_of(path):
         for banned in FORBIDDEN_IMPORTS:
             if path.name == ASKS and banned in ASKS_MAY_IMPORT:
+                continue
+            if path.name == WEBSITE and banned in WEBSITE_MAY_IMPORT:
                 continue
             assert name != banned and not name.startswith(banned + "."), (path.name, name)
 

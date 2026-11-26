@@ -1,0 +1,15 @@
+{
+  "id": "https://bakery.example/",
+  "loadingExperience": {
+    "metrics": {
+      "LARGEST_CONTENTFUL_PAINT_MS": {"percentile": 2900, "category": "AVERAGE"},
+      "CUMULATIVE_LAYOUT_SHIFT_SCORE": {"percentile": 4, "category": "FAST"},
+      "INTERACTION_TO_NEXT_PAINT": {"percentile": 180, "category": "FAST"}
+    },
+    "overall_category": "AVERAGE"
+  },
+  "lighthouseResult": {
+    "requestedUrl": "https://bakery.example/",
+    "categories": {"performance": {"id": "performance", "score": 0.62}}
+  }
+}
