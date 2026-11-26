@@ -290,8 +290,8 @@ class PlacesConnector:
         read, missed = getattr(snapshot, "read", 0), getattr(snapshot, "missed", 0)
         noun = f"{read} Google listing" + ("" if read == 1 else "s")
         if missed:
-            return STEP["connector.places.missed"].format(read=noun, missed=missed)
-        return STEP["connector.places"].format(read=noun)
+            return STEP["connector.places.missed"].format(listings=noun, missed=missed)
+        return STEP["connector.places"].format(listings=noun)
 
 
 async def _details(client: httpx.AsyncClient, place_id: str, now: datetime) -> PlacesListing | None:

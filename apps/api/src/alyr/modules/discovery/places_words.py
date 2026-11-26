@@ -6,7 +6,7 @@ Arabic is a careful draft for the native reviewer (ALY-66).
 
 # Next to every piece of evidence read on Google's public listing: Google's terms ask for the
 # "Google Maps" attribution on anything from the Places API (research R6 section 2.1).
-PLACES_NOTE = ("Google Maps, read live", "Google Maps، قراءة مباشرة")
+PLACES_NOTE = ("Google Maps, live", "Google Maps، مباشرةً")
 
 ERRORS: dict[str, tuple[str, str]] = {
     "place_link_short": (
@@ -25,6 +25,8 @@ ERRORS: dict[str, tuple[str, str]] = {
 
 # The run log's line for the step (English, like every step summary).
 STEP = {
-    "connector.places": "Read {read} live on Google Maps.",
-    "connector.places.missed": "Read {read} live on Google Maps; {missed} could not be read.",
+    "connector.places": "Got {listings} live from Google Maps.",
+    "connector.places.missed": (
+        "Got {listings} live from Google Maps; {missed} could not be fetched."
+    ),
 }

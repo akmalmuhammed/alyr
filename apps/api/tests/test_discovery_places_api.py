@@ -189,7 +189,7 @@ def test_a_run_reads_the_live_listing_logs_its_step_and_cost_and_labels_its_evid
     assert run["status"] == "done"
     assert len(seen) == 1 and seen[0].url.path == f"/v1/places/{PID}"
     step = next(s for s in run["steps"] if s["tool"] == "connector.places")
-    assert step["ok"] and step["summary"] == "Read 1 Google listing live on Google Maps."
+    assert step["ok"] and step["summary"] == "Got 1 Google listing live from Google Maps."
     cost = owner_sql("select cost_units from discovery_run_steps where run_id = $1 "
                      "and tool = 'connector.places'", UUID(run["id"]))
     assert [r["cost_units"] for r in cost] == [1]

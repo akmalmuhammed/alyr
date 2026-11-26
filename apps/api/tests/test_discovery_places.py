@@ -292,7 +292,7 @@ def test_a_failure_is_not_measured_never_a_failed_run(monkeypatch, trouble):
     assert snapshot.of(b.id).listing.found is True
     assert (snapshot.read, snapshot.missed) == (1, 1)
     assert places.PlacesConnector.sentence(snapshot) == (
-        "Read 1 Google listing live on Google Maps; 1 could not be read.")
+        "Got 1 Google listing live from Google Maps; 1 could not be fetched.")
 
 
 def test_the_timeout_is_ten_seconds():
@@ -310,7 +310,7 @@ def test_the_run_budget_stops_the_calls_and_the_rest_is_not_measured(monkeypatch
 def test_the_step_sentence_counts_listings(monkeypatch):
     serve(monkeypatch, {PID: answer("details_bakery.json"), PID2: answer("details_bare.json")})
     assert places.PlacesConnector.sentence(read(place(PID), place(PID2))) == (
-        "Read 2 Google listings live on Google Maps.")
+        "Got 2 Google listings live from Google Maps.")
 
 
 # ── what the rules make of it ──────────────────────────────────────────────────────────────
@@ -383,7 +383,7 @@ def test_evidence_from_the_live_listing_is_googles_dated_when_read(monkeypatch):
     assert all(e["source"] == "manual" for e in items if e["where"] == "website")
     # and the reader is told it is Google Maps' (the attribution Google's terms ask for)
     shown = words.evidence_view(listing[0], "en")["where"]
-    assert shown == "Google listing (Google Maps, read live)"
+    assert shown == "Google listing (Google Maps, live)"
     assert "Google Maps" in words.evidence_view(listing[0], "ar")["where"]
 
 
