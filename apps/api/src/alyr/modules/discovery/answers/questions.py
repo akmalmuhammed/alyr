@@ -3,9 +3,12 @@
 A question comes from a **closed list of trades and cities** and three fixed templates, so it is
 always generic and public: "best car care in Doha". It holds no business name, no person, no
 phone number and no digit. `build` is the only way to make one, and the only thing an engine is
-given is an `EngineRequest`, which has exactly two fields: a test fails if a field is added.
-Nothing a shop's own customers, contacts, messages, orders, reviews or team hold can enter here
-(hard rule 2, ALY-51).
+given is an `EngineRequest`: the question's text, its language and a `Location` (country, city
+and, when the owner chose one, an area of that city, all from closed lists), which an answer tool
+takes as the asker's place (DECISIONS 7, research R4: "area passed as location"). It has exactly
+those three fields, and `Location` exactly its three: a test fails if one is added. Nothing a
+shop's own customers, contacts, messages, orders, reviews or team hold can enter here (hard rule
+2, ALY-51).
 """
 
 from dataclasses import dataclass
@@ -41,6 +44,26 @@ CITIES: dict[str, tuple[str, str]] = {
     "manama": ("Manama", "المنامة"),
     "muscat": ("Muscat", "مسقط"),
 }
+# The country of each city (ISO 3166-1 alpha-2), for an answer tool's location.
+COUNTRY: dict[str, str] = {
+    "doha": "QA", "al_rayyan": "QA", "al_wakra": "QA", "al_khor": "QA", "lusail": "QA",
+    "umm_salal": "QA", "dubai": "AE", "abu_dhabi": "AE", "sharjah": "AE", "riyadh": "SA",
+    "jeddah": "SA", "kuwait_city": "KW", "manama": "BH", "muscat": "OM",
+}
+# Areas of a city an owner may choose (public places, never an address). Doha only for now; a city
+# with no list is asked as the whole city.
+AREAS: dict[str, dict[str, tuple[str, str]]] = {
+    "doha": {
+        "west_bay": ("West Bay", "الخليج الغربي"),
+        "al_sadd": ("Al Sadd", "السد"),
+        "the_pearl": ("The Pearl", "اللؤلؤة"),
+        "old_airport": ("Old Airport", "المطار القديم"),
+        "msheireb": ("Msheireb", "مشيرب"),
+        "al_dafna": ("Al Dafna", "الدفنة"),
+        "industrial_area": ("Industrial Area", "المنطقة الصناعية"),
+        "al_hilal": ("Al Hilal", "الهلال"),
+    },
+}
 # key: (English, Arabic). Always the same text for the same trade and city, so a change in an
 # answer is a change in the answer and not in the question.
 TEMPLATES: dict[str, tuple[str, str]] = {
@@ -59,11 +82,34 @@ class PublicQuestion:
 
 
 @dataclass(frozen=True)
+class Location:
+    """Where the asker is, in the English names an answer tool's location takes. Closed lists
+    only: `country` an ISO code, `city` a city's name, `area` an area's name or ""."""
+
+    country: str
+    city: str
+    area: str = ""
+
+
+@dataclass(frozen=True)
 class EngineRequest:
-    """Everything an engine is ever sent. Two fields, on purpose: a test pins them."""
+    """Everything an engine is ever sent. Three fields, on purpose: a test pins them."""
 
     text: str
     lang: str
+    location: Location | None = None
+
+
+def location_of(city: str, area: str | None = None) -> Location:
+    if city not in CITIES:
+        raise ValueError("unknown city")
+    if area and area not in AREAS.get(city, {}):
+        raise ValueError("unknown area")
+    return Location(COUNTRY[city], CITIES[city][0], AREAS[city][area][0] if area else "")
+
+
+def area_label(city: str | None, area: str | None, lang: str) -> str:
+    return label(AREAS.get(city or "", {}), area, lang) if area else ""
 
 
 def build(trade: str, city: str) -> list[PublicQuestion]:
@@ -80,8 +126,8 @@ def build(trade: str, city: str) -> list[PublicQuestion]:
     return out
 
 
-def request_of(question: PublicQuestion) -> EngineRequest:
-    return EngineRequest(question.text, question.lang)
+def request_of(question: PublicQuestion, location: Location | None = None) -> EngineRequest:
+    return EngineRequest(question.text, question.lang, location)
 
 
 def label(table: dict[str, tuple[str, str]], key: str | None, lang: str) -> str:
