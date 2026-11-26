@@ -360,6 +360,10 @@ async def _cool_hashes(conn: asyncpg.Connection, now: datetime) -> set:
         "(status = 'declined' and decided_at > $1) "
         "or (status = 'expired' and expire_reason = 'time' and updated_at > $1) "
         "or (status = 'undone' and undone_at > $1) "
+        # An undone "Change it": the value first shown is cooled too, not only the one approved.
+        "or (status = 'expired' and expire_reason = 'edited' and id in ("
+        "select edited_from from discovery_proposals where status = 'undone' "
+        "and undone_at > $1 and edited_from is not null)) "
         "or (status = 'applied' and verification in ('pending', 'not_confirmed') "
         "and updated_at > $1)",
         since,
@@ -569,7 +573,8 @@ async def expire(
     """`proposed` becomes `expired` (never anything else), with the reason on the record. Only
     `time` starts the cool-off (`_cool_hashes` reads `expire_reason`)."""
     rows = await conn.fetch(
-        "update discovery_proposals set status = 'expired', expire_reason = $2, updated_at = now() "
+        "update discovery_proposals set status = 'expired', expire_reason = $2, "
+        "closed_at = now(), updated_at = now() "
         "where id = any($1) and status = 'proposed' returning id, change_hash",
         ids, reason,
     )
@@ -830,6 +835,8 @@ def view(
         } if row["status"] == "failed" and row["failure_code"] else None,
         "verification": row["verification"],
         "expire_reason": row["expire_reason"] if row["status"] == "expired" else None,
+        # When an ask closed without a decision (0174): Proof dates an expired receipt by it.
+        "closed_at": _iso(row["closed_at"]) if row["status"] == "expired" else None,
         "sample": row["connector_kind"] == "sample",
         "can": _can(row, caller, scope, now,
                     _undoable(row["connector_kind"], row["target"], change["field"])),
@@ -1072,6 +1079,44 @@ async def overview_block(conn: asyncpg.Connection, caller: Caller, scope: Scope,
     }
 
 
+# ALYR writes nothing to an owner's own website (DECISIONS #8): no connector writes there, and a
+# website difference is a step the owner takes. The plan a proposal would have made gives the exact
+# text to put on the page; it is shown, never sent.
+WEBSITE_FIELDS = frozenset({("website", "hours"), ("website", "phone"), ("website", "whatsapp_link")})
+
+
+async def website_steps(conn: asyncpg.Connection, lang: str, finding_rows) -> dict[UUID, list]:
+    """`{finding id: [step]}` for open findings whose fix is on the owner's website. A step is
+    `{field, field_label, where, before, after, location}`, worded as a change is (`change_lines`),
+    so the owner can copy the exact text. Pure reads."""
+    rows = [f for f in finding_rows if f["status"] == "open" and any(
+        target == "website" for _t, _f, target in rules.PROPOSES.get(f["rule_id"], ()))]
+    if not rows:
+        return {}
+    now = datetime.now().astimezone()
+    locations = {r["id"]: r for r in await conn.fetch("select * from discovery_locations")}
+    facts = await facts_module.load(conn)
+    out: dict[UUID, list] = {}
+    for f in rows:
+        drafts = [d for d in plan(f, locations, facts, WEBSITE_FIELDS, [], now).drafts
+                  if d.target == "website"]
+        steps = []
+        for d in drafts:
+            place = locations.get(d.location_id)
+            name = ""
+            if place is not None:
+                name = place["name_ar"] if lang == "ar" and place["name_ar"] else place["name"]
+            lines = pw.change_lines(d.change, lang, "website")
+            steps.append({
+                "field": d.field, "field_label": lines["field_label"], "where": lines["where"],
+                "before": lines["before"], "after": lines["after"],
+                "location": {"id": str(d.location_id), "name": name},
+            })
+        if steps:
+            out[f["id"]] = steps
+    return out
+
+
 async def for_findings(
     conn: asyncpg.Connection, caller: Caller, scope: Scope, lang: str, finding_rows
 ) -> dict[UUID, dict]:
@@ -1080,9 +1125,12 @@ async def for_findings(
     `can_propose`."""
     now = datetime.now().astimezone()
     ids = [f["id"] for f in finding_rows]
-    out = {i: {"proposals": [], "needs_fact": None, "can_propose": False} for i in ids}
+    out = {i: {"proposals": [], "needs_fact": None, "can_propose": False, "website_steps": []}
+           for i in ids}
     if not ids:
         return out
+    for finding_id, steps in (await website_steps(conn, lang, finding_rows)).items():
+        out[finding_id]["website_steps"] = steps
     kind, writes = await _active_connector(conn)
     places = None if scope.everywhere else list(scope.places)
     rows = await conn.fetch(
@@ -1351,7 +1399,7 @@ async def approve_edited(
     await close_asks(conn, [proposal_id], "proposal_decided")
     await conn.execute(
         "update discovery_proposals set status = 'expired', expire_reason = 'edited', "
-        "updated_at = now() where id = $1",
+        "closed_at = now(), updated_at = now() where id = $1",
         proposal_id,
     )
     await team.record(

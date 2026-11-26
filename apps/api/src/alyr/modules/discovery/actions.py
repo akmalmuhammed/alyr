@@ -301,9 +301,13 @@ async def list_findings(conn: asyncpg.Connection, caller: Caller, args: dict) ->
                 None if scope.everywhere else list(scope.places),
             )
         }
+    # A website difference is the owner's to change, with the exact text (DECISIONS #8).
+    steps = await proposals.website_steps(conn, lang, rows)
     return {
         "items": [
-            finding_view(r, lang) | {"proposals_waiting": waiting.get(r["id"], 0)} for r in rows
+            finding_view(r, lang)
+            | {"proposals_waiting": waiting.get(r["id"], 0), "website_steps": steps.get(r["id"], [])}
+            for r in rows
         ],
         "counts": await _counts(conn, location_id),
     }
