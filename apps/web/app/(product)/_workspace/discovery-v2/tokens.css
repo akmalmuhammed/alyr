@@ -1,0 +1,314 @@
+/* Discovery v2 tokens (the approved "Morning Brief" prototype, D:\alyr-design-2026\proto\tokens.css
+   and modern.css, 26 Nov 2026). Scoped under `.d2`, the root class every Discovery v2 screen draws
+   in, so nothing outside it changes. This is the one file of the folder with colour and length
+   literals (design/allow.json names it); every other file reads these with var().
+
+   Grammar: Carbon speaks (ALYR) · Volt asks (the owner decides) · warm white holds (the business).
+   Volt is only the Approve fill and the highlighter behind the value to decide.
+
+   Contrast (WCAG 2.x sRGB, from the prototype's table): ink on canvas 16.76, ink-2 #4a4d52 on
+   canvas 7.9 and on white 8.6, ink-3 #5c5f64 on canvas 6.0, ok-text on ok-soft 4.85, warn-text
+   on canvas 5.06, chalk on Carbon 16.36, concrete on Carbon 7.94, on-volt on Volt 13.43,
+   focus moss on canvas 3.38 (non-text 3:1).
+
+   Light theme only for now; the dark values come with the dark pass. Arabic sizes are one step up
+   from 11 to 28 px (T3 section 6.1) and take looser line heights, no tracking. */
+
+.d2 {
+  /* Brand (the global tokens where they are the same colour) */
+  --d2-carbon: var(--carbon);
+  --d2-carbon-2: #22252a;
+  --d2-carbon-3: #2e3237;
+  --d2-carbon-3-hover: #3a3f45;
+  --d2-volt: var(--volt);
+  --d2-volt-hover: var(--volt-hover);
+  --d2-volt-pressed: var(--volt-pressed);
+  --d2-on-volt: #151a0f;
+  --d2-on-volt-key: rgb(21 26 15 / .1);
+  --d2-on-volt-edge: rgb(21 26 15 / .12);
+  --d2-on-volt-ring: rgb(21 26 15 / .2);
+  --d2-concrete: #a7adb5;
+  --d2-concrete-2: #b9bec5;
+  --d2-chalk: #f3f5f0;
+  --d2-moss: #6a9320;
+
+  /* Surfaces: white holds the owner's business */
+  --d2-canvas: #f8f7f4;
+  --d2-canvas-veil: rgb(248 247 244 / .96);
+  --d2-tint: #efede8;
+  --d2-group: #eeebe5;
+  --d2-surface: #ffffff;
+  --d2-surface-end: #fdfcfa;
+  --d2-surface-peek: #fbfaf8;
+  --d2-well: #f6f5f1;
+  --d2-well-end: #f3f1ec;
+  --d2-hair: #e6e3dc;
+  --d2-hair-strong: #d6d2c9;
+  --d2-line-strong: #83868b;
+  --d2-hover-veil: rgb(255 255 255 / .55);
+  --d2-ink-veil: rgb(21 23 26 / .07);
+  --d2-ink-veil-2: rgb(21 23 26 / .14);
+  --d2-hatch: rgb(21 23 26 / .07);
+  --d2-scrim: rgb(21 23 26 / .32);
+  --d2-scrim-light: rgb(21 23 26 / .22);
+
+  /* Ink */
+  --d2-ink: #15171a;
+  --d2-ink-2: #4a4d52;
+  --d2-ink-3: #5c5f64;
+
+  /* Status (always beside a word) */
+  --d2-ok: #2d7d46;
+  --d2-ok-text: #2a7541;
+  --d2-ok-soft: #e4f1e7;
+  --d2-ok-on-carbon: #7fd39a;
+  --d2-ok-on-carbon-soft: rgb(127 211 154 / .16);
+  --d2-warn: #a96400;
+  --d2-warn-text: #9a5b00;
+  --d2-warn-soft: #f7ecd9;
+  --d2-bad: #b42318;
+  --d2-bad-soft: #fbe5e2;
+
+  /* On Carbon (the agent bar, the toast, the stamp) */
+  --d2-glass: rgb(21 23 26 / .88);
+  --d2-on-carbon-hover: rgb(255 255 255 / .07);
+  --d2-on-carbon-fill: rgb(255 255 255 / .1);
+  --d2-on-carbon-fill-hover: rgb(255 255 255 / .17);
+  --d2-on-carbon-rule: rgb(255 255 255 / .12);
+  --d2-on-carbon-edge: rgb(255 255 255 / .08);
+  --d2-on-carbon-track: rgb(255 255 255 / .22);
+
+  /* People (avatars) */
+  --d2-av-h-bg: #ecdcc2;
+  --d2-av-h-ink: #4a3517;
+  --d2-av-o-bg: #d9e3d3;
+  --d2-av-o-ink: #2c3f26;
+  --d2-av-n-bg: #e4e1da;
+  --d2-av-n-ink: #3d3f43;
+
+  /* The listing miniature: the listing's own greys, drawn, never ALYR's */
+  --d2-g-paper: #ffffff;
+  --d2-g-ink: #202124;
+  --d2-g-soft: #5f6368;
+  --d2-g-dim: #70757a;
+  --d2-g-arrow: #9aa0a6;
+  --d2-g-open: #188038;
+  --d2-g-star: #f9ab00;
+  --d2-g-line: #e8eaed;
+  --d2-g-ring: #e9e6df;
+  --d2-g-focus: #f6f5f1;
+
+  /* Focus */
+  --d2-focus: var(--d2-moss);
+  --d2-focus-on-carbon: var(--d2-volt);
+  --d2-focus-width: 2px;
+  --d2-focus-offset: 3px;
+
+  /* Type: Instrument Sans for Latin, IBM Plex Sans Arabic for Arabic (the product's own families) */
+  --d2-font: var(--font-ui);
+  --d2-font-listing: var(--font-chat);
+  --d2-fs-display: 40px;   --d2-lh-display: 44px;   --d2-tr-display: -0.022em;
+  --d2-fs-sheet: 32px;     --d2-lh-sheet: 38px;
+  --d2-fs-lead: 24px;      --d2-lh-lead: 30px;      --d2-tr-lead: -0.016em;
+  --d2-fs-section: 24px;   --d2-lh-section: 30px;   --d2-tr-section: -0.012em;
+  --d2-fs-figure: 20px;
+  --d2-fs-mini-lead: 19px; --d2-lh-mini-lead: 25px;
+  --d2-fs-title: 18px;     --d2-lh-title: 24px;
+  --d2-fs-listing-name: 18px; --d2-lh-listing-name: 23px;
+  --d2-fs-body: 16px;      --d2-lh-body: 24px;
+  --d2-fs-cmd: 17px;
+  --d2-fs-btn: 15px;
+  --d2-fs-body-sm: 14px;   --d2-lh-body-sm: 20px;
+  --d2-fs-small: 13px;     --d2-lh-small: 18px;
+  --d2-fs-agent: 13.5px;   --d2-lh-agent: 18px;
+  --d2-fs-micro: 12px;     --d2-lh-micro: 16px;
+  --d2-fs-kbd: 11px;
+  --d2-fs-av: 11px;
+  --d2-wt-body: 400;
+  --d2-wt-medium: 500;
+  --d2-wt-label: 560;
+  --d2-wt-strong: 600;
+  --d2-wt-mark: 700;
+  --d2-tr-mark: .06em;
+  --d2-tr-tight: -0.01em;
+
+  /* Space (4 px grid) */
+  --d2-s-1: 2px;
+  --d2-s0: 3px;
+  --d2-s1: 4px;
+  --d2-s1h: 6px;
+  --d2-s2: 8px;
+  --d2-s2h: 10px;
+  --d2-s3: 12px;
+  --d2-s3h: 14px;
+  --d2-s4: 16px;
+  --d2-s4h: 18px;
+  --d2-s5: 20px;
+  --d2-s5h: 22px;
+  --d2-s6: 24px;
+  --d2-s6h: 26px;
+  --d2-s7: 28px;
+  --d2-s8: 32px;
+  --d2-s9: 40px;
+  --d2-s10: 48px;
+  --d2-s11: 56px;
+  --d2-s12: 72px;
+  --d2-s13: 136px;
+
+  /* Sizes */
+  --d2-column: 880px;
+  --d2-object: 300px;
+  --d2-sheet: 620px;
+  --d2-bar-width: 1010px;
+  --d2-toast-width: 440px;
+  --d2-cmdk-width: 640px;
+  --d2-cmdk-top: 120px;
+  --d2-cmdk-list: 440px;
+  --d2-bars-width: 440px;
+  --d2-bars-height: 104px;
+  --d2-bar-col: 30px;
+  --d2-bar-unit: 8px;
+  --d2-when-col: 96px;
+  --d2-act-col: 168px;
+  --d2-dl-col: 140px;
+  --d2-hours-day: 76px;
+  --d2-hours-row: 24px;
+  --d2-hours-focus: 34px;
+  --d2-search-width: 232px;
+  --d2-control: 44px;
+  --d2-control-sm: 36px;
+  --d2-approve: 48px;
+  --d2-approve-sm: 40px;
+  --d2-chip: 28px;
+  --d2-pill: 26px;
+  --d2-stamp: 40px;
+  --d2-bar: 56px;
+  --d2-seg: 40px;
+  --d2-tab: 36px;
+  --d2-kbd: 20px;
+  --d2-av: 24px;
+  --d2-av-md: 28px;
+  --d2-av-sm: 20px;
+  --d2-count: 22px;
+  --d2-node: 16px;
+  --d2-step: 28px;
+  --d2-ev-icon: 40px;
+  --d2-cmd-row: 46px;
+  --d2-cmd-icon: 30px;
+  --d2-cmd-input: 60px;
+  --d2-sheet-head: 68px;
+  --d2-icon: 18px;
+  --d2-icon-sm: 14px;
+  --d2-icon-xs: 12px;
+  --d2-icon-tick: 26px;
+  --d2-sq: 8px;
+  --d2-dot: 7px;
+  --d2-key: 9px;
+  --d2-rule: 1px;
+  --d2-rule-2: 1.5px;
+  --d2-rule-3: 2px;
+  --d2-track: 3px;
+  --d2-peek: 60px;
+  --d2-peek-1: 18px;
+  --d2-peek-2: 38px;
+  --d2-peek-drop: -10px;
+  --d2-peek-drop-2: -20px;
+  --d2-tip-gap: 8px;
+  --d2-maxch-sub: 64ch;
+  --d2-maxch-rule: 70ch;
+  --d2-stroke: 1.75;
+  --d2-underline-offset: 4px;
+  --d2-star-track: -1px;
+  --d2-lift: -1px;
+  --d2-glass-blur: blur(16px) saturate(140%);
+
+  /* Shape: radius 20 with one chamfered corner (the ALYR cut) */
+  --d2-r-card: 20px;
+  --d2-r-inner: 14px;
+  --d2-r-listing: 16px;
+  --d2-r-control: 12px;
+  --d2-r-key: 10px;
+  --d2-r-small: 8px;
+  --d2-r-tiny: 6px;
+  --d2-r-mark: 4px;
+  --d2-r-bar: 16px;
+  --d2-r-pill: 999px;
+  --d2-cut-ticket: 26px;
+  --d2-cut-control: 14px;
+  --d2-cut-stamp: 12px;
+  --d2-cut-bar: 20px;
+  --d2-tilt: -2deg;
+
+  /* Depth: content is flat; the Ticket, the agent bar and the toast float */
+  --d2-shadow-ticket: 0 0 0 1px rgb(21 23 26 / .04), 0 1px 2px rgb(21 23 26 / .06), 0 12px 32px -12px rgb(21 23 26 / .18), inset 0 1px 0 rgb(255 255 255 / .9);
+  --d2-shadow-peek: 0 1px 2px rgb(21 23 26 / .05), 0 8px 20px -12px rgb(21 23 26 / .14);
+  --d2-shadow-card: 0 0 0 1px rgb(21 23 26 / .05), 0 1px 2px rgb(21 23 26 / .05), 0 10px 28px -14px rgb(21 23 26 / .16), inset 0 1px 0 rgb(255 255 255 / .9);
+  --d2-shadow-card-hover: 0 0 0 1px rgb(21 23 26 / .07), 0 2px 4px rgb(21 23 26 / .06), 0 20px 40px -16px rgb(21 23 26 / .26);
+  --d2-shadow-pop: 0 0 0 1px rgb(21 23 26 / .07), 0 4px 10px rgb(21 23 26 / .08), 0 24px 48px -16px rgb(21 23 26 / .28);
+  --d2-shadow-bar: 0 2px 6px rgb(21 23 26 / .14), 0 18px 40px -12px rgb(21 23 26 / .38), inset 0 1px 0 rgb(255 255 255 / .08), inset 0 0 0 1px rgb(255 255 255 / .04);
+  --d2-shadow-sheet: -24px 0 64px -24px rgb(21 23 26 / .28);
+  --d2-shadow-sheet-rtl: 24px 0 64px -24px rgb(21 23 26 / .28);
+  --d2-shadow-thumb: 0 0 0 1px rgb(21 23 26 / .06), 0 1px 2px rgb(21 23 26 / .08), 0 3px 8px -3px rgb(21 23 26 / .12);
+  --d2-shadow-control: inset 0 0 0 1px var(--d2-hair-strong), 0 1px 2px rgb(21 23 26 / .06);
+  --d2-shadow-control-hover: inset 0 0 0 1px var(--d2-line-strong), 0 2px 6px -2px rgb(21 23 26 / .14);
+  --d2-shadow-approve: inset 0 -2px 0 rgb(21 26 15 / .12), 0 1px 2px rgb(21 23 26 / .14);
+  --d2-shadow-listing: 0 0 0 1px var(--d2-g-ring), 0 2px 4px rgb(21 23 26 / .04), 0 12px 28px -14px rgb(21 23 26 / .28);
+  --d2-shadow-tip: 0 8px 18px -8px rgb(21 23 26 / .5);
+  --d2-shadow-receipt: inset 0 1px 0 rgb(21 23 26 / .05);
+  --d2-shadow-group: inset 0 0 0 1px rgb(21 23 26 / .04);
+  --d2-shadow-foot: 0 -1px 0 var(--d2-hair), 0 -16px 32px -20px rgb(21 23 26 / .2);
+  --d2-ring-now: 0 0 0 4px rgb(21 23 26 / .07);
+
+  /* Hatching behind the bars where the listing said Closed */
+  --d2-hatch-band: repeating-linear-gradient(135deg, var(--d2-hatch) 0 1.5px, transparent 1.5px 7px);
+
+  /* Motion: plays once; with reduced motion only the end state shows */
+  --d2-dur-1: 120ms;
+  --d2-dur-2: 180ms;
+  --d2-dur-3: 240ms;
+  --d2-dur-4: 320ms;
+  --d2-dur-toast: 8s;
+  --d2-delay-hl: 260ms;
+  --d2-ease: cubic-bezier(.16, 1, .3, 1);
+  --d2-spring: linear(0, 0.0183, 0.0655, 0.1318, 0.2094, 0.2926, 0.3768, 0.4588, 0.5364, 0.6082, 0.6733, 0.7313, 0.7823, 0.8264, 0.8641, 0.8958, 0.9222, 0.9438, 0.9613, 0.9752, 0.986, 0.9943, 1.0004, 1.0047, 1.0077, 1.0096, 1.0106, 1.0109, 1.0108, 1.0104, 1.0097, 1.0088, 1.0079, 1.007, 1.0061, 1.0052, 1.0044, 1.0037, 1.0031, 1.0025, 1);
+  --d2-spring-ms: 415ms;
+  --d2-spring-stamp: linear(0, 0.0429, 0.1536, 0.3062, 0.4779, 0.6498, 0.8079, 0.9426, 1.0486, 1.1244, 1.1713, 1.1925, 1.1927, 1.1771, 1.1508, 1.1187, 1.0848, 1.0523, 1.0236, 1.0001, 0.9824, 0.9705, 0.964, 0.962, 0.9636, 0.9679, 0.9737, 0.9802, 0.9867, 0.9927, 0.9978, 1.0019, 1.0047, 1.0065, 1.0073, 1.0073, 1.0067, 1.0057, 1.0045, 1.0032, 1);
+  --d2-dur-draw: 400ms;
+  --d2-delay-draw: 500ms;
+  --d2-delay-fan: 60ms;
+  --d2-dur-instant: 1ms;
+  --d2-travel: 16px;
+  --d2-travel-fan: -46px;
+  --d2-dir: 1;
+}
+
+.d2[data-lang="ar"] {
+  --d2-lh-display: 52px;   --d2-tr-display: 0;
+  --d2-fs-sheet: 30px;     --d2-lh-sheet: 42px;
+  --d2-fs-lead: 26px;      --d2-lh-lead: 38px;      --d2-tr-lead: 0;
+  --d2-fs-section: 26px;   --d2-lh-section: 36px;   --d2-tr-section: 0;
+  --d2-fs-figure: 22px;
+  --d2-fs-mini-lead: 20px; --d2-lh-mini-lead: 30px;
+  --d2-fs-title: 20px;     --d2-lh-title: 30px;
+  --d2-fs-listing-name: 19px; --d2-lh-listing-name: 28px;
+  --d2-fs-body: 17px;      --d2-lh-body: 26px;
+  --d2-fs-btn: 16px;
+  --d2-fs-body-sm: 15px;   --d2-lh-body-sm: 24px;
+  --d2-fs-small: 14px;     --d2-lh-small: 22px;
+  --d2-fs-agent: 14.5px;   --d2-lh-agent: 22px;
+  --d2-fs-micro: 13px;     --d2-lh-micro: 20px;
+  --d2-fs-av: 13px;
+  --d2-wt-label: 500;
+  --d2-tr-tight: 0;
+  --d2-hours-day: 70px;
+  --d2-hours-row: 26px;
+  --d2-chip: 30px;
+  --d2-pill: 28px;
+  --d2-search-width: 184px;
+  --d2-maxch-sub: 76ch;
+  --d2-shadow-sheet: var(--d2-shadow-sheet-rtl);
+  --d2-dir: -1;
+}
+
+/* The page behind Discovery v2 is the same warm canvas: the new shell's main column and the preview. */
+.ns-main:has(.d2), body:has(.d2-preview) { background: #f8f7f4; }

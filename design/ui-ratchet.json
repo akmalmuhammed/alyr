@@ -13,6 +13,7 @@
     "apps/web/app/(product)/_workspace/catalogCopy.ts": { "ai-word": 2, "sku": 6 },
     "apps/web/app/(product)/_workspace/connect.css": { "btn": 1, "radius": 3, "space": 4 },
     "apps/web/app/(product)/_workspace/delivery.css": { "btn": 1, "radius": 2, "space": 1 },
+    "apps/web/app/(product)/_workspace/discovery-v2/discovery-v2.css": { "btn": 17 },
     "apps/web/app/(product)/_workspace/discovery.css": { "btn": 3, "space": 4 },
     "apps/web/app/(product)/_workspace/documents.css": { "btn": 4, "radius": 2, "space": 5 },
     "apps/web/app/(product)/_workspace/documentsCopy.ts": { "sku": 6 },
