@@ -311,5 +311,80 @@
   --d2-dir: -1;
 }
 
+/* U2 (Checks, Proof, Answers, Set up): the sizes and the few colours these screens add, from the
+   same prototype (modern.css rounds 1 to 4). Read with var() in screens.css. */
+.d2 {
+  --d2x-col-wide: 1040px;
+  --d2x-hc: 300px;
+  --d2x-hc-arrow: 11px;
+  --d2x-src: 20px;
+  --d2x-cmark: 24px;
+  --d2x-diamond: 13px;
+  --d2x-rc-date: 104px;
+  --d2x-rc-status: 176px;
+  --d2x-trail-node: 24px;
+  --d2x-dot: 40px;
+  --d2x-dot-sm: 16px;
+  --d2x-tool-meter: 190px;
+  --d2x-tmark: 32px;
+  --d2x-meter-label: 48px;
+  --d2x-tn-label: 76px;
+  --d2x-tn-bar: 12px;
+  --d2x-range: 84px;
+  --d2x-range-pt: 24px;
+  --d2x-range-band: 20px;
+  --d2x-srcs-cites: 170px;
+  --d2x-srcs-state: 160px;
+  --d2x-meter: 8px;
+  --d2x-ch-bar: 6px;
+  --d2x-ch-dot: 18px;
+  --d2x-psteps: 480px;
+  --d2x-pnode: 24px;
+  --d2x-stage: 204px;
+  --d2x-badge: 30px;
+  --d2x-pill: 30px;
+  --d2x-pill-n: 22px;
+  --d2x-mui: 276px;
+  --d2x-mui-shelf: 300px;
+  --d2x-mui-bio: 236px;
+  --d2x-mui-row: 27px;
+  --d2x-mui-q: 20px;
+  --d2x-mui-btn: 28px;
+  --d2x-mui-chip: 24px;
+  --d2x-mui-tile: 66px;
+  --d2x-mui-tag: 20px;
+  --d2x-mui-cell: 22px;
+  --d2x-mui-avt: 38px;
+  --d2x-mui-dot: 6px;
+  --d2x-ab-width: 1000px;
+  --d2x-ab-go: 52px;
+  --d2x-ab-prog: 3px;
+  --d2x-prov: 22px;
+  --d2x-prov-i: 16px;
+  --d2x-lift-2: -2px;
+
+  --d2x-diff-wash: linear-gradient(90deg, rgb(247 236 217 / .62), rgb(247 236 217 / 0) 72%);
+  --d2x-stage-bg: linear-gradient(180deg, #f2f0eb, #e9e5dd);
+  --d2x-stage-bg-on: linear-gradient(180deg, #ece8df, #e2ddd2);
+  --d2x-fam-bg: linear-gradient(180deg, #ffffff, #fdfcfa);
+  --d2x-fam-bg-on: linear-gradient(180deg, #ffffff, #faf8f3);
+  --d2x-fam-ring-on: 0 0 0 2px var(--d2-carbon), 0 0 0 7px rgb(21 23 26 / .06), inset 0 -48px 64px -48px rgb(21 23 26 / .07), 0 22px 44px -20px rgb(21 23 26 / .34);
+  --d2x-badge-ring: 0 0 0 3px #ffffff, 0 6px 14px -4px rgb(21 23 26 / .45);
+  --d2x-pill-hover: #e4e0d7;
+  --d2x-pill-n: rgb(255 255 255 / .8);
+  --d2x-mui-shadow: 0 0 0 1px rgb(21 23 26 / .06), 0 2px 4px rgb(21 23 26 / .05), 0 14px 28px -14px rgb(21 23 26 / .3);
+  --d2x-mui-dim: #6b6e73;
+  --d2x-sw-1: linear-gradient(160deg, #3b3c41, #1d1e21);
+  --d2x-sw-2: linear-gradient(160deg, #ddcdb2, #bba57f);
+  --d2x-sw-3: linear-gradient(160deg, #a7b7a1, #7f9479);
+  --d2x-avt: linear-gradient(135deg, #f0d6b3, #d6a777);
+  --d2x-avt-ink: #5a3515;
+  --d2x-g-tile-ink: #5f6368;
+  --d2x-g-tile-ring: #e1ded7;
+  --d2x-ab-glass: rgb(21 23 26 / .9);
+  --d2x-muted-on-carbon: #b9bec5;
+  --d2x-ok-on-carbon: var(--d2-ok-on-carbon);
+}
+
 /* The page behind Discovery v2 is the same warm canvas: the new shell's main column and the preview. */
 .ns-main:has(.d2), body:has(.d2-preview) { background: #f8f7f4; }

@@ -7,15 +7,20 @@ import { FIXTURE_NOW, approvedHours, fixture } from "@/app/(product)/_workspace/
 import { ThisWeek, type ThisWeekActions } from "@/app/(product)/_workspace/discovery-v2/ThisWeek";
 import { ErrorState, LoadingState } from "@/app/(product)/_workspace/discovery-v2/States";
 import type { Proposal } from "@/app/(product)/_workspace/discoveryApi";
+import { PreviewTabs, ScreensPreview, type ScreenTab } from "./ScreensPreview";
 
 /**
  * The preview's frame: the fixtures through the same adapter the workspace uses, and actions that
  * answer like the API would (Approve answers "approved", the next read "applied"), without a server.
  * `lang` is written on <html> the way the product layout writes it.
  */
-export function DiscoveryPreview({ lang, state, source, sheet, fan, change }: {
+export function DiscoveryPreview({ lang, state, source, sheet, fan, change, tab = "week", screenState = "default" }: {
   lang: D2Lang;
   state: "default" | "approved" | "loading" | "empty" | "error";
+  /** U2: the page; This week is U1's. */
+  tab?: "week" | ScreenTab;
+  /** U2: the state of a Checks, Answers, Proof or Set up page. */
+  screenState?: string;
   source: "google" | "sample";
   sheet: boolean;
   fan: boolean;
@@ -51,12 +56,13 @@ export function DiscoveryPreview({ lang, state, source, sheet, fan, change }: {
     pollMs: 700,
   };
 
+  if (tab !== "week") return <main className="d2-preview"><ScreensPreview lang={lang} tab={tab} state={screenState} /></main>;
   if (state === "loading") return <LoadingState lang={lang} />;
   if (state === "error") return <ErrorState lang={lang} message="" onRetry={() => window.location.reload()} />;
   const initial = state === "approved" ? { overrides: { [f.waiting[0].id]: approvedHours(f, lang) } } : undefined;
   return (
     <main className="d2-preview">
-      <ThisWeek key={`${lang}-${state}-${source}`} lang={lang} view={view} actions={actions} now={FIXTURE_NOW} initial={{ ...initial, sheet, fan }} />
+      <ThisWeek key={`${lang}-${state}-${source}`} lang={lang} view={view} actions={actions} now={FIXTURE_NOW} initial={{ ...initial, sheet, fan }} tabs={<PreviewTabs lang={lang} current="week" />} />
     </main>
   );
 }
