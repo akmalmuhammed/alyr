@@ -595,7 +595,8 @@ def test_every_piece_of_evidence_the_rules_produce_is_worded_in_both_languages()
                 label = fw.LABELS.get(e.label) or words_module.LABELS.get(e.label)
                 where = fw.WHERE.get(e.where) or words_module.WHERE.get(e.where)
                 assert label and where, (e.label, e.where)
-                value = fw.value_text(e.value, lang)
-                if value is None:
-                    value = words_module.value_text(e.value, lang)
+                # Through `words.value_text`, as the API words evidence: it hands `~fp_` values on.
+                value = words_module.value_text(e.value, lang)
                 assert value and not value.startswith("~"), (e.value, lang)
+                if e.value.startswith("~fp_"):
+                    assert value == fw.value_text(e.value, lang)

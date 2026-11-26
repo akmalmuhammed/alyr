@@ -551,6 +551,10 @@ def day_list(keys: str, lang: str) -> str:
 
 
 def value_text(value: str, lang: str) -> str:
+    if value.startswith("~fp_"):  # the first-party checks' own markers (`words_firstparty.py`)
+        from alyr.modules.discovery import words_firstparty
+
+        return words_firstparty.value_text(value, lang) or value
     if value.startswith("~of:"):  # "0 of 12", «0 من 12»
         part, whole = value[len("~of:") :].split(":")
         return f"{part} {'من' if lang == 'ar' else 'of'} {whole}"

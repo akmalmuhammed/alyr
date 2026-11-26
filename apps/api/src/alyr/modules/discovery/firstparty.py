@@ -625,9 +625,9 @@ def _season_due(ctx: Context) -> list[Outcome]:
     ))]
 
 
-# Kinds are the owner's: none of these can be written by a connector yet. When workstream B wires
-# `hours_vs_activity` into `rules.PROPOSES` as `("set_hours", "hours", "listing")`,
-# `effective_kind` makes it `agent` wherever the connector can write hours.
+# Kinds are the owner's, and none of these makes a proposal: `hours_vs_activity` asks the owner to
+# confirm the hours (a change to the listing comes from `hours_conflict` and `hours_missing`, out of
+# confirmed facts), never from activity counts.
 FIRSTPARTY_RULES: tuple[Rule, ...] = (
     Rule("hours_vs_activity", "presence", "owner", "high", 2, _hours_vs_activity),
     Rule("own_links_present", "presence", "owner", "medium", 1, _own_links_present),
