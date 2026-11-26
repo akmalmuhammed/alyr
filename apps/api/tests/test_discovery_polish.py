@@ -50,7 +50,8 @@ def test_before_a_check_up_every_rule_is_core_and_says_whether_it_is_first_party
     turn_on_sample(shop)
     answer = checks(shop.owner, lang="en")
     own = {r.id for r in engine.FIRSTPARTY_RULES}
-    assert [r["id"] for r in answer["rules"]] == [r.id for r in rules.RULES]
+    assert [r["id"] for r in answer["rules"]] == [r.id for r in engine.ALL_RULES]
+    assert own and own <= {r["id"] for r in answer["rules"]}, "the own-data checks are listed"
     for rule in answer["rules"]:
         assert rule["pack"] == "core"
         assert rule["first_party"] is (rule["id"] in own)

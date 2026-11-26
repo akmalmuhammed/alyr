@@ -26,7 +26,6 @@ from alyr.modules.discovery.rules import (
     NOT_MEASURED,
     PARTS,
     PASS,
-    RULE_BY_ID,
     Outcome,
     Rule,
 )
@@ -59,10 +58,15 @@ def part_values(
     outcomes: list[Outcome], answers: AnswersTally | None = None,
     rule_by_id: Mapping[str, Rule] | None = None,
 ) -> dict[str, dict]:
-    """`rule_by_id` is the registry the outcomes came from (the engine's, with the first-party
-    rules); a rule of a part that is not one of `PARTS` counts in "N of M checks match" but not in
-    the score."""
-    rule_by_id = RULE_BY_ID if rule_by_id is None else rule_by_id
+    """`rule_by_id` is the registry the outcomes came from; by default the engine's (every rule a
+    check-up may run, `engine.ALL_RULES`: the twelve and the first-party ones), so a run's kept
+    outcomes score the same again. A rule of a part that is not one of `PARTS`, or of weight 0
+    (`firstparty.season_due`, an ask), counts in "N of M checks match" but not in the score."""
+    if rule_by_id is None:
+        # Imported here: the engine imports this module.
+        from alyr.modules.discovery import engine
+
+        rule_by_id = engine.RULE_BY_ID
     passed = {p: Fraction(0) for p in PARTS}
     counted = {p: Fraction(0) for p in PARTS}
     for outcome in outcomes:

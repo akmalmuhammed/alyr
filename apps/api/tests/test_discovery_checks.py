@@ -7,7 +7,7 @@ from uuid import UUID
 
 import pytest
 
-from alyr.modules.discovery import rules, scoring
+from alyr.modules.discovery import engine, rules, scoring
 from discovery_support import discovery_shop, findings, run_check_up, turn_on_sample
 from test_consent import owner_sql
 
@@ -36,7 +36,7 @@ def test_before_a_check_up_nothing_is_measured_and_the_rules_are_still_named(sho
     answer = checks(shop.owner, lang="en")
     assert (answer["measured"], answer["run_id"], answer["finished_at"]) == (False, None, None)
     assert answer["places"] == [] and answer["business"] is None
-    assert [r["id"] for r in answer["rules"]] == [r.id for r in rules.RULES]
+    assert [r["id"] for r in answer["rules"]] == [r.id for r in engine.ALL_RULES]
     assert all(r["label"] and r["part"] in rules.PARTS for r in answer["rules"])
 
 
@@ -46,7 +46,7 @@ def test_after_a_check_up_every_place_has_a_state_for_every_rule_that_looked_at_
     assert answer["measured"] is True and answer["run_id"] == run["id"] and answer["finished_at"]
     places = shop.owner.get("/api/discovery/locations").json()["items"]
     assert [p["id"] for p in answer["places"]] == [p["id"] for p in places], "in their order"
-    known = {r.id for r in rules.RULES}
+    known = {r.id for r in engine.ALL_RULES}
     seen = set()
     for row in rows(answer):
         assert set(row["checks"]) <= known and set(row["checks"].values()) <= STATES

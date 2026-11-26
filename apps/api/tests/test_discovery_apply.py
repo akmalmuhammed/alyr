@@ -96,10 +96,13 @@ def test_the_score_is_higher_than_a_shop_at_the_same_stage_with_no_approval(
     approve(with_it.owner, find(with_it.owner, "whatsapp_link_missing", "Al Sadd"))
     approve(with_it.owner, find(with_it.owner, "name_conflict", "Al Wakra"))
     for client in (with_it.owner, without.owner):
-        assert score(client) == 74  # the same first check-up
+        # The same first check-up. 77, not 74, since the first-party checks are scored (#366): the
+        # sample's one-script names and matching WhatsApp links pass; season_due has weight 0.
+        assert score(client) == 77
         run_check_up(client)
     # Both at stage 1; the script fixes the same things in each; the approvals add two more.
-    assert (score(without.owner), score(with_it.owner)) == (84, 86)
+    # (86, 88), not (84, 86): the first-party checks that pass are scored too.
+    assert (score(without.owner), score(with_it.owner)) == (86, 88)
     assert finding_status(without.owner, "whatsapp_link_missing", "Al Sadd") == "open"
     assert finding_status(with_it.owner, "whatsapp_link_missing", "Al Sadd") == "verified"
     assert finding_status(with_it.owner, "name_conflict") == "verified"
