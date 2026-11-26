@@ -2,7 +2,8 @@
 `discovery` on, each shop in its own tenant transaction, as background work (customers' jobs first,
 D-078).
 
-It expires proposals past their 14 days, puts approved proposals that were never started or were
+It removes Google's text older than 30 days (`retention.py`, for every shop), expires proposals
+past their 14 days, puts approved proposals that were never started or were
 lost back on the queue, starts a scheduled check-up when the shop switched that on and one is due,
 and asks the people who should be asked. It does nothing for a shop with the module off. It sends
 nothing itself: asking is `asks.send_due`, handed in by the worker (`send_asks`), which goes through
@@ -18,7 +19,7 @@ import asyncpg
 
 from alyr.core.actions import module_on
 from alyr.db import Database
-from alyr.modules.discovery import KEY, apply, engine, proposals
+from alyr.modules.discovery import KEY, apply, engine, proposals, retention
 from alyr.modules.discovery.errors import DiscoveryError
 from alyr.modules.items import clock as shop_clock
 
@@ -53,8 +54,12 @@ async def sweep_shop(
     db: Database, tenant_id: UUID, send_asks: SendAsks | None = None, now: datetime | None = None
 ) -> dict:
     now = now or datetime.now(UTC)
-    done = {"expired": 0, "requeued": 0, "scheduled": False, "asked": 0}
+    done = {"expired": 0, "requeued": 0, "scheduled": False, "asked": 0, "removed": 0}
     async with db.tenant(tenant_id) as conn:
+        # Google's text older than 30 days goes whether or not the module is still on: switching
+        # Discovery off does not make it any less Google's (retention.py).
+        removed = await retention.expire_google_text(conn, now)
+        done["removed"] = sum(removed.values())
         if not await module_on(conn, KEY):
             return done
         done["expired"] = await proposals.expire_due(conn, now)
@@ -73,7 +78,7 @@ async def sweep_all(
     """Every shop with Discovery on, one transaction each; one failing never stops the others."""
     async with db.unscoped() as conn:
         shops = [r["id"] for r in await conn.fetch("select id from tenants")]
-    total = {"expired": 0, "requeued": 0, "scheduled": 0, "asked": 0}
+    total = {"expired": 0, "requeued": 0, "scheduled": 0, "asked": 0, "removed": 0}
     for tenant_id in shops:
         try:
             result = await sweep_shop(db, tenant_id, send_asks, now)

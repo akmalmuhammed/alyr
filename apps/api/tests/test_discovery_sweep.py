@@ -81,7 +81,8 @@ def test_a_shop_with_discovery_off_is_left_alone(client_factory, monkeypatch):
     off = discovery_shop(client_factory, monkeypatch, module=False)
     owner_sql("insert into discovery_settings (tenant_id, weekly_run) values ($1, true)",
               off.tenant_id)
-    assert sweep_at(off, midday()) == {"expired": 0, "requeued": 0, "scheduled": 0, "asked": 0}
+    assert sweep_at(off, midday()) == {
+        "expired": 0, "requeued": 0, "scheduled": 0, "asked": 0, "removed": 0}
     assert runs(off) == []
 
 
