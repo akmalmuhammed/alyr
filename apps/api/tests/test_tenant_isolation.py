@@ -52,6 +52,10 @@ GLOBAL_TABLES = {
     # What owners are asked to accept: every shop may read it, only the back office adds to it
     # (ALY-167). Forced row-level security.
     "terms_versions",
+    # Discovery's pooled answers (0172): a public question built from closed lists and what an
+    # answer tool said, shared by every business of a trade and city. No business's data; a
+    # business's own count is in discovery_answers. Forced row-level security: read and add only.
+    "discovery_answer_pool_runs", "discovery_answer_pool",
 }
 
 
