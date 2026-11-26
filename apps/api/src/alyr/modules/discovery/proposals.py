@@ -159,7 +159,9 @@ class Plan:
 
 def _listing_values(listing) -> dict:
     out: dict = {}
-    if not listing.found:
+    # A listing read live on Google's public page (`connectors/places.py`) is shown, never kept:
+    # nothing is proposed from it, so none of it is stored as a finding's `observed` values.
+    if not listing.found or getattr(listing, "live_only", False):
         return out
     if listing.hours is not None:
         out["hours"] = hours_to_json(listing.hours)

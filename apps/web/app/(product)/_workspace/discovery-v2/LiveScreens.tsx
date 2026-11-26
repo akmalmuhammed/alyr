@@ -15,6 +15,7 @@ import type { D2Lang } from "./copy";
 import { Answers } from "./Answers";
 import { Checks, type ChecksHrefs } from "./Checks";
 import { ErrorScreen, LoadingScreen } from "./frame";
+import { GoogleMapsLink } from "./GoogleMapsLink";
 import { Proof } from "./Proof";
 import { Setup, type Choice, type SetupStage } from "./Setup";
 import { buildAnswers, buildChecks, buildProof, knownFacts, type ChecksView, type ChangeReceipt, type ProofView } from "./screens";
@@ -235,6 +236,7 @@ export function LiveSetup({ lang, canManage, onDone, tabs }: { lang: D2Lang; can
   const data = load.value;
   return (
     <Setup lang={lang} packs={data.packs} choice={choice} onChoose={setChoice} canManage={canManage} tabs={tabs}
+      google={<GoogleMapsLink lang={lang} canManage={canManage} />}
       known={knownFacts({ place: data.place, facts: data.facts, sourceKind: data.sourceKind, lang })}
       stage={stage} error={error} onCheckNow={() => void checkNow()} />
   );

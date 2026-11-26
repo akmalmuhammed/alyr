@@ -274,4 +274,26 @@ export const discovery2 = {
   answers: (lang: D2Lang) => call(`/answers?lang=${lang}`, parseAnswers),
   /** The loop's open asks (at most three) and "Also noticed", the same block as the overview's `asks`. */
   asks: (lang: D2Lang) => call(`/asks?lang=${lang}`, parseAsksBlock),
+  /** Owner and admin only (403 otherwise): whether the Google Places live read is on, and each place's place ID. */
+  googlePlace: () => call("/google-place", parseGooglePlace),
+  /** A Google Maps link or a place ID; "" removes it. Refused (422) when it holds no place ID. */
+  setGooglePlace: (locationId: string, link: string) =>
+    call(`/google-place/${encodeURIComponent(locationId)}`, parseGooglePlace, "PUT", { link }),
 };
+
+// ── the Google Maps link of each place (workstream F) ──
+
+export type GooglePlace = { id: string; name: string; nameAr: string; area: string; placeId: string | null };
+export type GooglePlaces = { on: boolean; places: GooglePlace[] };
+
+export function parseGooglePlace(raw: unknown): GooglePlaces {
+  const r = rec(raw);
+  return {
+    on: r.on === true,
+    places: arr(r.places).flatMap((p) => {
+      const x = rec(p);
+      const id = str(x.id);
+      return id ? [{ id, name: str(x.name), nameAr: str(x.name_ar), area: str(x.area), placeId: str(x.place_id) || null }] : [];
+    }),
+  };
+}

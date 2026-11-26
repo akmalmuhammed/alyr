@@ -19,6 +19,11 @@ the founder's application); what it needs is written in `specs/066-discovery-app
 There is no class, no settings key, no screen and no network call for it: `gbp` is allowed by the
 database's check constraints and is not in `AVAILABLE`, so no shop can turn it on, and `get("gbp")`
 refuses.
+
+**`places` (Discovery 2.0) is another addition**: for every place whose place ID the owner gave
+(`discovery_locations.place_ref`, from a Google Maps link), a check-up reads the public Google
+listing live through the Places API (New), when `ALYR_DISCOVERY_PLACES` and its key are set. Only
+the place ID is kept (`places.py`). It is not the Business Profile, and it writes nothing.
 """
 
 from alyr.modules.discovery.connectors.base import (
@@ -41,6 +46,12 @@ from alyr.modules.discovery.connectors.base import (
     WriteError,
 )
 from alyr.modules.discovery.connectors.manual import ManualConnector
+from alyr.modules.discovery.connectors.places import (
+    PlacesConnector,
+    PlacesListing,
+    place_id_of,
+    places_on,
+)
 from alyr.modules.discovery.connectors.sample import SampleConnector
 from alyr.modules.discovery.connectors.website import SiteWebsite, WebsiteConnector, merge
 
@@ -76,14 +87,19 @@ def get(kind: str) -> Connector:
 def extras_for(kind: str, locations: list[Location]) -> tuple[Connector, ...]:
     """The sources a check-up adds to its connection's snapshot (Discovery 2.0): the business's own
     website (`website.py`), read for every place that has a website address, whatever the
-    connection. Never for the fictional `sample` business: its addresses are made up, and a made-up
-    address may be someone's real site. The engine reads each one after the connection's snapshot
-    and joins it with `merge`, which keeps what the connection already said."""
+    connection; and the public Google listing (`places.py`) of every place with a place ID, when
+    the Places read is switched on. Never for the fictional `sample` business: its addresses are
+    made up, and a made-up address may be someone's real site. The engine reads each one after the
+    connection's snapshot and joins it with `merge`, which keeps what the connection already
+    said."""
     if kind == "sample":
         return ()
+    extras: list[Connector] = []
     if any((location.website_url or "").strip() for location in locations):
-        return (WebsiteConnector(),)
-    return ()
+        extras.append(WebsiteConnector())
+    if places_on() and any(place_id_of(location.place_ref) for location in locations):
+        extras.append(PlacesConnector())
+    return tuple(extras)
 
 
 __all__ = [
@@ -99,6 +115,8 @@ __all__ = [
     "Location",
     "ManualConnector",
     "PlaceSnapshot",
+    "PlacesConnector",
+    "PlacesListing",
     "Receipt",
     "Review",
     "RunContext",

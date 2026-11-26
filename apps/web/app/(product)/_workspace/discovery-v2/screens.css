@@ -293,6 +293,21 @@
 .d2s-pi svg { inline-size: var(--d2-s2h); block-size: var(--d2-s2h); }
 .d2s-pi-alyr { background: var(--d2-carbon); color: var(--d2-chalk); }
 
+/* The Google Maps link of each place (workstream F): shown only when the live read is on. */
+.d2s-gm { margin-block-start: var(--d2-s9); padding: var(--d2-s6); }
+.d2s-gm h2 { font-size: var(--d2-fs-figure); line-height: var(--d2-lh-title); font-weight: var(--d2-wt-strong); letter-spacing: var(--d2-tr-tight); }
+.d2s-gm > header p { margin-block-start: var(--d2-s-1); max-inline-size: 68ch; font-size: var(--d2-fs-btn); line-height: var(--d2-lh-body-sm); color: var(--d2-ink-2); }
+.d2s-gm-list { margin-block-start: var(--d2-s5); display: grid; gap: var(--d2-s2); }
+.d2s-gm-row { display: grid; gap: var(--d2-s2); padding: var(--d2-s3h) var(--d2-s4) var(--d2-s4); border-radius: var(--d2-r-inner); background: var(--d2-well); box-shadow: var(--d2-shadow-group); min-inline-size: 0; }
+.d2s-gm-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: var(--d2-s1) var(--d2-s4); min-inline-size: 0; }
+.d2s-gm-lab { font-size: var(--d2-fs-small); line-height: var(--d2-lh-small); font-weight: var(--d2-wt-medium); color: var(--d2-ink-2); }
+.d2s-gm-now { font-size: var(--d2-fs-small); line-height: var(--d2-lh-small); color: var(--d2-ink-2); overflow-wrap: anywhere; min-inline-size: 0; }
+.d2s-gm-form { display: flex; flex-wrap: wrap; gap: var(--d2-s2); min-inline-size: 0; }
+.d2s-gm-in { flex: 1 1 24ch; min-inline-size: 0; block-size: var(--d2-control); padding-inline: var(--d2-s3); border: var(--d2-rule) solid var(--d2-line-strong); border-radius: var(--d2-r-control); background: var(--d2-surface); color: var(--d2-ink); font: inherit; font-size: var(--d2-fs-btn); }
+.d2s-gm-in::placeholder { color: var(--d2-ink-3); }
+.d2s-gm-in[aria-invalid="true"] { border-color: var(--d2-bad); }
+.d2s-gm-err { font-size: var(--d2-fs-small); line-height: var(--d2-lh-small); color: var(--d2-bad); }
+
 /* Sticky action bar: ALYR speaks (Carbon), the owner decides (the one Volt button) */
 .d2s-actionbar-wrap { position: sticky; inset-block-end: var(--d2-s5); z-index: 40; display: flex; justify-content: center; padding-inline: var(--d2-s9); margin-block-start: var(--d2-s8); pointer-events: none; }
 .d2s-actionbar {

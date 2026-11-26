@@ -11,7 +11,7 @@ through `counted()` and `agree()`), never joined from fragments.
 
 from alyr.core.words import Noun, counted
 from alyr.modules.agent.words import DAY_SHORT, MONTHS, agree
-from alyr.modules.discovery import answer_words
+from alyr.modules.discovery import answer_words, places_words
 
 PROBLEMS: Noun = (
     ("problem", "problems"),
@@ -522,6 +522,9 @@ STEP_SUMMARIES = {
 # Phase 3 (spec 068): the Answers check's refusals and its step sentences.
 ERRORS.update(answer_words.ERRORS)
 STEP_SUMMARIES.update(answer_words.STEP)
+# Discovery 2.0 (workstream F): the Google Places live read.
+ERRORS.update(places_words.ERRORS)
+STEP_SUMMARIES.update(places_words.STEP)
 
 STATUSES = ("open", "skipped", "owner_done", "verified", "gone")
 
@@ -567,6 +570,9 @@ def evidence_view(item: dict, lang: str) -> dict:
     where = pick(WHERE.get(item["where"], (item["where"], item["where"])), lang)
     if item.get("source") == "sample":
         where = f"{where} ({pick(SAMPLE_NOTE, lang)})"
+    elif item.get("source") == "google":
+        # Read live on Google's public listing: Google's terms ask for "Google Maps" beside it.
+        where = f"{where} ({pick(places_words.PLACES_NOTE, lang)})"
     elif item.get("source") == "manual":
         # Whose look it was and which day: "Google listing (recorded by ALYR on 20 Nov 2026)".
         where = f"{where} ({pick(MANUAL_NOTE, lang).format(day=date_text(item['seen_at'], lang))})"

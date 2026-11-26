@@ -409,13 +409,16 @@ async def _carry_out(db, tenant_id, run, log_, get_connector) -> None:
     # 1b. What each place's own website says (Discovery 2.0, `connectors/website.py`): read for
     # every place with a website address, never for the fictional sample, and joined without
     # overriding what the connection said. One logged step per added source.
+    # The public Google listing (`connectors/places.py`) is added the same way, its calls counted
+    # on the run's cost.
     for extra in connectors.extras_for(run["connector_kind"], locations):
         tool = f"connector.{extra.kind}"
         log_.guard(tool)
         started = clock()
+        spent = ctx.spent
         read = await extra.snapshot(locations, ctx)
         snapshot = connectors.merge(snapshot, read)
-        await log_.note(tool, extra.sentence(read), started)
+        await log_.note(tool, extra.sentence(read), started, cost=ctx.spent - spent)
 
     # 2. The rules of the business's pack, one part at a time.
     async with db.tenant(tenant_id, readonly=True) as conn:
@@ -609,14 +612,36 @@ def _evidence(outcome: rules.Outcome, snapshot: Snapshot) -> list[dict]:
     # What the business's own website said was read from it, at the time it was read, whatever
     # the connection of the run (Discovery 2.0).
     site = place.website if place and isinstance(place.website, connectors.SiteWebsite) else None
+    # What Google's public listing said, read live (`connectors/places.py`): labelled `google`, so
+    # `retention.py` removes it after 30 days, and dated when it was read. A finding about the
+    # whole business (the name) quotes each place's listing: Google's if any place's was.
+    live = [p.listing for p in snapshot.places if isinstance(p.listing, connectors.PlacesListing)]
+    google = (
+        place.listing if place and isinstance(place.listing, connectors.PlacesListing)
+        else live[0] if live and place is None else None
+    )
+
+    def when(where: str) -> str:
+        if site and where == "website" and site.read_at:
+            return site.read_at.isoformat()
+        if google and where == "listing" and google.read_at:
+            return google.read_at.isoformat()
+        return seen
+
+    def source(where: str) -> str:
+        if site and where == "website":
+            return "website"
+        if google and where == "listing":
+            return google.source
+        return snapshot.source
+
     return [
         {
             "label": e.label,
             "value": e.value,
             "where": e.where,
-            "seen_at": site.read_at.isoformat() if site and e.where == "website" and site.read_at
-            else seen,
-            "source": "website" if site and e.where == "website" else snapshot.source,
+            "seen_at": when(e.where),
+            "source": source(e.where),
         }
         for e in outcome.evidence
     ]

@@ -391,7 +391,7 @@ def test_google_business_profile_is_an_interface_and_nothing_stands_in_for_it(
     # the sample, the manual source ALYR staff record by hand (D-169) and the owner's own website
     # (Discovery 2.0, read only): no file for gbp
     assert sorted(p.name for p in folder.glob("*.py")) == [
-        "__init__.py", "base.py", "manual.py", "sample.py", "website.py"]
+        "__init__.py", "base.py", "manual.py", "places.py", "sample.py", "website.py"]
     shop = prepared_shop(client_factory, monkeypatch, run=False)
     answer = shop.owner.put(f"{BASE}/connection", json={"kind": "gbp", "on": True})
     assert answer.status_code == 422 and answer.json()["code"] == "bad_connector"
@@ -401,6 +401,11 @@ def test_google_business_profile_is_an_interface_and_nothing_stands_in_for_it(
         # The one Google address allowed: PageSpeed Insights, which the website reader may ask
         # about the owner's public home page (off unless switched on); never Business Profile.
         text = text.replace("https://www.googleapis.com/pagespeedonline/v5/runpagespeed", "")
+        # And the Places API (New), which the Places live read asks about a place's public
+        # listing (off unless switched on; read only, `connectors/places.py`); never Business
+        # Profile.
+        text = text.replace("https://places.googleapis.com/v1/places/", "")
+        text = text.replace("places.googleapis.com", "")
         for banned in ("googleapis", "oauth", "client_secret", "access_token", "refresh_token"):
             assert banned not in text, (path.name, banned)
 

@@ -48,6 +48,12 @@ ASKS_MAY_IMPORT = ("alyr.channels", "alyr.core.templates")
 # test_discovery_website.py; it imports nothing else on this list.
 WEBSITE = "website.py"
 WEBSITE_MAY_IMPORT = ("httpx", "urllib")
+# The other (Discovery 2.0, workstream F): Google's public listing, read live through the Places
+# API (New) at places.googleapis.com only, off unless switched on. What it may call is pinned in
+# test_discovery_places.py and below.
+PLACES = "places.py"
+PLACES_MAY_IMPORT = ("httpx", "urllib")
+PLACES_HOST = "https://places.googleapis.com/v1/places/"
 
 
 def test_the_scan_sees_the_module_it_is_meant_to_guard():
@@ -64,6 +70,9 @@ def test_no_file_of_discovery_imports_anything_that_reaches_outside(path):
             if path.name == ASKS and banned in ASKS_MAY_IMPORT:
                 continue
             if path.name == WEBSITE and banned in WEBSITE_MAY_IMPORT:
+                continue
+            if path.name == PLACES and path.parent.name == "connectors" and (
+                    banned in PLACES_MAY_IMPORT):
                 continue
             assert name != banned and not name.startswith(banned + "."), (path.name, name)
 
@@ -99,7 +108,31 @@ def test_the_sample_connector_imports_only_dates_and_discoveries_own_plain_data(
 def test_no_place_for_a_key_or_a_model_exists_in_the_module():
     for path in FILES:
         text = path.read_text(encoding="utf-8").lower()
+        if path.name == PLACES and path.parent.name == "connectors":
+            # the Places read's own key, read from the environment and sent in a header
+            text = text.replace("alyr_places_key", "")
         assert "places_key" not in text and "api_key" not in text, path.name
+
+
+def test_the_places_read_calls_only_googles_places_host_by_get():
+    path = SRC / "modules" / "discovery" / "connectors" / PLACES
+    text = path.read_text(encoding="utf-8")
+    hosts = set(re.findall(r"https?://[\w.-]+", text))
+    # the only address it calls; maps.google.com and google.com appear only in its words about
+    # links an owner pastes, never as something requested
+    assert {h for h in hosts if "googleapis" in h} == {"https://places.googleapis.com"}
+    assert f'DETAILS_URL = "{PLACES_HOST}"' in text
+    calls = [n.func.attr for n in ast.walk(ast.parse(text)) if isinstance(n, ast.Call)
+             and isinstance(n.func, ast.Attribute) and isinstance(n.func.value, ast.Name)
+             and n.func.value.id == "client"]
+    assert calls == ["get"]
+    # no other file of the module names a Google API host besides the website reader's PageSpeed
+    for other in FILES:
+        if other == path:
+            continue
+        found = set(re.findall(r"[\w.-]+\.googleapis\.com", other.read_text(encoding="utf-8")))
+        allowed = {"www.googleapis.com"} if other.name == WEBSITE else set()
+        assert found <= allowed, (other.name, found)
 
 
 def test_a_whole_check_up_makes_no_http_call_and_queues_no_message(client_factory, monkeypatch):
