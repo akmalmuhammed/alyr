@@ -10,7 +10,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import type { Finding, Proposal } from "../discoveryApi";
 import type { AskView, ReceiptRow, ThisWeekView } from "./adapter";
 import { T, type D2Lang } from "./copy";
-import { dayKeyAt, joinNames, keepPolling, stageOf, askAgainAfter, whereOf } from "./logic";
+import { afterFromDraft, dayKeyAt, draftFor, joinNames, keepPolling, stageOf, askAgainAfter, whereOf, type Draft } from "./logic";
 import { PageBrief } from "./PageBrief";
 import { AskTicket, type Busy } from "./AskTicket";
 import { WaitingFan } from "./WaitingFan";
@@ -19,7 +19,6 @@ import { EvidenceSheet } from "./EvidenceSheet";
 import { AgentBar } from "./AgentBar";
 import { CommandMenu, type Command } from "./CommandMenu";
 import { Toast, type ToastData } from "./Toast";
-import type { HoursDraft } from "./ListingMiniature";
 import { time } from "./parts";
 import "./tokens.css";
 import "./discovery-v2.css";
@@ -31,8 +30,9 @@ export type ThisWeekActions = {
   /** Read one proposal again (after Approve, until it is sent). */
   read: (p: Proposal) => Promise<Proposal>;
   skip: (f: Finding) => Promise<void>;
-  /** TODO(D): send a changed after value. Undefined today (the API has no route): Change it is not drawn. */
-  changeAfter?: (p: Proposal, draft: HoursDraft) => Promise<Proposal>;
+  /** "Change it": approve a changed value (`POST /proposals/{id}/change`). The answer is a new
+   * proposal. Drawn only where the proposal's `edit` allows it. */
+  changeAfter?: (p: Proposal, after: Record<string, unknown>) => Promise<Proposal>;
   /** The workspace's own search palette; absent in the preview, which opens its own menu. */
   onSearch?: () => void;
   hrefs: { checks: string; changes: string; reports: string; settings: string; classic: string };
@@ -61,7 +61,7 @@ export function ThisWeek({ lang, view, actions, now, initial, tabs }: {
   const [fan, setFan] = useState(!!initial?.fan);
   const [sheet, setSheet] = useState<AskView | null>(initial?.sheet ? view.asks[0] ?? null : null);
   const [toast, setToast] = useState<ToastState | null>(null);
-  const [draft, setDraft] = useState<HoursDraft | null>(null);
+  const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState("");
   const [cmdk, setCmdk] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -72,7 +72,8 @@ export function ThisWeek({ lang, view, actions, now, initial, tabs }: {
   const currentP = current ? overrides[current.p.id] ?? current.p : null;
   const rest = view.asks.slice(1).filter((a) => !decided.has(a.p.id));
   const owner = view.owner.filter((f) => !decided.has(f.id));
-  const leftCount = view.total - decided.size;
+  /** The one count of the page: open asks not yet decided in this visit (headline, ticket, tab, bar). */
+  const leftCount = Math.max(0, view.total - decided.size);
   const today = dayKeyAt(now);
 
   const showToast = useCallback((data: Omit<ToastState, "id">) => {
@@ -82,19 +83,20 @@ export function ThisWeek({ lang, view, actions, now, initial, tabs }: {
   }, []);
   useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current); }, []);
 
-  const put = (p: Proposal) => setOverrides((o) => ({ ...o, [p.id]: p }));
+  /** Kept under the ask's own id: "Change it" answers with a new proposal (a new id). */
+  const put = (key: string, p: Proposal) => setOverrides((o) => ({ ...o, [key]: p }));
 
   // After Approve, read the proposal again until it is sent (the API applies it in a job).
-  const polling = useMemo(() => Object.values(overrides).filter((p) => keepPolling(p, 0)).map((p) => p.id).join(","), [overrides]);
+  const polling = useMemo(() => Object.entries(overrides).filter(([, p]) => keepPolling(p, 0)).map(([key]) => key).join(","), [overrides]);
   useEffect(() => {
     if (!polling) return;
     let polls = 0;
     let stop = false;
     const tick = async () => {
-      for (const id of polling.split(",")) {
-        const p = overrides[id];
+      for (const key of polling.split(",")) {
+        const p = overrides[key];
         if (!p || !keepPolling(p, polls)) continue;
-        try { const next = await actions.read(p); if (!stop) put(next); } catch { /* the next read tries again */ }
+        try { const next = await actions.read(p); if (!stop) put(key, next); } catch { /* the next read tries again */ }
       }
       polls += 1;
     };
@@ -109,12 +111,14 @@ export function ThisWeek({ lang, view, actions, now, initial, tabs }: {
     setBusy({ id: p.id, kind: "approve" });
     setError("");
     try {
-      const next = draft && actions.changeAfter ? await actions.changeAfter(p, draft) : await actions.approve(p);
-      put(next);
+      const after = draft && actions.changeAfter ? afterFromDraft(p, draft) : null;
+      if (draft && actions.changeAfter && !after) return;
+      const next = after && actions.changeAfter ? await actions.changeAfter(p, after) : await actions.approve(p);
+      put(ask.p.id, next);
       setDecided((d) => new Set(d).add(p.id));
       setDraft(null);
       setSheet(null);
-      showToast({ title: t.toastApproved(next.decided?.by ?? ""), body: t.toastSending(ask.exact, ask.where), undo: next.can.undo, undoId: next.id });
+      showToast({ title: t.toastApproved(next.decided?.by ?? ""), body: t.toastSending(ask.exact, ask.where), undo: next.can.undo, undoId: ask.p.id });
     } catch (e) {
       setError(actions.sayError(e));
     } finally {
@@ -128,7 +132,7 @@ export function ThisWeek({ lang, view, actions, now, initial, tabs }: {
     setBusy({ id: p.id, kind: "decline" });
     setError("");
     try {
-      put(await actions.decline(p));
+      put(ask.p.id, await actions.decline(p));
       setDecided((d) => new Set(d).add(p.id));
       setSnoozed((s) => ({ ...s, [p.id]: askAgainAfter(Date.now()) }));
       setSheet(null);
@@ -141,15 +145,15 @@ export function ThisWeek({ lang, view, actions, now, initial, tabs }: {
     }
   }, [overrides, busy, actions, showToast, t]);
 
-  const undo = useCallback(async (p: Proposal) => {
+  const undo = useCallback(async (p: Proposal, key: string = p.id) => {
     if (!p.can.undo || busy) return;
-    setBusy({ id: p.id, kind: "undo" });
+    setBusy({ id: key, kind: "undo" });
     try {
       const next = await actions.undo(p);
-      put(next);
+      put(key, next);
       const where = whereOf(p.target, view.sourceKind);
-      const ask = view.asks.find((a) => a.p.id === p.id);
-      const row = view.receipts.find((r): r is Extract<ReceiptRow, { kind: "change" }> => r.kind === "change" && r.p.id === p.id);
+      const ask = view.asks.find((a) => a.p.id === key);
+      const row = view.receipts.find((r): r is Extract<ReceiptRow, { kind: "change" }> => r.kind === "change" && r.p.id === key);
       showToast({ title: t.toastUndone, body: t.toastUndoneBody(ask?.before ?? row?.before ?? p.before.text, where), undo: false, undoId: null });
     } catch (e) {
       showToast({ title: t.toastUndone, body: actions.sayError(e), undo: false, undoId: null });
@@ -185,7 +189,7 @@ export function ThisWeek({ lang, view, actions, now, initial, tabs }: {
     const id = toast?.undoId;
     setToast(null);
     const p = id ? overrides[id] : null;
-    if (p) void undo(p);
+    if (p && id) void undo(p, id);
   }, [toast, overrides, undo]);
 
   // The toast's Undo follows the proposal: it appears once the API says the change can be undone.
@@ -202,7 +206,7 @@ export function ThisWeek({ lang, view, actions, now, initial, tabs }: {
       if (target?.closest("input, select, textarea, [contenteditable]")) return;
       if (!current || !currentP || stageOf(currentP) !== "waiting" || snoozed[current.p.id]) return;
       if (k === "a" && !e.shiftKey) { e.preventDefault(); void approve(current); }
-      else if (k === "c" && actions.changeAfter && current.day && !sheet) { e.preventDefault(); setDraft(draft ? null : { open: current.after.split("–")[0] ?? "", close: current.after.split("–")[1] ?? "" }); }
+      else if (k === "c" && actions.changeAfter && draftFor(currentP) && !sheet) { e.preventDefault(); setDraft(draft ? null : draftFor(currentP)); }
       else if (k === "n" && !sheet) { e.preventDefault(); void decline(current); }
       else if (e.key === "?" && !sheet) { e.preventDefault(); openSheet(current); }
     };
@@ -247,8 +251,8 @@ export function ThisWeek({ lang, view, actions, now, initial, tabs }: {
           <AskTicket ask={current} p={currentP} lang={lang} approvers={view.approvers} today={today} checkedAt={view.checkedAt}
             busy={busy?.id === current.p.id ? busy.kind : busy ? "approve" : null}
             snoozedUntil={snoozed[current.p.id] ?? null}
-            draft={draft} onEdit={actions.changeAfter && current.day ? (on) => setDraft(on ? { open: current.after.split("–")[0] ?? "", close: current.after.split("–")[1] ?? "" } : null) : undefined}
-            onDraft={setDraft} onApprove={() => void approve(current)} onDecline={() => void decline(current)} onUndo={() => void undo(currentP)}
+            draft={draft} onEdit={actions.changeAfter && draftFor(currentP) ? (on) => setDraft(on ? draftFor(currentP) : null) : undefined}
+            onDraft={setDraft} onApprove={() => void approve(current)} onDecline={() => void decline(current)} onUndo={() => void undo(currentP, current.p.id)}
             onWhy={() => openSheet(current)} error={error} peeks={Math.min(2, rest.length + owner.length)} nextCheckAt={view.nextCheckAt} />
         ) : view.state !== "content" || !view.total ? (
           <div className="d2-empty"><p>{t.emptyBody}</p></div>
@@ -256,10 +260,12 @@ export function ThisWeek({ lang, view, actions, now, initial, tabs }: {
 
         <WaitingFan lang={lang} asks={rest} owner={owner} startIndex={2} of={view.total} open={fan} onToggle={() => setFan((v) => !v)}
           onApprove={(a) => void approve(a)} onDecline={(a) => void decline(a)} onWhy={openSheet} onSkip={(f) => void skip(f)} busyId={busy?.id ?? null} />
+        {view.alsoNoticed > 0 ? <p className="d2-small d2-muted d2-also">{t.alsoNoticed(view.alsoNoticed)}</p> : null}
+        {view.ownerOnly > 0 ? <p className="d2-small d2-muted d2-also"><a className="d2-link" href={actions.hrefs.checks}>{t.ownerOnly(view.ownerOnly)}</a></p> : null}
 
         <ReceiptsList lang={lang} rows={view.receipts.map((r) => (r.kind === "change" && overrides[r.p.id] ? { ...r, p: overrides[r.p.id] } : r))}
           people={view.approvers} tally={view.tally} checkedAt={view.checkedAt} checksHref={actions.hrefs.checks}
-          onUndo={(r) => void undo(r.p)} busyId={busy?.id ?? null} />
+          onUndo={(r) => void undo(r.p, r.p.id)} busyId={busy?.id ?? null} />
       </div>
 
       <AgentBar lang={lang} asks={Math.max(0, leftCount)} latest={latest} nextCheckAt={view.nextCheckAt} onSearch={search} onAsks={focusAsk}

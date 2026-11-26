@@ -5,12 +5,13 @@
 
 import { T, wherePage, type D2Lang } from "./copy";
 import type { AskView } from "./adapter";
-import { spanText } from "./logic";
+import { choiceLabels, spanText, type Draft } from "./logic";
 import type { DayKey } from "../discoveryApi";
 import { Ic } from "./icons";
 import { Hl, Ltr, dayTime } from "./parts";
 
-export type HoursDraft = { open: string; close: string };
+/** Change it's draft (logic.ts `Draft`): one day's hours, a phone number or a confirmed value. */
+export type { Draft } from "./logic";
 
 const ORDER: DayKey[] = ["sat", "sun", "mon", "tue", "wed", "thu", "fri"];
 const LONG: Record<D2Lang, Record<DayKey, string>> = {
@@ -29,30 +30,51 @@ export function ListingMiniature({ ask, lang, today, settled, readAt, draft, onD
   /** After Approve: only the new value shows. */
   settled: boolean;
   readAt: string | null;
-  /** Change it: the draft of the one day's hours, with its setter. Absent when not editing. */
-  draft?: HoursDraft | null;
-  onDraft?: (draft: HoursDraft) => void;
+  /** Change it: the draft (hours of the one day, a phone number or a confirmed value), with its setter. Absent when not editing. */
+  draft?: Draft | null;
+  onDraft?: (draft: Draft) => void;
 }) {
   const t = T[lang];
   const { p, listing } = ask;
   const start = ORDER.indexOf(today);
   const week = [...ORDER.slice(start), ...ORDER.slice(0, start)];
   const lineOf = (day: DayKey) => p.before.lines.find((l) => l.day === day)?.text ?? "";
-  const shownAfter = draft ? `${draft.open}–${draft.close}` : ask.after;
+  const shownAfter = ask.after;
+  const choices = choiceLabels(p);
 
-  const diff = (before: string) => (
-    <span className="d2-diff">
-      {draft && onDraft ? (
+  const editor = (d: Draft, set: (draft: Draft) => void) => {
+    if (d.kind === "hours") {
+      return (
         <span className="d2-edit" dir="ltr">
-          <select className="d2-select" aria-label={t.opens(LONG[lang][ask.day ?? "fri"])} value={draft.open} onChange={(e) => onDraft({ ...draft, open: e.target.value })}>
+          <select className="d2-select" aria-label={t.opens(LONG[lang][d.day])} value={d.open} onChange={(e) => set({ ...d, open: e.target.value })}>
             {HALF_HOURS.map((h) => <option key={h}>{h}</option>)}
           </select>
           {" – "}
-          <select className="d2-select" aria-label={t.closes(LONG[lang][ask.day ?? "fri"])} value={draft.close} onChange={(e) => onDraft({ ...draft, close: e.target.value })}>
+          <select className="d2-select" aria-label={t.closes(LONG[lang][d.day])} value={d.close} onChange={(e) => set({ ...d, close: e.target.value })}>
             {HALF_HOURS.map((h) => <option key={h}>{h}</option>)}
           </select>
         </span>
-      ) : (
+      );
+    }
+    if (d.kind === "phone") {
+      return (
+        <span className="d2-edit" dir="ltr">
+          <input className="d2-select d2-input" type="tel" inputMode="tel" autoComplete="off" aria-label={t.editPhoneLabel} value={d.phone} onChange={(e) => set({ ...d, phone: e.target.value })} />
+        </span>
+      );
+    }
+    return (
+      <span className="d2-edit">
+        <select className="d2-select" aria-label={t.editChoiceLabel} value={String(d.index)} onChange={(e) => set({ ...d, index: Number(e.target.value) })}>
+          {choices.map((c, i) => <option key={`${c}-${i}`} value={String(i)}>{c}</option>)}
+        </select>
+      </span>
+    );
+  };
+
+  const diff = (before: string) => (
+    <span className="d2-diff">
+      {draft && onDraft ? editor(draft, onDraft) : (
         <>
           {settled ? null : <><span className="d2-strike">{lang === "ar" ? <Ltr>{before}</Ltr> : before}</span><Ic name="arrow" size="xs" flip className="d2-to" /></>}
           <span className="d2-new">{settled ? <Ltr>{shownAfter}</Ltr> : <Hl><Ltr>{shownAfter}</Ltr></Hl>}</span>

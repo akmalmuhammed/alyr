@@ -294,6 +294,8 @@
   --d2-fs-listing-name: 19px; --d2-lh-listing-name: 28px;
   --d2-fs-body: 17px;      --d2-lh-body: 26px;
   --d2-fs-btn: 16px;
+  --d2-fs-cmd: 18px;
+  --d2-fs-kbd: 12px;
   --d2-fs-body-sm: 15px;   --d2-lh-body-sm: 24px;
   --d2-fs-small: 14px;     --d2-lh-small: 22px;
   --d2-fs-agent: 14.5px;   --d2-lh-agent: 22px;

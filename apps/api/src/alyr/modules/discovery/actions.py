@@ -503,15 +503,23 @@ async def get_checks(conn: asyncpg.Connection, caller: Caller, args: dict) -> di
     """Every place against every check, from the last finished check-up (spec 065, "Checks per
     place"). A check-up made before outcomes were kept answers `measured: false`."""
     lang = await _lang(conn, args.get("lang"))
-    columns = [
-        {"id": r.id, "part": r.part, "label": w.pick(w.CHECK_NAMES[r.id], lang)}
-        for r in rules.RULES
-    ]
     runs = await conn.fetch(
         "select id, finished_at, checks from discovery_runs where status = 'done' "
         "order by created_at desc limit 2"
     )
     last = runs[0] if runs else None
+    # Discovery 2.0: which pack brought each check into the last check-up (`core` before any, or
+    # for a check-up from before the packs), and whether it reads ALYR's own records.
+    packs_of = {
+        e["rule"]: e["pack"] for e in ((last["checks"] if last else None) or [])
+        if isinstance(e, dict) and isinstance(e.get("rule"), str) and isinstance(e.get("pack"), str)
+    }
+    own = {r.id for r in engine.FIRSTPARTY_RULES}
+    columns = [
+        {"id": r.id, "part": r.part, "label": w.pick(w.CHECK_NAMES[r.id], lang),
+         "pack": packs_of.get(r.id, "core"), "first_party": r.id in own}
+        for r in rules.RULES
+    ]
     now = _states(last["checks"]) if last else {}
     answer = {
         "run_id": str(last["id"]) if last else None,

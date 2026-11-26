@@ -7,13 +7,13 @@
 
 import type { AskView, Person } from "./adapter";
 import type { Proposal, DayKey } from "../discoveryApi";
-import { T, dayName, type D2Lang } from "./copy";
+import { T, type D2Lang } from "./copy";
 import { Ic } from "./icons";
 import { Avs, Hl, Kbd, day, time } from "./parts";
 import { DayBars } from "./DayBars";
-import { ListingMiniature, type HoursDraft } from "./ListingMiniature";
+import { ListingMiniature } from "./ListingMiniature";
 import { ChangeLifeTrack } from "./ChangeLifeTrack";
-import { stageOf } from "./logic";
+import { afterFromDraft, draftText, stageOf, type Draft } from "./logic";
 
 export type Busy = "approve" | "decline" | "undo" | null;
 
@@ -28,10 +28,10 @@ export type AskTicketProps = {
   busy: Busy;
   /** Not now was pressed: the date ALYR may ask again. */
   snoozedUntil: number | null;
-  /** Change it, when the API takes a changed value (otherwise undefined and the button is not drawn). */
-  draft: HoursDraft | null;
+  /** Change it, where the API lets this proposal be changed (`edit`); otherwise undefined and the button is not drawn. */
+  draft: Draft | null;
   onEdit?: (on: boolean) => void;
-  onDraft?: (draft: HoursDraft) => void;
+  onDraft?: (draft: Draft) => void;
   onApprove: () => void;
   onDecline: () => void;
   onUndo: () => void;
@@ -49,7 +49,8 @@ export function AskTicket(props: AskTicketProps) {
   const undone = stage === "undone";
   const after = !undone && stage !== "waiting" && stage !== "declined" && stage !== "expired";
   const editing = !!props.draft;
-  const exact = props.draft && ask.day ? `${dayName(ask.day, lang)} ${props.draft.open}–${props.draft.close}` : ask.exact;
+  const exact = props.draft ? draftText(p, props.draft, lang) : ask.exact;
+  const draftOk = !props.draft || afterFromDraft(p, props.draft) !== null;
   const names = approvers.map((a) => a.name);
   const nameList = names.length > 1 ? `${names.slice(0, -1).join(t.listSep)}${t.or}${names[names.length - 1]}` : names[0] ?? "";
   const asked = ask.p.proposed_at ? (ask.p.expires_at ? t.asked(day(ask.p.proposed_at, lang), day(ask.p.expires_at, lang)) : t.askedOnly(day(ask.p.proposed_at, lang))) : "";
@@ -82,7 +83,8 @@ export function AskTicket(props: AskTicketProps) {
                   <div className="d2-after">
                     <div className="d2-stamp d2-cut-stamp"><Ic name="check" size="sm" />{t.approved}{p.decided ? <small>{t.stampBy(p.decided.by, time(p.decided.at, lang))}</small> : null}</div>
                     <h2 className="d2-t-lead" id="d2-ask-title">{ask.day ? t.afterLeadDay(ask.day, ask.after, ask.where) : t.afterLead(p.field_label, ask.where)}</h2>
-                    <p className="d2-t-support">{stage === "failed" ? t.failed(p.failure?.message ?? "") : t.afterSupport(ask.where)}</p>
+                    <p className="d2-t-support">{stage === "failed" ? t.failed(p.failure?.message ?? "") : p.life && (p.life.state === "rejected" || p.life.state === "changed_back") && p.life.text ? p.life.text : t.afterSupport(ask.where)}</p>
+                    {p.approved_as === "edited" ? <p className="d2-small d2-muted">{t.editedNote}</p> : null}
                     <ChangeLifeTrack p={p} where={ask.where} lang={lang} nextCheckAt={props.nextCheckAt} />
                     <div className="d2-t-actions d2-undo-row">
                       {p.can.undo && p.undo_until ? (
@@ -113,9 +115,11 @@ export function AskTicket(props: AskTicketProps) {
                       <span className="d2-chip"><Ic name="calendar" size="sm" />{ask.day ? t.onlyDay(ask.day) : ask.days.length > 1 ? t.daysChange(ask.days.length) : t.onlyField(p.field_label)}</span>
                       <span className="d2-chip"><Ic name="globe" size="sm" />{t.whereChip(ask.where)}</span>
                     </div>
+                    {editing && (p.field === "hours" || p.field === "phone") ? <p className="d2-small d2-muted">{t.editFactNote(p.field_label)}</p> : null}
+                    {editing && !draftOk ? <p className="d2-error" role="alert">{t.editInvalid}</p> : null}
                     {props.error ? <p className="d2-error" role="alert">{props.error}</p> : null}
                     <div className="d2-t-actions d2-t-actions-main">
-                      <button className="d2-btn d2-btn-approve d2-cut-control" type="button" onClick={props.onApprove} disabled={!p.can.approve || props.busy !== null} aria-keyshortcuts="a">
+                      <button className="d2-btn d2-btn-approve d2-cut-control" type="button" onClick={props.onApprove} disabled={!p.can.approve || props.busy !== null || !draftOk} aria-keyshortcuts="a">
                         <span>{props.busy === "approve" ? t.sending : editing ? t.approveExact(exact) : t.approve}</span><Kbd>{t.keyA}</Kbd>
                       </button>
                       {props.onEdit ? (
@@ -138,6 +142,7 @@ export function AskTicket(props: AskTicketProps) {
               ) : (
                 <span>
                   {t.nothingUntil(ask.where)}
+                  {p.undo_window_days ? <><span className="d2-sep"> · </span>{t.undoFor(p.undo_window_days)}</> : null}
                   {names.length ? <><span className="d2-sep"> · </span><Avs people={approvers} tips={(a) => t.personTip(a.name, t.roles[a.role] ?? "")} /> {t.canApprove(nameList)}</> : null}
                 </span>
               )}

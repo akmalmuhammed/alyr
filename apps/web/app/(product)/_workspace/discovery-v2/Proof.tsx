@@ -9,13 +9,12 @@
 // customers".
 
 import { useState, type ReactNode } from "react";
-import type { Person } from "./adapter";
-import { toneOf } from "./adapter";
+import { personFor, type Person } from "./adapter";
 import { T, type D2Lang } from "./copy";
 import { T2 } from "./copy2";
 import { Filters, ScreenFrame, StatePill, Val, type PillTone } from "./frame";
 import { Ic } from "./icons";
-import { joinNames, whereOf } from "./logic";
+import { joinNames, stageOf as stage, whereOf } from "./logic";
 import { Av, day, dayTime } from "./parts";
 import { Mark } from "../shellParts";
 import { beforeAfter } from "./logic";
@@ -36,12 +35,7 @@ export function Proof({ lang, view, tabs, foot, people, sourceKind, onUndo, busy
   const [filter, setFilter] = useState<ReceiptFilter>(initialFilter);
   const shown = filterReceipts(view.receipts, filter);
   const google = view.receipts.some((r) => r.kind !== "you" && whereOf(r.p.target, sourceKind) === "google");
-  // An Arabic name has no Latin initial (`initials()` answers «·»): its first letter stands in.
-  const personOf = (name: string): Person => {
-    const found = people.find((p) => p.name === name);
-    const initial = found && /\p{L}/u.test(found.initial) ? found.initial : name.slice(0, 1).toUpperCase();
-    return { name, initial, tone: found?.tone ?? toneOf(name, people), role: found?.role ?? "" };
-  };
+  const personOf = (name: string): Person => personFor(name, people);
   const deciders = view.deciders.map(personOf);
   const filters = (["all", "approved", "you", "undone", "expired", "declined"] as const)
     .filter((k) => k === "all" || k === "approved" || view.counts[k] > 0)
@@ -134,15 +128,17 @@ function ReceiptCard({ r, lang, sourceKind, personOf, onUndo, busy }: {
   const ba = beforeAfter(p, lang);
   const by = p.decided?.by ?? "";
   const steps: Step[] = [];
-  if (p.proposed_at) steps.push({ node: "ask", title: t.asked, text: dayTime(p.proposed_at, lang) });
+  // The loop opens an ask when it becomes one of the three; before that it was only noticed.
+  const askedAt = p.opened_at ?? p.proposed_at;
+  if (askedAt) steps.push({ node: "ask", title: t.asked, text: dayTime(askedAt, lang) });
   if (r.kind === "expired") {
     steps.push({ node: "ask", open: true, title: t.nobodyDecided(day(p.expires_at, lang)), text: "" });
     steps.push({ node: "no", title: t.nothingApplied, text: t.nothingAppliedBody });
   } else if (r.kind === "declined") {
     steps.push({ node: by ? { person: personOf(by) } : "no", title: t.declinedBy(by), text: [dayTime(p.decided?.at, lang), t.channel[p.decided?.channel ?? ""]].filter(Boolean).join(", ") });
-    steps.push({ node: "no", title: t.nothingApplied, text: t.notNowBody });
+    steps.push({ node: "no", title: t.nothingApplied, text: p.decided?.reason === "declined" ? "" : t.notNowBody });
   } else {
-    if (by) steps.push({ node: { person: personOf(by) }, title: t.approvedBy(by), text: [dayTime(p.decided?.at, lang), t.channel[p.decided?.channel ?? ""]].filter(Boolean).join(", ") });
+    if (by) steps.push({ node: { person: personOf(by) }, title: t.approvedBy(by), text: [dayTime(p.decided?.at, lang), t.channel[p.decided?.channel ?? ""], p.approved_as === "edited" ? t1.editedNote : ""].filter(Boolean).join(", ") });
     if (p.status === "failed") steps.push({ node: "no", title: t.notSent, text: p.failure?.message ?? "" });
     else if (p.applied_at) steps.push({ node: "alyr", title: t.sentBy, text: `${t.sentTo[where]} · ${dayTime(p.applied_at, lang)}` });
     else steps.push({ node: "alyr", open: true, title: t.sendingNow, text: "" });
@@ -150,9 +146,19 @@ function ReceiptCard({ r, lang, sourceKind, personOf, onUndo, busy }: {
       const who = p.undone?.by ?? "";
       steps.push({ node: who ? { person: personOf(who) } : "ask", title: t.undoneByAt(who), text: `${dayTime(p.undone?.at, lang)}. ${t.undoneBody(ba.before, t.where[where])}` });
     } else if (p.applied_at) {
-      if (p.verification === "confirmed") steps.push({ node: "ok", title: t.nextSaw, text: "" });
-      else if (p.verification === "not_confirmed") steps.push({ node: "eye", title: t.nextSawNot, text: "" });
-      else steps.push({ node: "wait", open: true, title: t.nextWait, text: "" });
+      // The loop's life (Google's review, refused, changed back) in the API's words, then the check
+      // about 20 hours after sending: when it looks, and what it saw.
+      const life = p.life?.state;
+      const verified = p.receipt?.verified ?? null;
+      const seen = verified?.at ? dayTime(verified.at, lang) : "";
+      if (life === "pending_review") steps.push({ node: "wait", open: true, title: p.life?.text || t.nextWait, text: dayTime(p.life?.at, lang) });
+      if (life === "rejected" || life === "changed_back") steps.push({ node: "eye", title: p.life?.text || t.nextSawNot, text: dayTime(p.life?.at, lang) });
+      else if (stage(p) === "live") steps.push({ node: "ok", title: t.nextSaw, text: seen || dayTime(p.verified_at, lang) });
+      else if (p.verification === "not_confirmed") steps.push({ node: "eye", title: verified?.text || t.nextSawNot, text: seen });
+      else if (life !== "pending_review") {
+        const next = p.next_check_at ?? p.receipt?.next_check_at ?? null;
+        steps.push({ node: "wait", open: true, title: t.nextWait, text: next ? t1.checkAround(dayTime(next, lang)) : "" });
+      }
     }
   }
   const word = { matches: t.stMatches, sent: t.stSent, notMatching: t.stNotMatching, approved: t.stApproved, failed: t.stFailed, undone: t.stUndone, expired: t.stExpired, declined: t.stDeclined, youMatches: t.stMatches, youPending: t.stPending }[r.status];
@@ -163,7 +169,7 @@ function ReceiptCard({ r, lang, sourceKind, personOf, onUndo, busy }: {
       <div className="d2s-rc-main">
         <h3>{t1.exactField(p.field_label, where)}</h3>
         <div className="d2-pair">
-          <span className="d2-chip d2-chip-from"><Val text={ba.before} /></span>
+          {p.before.removed ? <span className="d2-chip d2-chip-from d2-chip-removed" data-tip={t1.removedTip}>{ba.before}</span> : <span className="d2-chip d2-chip-from"><Val text={ba.before} /></span>}
           <Ic name="arrow" size="xs" flip className="d2-to" />
           <span className="d2-chip d2-chip-to"><Val text={ba.after} /></span>
         </div>

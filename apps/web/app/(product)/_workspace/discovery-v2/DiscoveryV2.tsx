@@ -33,6 +33,7 @@ export function DiscoveryV2({ lang, page, go, canManage, onSearch }: {
   onSearch?: () => void;
 }) {
   const [waiting, setWaiting] = useState(0);
+  const [nextCheckAt, setNextCheckAt] = useState<string | null>(null);
   const [hasRun, setHasRun] = useState(true);
   const [first, setFirst] = useState<PageKey | null>(null);
 
@@ -42,7 +43,9 @@ export function DiscoveryV2({ lang, page, go, canManage, onSearch }: {
       try {
         const plus = await discovery2.overview(lang);
         if (!live) return;
-        setWaiting(plus.overview.proposals?.waiting ?? 0);
+        // The open asks (at most three, the loop), not every proposal waiting behind them.
+        setWaiting(plus.asks ? plus.asks.open.length : plus.overview.proposals?.waiting ?? 0);
+        setNextCheckAt(plus.asks?.nextCheckAt ?? null);
         setHasRun(plus.overview.has_run);
         if (canManage && !plus.overview.has_run && page === null) {
           const mine = await discovery2.pack(lang).catch(() => null);
@@ -62,8 +65,8 @@ export function DiscoveryV2({ lang, page, go, canManage, onSearch }: {
   const shown: PageKey = page ?? first ?? "week";
   const tabs = shown === "setup" && !hasRun ? null : <Tabs lang={lang} current={shown === "setup" ? null : shown} waiting={waiting} hrefOf={pageHref} onGo={go} />;
   const foot = useCallback((toast: ReactNode) => (
-    <AgentBar lang={lang} asks={waiting} latest="" nextCheckAt={null} onSearch={onSearch ?? (() => {})} onAsks={() => go("week")} toast={toast} />
-  ), [lang, waiting, onSearch, go]);
+    <AgentBar lang={lang} asks={waiting} latest="" nextCheckAt={nextCheckAt} onSearch={onSearch ?? (() => {})} onAsks={() => go("week")} toast={toast} />
+  ), [lang, waiting, nextCheckAt, onSearch, go]);
 
   if (page === null && first === null) return null;
   switch (shown) {
@@ -80,6 +83,6 @@ export function DiscoveryV2({ lang, page, go, canManage, onSearch }: {
     case "setup":
       return <LiveSetup lang={lang} canManage={canManage} tabs={tabs} onDone={() => go("checks")} />;
     default:
-      return <LiveThisWeek lang={lang} onSearch={onSearch} tabs={tabs} checksHref={pageHref("checks")} />;
+      return <LiveThisWeek lang={lang} onSearch={onSearch} tabs={tabs} checksHref={pageHref("checks")} proofHref={pageHref("proof")} />;
   }
 }

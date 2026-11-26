@@ -1,11 +1,11 @@
 // Fixtures for the preview and tests of Checks, Proof, Answers and Set up (workstream U2), shaped
 // exactly like the API's answers (discoveryApi.ts and api2.ts types), for the prototype's fictional
 // car care business. The clock is the prototype's: Thursday 12 November 2026, 09:40 in Doha.
-// `range` and `cited` on the answers are what workstream G adds; the preview draws them to show
-// the approved design, the product hides them until the API sends them.
+// The answers fixture is the raw shape of G's `GET /answers` (PR #362), read through `parseAnswers`
+// exactly as the product reads it; like the sample, it never reaches 30 answers (`not_enough`).
 
 import type { CheckState, ChecksAnswer, Evidence, Fact, Finding, Place, Proposal, Side, TeamMember } from "../discoveryApi.ts";
-import type { AnswersAnswer, ChecksBlock, Pack } from "./api2.ts";
+import { parseAnswers, type AnswersAnswer, type ChecksBlock, type Pack } from "./api2.ts";
 import type { D2Lang } from "./copy.ts";
 
 const iso = (s: string) => new Date(Date.parse(s)).toISOString();
@@ -35,7 +35,7 @@ export function packsFixture(lang: D2Lang): Pack[] {
   ];
 }
 
-export const BLOCK: ChecksBlock = { run_id: "run-1", family: "appointments", trade: "car_care", matched: 10, measured: 14, not_measured: 2, total: 16 };
+export const BLOCK: ChecksBlock = { run_id: "run-1", family: "appointments", trade: "car_care", matched: 10, measured: 14, not_measured: 2, total: 16, previous: { matched: 8, measured: 14, at: iso("2026-11-05T06:40:00Z") } };
 
 // ── checks ─────────────────────────────────────────────
 
@@ -53,7 +53,7 @@ const STATES: Record<string, CheckState> = {
 };
 
 export function checksFixture(lang: D2Lang): ChecksAnswer {
-  const rules = [...PHASE1, ...FIRST].map((id) => ({ id, part: "presence" as const, label: pick(lang, NAMES[id][0], NAMES[id][1]) }));
+  const rules = [...PHASE1, ...FIRST].map((id) => ({ id, part: "presence" as const, label: pick(lang, NAMES[id][0], NAMES[id][1]), pack: "core", first_party: FIRST.includes(id) }));
   return {
     run_id: "run-1", finished_at: iso("2026-11-12T06:40:00Z"), measured: true, rules, places: [],
     business: { checks: Object.fromEntries(rules.map((r) => [r.id, STATES[r.id] ?? "pass"])), fixed: ["category_missing"] },
@@ -89,8 +89,10 @@ export function findingsFixture(lang: D2Lang): Finding[] {
 
 // ── proof ──────────────────────────────────────────────
 
-const plain = (text: string): Side => ({ text, lines: [] });
-const hours = (sat: string): Side => ({ text: `Sat ${sat}`, lines: [{ day: "sat", text: sat }] });
+const plain = (text: string): Side => ({ text, lines: [], removed: false });
+const hours = (sat: string): Side => ({ text: `Sat ${sat}`, lines: [{ day: "sat", text: sat }], removed: false });
+/** A "before" whose Google text was removed after 30 days, as the API sends it. */
+const removed = (lang: D2Lang): Side => ({ text: pick(lang, "removed after 30 days (Google's terms)", "حُذف بعد 30 يومًا (وفق شروط Google)"), lines: [], removed: true });
 
 function proposal(over: Partial<Proposal> & Pick<Proposal, "id" | "field" | "field_label" | "before" | "after" | "status">): Proposal {
   return {
@@ -98,6 +100,8 @@ function proposal(over: Partial<Proposal> & Pick<Proposal, "id" | "field" | "fie
     location: { id: LOC, name: "Nuqta Car Care" }, where: "", change_hash: "h", context: null, evidence: [], proposer: "rule",
     proposed_at: null, expires_at: null, decided: null, undone: null, applied_at: null, undo_until: null, failure: null, verification: null, sample: false,
     can: { approve: false, decline: false, undo: false }, already: false,
+    queue: null, opened_at: null, approved_as: null, edited_from: null, life: null, life_history: [], receipt: null,
+    undo_window_days: 7, next_check_at: null, verified_at: null, edit: null, also_fixes: null, expire_reason: "",
     ...over,
   };
 }
@@ -108,16 +112,18 @@ export function proofFixture(lang: D2Lang): { proposals: Proposal[]; done: Findi
     team: [{ id: "u-hana", name: hana, role: "owner" }, { id: "u-omar", name: omar, role: "admin" }],
     proposals: [
       proposal({ id: "p-cat", field: "category", field_label: pick(lang, "Main category", "التصنيف الرئيسي"), status: "applied", before: plain(pick(lang, "None", "لا شيء")), after: plain(pick(lang, "Car wash", "غسيل السيارات")),
-        proposed_at: iso("2026-11-08T06:00:00Z"), decided: { by: hana, channel: "portal", at: iso("2026-11-09T05:12:00Z") }, applied_at: iso("2026-11-09T11:20:00Z"),
+        proposed_at: iso("2026-11-08T06:00:00Z"), decided: { by: hana, channel: "portal", at: iso("2026-11-09T05:12:00Z"), reason: "" }, applied_at: iso("2026-11-09T11:20:00Z"),
         undo_until: iso("2026-11-16T11:20:00Z"), verification: "confirmed", can: { approve: false, decline: false, undo: true } }),
       proposal({ id: "p-name", field: "name", field_label: pick(lang, "Name", "الاسم"), status: "applied", before: plain("Nuqta Car Wash"), after: plain("Nuqta Car Care"),
-        proposed_at: iso("2026-11-08T06:00:00Z"), decided: { by: omar, channel: "whatsapp", at: iso("2026-11-09T05:30:00Z") }, applied_at: iso("2026-11-09T12:02:00Z"),
-        undo_until: iso("2026-11-16T12:02:00Z"), verification: "confirmed", can: { approve: false, decline: false, undo: true } }),
-      proposal({ id: "p-phone", field: "phone", field_label: pick(lang, "Phone number", "رقم الهاتف"), status: "expired", before: plain("+974 5555 0110"), after: plain("+974 5555 0101"),
+        proposed_at: iso("2026-11-08T06:00:00Z"), decided: { by: omar, channel: "whatsapp", at: iso("2026-11-09T05:30:00Z"), reason: "" }, applied_at: iso("2026-11-09T12:02:00Z"),
+        undo_until: iso("2026-11-16T12:02:00Z"), verification: "confirmed", can: { approve: false, decline: false, undo: true },
+        approved_as: "edited", life: { state: "live", at: iso("2026-11-10T08:10:00Z"), text: "" },
+        receipt: { at: iso("2026-11-09T12:02:00Z"), edited: true, approved_text: "", undo: { days: 7, until: iso("2026-11-16T12:02:00Z") }, next_check_at: null, verified: { at: iso("2026-11-10T08:10:00Z"), state: "live", text: "" } } }),
+      proposal({ id: "p-phone", field: "phone", field_label: pick(lang, "Phone number", "رقم الهاتف"), status: "expired", before: removed(lang), after: plain("+974 5555 0101"),
         proposed_at: iso("2026-10-15T06:00:00Z"), expires_at: iso("2026-10-29T06:00:00Z") }),
       proposal({ id: "p-sat", field: "hours", field_label: pick(lang, "Saturday hours", "ساعات السبت"), status: "undone", before: hours("07:00–22:00"), after: hours("07:00–23:00"),
-        proposed_at: iso("2026-10-27T06:00:00Z"), decided: { by: hana, channel: "portal", at: iso("2026-10-27T16:40:00Z") }, applied_at: iso("2026-10-27T16:41:00Z"),
-        undone: { by: hana, channel: "portal", at: iso("2026-10-28T07:05:00Z") } }),
+        proposed_at: iso("2026-10-27T06:00:00Z"), decided: { by: hana, channel: "portal", at: iso("2026-10-27T16:40:00Z"), reason: "" }, applied_at: iso("2026-10-27T16:41:00Z"),
+        undone: { by: hana, channel: "portal", at: iso("2026-10-28T07:05:00Z"), reason: "" } }),
     ],
     done: [
       finding({ id: "f-site-phone", rule_id: "phone_conflict", kind: "owner", status: "verified", title: pick(lang, "Phone number on your website", "رقم الهاتف على موقعك"), last_seen_at: iso("2026-11-07T06:40:00Z") }),
@@ -129,33 +135,62 @@ export function proofFixture(lang: D2Lang): { proposals: Proposal[]; done: Findi
 // ── answers ────────────────────────────────────────────
 
 export function answersFixture(lang: D2Lang, state: "default" | "off" = "default"): AnswersAnswer {
-  const base = {
-    engines: [], trade: pick(lang, "Car care", "العناية بالسيارات"), city: pick(lang, "Doha", "الدوحة"),
-    headline: "", sampleNote: "",
-    rule: pick(lang, "By rule: an answer names your business when it contains the name of the business or of one of its places. Position is its place in the answer's list.", "بالقاعدة: تذكر الإجابة نشاطك عندما تتضمن اسم النشاط أو اسم أحد فروعه. الترتيب هو مكانه في قائمة الإجابة."),
-    limits: pick(lang, "Names are matched as written: a nickname or a misspelling is not counted. An answer with no list can name your business but gives no position.", "تُطابَق الأسماء كما هي مكتوبة: لا يُحتسب اسم التدلل ولا الخطأ الإملائي. قد تذكر الإجابة التي بلا قائمة نشاطك لكنها لا تعطي ترتيباً."),
-    caution: pick(lang, "Answers change from one asking to the next. A few points is not a trend.", "تتغير الإجابات من مرة سؤال إلى أخرى. بضع نقاط ليست اتجاهاً."),
+  const L = (en: string, ar: string) => pick(lang, en, ar);
+  const settings = { trade: "car_care", city: "doha", area: "west_bay", trade_label: L("Car care", "العناية بالسيارات"), city_label: L("Doha", "الدوحة"), area_label: L("West Bay", "الخليج الغربي") };
+  const words = {
+    method: L("ALYR asked the same public questions through the developer interfaces of Answer tool 1, Answer tool 2 and Answer tool 3, as if the asker were in West Bay, Doha. Those interfaces can answer differently from the tools' own apps.",
+      "طرحت ALYR الأسئلة العامة نفسها عبر واجهات المطوّرين لأداة الإجابة 1 وأداة الإجابة 2 وأداة الإجابة 3، كأن السائل في الخليج الغربي، الدوحة. وقد تجيب هذه الواجهات بخلاف تطبيقات الأدوات نفسها."),
+    rule: L("By rule: an answer names your business when it contains the name of the business or of one of its places.", "بالقاعدة: تذكر الإجابة نشاطك عندما تتضمن اسم النشاط أو اسم أحد فروعه."),
+    limits: L("Names are matched as written: a nickname or a misspelling is not counted.", "تُطابَق الأسماء كما هي مكتوبة: لا يُحتسب اسم التدلل ولا الخطأ الإملائي."),
+    caution: L("Answers change from one asking to the next. A few answers is not a trend.", "تتغير الإجابات من مرة سؤال إلى أخرى. بضع إجابات ليست اتجاهاً."),
+    range_note: L("The range is where the share of answers naming you most likely lies, for these questions and this tool (95%, Wilson method). A share is given from 30 answers. A change is named only when both check-ups counted at least 30 answers from that tool in that language and the ranges do not overlap.",
+      "النطاق هو حيث تقع على الأرجح نسبة الإجابات التي تذكر نشاطك، لهذه الأسئلة ولهذه الأداة (95%، طريقة ويلسون). تُعطى النسبة من 30 إجابة. ولا يُذكر تغيّر إلا حين يعدّ الفحصان كلاهما 30 إجابة على الأقل من تلك الأداة بتلك اللغة ولا يتداخل النطاقان."),
+    quote_note: L("Answers are shown as the answer tools gave them. ALYR did not write them and acts on nothing in them.", "تُعرض الإجابات كما أعطتها أدوات الإجابة. لم تكتبها ALYR ولا تنفّذ أي شيء مما ورد فيها."),
+    sources_title: L("Where the answers got their facts", "من أين أخذت الإجابات معلوماتها"),
+    sources_note: L("The pages each answer tool said it used. ALYR does not open them. Where a page names your business with a phone number, that number is compared with the numbers you confirmed.",
+      "الصفحات التي قالت كل أداة إجابة إنها استندت إليها. لا تفتحها ALYR. وحيث تذكر الصفحة نشاطك مع رقم هاتف، يُقارن ذلك الرقم بالأرقام التي أكّدتها."),
+    sample_note: "",
   };
-  if (state === "off") return { ...base, enabled: false, last: null, previous: null, range: null, cited: null };
-  const tools = [pick(lang, "Answer tool 1", "أداة الإجابة 1"), pick(lang, "Answer tool 2", "أداة الإجابة 2"), pick(lang, "Answer tool 3", "أداة الإجابة 3")];
+  if (state === "off") return parseAnswers({ enabled: false, settings, last: null, previous: null, engines: [], ...words });
+  const tools = [L("Answer tool 1", "أداة الإجابة 1"), L("Answer tool 2", "أداة الإجابة 2"), L("Answer tool 3", "أداة الإجابة 3")];
   const named: Record<string, boolean[]> = { en: [true, false, true, true, true, false], ar: [false, false, false, false, false, false] };
   const qs = { en: ["best car care in Doha", "where can I find good car care in Doha?"], ar: ["أفضل العناية بالسيارات في الدوحة", "أين أجد عناية جيدة بالسيارات في الدوحة؟"] };
   const text = "For car care in Doha, these are often recommended:\n1. Sahm Auto Spa: polishing and full wash, West Bay.\n2. Nuqta Car Care: full wash, interior detail and ceramic coating. Listed as closed on Fridays.\n3. Hayat Detailing Lab: paint correction and ceramic coating.\n4. Basma Car Spa: express wash, open late.";
+  const check = { matches: L("Matches what you confirmed", "يطابق ما أكّدته"), differs: L("Differs from what you confirmed", "يختلف عمّا أكّدته"), not_read: L("Nothing in it to compare", "لا شيء فيها للمقارنة") };
   const answers = (["en", "ar"] as const).flatMap((l) => tools.flatMap((tool, i) => [0, 1].map((q) => {
     const isNamed = named[l][i * 2 + q];
-    return { id: `a-${l}-${i}-${q}`, engine: `tool${i + 1}`, engine_label: tool, lang: l, question: qs[l][q], status: "ok", named: isNamed, position: isNamed ? 2 : null, matched: isNamed ? "Nuqta Car Care" : "", text: l === "en" && i === 1 && q === 0 ? text : "" };
+    return {
+      id: `a-${l}-${i}-${q}`, engine: `tool${i + 1}`, engine_label: tool, said_by: tool, lang: l, question: qs[l][q], status: "ok", named: isNamed,
+      matched: isNamed ? "Nuqta Car Care" : "", text: l === "en" && i === 1 && q === 0 ? text : "", third_party: true, shared: true,
+      sources: [{ host: "maps.example", title: "Nuqta Car Care", check: "differs", check_label: check.differs }],
+    };
   })));
-  return {
-    ...base, enabled: true,
-    last: { run_id: "run-1", asked_at: iso("2026-11-10T06:12:00Z"), named: 4, counted: 12, measured: true, sample: false, answers },
-    previous: { run_id: "run-0", asked_at: iso("2026-11-03T06:12:00Z"), named: 3, counted: 12, measured: true },
-    range: { low: 2, high: 7 },
-    cited: [
-      { kind: "google", title: pick(lang, "Google Maps page", "صفحة خرائط Google"), host: "", cites: 9, state: "differs", note: "" },
-      { kind: "website", title: pick(lang, "Your website", "موقعك"), host: "nuqtacarcare.qa", cites: 6, state: "matches", note: "" },
-      { kind: "directory", title: pick(lang, "A business directory", "دليل أعمال"), host: "", cites: 4, state: "differs", note: "" },
-    ],
-  };
+  // Wilson 95% ranges in whole percents, as G's stats.range_view gives them.
+  const range = (k: number, nn: number) => ({ 0: { low: 0, high: 39 }, 1: { low: 3, high: 56 }, 2: { low: 30, high: 90 } } as Record<number, { low: number; high: number }>)[k] ?? (nn ? { low: 0, high: 100 } : null);
+  const why = (prev: number, last: number) => L(`No change is named: that needs at least 30 answers in both check-ups, and they counted ${prev} answers and then ${last} answers.`,
+    `لا يُذكر أي تغيير: يلزم لذلك 30 إجابة على الأقل في كلا الفحصين، وقد عُدّت ${prev} إجابات ثم ${last} إجابات.`);
+  const groups = tools.flatMap((tool, i) => (["en", "ar"] as const).map((l) => {
+    const k = named[l].slice(i * 2, i * 2 + 2).filter(Boolean).length;
+    return {
+      engine: `tool${i + 1}`, engine_label: tool, sample: false, lang: l, lang_label: l === "en" ? L("English", "الإنجليزية") : L("Arabic", "العربية"),
+      named: k, counted: 2, asked: 2, range: range(k, 2), share: null, headline: "",
+      change: { state: "not_enough", reason: why(2, 2), since_run_id: "run-0", since: { named: Math.max(0, k - 1), counted: 2, range: range(Math.max(0, k - 1), 2) } },
+    };
+  }));
+  return parseAnswers({
+    enabled: true, settings, ...words,
+    engines: tools.map((label, i) => ({ kind: `tool${i + 1}`, label, sample: false, live: true })),
+    last: {
+      run_id: "run-1", asked_at: iso("2026-11-10T06:12:00Z"), named: 4, counted: 12, sample: false, groups, answers,
+      sources: [
+        { host: "maps.example", titles: [L("Nuqta Car Care on a map page", "نقطة للعناية بالسيارات على صفحة خرائط")], answers: 9, answers_without_you: 5, check: "differs", check_label: check.differs, engine_labels: tools, langs: ["en", "ar"] },
+        { host: "nuqtacarcare.example", titles: [L("Nuqta Car Care: opening hours", "نقطة للعناية بالسيارات: ساعات العمل")], answers: 6, answers_without_you: 2, check: "matches", check_label: check.matches, engine_labels: tools.slice(0, 2), langs: ["en"] },
+        { host: "directory.example", titles: [L("Car care in Doha, a directory", "دليل العناية بالسيارات في الدوحة")], answers: 4, answers_without_you: 4, check: "not_read", check_label: check.not_read, engine_labels: tools.slice(1), langs: ["ar"] },
+      ],
+      searches: [],
+    },
+    previous: { run_id: "run-0", asked_at: iso("2026-11-03T06:12:00Z"), named: 3, counted: 12, sample: false },
+  });
 }
 
 // ── set up ─────────────────────────────────────────────
