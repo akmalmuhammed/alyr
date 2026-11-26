@@ -306,7 +306,8 @@ async def list_findings(conn: asyncpg.Connection, caller: Caller, args: dict) ->
     return {
         "items": [
             finding_view(r, lang)
-            | {"proposals_waiting": waiting.get(r["id"], 0), "website_steps": steps.get(r["id"], [])}
+            | {"proposals_waiting": waiting.get(r["id"], 0),
+               "website_steps": steps.get(r["id"], [])}
             for r in rows
         ],
         "counts": await _counts(conn, location_id),

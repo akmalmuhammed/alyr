@@ -1080,9 +1080,11 @@ async def overview_block(conn: asyncpg.Connection, caller: Caller, scope: Scope,
 
 
 # ALYR writes nothing to an owner's own website (DECISIONS #8): no connector writes there, and a
-# website difference is a step the owner takes. The plan a proposal would have made gives the exact
-# text to put on the page; it is shown, never sent.
-WEBSITE_FIELDS = frozenset({("website", "hours"), ("website", "phone"), ("website", "whatsapp_link")})
+# website difference is a step the owner takes. The plan a proposal would have made gives the
+# exact text to put on the page; it is shown, never sent.
+WEBSITE_FIELDS = frozenset(
+    {("website", "hours"), ("website", "phone"), ("website", "whatsapp_link")}
+)
 
 
 async def website_steps(conn: asyncpg.Connection, lang: str, finding_rows) -> dict[UUID, list]:

@@ -149,9 +149,8 @@ def test_evidence_that_found_nothing_is_a_whole_sentence(shop, lang, sentence):
 def test_evidence_that_found_something_has_no_sentence(shop):
     every = [e for f in findings(shop.owner) for e in f["evidence"]]
     assert every
-    assert all(e["sentence"] == "" for e in every if e["value"] not in ("None", "Not found", "No",
-                                                                        "Not listed",
-                                                                        "Listed, with no page of its own"))
+    nothing = ("None", "Not found", "No", "Not listed", "Listed, with no page of its own")
+    assert all(e["sentence"] == "" for e in every if e["value"] not in nothing)
 
 
 # ── no source connected ─────────────────────────────────────────────────────────────────
