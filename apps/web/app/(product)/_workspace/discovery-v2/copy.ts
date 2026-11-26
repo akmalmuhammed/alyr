@@ -33,6 +33,8 @@ const cap = (value: number) => WORDS_EN[value] || n(value);
 /** A range keeps its two ends together: word joiners round the dash, so a line never breaks inside it. */
 export const keep = (text: string) => text.replace(/–/g, "⁠–⁠");
 const ar = (text: string) => isolate(keep(text));
+/** A label inside an English sentence: plain words in small letters, a name (WhatsApp, Google, ALYR) as it is. */
+export const lowerWords = (text: string) => text.split(" ").map((w) => (/^[A-Z][a-z]*$/.test(w) ? w.toLowerCase() : w)).join(" ");
 
 const DAY_EN: Record<DayKey, [one: string, many: string]> = {
   sat: ["Saturday", "Saturdays"], sun: ["Sunday", "Sundays"], mon: ["Monday", "Mondays"], tue: ["Tuesday", "Tuesdays"],
@@ -72,7 +74,7 @@ export const T = {
     sampleSource: "These are the sample business's pages, not yours.",
     notChecked: "ALYR has not checked your business yet.",
     remaining: (names: string) => `Still waiting: ${names}.`,
-    waitingName: (field: string, where: WhereKey) => `the ${field.toLowerCase()} on ${WHERE.en.mid[where]}`,
+    waitingName: (field: string, where: WhereKey) => `the ${lowerWords(field)} on ${WHERE.en.mid[where]}`,
     ownerName: { whatsapp_link_missing: "the WhatsApp link on your website" } as Record<string, string>,
     onItsWay: (what: string, where: WhereKey) => `${what} is on its way to ${WHERE.en.mid[where]}.`,
     matchOf: (measured: number) => ({ pre: "", of: ` of ${n(measured)}`, post: " checks match" }),
@@ -95,6 +97,9 @@ export const T = {
     leadNoCategory: (where: WhereKey) => ({ pre: `${WHERE.en.start[where]} has `, hl: "no main category", post: "." }),
     leadCategory: (where: WhereKey) => ({ pre: `${WHERE.en.start[where]} shows a `, hl: "different main category", post: "." }),
     leadNoWhatsapp: (where: WhereKey) => ({ pre: `${WHERE.en.start[where]} has `, hl: "no WhatsApp link", post: "." }),
+    leadWhatsappOther: (where: WhereKey) => ({ pre: `${WHERE.en.start[where]}’s WhatsApp link goes to `, hl: "a different number", post: "." }),
+    leadNoPhone: (where: WhereKey) => ({ pre: `${WHERE.en.start[where]} shows `, hl: "no phone number", post: "." }),
+    leadNoName: (where: WhereKey) => ({ pre: `${WHERE.en.start[where]} shows `, hl: "no business name", post: "." }),
     leadReview: { pre: "A review ", hl: "has no reply", post: "." },
     confirmedDay: (day: DayKey, span: string, date: string) => `You confirmed ${DAY_EN[day][0]} hours of ${span} on ${date}.`,
     confirmedValue: (value: string, date: string) => `You confirmed ${value} on ${date}.`,
@@ -109,7 +114,7 @@ export const T = {
     barTitle: (date: string, orders: number, bookings: number) => `${date}: ${counted(orders, N.order, "en")}, ${counted(bookings, N.booking, "en")}`,
     onlyDay: (day: DayKey) => `Only ${DAY_EN[day][0]} changes`,
     daysChange: (count: number) => `${n(count)} days change`,
-    onlyField: (field: string) => `Only the ${field.toLowerCase()} changes`,
+    onlyField: (field: string) => `Only the ${lowerWords(field)} changes`,
     whereChip: (where: WhereKey) => WHERE.en.chip[where],
     approve: "Approve",
     approveExact: (exact: string) => `Approve ${exact}`,
@@ -271,6 +276,26 @@ export const T = {
     readLive: (when: string) => `Read ${when}`,
     openNow: "Open",
     closesAt: (time: string) => `Closes ${time}`,
+    // Polish pass (agent P): the loop's words
+    removedText: "Removed after 30 days",
+    removedTip: "Google's text is kept at most 30 days, then removed. What ALYR sent stays.",
+    alsoNoticed: (count: number) => (count === 1
+      ? "Also noticed: one more change waits its turn. ALYR asks it when one of these closes."
+      : `Also noticed: ${n(count)} more changes wait their turn. ALYR asks one when one of these closes.`),
+    undoFor: (days: number) => (days === 1 ? "Undo for 1 day after it is sent" : `Undo for ${n(days)} days after it is sent`),
+    editedNote: "Approved with a changed value",
+    ownerOnly: (count: number) => `Also noticed: ${counted(count, N.thing, "en")} only you can change, listed on Checks.`,
+    editHoursLabel: (day: string) => `${day} hours`,
+    editPhoneLabel: "New phone number",
+    editChoiceLabel: "Choose the value",
+    editFactNote: (field: string) => `It also becomes your confirmed ${lowerWords(field)} in ALYR.`,
+    editInvalid: "Check the value: it cannot be sent as it is.",
+    railRejected: (where: WhereKey) => (where === "google" ? "Refused by Google" : "Refused"),
+    railChangedBack: "Changed back",
+    checkAround: (when: string) => `Checked again about 20 hours after sending, ${when}`,
+    checkedResult: (when: string) => `Checked ${when}`,
+    notNowReason: "Not now",
+    declinedReason: "Declined",
   },
   ar: {
     sample: "شاشة مثال لنشاط عناية بالسيارات وهمي. الأسماء والأرقام مختلقة، وليست نتائج ALYR.",
@@ -304,6 +329,9 @@ export const T = {
     leadNoCategory: (where: WhereKey) => ({ pre: `${WHERE.ar.start[where]} بلا `, hl: "تصنيف رئيسي", post: "." }),
     leadCategory: (where: WhereKey) => ({ pre: `${WHERE.ar.start[where]} تعرض `, hl: "تصنيفاً رئيسياً مختلفاً", post: "." }),
     leadNoWhatsapp: (where: WhereKey) => ({ pre: `${WHERE.ar.start[where]} بلا `, hl: "رابط واتساب", post: "." }),
+    leadWhatsappOther: (where: WhereKey) => ({ pre: `رابط واتساب في ${WHERE.ar.mid[where]} يوصل إلى `, hl: "رقم مختلف", post: "." }),
+    leadNoPhone: (where: WhereKey) => ({ pre: `${WHERE.ar.start[where]} بلا `, hl: "رقم هاتف", post: "." }),
+    leadNoName: (where: WhereKey) => ({ pre: `${WHERE.ar.start[where]} بلا `, hl: "اسم للمنشأة", post: "." }),
     leadReview: { pre: "مراجعة ", hl: "بلا رد", post: "." },
     confirmedDay: (day: DayKey, span: string, date: string) => `أكّدتَ ساعات ${DAY_AR[day]} ${ar(span)} يوم ${date}.`,
     confirmedValue: (value: string, date: string) => `أكّدتَ ${ar(value)} يوم ${date}.`,
@@ -469,6 +497,26 @@ export const T = {
     readLive: (when: string) => `قُرئ ${when}`,
     openNow: "مفتوح",
     closesAt: (time: string) => `يغلق ${ar(time)}`,
+    // Polish pass (agent P): the loop's words
+    removedText: "حُذف بعد 30 يومًا",
+    removedTip: "يُحتفظ بنص Google مدة 30 يومًا على الأكثر ثم يُحذف. ويبقى ما أرسلته ALYR.",
+    alsoNoticed: (count: number) => (count === 1
+      ? "لوحظ أيضًا: تغيير آخر ينتظر دوره. تسأل عنه ALYR حين يُغلق أحد هذه القرارات."
+      : `لوحظ أيضًا ما ينتظر دوره: ${counted(count, N.change, "ar")}. تسأل ALYR عن واحد منها حين يُغلق أحد هذه القرارات.`),
+    undoFor: (days: number) => (days === 1 ? "يمكن التراجع خلال يوم واحد بعد الإرسال" : `يمكن التراجع خلال ${counted(days, { en: ["day", "days"], ar: ["يوم واحد", "يومين", "أيام", "يوماً"] }, "ar")} بعد الإرسال`),
+    editedNote: "اعتُمد بقيمة معدّلة",
+    ownerOnly: (count: number) => `لوحظ أيضًا ما لا يغيّره إلا أنت: ${counted(count, N.thing, "ar")}، تجدها في الفحوصات.`,
+    editHoursLabel: (day: string) => `ساعات ${day}`,
+    editPhoneLabel: "رقم الهاتف الجديد",
+    editChoiceLabel: "اختر القيمة",
+    editFactNote: (field: string) => `ويصبح أيضًا ${field} المؤكَّد لديك في ALYR.`,
+    editInvalid: "راجع القيمة: لا يمكن إرسالها كما هي.",
+    railRejected: (where: WhereKey) => (where === "google" ? "رفضته Google" : "رُفض"),
+    railChangedBack: "أُعيد إلى ما كان",
+    checkAround: (when: string) => `يُفحص مجددًا بعد نحو 20 ساعة من الإرسال، ${when}`,
+    checkedResult: (when: string) => `فُحص ${when}`,
+    notNowReason: "ليس الآن",
+    declinedReason: "رُفض",
   },
 };
 

@@ -1,13 +1,15 @@
 // The typed adapter between the Discovery API and the v2 screens. `buildThisWeek` turns the answers
-// the API gives today (overview, proposals, checks, facts, team) into what This week draws. What
-// the approved design shows but the API does not send yet arrives in `Extras`, one optional field
-// per missing piece with the workstream that adds it; when a field is absent its part of the screen
-// is not drawn (never faked). Each is listed in D:\alyr-discovery-build\api-gaps.md.
+// the API gives (overview with its `asks` and `checks` blocks, proposals, checks, facts, team) into
+// what This week draws. What the approved design shows but the API does not send yet arrives in
+// `Extras`, one optional field per missing piece with the workstream that adds it; when a field is
+// absent its part of the screen is not drawn (never faked). Each is listed in
+// D:\alyr-discovery-build\api-gaps.md.
 //
 // Pure: no React, no fetch, so `adapter.test.mjs` runs it under `node --test`.
 
 import { initials } from "../../../_ui/format.ts";
-import type { ChecksAnswer, DayKey, Fact, Finding, Overview, Proposal, TeamMember } from "../discoveryApi.ts";
+import type { AlsoFixes, ChecksAnswer, DayKey, Fact, Finding, Overview, Proposal, TeamMember } from "../discoveryApi.ts";
+import type { AsksBlock, ChecksBlock } from "./api2.ts";
 import type { D2Lang, WhereKey } from "./copy.ts";
 import { beforeAfter, changedDays, exactText, leadFor, oneDay, sinceLastWeek, spanText, tally, whereOf, type LeadParts, type Tally } from "./logic.ts";
 
@@ -21,17 +23,12 @@ export type FirstParty = { day: DayKey; weeks: FirstPartyWeek[]; listingSaidClos
 /** TODO(F): what the live listing read shows around the hours (Places connector, wave 2). */
 export type ListingExtras = { rating: number | null; reviews: number | null; category: string; openLine: string | null };
 
-/** TODO(B): checks matched on the run before, and what one ask would also fix (packs, engine). */
+/** Checks matched on the check-up before the last, and when (the overview's `checks.previous`, agent D). */
 export type PreviousTally = { matched: number; at: string };
-export type AlsoFixes = { checks: number; from: number; to: number; of: number };
 
 export type Extras = {
   firstParty?: Record<string, FirstParty>;
   listing?: Record<string, ListingExtras>;
-  previous?: PreviousTally;
-  alsoFixes?: Record<string, AlsoFixes>;
-  /** TODO(D): when the weekly check runs next. */
-  nextCheckAt?: string;
 };
 
 // ── what the screens draw ──────────────────────────────
@@ -77,25 +74,46 @@ export type ThisWeekView = {
   owner: Finding[];
   /** Asks and owner tasks together: the "of N" of every ticket. */
   total: number;
+  /** Asks that wait their turn behind the open ones (at most three open, DECISIONS #16). */
+  alsoNoticed: number;
+  /** Things only the owner can change (no proposal): named under "Also noticed", not counted as asks. */
+  ownerOnly: number;
   receipts: ReceiptRow[];
   approvers: Person[];
+  /** The weekly check-up, when it is on. */
   nextCheckAt: string | null;
+  /** The soonest check about 20 hours after a sent change. */
+  nextChangeCheckAt: string | null;
   latest: Proposal | null;
 };
 
 export type ThisWeekInput = {
   overview: Overview;
+  /** The proposals waiting: used only when the API sends no `asks` block (an older API). */
   waiting: readonly Proposal[];
   recent: readonly Proposal[];
   checks: ChecksAnswer | null;
   facts: readonly Fact[];
   team: readonly TeamMember[] | null;
+  /** The overview's `asks` block (the loop): at most three open asks, the rest "Also noticed". */
+  asks?: AsksBlock | null;
+  /** The overview's `checks` block: "N of M" counted as the packs count it, and the check-up before. */
+  block?: ChecksBlock | null;
   extras?: Extras;
   now: number;
   lang: D2Lang;
 };
 
 const TONES: Tone[] = ["h", "o", "n"];
+
+/** The letter on a person's avatar: never «·» and never a mark (an Arabic name gives its first
+ * letter past the article; a name with no letter at all gives its first character). */
+export function initialOf(name: string): string {
+  const first = initials(name, "");
+  if (/\p{L}/u.test(first)) return first;
+  const letter = Array.from(name).find((ch) => /[\p{L}\p{N}]/u.test(ch));
+  return (letter ?? "").toLocaleUpperCase("en");
+}
 
 /** The people who may approve: owners and managers in the team, owner first. Empty when the team
  * could not be read (the receipt line then leaves the names out). */
@@ -105,12 +123,17 @@ export function approversOf(team: readonly TeamMember[] | null): Person[] {
   return team
     .filter((m) => m.role === "owner" || m.role === "admin")
     .sort((a, b) => rank(a.role) - rank(b.role))
-    .map((m, i) => ({ name: m.name, initial: initials(m.name), tone: TONES[Math.min(i, 2)], role: m.role }));
+    .map((m, i) => ({ name: m.name, initial: initialOf(m.name), tone: TONES[Math.min(i, 2)], role: m.role }));
 }
 
 /** The tone of a person's avatar: the same person keeps the same colour across the page. */
 export function toneOf(name: string, people: readonly Person[]): Tone {
   return people.find((p) => p.name === name)?.tone ?? "n";
+}
+
+/** A person by name: from the team when they are in it, else a neutral avatar with their initial. */
+export function personFor(name: string, people: readonly Person[]): Person {
+  return people.find((p) => p.name === name) ?? { name, initial: initialOf(name), tone: toneOf(name, people), role: "" };
 }
 
 /** What the owner confirmed for the field (and the day) of this proposal. */
@@ -147,7 +170,7 @@ export function askView(p: Proposal, index: number, of: number, input: Pick<This
     confirmed: confirmedFor(p, input.facts, input.lang),
     firstParty: input.extras?.firstParty?.[p.id] ?? null,
     listing: input.extras?.listing?.[p.id] ?? null,
-    alsoFixes: input.extras?.alsoFixes?.[p.id] ?? null,
+    alsoFixes: p.also_fixes,
   };
 }
 
@@ -157,13 +180,38 @@ const latestOf = (items: readonly Proposal[]): Proposal | null => {
   return sorted[0] ?? null;
 };
 
+/** "N of M checks match": the overview's count (the packs' own, the same as "Up from") when it has
+ * one, else summed from `GET /checks`. A check not measured is never in M. */
+export function tallyOf(block: ChecksBlock | null | undefined, checks: ChecksAnswer | null): Tally | null {
+  if (block && block.run_id && block.measured > 0) {
+    return { matched: block.matched, measured: block.measured, notMeasured: block.not_measured, total: block.total };
+  }
+  return tally(checks);
+}
+
 export function buildThisWeek(input: ThisWeekInput): ThisWeekView {
   const { overview, now } = input;
   const sourceKind = overview.source?.kind ?? "";
-  const waiting = input.waiting.filter((p) => p.status === "proposed");
-  const owner = [overview.next, ...overview.up_next].filter((f): f is Finding => !!f && f.kind === "owner" && f.status === "open");
+  const asks = input.asks ?? null;
+  // The loop's open asks (at most three) when the API sends them; an older API: every waiting one.
+  const waiting = (asks
+    ? asks.open.flatMap((item) => (item.kind === "proposal" ? [item.proposal] : []))
+    : input.waiting).filter((p) => p.status === "proposed");
+  const seasons = asks ? asks.open.flatMap((item) => (item.kind === "season" ? [item.finding] : [])) : [];
+  // An owner's task is one ALYR cannot change itself: a finding with a change waiting (an open ask
+  // or one "Also noticed") is asked as that change, never counted twice.
+  const asked = new Set([...waiting, ...(asks ? asks.alsoNoticed.flatMap((i) => (i.kind === "proposal" ? [i.proposal] : [])) : [])].map((p) => p.finding_id));
+  const ownerOpen = [overview.next, ...overview.up_next]
+    .filter((f): f is Finding => !!f && f.kind === "owner" && f.status === "open" && f.proposals_waiting === 0 && !asked.has(f.id));
+  const others = ownerOpen.filter((f) => !seasons.some((s) => s.id === f.id));
+  // With the loop's cap (at most three open asks) one count drives the page: the headline, every
+  // ticket's "of N", the tab and the agent bar are the open asks (a seasonal ask among them). What
+  // only the owner can change is not an ask: it is named under "Also noticed". An older API
+  // without the block keeps the owner's tasks among the tickets, as before.
+  const owner = asks ? seasons : [...seasons, ...others];
+  const ownerOnly = asks ? others.length : 0;
   const total = waiting.length + owner.length;
-  const asks = waiting.map((p, i) => askView(p, i + 1, total, { ...input, sourceKind }));
+  const views = waiting.map((p, i) => askView(p, i + 1, total, { ...input, sourceKind }));
 
   const changes: ReceiptRow[] = sinceLastWeek(input.recent, now).map((p) => {
     const where = whereOf(p.target, sourceKind);
@@ -182,20 +230,24 @@ export function buildThisWeek(input: ThisWeekInput): ThisWeekView {
   else if (!overview.has_run) state = "noRun";
   else if (!total && !receipts.length) state = "empty";
 
+  const prev = input.block?.previous ?? null;
   return {
     state,
     sourceKind,
     sample: sourceKind === "sample",
     recordedOn: sourceKind === "manual" ? overview.source?.observed_on ?? null : null,
     checkedAt: input.checks?.finished_at ?? overview.last_run?.finished_at ?? null,
-    tally: tally(input.checks),
-    previous: input.extras?.previous ?? null,
-    asks,
+    tally: tallyOf(input.block, input.checks),
+    previous: prev ? { matched: prev.matched, at: prev.at } : null,
+    asks: views,
     owner,
     total,
+    alsoNoticed: asks ? asks.alsoNoticed.length : 0,
+    ownerOnly,
     receipts,
     approvers: approversOf(input.team),
-    nextCheckAt: input.extras?.nextCheckAt ?? null,
-    latest: latestOf([...input.waiting, ...input.recent]),
+    nextCheckAt: asks?.nextCheckAt ?? null,
+    nextChangeCheckAt: asks?.nextChangeCheckAt ?? null,
+    latest: latestOf([...waiting, ...input.recent]),
   };
 }

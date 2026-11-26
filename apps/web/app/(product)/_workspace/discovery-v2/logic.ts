@@ -2,7 +2,7 @@
 // sentence that leads the ticket, the checks tally, the life of a change and the receipts of the
 // week. No React and no browser globals, so `logic.test.mjs` runs it under `node --test`.
 
-import type { ChecksAnswer, ChecksRow, DayKey, Proposal, Side } from "../discoveryApi.ts";
+import type { ChecksAnswer, ChecksRow, DayKey, LifeState, Proposal, Side } from "../discoveryApi.ts";
 import { isolate } from "../../../_ui/format.ts";
 import { T, type D2Lang, type WhereKey } from "./copy.ts";
 
@@ -55,10 +55,11 @@ export function leadFor(p: Pick<Proposal, "field" | "before" | "after" | "title"
       if (day) return isClosedText(lineOf(p.before, day)) ? t.leadClosed(where, day) : t.leadDayHours(where, day);
       return t.leadHours(where);
     }
-    case "phone": return t.leadPhone(where);
-    case "name": return t.leadName(where);
+    // The sentence follows what was found: nothing there, or something different.
+    case "phone": return empty(p.before.text) ? t.leadNoPhone(where) : t.leadPhone(where);
+    case "name": return empty(p.before.text) ? t.leadNoName(where) : t.leadName(where);
     case "category": return empty(p.before.text) ? t.leadNoCategory(where) : t.leadCategory(where);
-    case "whatsapp_link": return t.leadNoWhatsapp(where);
+    case "whatsapp_link": return empty(p.before.text) ? t.leadNoWhatsapp(where) : t.leadWhatsappOther(where);
     case "review_reply": return t.leadReview;
     default: return { pre: p.title, hl: "", post: "" };
   }
@@ -73,12 +74,83 @@ export function exactText(p: Pick<Proposal, "field" | "before" | "after">, lang:
 const dayEn = (d: DayKey) => ({ sat: "Saturday", sun: "Sunday", mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday" })[d];
 const dayAr = (d: DayKey) => ({ sat: "السبت", sun: "الأحد", mon: "الاثنين", tue: "الثلاثاء", wed: "الأربعاء", thu: "الخميس", fri: "الجمعة" })[d];
 
-/** The before and after values of the one changed day, or of the whole change. */
+/** The before and after values of the one changed day, or of the whole change. A side whose
+ * Google text was removed after 30 days says so («Removed after 30 days»), never "None" or empty. */
 export function beforeAfter(p: Pick<Proposal, "field" | "before" | "after">, lang: D2Lang): { before: string; after: string } {
+  if (p.before.removed || p.after.removed) {
+    const side = (x: Side) => (x.removed ? T[lang].removedText : x.text || T[lang].none);
+    return { before: side(p.before), after: side(p.after) };
+  }
   const day = oneDay(p);
   if (day) return { before: spanText(lineOf(p.before, day), lang), after: spanText(lineOf(p.after, day), lang) };
   return { before: empty(p.before.text) ? T[lang].none : p.before.text, after: p.after.text };
 }
+
+// ── Change it (the loop, agent D: `POST /proposals/{id}/change`) ──
+
+/** What the person is changing before approving: one day's hours, a phone number, or one of the
+ * values the owner confirmed (by its place in `edit.options`). */
+export type Draft =
+  | { kind: "hours"; day: DayKey; open: string; close: string }
+  | { kind: "phone"; phone: string }
+  | { kind: "choice"; index: number };
+
+const optionText = (o: Record<string, string>) => Object.values(o)[0] ?? "";
+
+/** Where "Change it" starts: the proposed value. Null when the API does not let this proposal be
+ * changed, or (hours) when more than one day changes: the screen then does not draw Change it. */
+export function draftFor(p: Pick<Proposal, "edit" | "field" | "before" | "after">): Draft | null {
+  const edit = p.edit;
+  if (!edit) return null;
+  if (edit.kind === "hours") {
+    const day = oneDay(p);
+    if (!day) return null;
+    const hit = TIME.exec(lineOf(p.after, day));
+    return { kind: "hours", day, open: hit?.[1] ?? "", close: hit?.[2] ?? "" };
+  }
+  if (edit.kind === "phone") return { kind: "phone", phone: p.after.text };
+  const at = edit.options.findIndex((o) => optionText(o) === p.after.text);
+  return { kind: "choice", index: Math.max(0, at) };
+}
+
+const pad = (t: string) => (/^\d:/.test(t) ? `0${t}` : t);
+
+/** The changed value in the API's plain shape, or null when it is not complete or not valid
+ * (hours: the whole week, every other day as proposed; the changed day opens before it closes). */
+export function afterFromDraft(p: Pick<Proposal, "edit" | "after">, draft: Draft): Record<string, unknown> | null {
+  if (draft.kind === "hours") {
+    const open = pad(draft.open), close = pad(draft.close);
+    if (!open || !close || open >= close) return null;
+    const week: Record<string, [string, string] | null> = {};
+    for (const line of p.after.lines) {
+      const hit = TIME.exec(line.text);
+      week[line.day] = hit ? [pad(hit[1]), pad(hit[2])] : null;
+    }
+    if (Object.keys(week).length !== 7) return null;
+    week[draft.day] = [open, close];
+    return week;
+  }
+  if (draft.kind === "phone") {
+    const phone = draft.phone.replace(/\s+/g, "");
+    return /^\+?\d{7,15}$/.test(phone) ? { phone } : null;
+  }
+  const options = p.edit?.kind === "choice" ? p.edit.options : [];
+  return options[draft.index] ? { ...options[draft.index] } : null;
+}
+
+/** The changed value in words, for the Approve button ("Approve Friday 13:30–22:00"). */
+export function draftText(p: Pick<Proposal, "edit">, draft: Draft, lang: D2Lang): string {
+  if (draft.kind === "hours") {
+    const span = `${draft.open}–${draft.close}`;
+    return `${lang === "ar" ? dayAr(draft.day) : dayEn(draft.day)} ${lang === "ar" ? isolate(span) : span}`;
+  }
+  if (draft.kind === "phone") return lang === "ar" ? isolate(draft.phone) : draft.phone;
+  const options = p.edit?.kind === "choice" ? p.edit.options : [];
+  return options[draft.index] ? optionText(options[draft.index]) : "";
+}
+
+/** The labels of `edit.options` (a name or a category the owner confirmed). */
+export const choiceLabels = (p: Pick<Proposal, "edit">): string[] => (p.edit?.kind === "choice" ? p.edit.options.map(optionText) : []);
 
 // ── checks ─────────────────────────────────────────────
 
@@ -113,12 +185,18 @@ export function tally(answer: ChecksAnswer | null): Tally | null {
 
 export type Stage = "waiting" | "approved" | "sent" | "live" | "notLive" | "failed" | "undone" | "declined" | "expired";
 
-/** Where a proposal is in its life, from the API's status and verification. */
-export function stageOf(p: Pick<Proposal, "status" | "verification">): Stage {
+/** Where a proposal is in its life, from the API's status, the loop's `life` (agent D) when it says
+ * live, rejected or changed back, and else the verification. */
+export function stageOf(p: Pick<Proposal, "status" | "verification"> & Partial<Pick<Proposal, "life">>): Stage {
   switch (p.status) {
     case "proposed": return "waiting";
     case "approved": return "approved";
-    case "applied": return p.verification === "confirmed" ? "live" : p.verification === "not_confirmed" ? "notLive" : "sent";
+    case "applied": {
+      const life = p.life?.state;
+      if (life === "live") return "live";
+      if (life === "rejected" || life === "changed_back") return "notLive";
+      return p.verification === "confirmed" ? "live" : p.verification === "not_confirmed" ? "notLive" : "sent";
+    }
     case "failed": return "failed";
     case "undone": return "undone";
     case "declined": return "declined";
@@ -129,17 +207,31 @@ export function stageOf(p: Pick<Proposal, "status" | "verification">): Stage {
 export type RailState = "done" | "now" | "todo" | "ok" | "attn";
 export type RailStep = { key: "approved" | "sent" | "pending" | "live"; state: RailState; at: string | null };
 
-/** The four steps of the approved track (Approved, Sent, Pending review, Live and checked). */
-export function railOf(p: Pick<Proposal, "status" | "verification" | "decided" | "applied_at">): RailStep[] {
+/** The four steps of the approved track (Approved, Sent, Pending review, Live and checked). With the
+ * loop's `life` (agent D) the track follows it: Google's own review, live, and the two exits
+ * (`rejected` marks the review step, `changed_back` the live step), each step with its time. */
+export function railOf(p: Pick<Proposal, "status" | "verification" | "decided" | "applied_at"> & Partial<Pick<Proposal, "life" | "life_history">>): RailStep[] {
   const stage = stageOf(p);
   const decidedAt = p.decided?.at ?? null;
+  const history = p.life_history ?? [];
+  const when = (state: LifeState) => [...history].reverse().find((h) => h.state === state)?.at ?? null;
   const steps: RailStep[] = [
-    { key: "approved", state: "todo", at: decidedAt },
-    { key: "sent", state: "todo", at: p.applied_at },
-    { key: "pending", state: "todo", at: null },
-    { key: "live", state: "todo", at: null },
+    { key: "approved", state: "todo", at: when("approved") ?? decidedAt },
+    { key: "sent", state: "todo", at: when("sent") ?? p.applied_at },
+    { key: "pending", state: "todo", at: when("pending_review") },
+    { key: "live", state: "todo", at: when("live") ?? when("changed_back") },
   ];
   const set = (...states: RailState[]) => states.forEach((s, i) => { steps[i].state = s; });
+  const life = p.life?.state ?? null;
+  if (life && stage !== "undone" && stage !== "failed") {
+    if (life === "approved") set("done", "now");
+    else if (life === "sent") set("done", "done", "now");
+    else if (life === "pending_review") set("done", "done", "now");
+    else if (life === "live") set("done", "done", "done", "ok");
+    else if (life === "rejected") { set("done", "done", "attn"); steps[2].at = when("rejected"); }
+    else if (life === "changed_back") set("done", "done", "done", "attn");
+    return steps;
+  }
   if (stage === "approved") set("done", "now");
   else if (stage === "sent") set("done", "done", "now");
   else if (stage === "live") set("done", "done", "done", "ok");

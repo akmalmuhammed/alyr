@@ -467,7 +467,8 @@ def change_lines(change: dict, lang: str, target: str = "listing") -> dict:
     for side in ("before", "after"):
         value = change.get(side)
         if isinstance(value, dict) and value.get("removed") is True:
-            out[side] = {"text": pick(REMOVED_TEXT, lang), "lines": []}
+            # `removed` tells a screen to say so in its own words, never to draw an empty side.
+            out[side] = {"text": pick(REMOVED_TEXT, lang), "lines": [], "removed": True}
             continue
         out[side] = {
             "text": value_text(field, value, lang),

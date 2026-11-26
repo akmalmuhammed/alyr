@@ -4,7 +4,7 @@
 // difference and is left out of every "N of M"; a count is only ever a count of what the API sent.
 
 import { DAYS, type CheckState, type ChecksAnswer, type DayKey, type Evidence, type Fact, type Finding, type Place, type Proposal } from "../discoveryApi.ts";
-import type { AnswerItem, AnswersAnswer, ChecksBlock, Pack } from "./api2.ts";
+import type { AnswerGroup, AnswerItem, AnswersAnswer, ChecksBlock, CitedHost, Pack } from "./api2.ts";
 import type { D2Lang } from "./copy.ts";
 import { T2 } from "./copy2.ts";
 import { stageOf, tally, type Tally } from "./logic.ts";
@@ -24,13 +24,6 @@ export function bidiValue(text: string): { rtl: boolean; text: string } {
 }
 
 // ── Checks ─────────────────────────────────────────────
-
-/**
- * The first-party checks (workstream C, `firstparty.py`): what only ALYR can check, from the shop's
- * own orders, bookings and pages. TODO(B): `/checks` should say which rules are first-party (a
- * `source` on each rule); until it does, these ids are the group "Your own data" (api-gaps.md).
- */
-export const FIRST_PARTY_RULES: readonly string[] = ["hours_vs_activity", "own_links_present", "whatsapp_number_mismatch", "bilingual_name_rule", "season_due"];
 
 export type CheckKind = "differ" | "ok" | "nm";
 export type CheckFilter = "all" | CheckKind;
@@ -92,8 +85,11 @@ export function buildChecks(input: {
     return { ...base, state: "notMeasured", tally: null, groups: [], counts: { all: 0, differ: 0, ok: 0, nm: 0 } };
   }
   const label = new Map(checks.rules.map((r) => [r.id, r.label]));
-  const own = new Set(FIRST_PARTY_RULES);
-  const famRules = familyRules(packs, fam?.id ?? null, trade?.key ?? null);
+  // `GET /checks` marks each rule: `first_party` (it reads ALYR's own records) and `pack` (the pack
+  // that brought it into the last check-up). A pack other than the core is the family's group
+  // (its overlays included). An older API without marks: every rule is core.
+  const own = new Set(checks.rules.filter((r) => r.first_party).map((r) => r.id));
+  const famRules = new Set(checks.rules.filter((r) => !r.first_party && r.pack && r.pack !== "core").map((r) => r.id));
   const many = checks.places.length > 1;
   const waitingFindings = new Set(input.waiting.filter((p) => p.status === "proposed").map((p) => p.finding_id));
   const open = findings.filter((f) => f.status === "open");
@@ -214,6 +210,13 @@ export type AnswersView = {
   en: LangTally;
   ar: LangTally;
   tools: ToolRow[];
+  /** One per tool and language (the API's `groups`), never added together. */
+  groups: AnswerGroup[];
+  /** No tool reached 30 answers in a language: no share and no change can be named. */
+  notEnough: boolean;
+  /** The most answers one tool counted in one language. */
+  most: number;
+  cited: CitedHost[];
   quote: AnswerItem | null;
   askedAt: string | null;
   sample: boolean;
@@ -234,16 +237,43 @@ export function buildAnswers(a: AnswersAnswer): AnswersView {
     const mine = ok.filter((x) => x.engine === engine);
     return { engine, label: mine[0]?.engine_label ?? engine, en: langTally(mine.filter((x) => x.lang === "en")), ar: langTally(mine.filter((x) => x.lang === "ar")) };
   });
-  const state = !a.last ? (a.enabled ? "notAsked" : "off") : !a.last.measured || !ok.length ? "tooFew" : "content";
+  const state = !a.last ? (a.enabled ? "notAsked" : "off") : !a.last.counted || !ok.length ? "tooFew" : "content";
+  const groups = a.last?.groups ?? [];
+  const most = groups.reduce((m, g) => Math.max(m, g.counted), 0);
   return {
     state,
     named: a.last?.named ?? 0,
     counted: a.last?.counted ?? 0,
     en: langTally(en), ar: langTally(ar), tools,
+    groups,
+    notEnough: groups.length > 0 && most < 30,
+    most,
+    cited: a.last?.sources ?? [],
     quote: ok.find((x) => x.named && x.text) ?? ok.find((x) => x.text) ?? null,
     askedAt: a.last?.asked_at ?? null,
     sample: !!a.last?.sample,
   };
+}
+
+/** An answer tool's text as plain paragraphs: `**…**` becomes a strong part with its markers
+ * removed, and every other character stays text (React escapes it: no markup from an answer is
+ * ever drawn as HTML). The matched name is marked inside either kind of part. */
+export function answerParas(text: string, matched: string): { text: string; strong: boolean; mark: boolean }[][] {
+  return text.split(/\n+/).map((line) => line.trim()).filter(Boolean).map((line) => {
+    const out: { text: string; strong: boolean; mark: boolean }[] = [];
+    line.split(/(\*\*[^*]+\*\*)/g).filter(Boolean).forEach((chunk) => {
+      const strong = /^\*\*[^*]+\*\*$/.test(chunk);
+      const plain = strong ? chunk.slice(2, -2) : chunk.replace(/\*\*/g, "");
+      for (const part of markName(plain, matched)) out.push({ text: part.text, strong, mark: part.mark });
+    });
+    return out;
+  }).filter((para) => para.length);
+}
+
+/** A sentence cut around each percent ("79%", "6 to 79%" keeps its own words), so a screen can
+ * hold every percent left to right. */
+export function percentRuns(text: string): { text: string; pct: boolean }[] {
+  return text.split(/(\d+(?:[.,]\d+)?\s?%)/g).filter(Boolean).map((part) => ({ text: part, pct: /%$/.test(part) }));
 }
 
 /** The answer's text cut into parts around the matched name, so the name can be marked. */

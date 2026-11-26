@@ -498,7 +498,7 @@ test("a proposal is read as the spec writes it, and what a person may do is only
     ...PROPOSAL, status: "applied", decided: { by: "Huda", channel: "whatsapp", at: "2026-11-09T09:12:40Z" }, applied_at: "2026-11-09T09:12:44Z",
     undo_until: "2026-11-16T09:12:44Z", verification: "pending", can: { approve: false, decline: false, undo: true },
   });
-  assert.deepEqual(applied.decided, { by: "Huda", channel: "whatsapp", at: "2026-11-09T09:12:40Z" });
+  assert.deepEqual(applied.decided, { by: "Huda", channel: "whatsapp", at: "2026-11-09T09:12:40Z", reason: "" });
   assert.equal(applied.verification, "pending");
   assert.equal(parseProposal({ ...PROPOSAL, verification: "magic" }).verification, null);
   const failed = parseProposal({ ...PROPOSAL, status: "failed", failure: { code: "stale_before", message: "The listing changed since this was proposed." } });
@@ -728,7 +728,39 @@ test("the confirmed fact and the reply are the only things sent from a person's 
   const api = read(join(HERE, "discoveryApi.ts"));
   // the change a person approves is identified by its id and hash; its before and after are never posted back
   assert.match(api, /call\(`\/proposals\/\$\{encodeURIComponent\(id\)\}\/approve\$\{q\(\{ lang \}\)\}`, parseProposal, "POST", \{ change_hash \}\)/);
-  assert.doesNotMatch(api, /\/proposals[^`]*`, parseProposal, "(POST|PUT)", \{[^}]*(after|before)/);
+  assert.doesNotMatch(api, /\/proposals[^`]*`, parseProposal, "(POST|PUT)", \{[^}]*before/);
+  // Discovery 2.0 "Change it" (agent D): the one route that takes a value, the person's changed
+  // "after", with the hash of the change they were shown; no other proposal route posts one.
+  const posted = [...api.matchAll(/\/proposals[^`]*`, parseProposal, "(?:POST|PUT)", \{([^}]*)\}/g)].map((m) => m[1].trim());
+  assert.deepEqual(posted.filter((body) => /after/.test(body)), ["change_hash, after, update_fact"]);
+  assert.match(api, /`\/proposals\/\$\{encodeURIComponent\(id\)\}\/change\$\{q\(\{ lang \}\)\}`/);
+});
+
+test("Discovery 2.0: the loop's fields are read, and an older API without them gives nulls, never a crash", () => {
+  const old = parseProposal(PROPOSAL);
+  assert.deepEqual([old.queue, old.life, old.receipt, old.edit, old.also_fixes, old.undo_window_days], [null, null, null, null, null, null]);
+  assert.deepEqual(old.life_history, []);
+  assert.equal(old.before.removed, false);
+  const p = parseProposal({
+    ...PROPOSAL, status: "applied", queue: "open", approved_as: "edited", edited_from: "p0",
+    before: { removed: true, text: "removed after 30 days (Google's terms)", lines: [] },
+    life: { state: "pending_review", at: "2026-11-09T10:00:00Z", text: "Google is reviewing it." },
+    life_history: [{ state: "approved", at: "2026-11-09T09:00:00Z", text: "" }, { state: "made_up", at: null, text: "" }],
+    receipt: { at: "2026-11-09T09:12:44Z", edited: true, approved_text: "With a change", undo: { days: 7, until: "2026-11-16T09:12:44Z" }, next_check_at: "2026-11-10T05:12:44Z", verified: { at: null, state: "nonsense", text: "" } },
+    undo_window_days: 7, edit: { kind: "choice", options: [{ category: "Car wash" }, { category: "" }, { a: "x", b: "y" }] },
+    also_fixes: { checks: 2, rules: ["x"], from: 10, to: 12, of: 14 },
+  });
+  assert.equal(p.before.removed, true);
+  assert.equal(p.queue, "open");
+  assert.equal(p.approved_as, "edited");
+  assert.equal(p.life.state, "pending_review");
+  assert.deepEqual(p.life_history.map((s) => s.state), ["approved"], "a state this screen does not know is left out");
+  assert.equal(p.receipt.undo.days, 7);
+  assert.equal(p.receipt.verified.state, "");
+  assert.deepEqual(p.edit, { kind: "choice", options: [{ category: "Car wash" }] });
+  assert.equal(p.also_fixes.to, 12);
+  assert.equal(parseProposal({ ...PROPOSAL, also_fixes: { checks: 1, from: 1, to: 2, of: 3 } }).also_fixes, null, "one check is not 'also fixes'");
+  assert.equal(parseProposal({ ...PROPOSAL, decided: { by: "Huda", channel: "portal", at: "2026-11-09T09:12:40Z", reason: "not_now" } }).decided.reason, "not_now");
 });
 
 // ── Home's score band (ALY-332) ─────────────────────────
