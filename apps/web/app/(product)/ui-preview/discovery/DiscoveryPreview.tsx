@@ -55,8 +55,8 @@ export function DiscoveryPreview({ lang, state, source, sheet, fan, change }: {
   if (state === "error") return <ErrorState lang={lang} message="" onRetry={() => window.location.reload()} />;
   const initial = state === "approved" ? { overrides: { [f.waiting[0].id]: approvedHours(f, lang) } } : undefined;
   return (
-    <div className="d2-preview">
+    <main className="d2-preview">
       <ThisWeek key={`${lang}-${state}-${source}`} lang={lang} view={view} actions={actions} now={FIXTURE_NOW} initial={{ ...initial, sheet, fan }} />
-    </div>
+    </main>
   );
 }

@@ -65,7 +65,7 @@ export function ListingMiniature({ ask, lang, today, settled, readAt, draft, onD
     <figure className="d2-object">
       <figcaption className="d2-object-label"><Ic name="eye" size="xs" />{wherePage(ask.where, lang)}</figcaption>
       <div className="d2-listing" role="group" aria-label={t.listingMini}>
-        <h4 className="d2-listing-name">{ask.place}</h4>
+        <p className="d2-listing-name">{ask.place}</p>
         {listing && listing.rating !== null ? (
           <div className="d2-g-rate">
             <span className="d2-g-v">{listing.rating.toFixed(1)}</span>

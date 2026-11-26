@@ -30,8 +30,8 @@ export function AgentBar({ lang, asks, latest, nextCheckAt, onSearch, onAsks, to
             <span className="d2-div" aria-hidden="true" />
           </>
         ) : null}
-        <button className="d2-seg" type="button" onClick={onAsks} aria-label={t.asksLabel(asks)}>
-          <span className="d2-count">{asks.toLocaleString("en")}</span><span>{t.asksWaiting}</span>
+        <button className="d2-seg" type="button" onClick={onAsks}>
+          <span className="d2-count">{asks.toLocaleString("en")}</span> <span>{t.asksWaiting}</span>
         </button>
         {latest ? (
           <>

@@ -20,11 +20,11 @@ export function EvidenceSheet({ ask, lang, approvers, onClose, onApprove, onDecl
 }) {
   const t = T[lang];
   const { p } = ask;
-  const ref = useRef<HTMLElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => { closeRef.current?.focus({ preventScroll: true }); }, []);
 
-  const trap = (event: KeyboardEvent<HTMLElement>) => {
+  const trap = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== "Tab" || !ref.current) return;
     const items = [...ref.current.querySelectorAll<HTMLElement>("button:not([disabled]), a[href]")];
     if (!items.length) return;
@@ -43,7 +43,7 @@ export function EvidenceSheet({ ask, lang, approvers, onClose, onApprove, onDecl
   return (
     <>
       <div className="d2-scrim" onClick={onClose} aria-hidden="true" />
-      <aside className="d2-sheet" role="dialog" aria-modal="true" aria-labelledby="d2-why-title" ref={ref} onKeyDown={trap}>
+      <div className="d2-sheet" role="dialog" aria-modal="true" aria-labelledby="d2-why-title" ref={ref} onKeyDown={trap}>
         <div className="d2-sheet-head">
           <span className="d2-crumb">{t.sheetCrumb(ask.index, ask.of)}</span>
           <span className="d2-sheet-close"><Kbd>{t.esc}</Kbd><button ref={closeRef} className="d2-icon-btn" type="button" onClick={onClose} aria-label={t.close}><Ic name="x" /></button></span>
@@ -139,7 +139,7 @@ export function EvidenceSheet({ ask, lang, approvers, onClose, onApprove, onDecl
           <button className="d2-btn d2-btn-approve d2-cut-control" type="button" onClick={onApprove} disabled={!p.can.approve || busy}><span>{t.approveExact(ask.exact)}</span><Kbd>{t.keyA}</Kbd></button>
           <button className="d2-btn d2-btn-text" type="button" onClick={onDecline} disabled={!p.can.decline || busy}>{t.notNow}</button>
         </div>
-      </aside>
+      </div>
     </>
   );
 }
