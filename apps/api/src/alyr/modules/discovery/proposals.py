@@ -161,15 +161,20 @@ def _listing_values(listing) -> dict:
     out: dict = {}
     if not listing.found:
         return out
-    if listing.hours is not None:
+    # What Google's public listing said, read live (`connectors/places.py`), is shown, never kept:
+    # nothing is proposed from it, so none of its fields is stored as a finding's `observed`
+    # values. A listing merged with a recorded round keeps the round's own fields.
+    live = getattr(listing, "google_fields", frozenset()) if getattr(
+        listing, "live_only", False) else frozenset()
+    if listing.hours is not None and "hours" not in live:
         out["hours"] = hours_to_json(listing.hours)
-    if listing.phone is not None:
+    if listing.phone is not None and "phone" not in live:
         out["phone"] = {"phone": listing.phone}
-    if listing.categories is not None:
+    if listing.categories is not None and "categories" not in live:
         out["category"] = {"category": listing.categories[0] if listing.categories else ""}
-    if listing.name is not None:
+    if listing.name is not None and "name" not in live:
         out["name"] = {"name": listing.name}
-    if listing.whatsapp_link is not None:
+    if listing.whatsapp_link is not None and "whatsapp_link" not in live:
         out["whatsapp_link"] = {"url": listing.whatsapp_link}
     return out
 

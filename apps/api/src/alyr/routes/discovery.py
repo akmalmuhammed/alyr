@@ -234,8 +234,31 @@ async def locations(request: Request, staff: Staff = Depends(current_staff)):
 async def edit_locations(
     body: LocationsIn, request: Request, staff: Staff = Depends(current_staff)
 ):
+    # `exclude_unset`: a place sent without `place_ref` keeps the Google place ID it has.
     return await _act(
-        request, staff, "discovery.edit_locations", items=[item.model_dump() for item in body.items]
+        request, staff, "discovery.edit_locations",
+        items=[item.model_dump(exclude_unset=True) for item in body.items],
+    )
+
+
+class GooglePlaceIn(Strict):
+    # A Google Maps link or a place ID; "" clears it.
+    link: str = Field(default="", max_length=2000)
+
+
+@router.get("/google-place")
+async def google_place(request: Request, staff: Staff = Depends(current_staff)):
+    """Discovery 2.0: whether the Google Places live read is on, and each place's place ID."""
+    return await _act(request, staff, "discovery.google_place")
+
+
+@router.put("/google-place/{location_id}")
+async def set_google_place(
+    location_id: UUID, body: GooglePlaceIn, request: Request,
+    staff: Staff = Depends(current_staff),
+):
+    return await _act(
+        request, staff, "discovery.set_google_place", location_id=location_id, link=body.link
     )
 
 

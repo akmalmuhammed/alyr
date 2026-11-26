@@ -131,7 +131,9 @@ async def set_places(
     async with _one_business(request, business_id) as (conn, office):
         try:
             await actions.edit_locations(
-                conn, _caller(staff), {"items": [item.model_dump() for item in body.items]}
+                conn, _caller(staff),
+                # a place sent without `place_ref` keeps the owner's Google place ID
+                {"items": [item.model_dump(exclude_unset=True) for item in body.items]},
             )
         except DiscoveryError as error:
             raise _refused(error) from error

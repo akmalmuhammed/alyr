@@ -1,0 +1,32 @@
+{
+  "nationalPhoneNumber": "5555 0123",
+  "internationalPhoneNumber": "+974 5555 0123",
+  "regularOpeningHours": {
+    "openNow": true,
+    "periods": [
+      {"open": {"day": 0, "hour": 6, "minute": 0}, "close": {"day": 0, "hour": 22, "minute": 0}},
+      {"open": {"day": 1, "hour": 6, "minute": 0}, "close": {"day": 1, "hour": 22, "minute": 0}},
+      {"open": {"day": 2, "hour": 6, "minute": 0}, "close": {"day": 2, "hour": 22, "minute": 0}},
+      {"open": {"day": 3, "hour": 6, "minute": 0}, "close": {"day": 3, "hour": 22, "minute": 0}},
+      {"open": {"day": 4, "hour": 6, "minute": 0}, "close": {"day": 4, "hour": 22, "minute": 0}},
+      {"open": {"day": 5, "hour": 13, "minute": 0}, "close": {"day": 5, "hour": 22, "minute": 0}},
+      {"open": {"day": 6, "hour": 6, "minute": 0}, "close": {"day": 6, "hour": 22, "minute": 0}}
+    ],
+    "weekdayDescriptions": [
+      "Monday: 6:00 AM – 10:00 PM",
+      "Tuesday: 6:00 AM – 10:00 PM",
+      "Wednesday: 6:00 AM – 10:00 PM",
+      "Thursday: 6:00 AM – 10:00 PM",
+      "Friday: 1:00 – 10:00 PM",
+      "Saturday: 6:00 AM – 10:00 PM",
+      "Sunday: 6:00 AM – 10:00 PM"
+    ]
+  },
+  "businessStatus": "OPERATIONAL",
+  "googleMapsUri": "https://maps.google.com/?cid=1234567890123456789",
+  "websiteUri": "https://bakery.example/",
+  "rating": 4.6,
+  "userRatingCount": 212,
+  "primaryType": "bakery",
+  "displayName": {"text": "Test Bakery Al Sadd", "languageCode": "en"}
+}

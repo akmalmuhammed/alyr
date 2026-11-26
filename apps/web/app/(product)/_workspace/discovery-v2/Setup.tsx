@@ -22,7 +22,7 @@ import { checksFor, families, type KnownFact } from "./screens";
 export type SetupStage = "idle" | "saving" | "queued" | "running" | "done";
 export type Choice = { family: string | null; trade: string | null };
 
-export function Setup({ lang, packs, choice, onChoose, canManage, known, stage, error, onCheckNow, tabs }: {
+export function Setup({ lang, packs, choice, onChoose, canManage, known, stage, error, onCheckNow, tabs, google }: {
   lang: D2Lang;
   packs: Pack[];
   choice: Choice;
@@ -33,6 +33,8 @@ export function Setup({ lang, packs, choice, onChoose, canManage, known, stage, 
   error: string;
   onCheckNow: () => void;
   tabs?: ReactNode;
+  /** The Google Maps link of each place (`GoogleMapsLink`), when the live read is on. */
+  google?: ReactNode;
 }) {
   const t = T2[lang];
   const fams = families(packs);
@@ -142,6 +144,7 @@ export function Setup({ lang, packs, choice, onChoose, canManage, known, stage, 
         })}
       </div>
       <p className="d2-small d2-muted d2s-gap">{t.drawingsNote}</p>
+      {google}
 
       <section className="d2s-known d2s-card" aria-labelledby="d2s-known-title">
         <header>

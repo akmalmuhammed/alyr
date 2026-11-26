@@ -31,6 +31,7 @@ from alyr.modules.discovery import facts as facts_module
 from alyr.modules.discovery import words as w
 from alyr.modules.discovery.answers import service as answers_service
 from alyr.modules.discovery.connectors import Location, sample
+from alyr.modules.discovery.connectors import places as places_connector
 from alyr.modules.discovery.connectors.manual import STALE_AFTER_DAYS
 from alyr.modules.discovery.errors import DiscoveryError
 from alyr.modules.items import clock as shop_clock
@@ -635,6 +636,26 @@ async def set_finding_status(conn: asyncpg.Connection, caller: Caller, args: dic
     return (await finding_views(conn, caller, lang, [fresh]))[0]
 
 
+# A place's Google place ID left as it is: the list was sent without `place_ref` (the back office's
+# places editor does not show it), so an edit there never wipes what the owner gave.
+KEEP = object()
+
+
+def _place_ref(value: str | None) -> str | None:
+    """The place ID kept for a place (Discovery 2.0, `connectors/places.py`): parsed from a Google
+    Maps link or a pasted ID. The fictional sample's own refs (`sample:...`) are kept as they
+    are."""
+    text = (value or "").strip()
+    if not text:
+        return None
+    if text.startswith(f"{sample.KIND}:"):
+        return text[:200]
+    try:
+        return places_connector.parse_place(text)
+    except places_connector.PlaceLinkError as error:
+        raise DiscoveryError(error.code) from error
+
+
 def _clean_location(item: dict) -> dict:
     name = (item.get("name") or "").strip()
     if not name:
@@ -650,7 +671,7 @@ def _clean_location(item: dict) -> dict:
         "name": name[:160],
         "name_ar": (item.get("name_ar") or "").strip()[:160],
         "area": (item.get("area") or "").strip()[:120],
-        "place_ref": (item.get("place_ref") or "").strip()[:200] or None,
+        "place_ref": _place_ref(item["place_ref"]) if "place_ref" in item else KEEP,
         "website_url": url[:300] if url else None,
         "whatsapp_e164": number,
         "is_primary": bool(item.get("is_primary")),
@@ -686,11 +707,12 @@ async def edit_locations(conn: asyncpg.Connection, caller: Caller, args: dict) -
     await conn.execute("update discovery_locations set is_primary = false")
     primary = next((i for i, c in enumerate(cleaned) if c["is_primary"]), 0)
     for position, c in enumerate(cleaned):
+        keep = c["place_ref"] is KEEP
         fields = (
             c["name"],
             c["name_ar"],
             c["area"],
-            c["place_ref"],
+            None if keep else c["place_ref"],
             c["website_url"],
             c["whatsapp_e164"],
             position,
@@ -704,10 +726,11 @@ async def edit_locations(conn: asyncpg.Connection, caller: Caller, args: dict) -
         else:
             await conn.execute(
                 "update discovery_locations set name = $2, name_ar = $3, area = $4, "
-                "place_ref = $5, "
+                "place_ref = case when $9 then place_ref else $5 end, "
                 "website_url = $6, whatsapp_e164 = $7, position = $8 where id = $1",
                 c["id"],
                 *fields,
+                keep,
             )
     await conn.execute(
         "update discovery_locations set is_primary = true where id = $1", cleaned[primary]["id"]
@@ -1107,8 +1130,9 @@ async def set_my_asks(conn: asyncpg.Connection, caller: Caller, args: dict) -> d
     return {"on": on, "linked": contact_id is not None}
 
 
-# Phase 3 (spec 068, D-168): the Answers check. Its actions are in their own file.
-from alyr.modules.discovery import answers_actions  # noqa: E402,F401
+# Phase 3 (spec 068, D-168): the Answers check. Its actions are in their own file. So are those of
+# each place's Google place ID, for the Places live read (Discovery 2.0, workstream F).
+from alyr.modules.discovery import answers_actions, places_actions  # noqa: E402,F401
 
 # Discovery 2.0: the check packs' actions (`packs/service.py`).
 from alyr.modules.discovery.packs import service as pack_service  # noqa: E402

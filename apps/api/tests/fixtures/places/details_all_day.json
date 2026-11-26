@@ -1,0 +1,11 @@
+{
+  "internationalPhoneNumber": "+974 4444 0125",
+  "regularOpeningHours": {
+    "openNow": true,
+    "periods": [{"open": {"day": 0, "hour": 0, "minute": 0}}],
+    "weekdayDescriptions": ["Monday: Open 24 hours"]
+  },
+  "businessStatus": "OPERATIONAL",
+  "googleMapsUri": "https://maps.google.com/?cid=3234567890123456789",
+  "displayName": {"text": "Test Pharmacy Al Wakra", "languageCode": "en"}
+}

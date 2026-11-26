@@ -88,7 +88,8 @@ def test_evidence_says_where_it_came_from_and_that_the_sample_is_a_sample():
             "source": "sample"}
     assert words.evidence_view(item, "en")["where"] == "Google listing (sample data)"
     assert words.evidence_view(item, "ar")["where"] == "صفحة Google (بيانات تجريبية)"
-    assert words.evidence_view({**item, "source": "google"}, "en")["where"] == "Google listing"
+    assert words.evidence_view({**item, "source": "google"}, "en")["where"] == (
+        "Google listing (Google Maps, live)")  # the attribution the Places terms ask for
 
 
 def test_days_are_worded_in_the_readers_language():
