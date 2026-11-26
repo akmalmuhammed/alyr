@@ -76,9 +76,10 @@ def test_inside_the_window_an_ask_is_a_message_with_three_buttons_in_the_specs_w
         "\n"
         "_By rule: the listing shows no opening hours, and you confirmed this branch's hours._\n"
         "Nothing changes until you tap Approve.")
+    # Discovery 2.0, the Sunday card: Approve, Change it, Not now ("See details" was third)
     assert [(c["id"], c["title"]) for c in message["payload"]["choices"]] == [
-        (f"dc:{ask['id']}:approve", "Approve"), (f"dc:{ask['id']}:later", "Not now"),
-        (f"dc:{ask['id']}:details", "See details")]
+        (f"dc:{ask['id']}:approve", "Approve"), (f"dc:{ask['id']}:change", "Change it"),
+        (f"dc:{ask['id']}:later", "Not now")]
     assert len(message["body"]) <= 1024 and all(len(c["title"]) <= 20
                                                  for c in message["payload"]["choices"])
     # the two value lines are the workspace's own words, from one function
@@ -111,7 +112,8 @@ def test_the_ask_in_arabic_opens_every_line_with_the_right_to_left_mark(
         "\n"
         "_بحسب القاعدة: لا تظهر ساعات عمل في الملف التجاري، وقد أكّدت ساعات هذا الفرع._\n"
         "لا يتغير شيء قبل أن تضغط «موافقة».")
-    assert [c["title"] for c in message["payload"]["choices"]] == ["موافقة", "ليس الآن", "التفاصيل"]
+    # Discovery 2.0, the Sunday card: Approve, Change it, Not now
+    assert [c["title"] for c in message["payload"]["choices"]] == ["موافقة", "تعديله", "ليس الآن"]
     assert get(shop.owner, p["id"], "ar")["after"]["text"] in message["body"]
     assert p["id"]
 
@@ -149,8 +151,9 @@ def test_outside_the_window_with_the_template_approved_it_goes_as_the_template(
         f"Change waiting at Qirfa Bakery: Opening hours for {SADD} would go from none to "
         "Sat to Thu 07:00 to 22:00; Fri 13:00 to 22:00. Nothing changes until you tap Approve. "
         "Send PROPOSALS OFF to stop these messages.")
+    # Discovery 2.0, the Sunday card: Approve, Change it, Not now
     assert [c["id"] for c in message["payload"]["choices"]] == [
-        f"dc:{ask['id']}:approve", f"dc:{ask['id']}:later", f"dc:{ask['id']}:details"]
+        f"dc:{ask['id']}:approve", f"dc:{ask['id']}:change", f"dc:{ask['id']}:later"]
     assert shop.owner.get(f"{BASE}/settings").json()["template_ready"] is True
 
 
@@ -316,6 +319,11 @@ def test_a_branch_manager_is_asked_only_about_their_own_place(client_factory, mo
     link_phone(manager, shop.slug, "97455500202")
     receive(shop, "97455500202")
     receive(shop, OWNER_PHONE, on=False)
+    # Discovery 2.0: the business has at most three open asks; with only the branch's changes
+    # waiting, they are the open ones (the asks are still only about the manager's own place)
+    owner_sql("update discovery_proposals p set status = 'declined', decided_at = now() "
+              "from discovery_locations l where l.id = p.location_id and p.tenant_id = $1 "
+              "and p.status = 'proposed' and l.name not like '%Industrial Area'", shop.tenant_id)
     for _ in range(4):
         if send_asks(shop):
             tap(shop, "97455500202", open_ask(shop)["id"], "later")
@@ -386,10 +394,12 @@ def test_tapping_approve_is_the_same_approval_as_the_workspaces_and_says_where_i
     send_asks(shop)
     [ask] = asks(shop)
     replies = tap(shop, OWNER_PHONE, ask["id"], "approve")
-    assert replies[-2]["body"] == f"Approved: Opening hours at {SADD}. The change is being applied."
-    # applied by the time the job has run, and the person is told, in their window
-    assert replies[-1]["body"].startswith(f"Done: Opening hours at {SADD} is now Sat to Thu")
-    assert "You can undo it in your workspace until " in sent_to_owner(shop)[-1]["body"]
+    # Discovery 2.0: one confirmation now; the one result comes with the check about 20 hours
+    # after it was applied (test_discovery_loop.py), not when the job has run
+    assert replies[-1]["body"] == (
+        f"Approved: Opening hours at {SADD}. ALYR sends it now, checks it again within a day "
+        "and sends you the result here.")
+    assert not sent_to_owner(shop)[-1]["body"].startswith("Done:")
     done = get(shop.owner, p["id"])
     assert done["status"] == "applied"
     assert done["decided"] == {"by": "Owner", "channel": "whatsapp", "at": done["decided"]["at"]}
@@ -425,18 +435,22 @@ def test_approve_in_the_workspace_then_tap_the_old_button_is_already_approved(sh
     assert len(activity(shop, "proposal.apply", p["id"])) == 1
 
 
-def test_not_now_leaves_the_proposal_exactly_as_it_is(shop):
+def test_not_now_closes_the_change_for_14_days_and_approves_nothing(shop):
+    """Discovery 2.0 (DECISIONS #10): "Not now" was "leave it waiting"; it is now a decision that
+    frees its place among the three open asks and comes back after 14 days only if a check still
+    finds it."""
     p = only_one_waits(shop, "hours_missing", "Al Sadd")
     send_asks(shop)
     ask = asks(shop)[0]
     reply = tap(shop, OWNER_PHONE, ask["id"], "later")[-1]["body"]
-    until = datetime.fromisoformat(p["expires_at"])
-    assert reply.startswith("Okay. It stays in your workspace under Proposals until ")
-    assert pw.shop_date(until, "Asia/Qatar", "en") in reply
-    assert get(shop.owner, p["id"])["status"] == "proposed"
+    assert reply.startswith("Okay. Nothing changes. ALYR asks again after ")
+    done = get(shop.owner, p["id"])
+    assert (done["status"], done["decided"]["reason"]) == ("declined", "not_now")
     row = asks(shop)[0]
     assert (row["status"], row["answer"]) == ("answered", "later")
-    assert activity(shop, "proposal.decline") == [] and activity(shop, "proposal.approve") == []
+    [entry] = activity(shop, "proposal.decline")
+    assert json.loads(entry["detail"])["reason"] == "not_now"
+    assert activity(shop, "proposal.approve") == []
 
 
 def test_see_details_sends_every_line_and_two_buttons(shop):
@@ -491,6 +505,8 @@ def test_a_tap_after_the_person_lost_the_place_says_it_belongs_to_another_branch
     link_phone(manager, shop.slug, "97455500202")
     receive(shop, "97455500202")
     receive(shop, OWNER_PHONE, on=False)
+    # Discovery 2.0: only one of the three open asks is sent; make the branch's change the one
+    only_one_waits(shop, "hours_conflict", "Industrial Area")
     send_asks(shop)
     ask = asks(shop)[0]
     shop.owner.put(f"{BASE}/locations/{place_id(shop.owner, 'Industrial Area')}/managers",
@@ -542,7 +558,9 @@ def test_the_result_is_not_sent_when_the_window_has_closed(shop):
     ask = asks(shop)[0]
     tap(shop, OWNER_PHONE, ask["id"], "approve")
     before = len(sent_to_owner(shop))
-    # approved on WhatsApp, applied much later (a retry): no window, so no message, never a template
+    # approved on WhatsApp, its result known much later: no window, so no message, never a
+    # template (Discovery 2.0: the result is the check's, so the change is made live here)
+    owner_sql("update discovery_proposals set life = 'live' where id = $1", UUID(p["id"]))
     owner_sql("update contacts set last_inbound_at = now() - interval '3 days' where "
               "tenant_id = $1 and phone = $2", shop.tenant_id, OWNER_PHONE)
     from alyr.modules.discovery import asks as asks_module
@@ -632,10 +650,11 @@ def test_the_template_is_created_on_meta_with_its_buttons_in_each_language():
     template = CATALOGUE["discovery_ask"]
     en = templates_sync.components(template, template.en, None, "en")
     ar = templates_sync.components(template, template.ar, None, "ar")
+    # Discovery 2.0, the Sunday card: Approve, Change it, Not now (it was "See details" third)
     assert en[1] == {"type": "BUTTONS", "buttons": [
-        {"type": "QUICK_REPLY", "text": "Approve"}, {"type": "QUICK_REPLY", "text": "Not now"},
-        {"type": "QUICK_REPLY", "text": "See details"}]}
-    assert [b["text"] for b in ar[1]["buttons"]] == ["موافقة", "ليس الآن", "التفاصيل"]
+        {"type": "QUICK_REPLY", "text": "Approve"}, {"type": "QUICK_REPLY", "text": "Change it"},
+        {"type": "QUICK_REPLY", "text": "Not now"}]}
+    assert [b["text"] for b in ar[1]["buttons"]] == ["موافقة", "تعديله", "ليس الآن"]
     assert en[0]["example"]["body_text"][0][0] == "Nuqta Car Care"
     assert ar[0]["example"]["body_text"][0][0] == "نقطة لعناية السيارات"
     assert template.held and template.category == "utility"

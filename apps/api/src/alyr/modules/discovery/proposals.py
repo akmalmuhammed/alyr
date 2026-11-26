@@ -841,8 +841,8 @@ def view(
     out["opened_at"] = _iso(row["opened_at"])
     out["approved_as"] = row["approved_as"]
     out["edited_from"] = str(row["edited_from"]) if row["edited_from"] else None
-    if out["decided"] is not None:
-        out["decided"]["reason"] = row["decline_reason"] if row["status"] == "declined" else None
+    if out["decided"] is not None and row["status"] == "declined":
+        out["decided"]["reason"] = row["decline_reason"] or "declined"
     out["life"], out["life_history"] = life_view(row, lang)
     out["receipt"] = receipt_view(row, lang)
     out["undo_window_days"] = undo_days(row["connector_kind"], row["target"], change["field"])

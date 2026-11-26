@@ -169,8 +169,9 @@ def test_the_discovery_ask_template_has_the_words_the_blanks_and_the_buttons_of_
     for text in (template.en, template.ar):
         other = re.sub(r"\{\{\d+\}\}", " ", text).split()
         assert len(other) >= 10  # Meta refuses a handful of words around five blanks
-    assert template.buttons == ("Approve", "Not now", "See details")
-    assert template.buttons_ar == ("موافقة", "ليس الآن", "التفاصيل")
+    # Discovery 2.0, the Sunday card: Approve, Change it, Not now (still held, never submitted)
+    assert template.buttons == ("Approve", "Change it", "Not now")
+    assert template.buttons_ar == ("موافقة", "تعديله", "ليس الآن")
     # fictional samples only
     assert template.samples[0] == "Nuqta Car Care" and template.samples[2].startswith("Nuqta")
 

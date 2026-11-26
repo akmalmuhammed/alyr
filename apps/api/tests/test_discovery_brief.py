@@ -98,7 +98,9 @@ def test_a_branch_manager_is_counted_for_their_own_place_only(client_factory, sh
 
 
 def test_an_expired_change_is_not_counted(shop):
+    # Discovery 2.0: an open ask (an "Also noticed" one waits, its 14 days not started)
     owner_sql("update discovery_proposals set proposed_at = now() - interval '15 days', "
+              "opened_at = now() - interval '15 days', "
               "expires_at = now() - interval '1 day' where id = (select id from "
               "discovery_proposals where tenant_id = $1 limit 1)", shop.tenant_id)
     assert line(shop, person(shop, "owner"))["count"] == 9
