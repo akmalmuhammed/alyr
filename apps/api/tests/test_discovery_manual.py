@@ -22,7 +22,7 @@ from uuid import UUID, uuid4
 import asyncpg
 import pytest
 
-from alyr.modules.discovery import observations, rules, scoring
+from alyr.modules.discovery import engine, observations, rules, scoring
 from alyr.modules.discovery import words as w
 from alyr.modules.discovery.connectors import ConnectorError, ManualConnector, RunContext
 from alyr.modules.discovery.connectors.manual import day_start
@@ -628,7 +628,7 @@ def test_the_overview_for_staff_carries_the_places_their_history_and_the_last_ru
     assert view["last_run"]["status"] == "done"
     # the business's own screens still work on it: the matrix reads the run's checks
     checks = biz.owner.get("/api/discovery/checks").json()
-    assert checks["measured"] is True and len(checks["rules"]) == 12
+    assert checks["measured"] is True and len(checks["rules"]) == len(engine.ALL_RULES)
 
 
 def test_turning_the_source_on_while_a_check_up_runs_is_refused(client_factory, monkeypatch):

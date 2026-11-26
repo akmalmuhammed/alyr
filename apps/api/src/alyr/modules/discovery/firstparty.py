@@ -28,7 +28,6 @@ import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta
-from urllib.parse import urlsplit
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -196,6 +195,11 @@ async def _counts(conn, sql: str, start: datetime, end: datetime, tz: str) -> di
 
 
 _ORDERS = "select created_at as at from orders where not is_test and status <> 'cancelled'"
+# Bookings have no `is_test` mark (orders have one, migration 0056), so the owner's own test
+# customer (`TEST.<user>`, core/identity.py) is left out through its contact. The statement takes
+# only the start time of each booking, which is counted by day and hour: no contact id, name or
+# number leaves it. It is the one statement in Discovery on `contacts` that does not say
+# `role = 'staff'`, named with this reason in test_discovery_no_outbound.py.
 _BOOKINGS = (
     "select b.starts_at as at from bookings b join contacts c on c.id = b.contact_id "
     "where b.status = any('{booked,completed,no_show}'::text[]) "
@@ -425,16 +429,25 @@ def _host(netloc: str) -> str:
     return host.removeprefix("www.")
 
 
+# A link as (host, path), read as text. Discovery imports nothing from `urllib` (or any other
+# package that can reach outside ALYR; test_discovery_no_outbound.py), so the split is a pattern:
+# an optional scheme, then `//host`, then the path up to a query or a fragment.
+_LINK = re.compile(r"^(?:[a-z][a-z0-9+.-]*:)?//([^/?#]*)([^?#]*)", re.IGNORECASE)
+
+
+def _split(link: str) -> tuple[str, str] | None:
+    text = link.strip()
+    found = _LINK.match(text) or _LINK.match("//" + text)  # "alyr.qa/b/shop": a host first
+    return (found.group(1), found.group(2)) if found else None
+
+
 def same_page(link: str, page: str) -> bool:
     """A link opens this page: the same host and path, whatever the scheme, query or last slash
     (a customer's own link carries a token, `?t=...`)."""
-    try:
-        a, b = urlsplit(link.strip()), urlsplit(page)
-    except ValueError:
+    a, b = _split(link), _split(page)
+    if a is None or b is None or not a[0]:
         return False
-    if not a.netloc:
-        a = urlsplit("//" + link.strip())
-    return _host(a.netloc) == _host(b.netloc) and a.path.rstrip("/") == b.path.rstrip("/")
+    return _host(a[0]) == _host(b[0]) and a[1].rstrip("/") == b[1].rstrip("/")
 
 
 def _whatsapp_seen(listing, web) -> list[tuple[str, str, list[str] | None]]:
@@ -628,11 +641,18 @@ def _season_due(ctx: Context) -> list[Outcome]:
 # Kinds are the owner's, and none of these makes a proposal: `hours_vs_activity` asks the owner to
 # confirm the hours (a change to the listing comes from `hours_conflict` and `hours_missing`, out of
 # confirmed facts), never from activity counts.
+#
+# The score (`scoring.py`) counts the first four like any check: each sets what customers see in
+# public against what ALYR's own records show. `season_due` has weight 0: it is an ask that the
+# calendar raises, not something wrong on a public page, so it is listed among the checks and asks
+# the owner, but it never moves the score (otherwise every shop's score would drop three weeks
+# before National Day and rise again after it, with nothing on its pages changed).
+SEASON_WEIGHT = 0
 FIRSTPARTY_RULES: tuple[Rule, ...] = (
     Rule("hours_vs_activity", "presence", "owner", "high", 2, _hours_vs_activity),
     Rule("own_links_present", "presence", "owner", "medium", 1, _own_links_present),
     Rule("whatsapp_number_mismatch", "whatsapp", "owner", "high", 2, _whatsapp_number_mismatch),
     Rule("bilingual_name_rule", "presence", "owner", "high", 2, _bilingual_name_rule),
-    Rule("season_due", "presence", "owner", "medium", 1, _season_due),
+    Rule("season_due", "presence", "owner", "medium", SEASON_WEIGHT, _season_due),
 )
 RULE_BY_ID = {r.id: r for r in FIRSTPARTY_RULES}

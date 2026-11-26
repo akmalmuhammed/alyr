@@ -44,8 +44,8 @@ RULE_WORDS: dict[str, dict[str, tuple[str, str]]] = {
             "التالي هذا البند.",
         ),
         "what_is_needed": (
-            "The owner confirms the real opening hours for each day. ALYR never takes hours "
-            "from orders or bookings alone.",
+            "The owner confirms the real opening hours for each day. ALYR never sets hours "
+            "on the strength of orders or bookings alone.",
             "يؤكد المالك ساعات العمل الفعلية لكل يوم. لا تأخذ ALYR الساعات من الطلبات أو "
             "الحجوزات وحدها.",
         ),
@@ -136,7 +136,7 @@ RULE_WORDS: dict[str, dict[str, tuple[str, str]]] = {
     },
     "season_due": {
         "title": (
-            "A season is coming: confirm the hours for it",
+            "Season due: confirm the hours for it",
             "موسم قادم: أكّد ساعات العمل فيه",
         ),
         "rule": (
@@ -185,7 +185,7 @@ LABELS: dict[str, tuple[str, str]] = {
         "The business's confirmed WhatsApp number", "رقم واتساب المؤكد للمنشأة"),
     "fp_name_en": ("The business's name in English", "اسم المنشأة بالإنجليزية"),
     "fp_name_ar": ("The business's name in Arabic", "اسم المنشأة بالعربية"),
-    "fp_season": ("Coming up", "قادم"),
+    "fp_season": ("Season due", "موسم قادم"),
 }
 WHERE: dict[str, tuple[str, str]] = {
     "alyr_records": ("Orders and bookings in ALYR", "الطلبات والحجوزات في ALYR"),
