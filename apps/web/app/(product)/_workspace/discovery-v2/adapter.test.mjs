@@ -3,7 +3,7 @@
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { approversOf, buildThisWeek, confirmedFor, toneOf } from "./adapter.ts";
+import { approversOf, buildThisWeek, confirmedFor, initialOf, personFor, toneOf } from "./adapter.ts";
 import { FIXTURE_NOW, approvedHours, fixture } from "./fixtures.ts";
 
 const f = fixture("en");
@@ -21,20 +21,51 @@ test("asks and owner tasks are counted together, in the API's order", () => {
 
 test("without extras nothing the API lacks is drawn", () => {
   const v = build({ extras: undefined });
-  assert.equal(v.previous, null);
-  assert.equal(v.nextCheckAt, null);
   assert.equal(v.asks[0].firstParty, null);
   assert.equal(v.asks[0].listing, null);
-  assert.equal(v.asks[0].alsoFixes, null);
+});
+
+test("the loop's fields come from the API: previous check-up, next check, what an ask also fixes", () => {
+  const v = build({ extras: undefined });
+  assert.deepEqual(v.previous, { matched: 8, at: f.block.previous.at });
+  assert.equal(v.nextCheckAt, f.asks.nextCheckAt);
+  assert.deepEqual(v.tally, { matched: 10, measured: 14, notMeasured: 2, total: 16 }, "counted as the packs count it, like 'Up from'");
+  assert.equal(v.asks[0].alsoFixes.to, 12);
+  assert.equal(v.asks[1].alsoFixes, null);
+  // An older API: no blocks, nothing invented.
+  const old = build({ extras: undefined, asks: null, block: null });
+  assert.equal(old.previous, null);
+  assert.equal(old.nextCheckAt, null);
+  assert.equal(old.alsoNoticed, 0);
+  assert.equal(old.asks.length, 2, "every waiting proposal, as before");
+});
+
+test("at most the open asks are tickets; the rest are counted as Also noticed", () => {
+  const extra = { ...f.waiting[1], id: "p-more", queue: "also_noticed", expires_at: null };
+  const v = build({ asks: { ...f.asks, alsoNoticed: [{ kind: "proposal", queue: "also_noticed", proposal: extra }] }, waiting: [...f.waiting, extra] });
+  assert.deepEqual(v.asks.map((a) => a.p.id), ["p-hours", "p-phone"]);
+  assert.equal(v.alsoNoticed, 1);
+  // a seasonal ask counts toward the open ones, among the owner's tasks
+  const season = { ...f.overview.up_next[0], id: "f-season", rule_id: "season_due" };
+  const w = build({ asks: { ...f.asks, open: [...f.asks.open, { kind: "season", queue: "open", finding: season }] } });
+  assert.deepEqual(w.owner.map((x) => x.id), ["f-season", "f-link"]);
+  assert.equal(w.total, 4);
 });
 
 test("with extras each piece lands on its ask", () => {
   const v = build({ extras: f.extras });
-  assert.equal(v.previous.matched, 8);
   assert.equal(v.asks[0].firstParty.weeks.length, 4);
   assert.equal(v.asks[0].listing.rating, 4.6);
   assert.equal(v.asks[1].firstParty, null);
-  assert.equal(v.nextCheckAt, f.extras.nextCheckAt);
+});
+
+test("an avatar's letter is never a dot or a mark, in either language", () => {
+  assert.equal(initialOf("Hana"), "H");
+  assert.equal(initialOf("هناء"), "ه");
+  assert.equal(initialOf("‏عمر"), "ع");
+  assert.equal(initialOf("+974 5555 0101"), "9");
+  assert.equal(personFor("عمر", []).initial, "ع");
+  assert.equal(personFor("Omar", approversOf([{ id: "2", name: "Omar", role: "admin" }])).tone, "h");
 });
 
 test("what the owner confirmed is read from the facts, for the changed day", () => {
@@ -63,7 +94,7 @@ test("the week's receipts are the sent changes and the owner's own fixes, newest
 test("the states: no connection, no check-up yet, nothing this week", () => {
   assert.equal(build({ overview: { ...f.overview, has_connection: false } }).state, "noConnection");
   assert.equal(build({ overview: { ...f.overview, has_run: false } }).state, "noRun");
-  assert.equal(build({ waiting: [], recent: [], overview: { ...f.overview, up_next: [], done: [] } }).state, "empty");
+  assert.equal(build({ waiting: [], recent: [], asks: { ...f.asks, open: [] }, overview: { ...f.overview, up_next: [], done: [] } }).state, "empty");
 });
 
 test("the latest receipt is the newest approved or sent change; the sample source says so", () => {

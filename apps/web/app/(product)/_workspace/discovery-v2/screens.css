@@ -186,6 +186,18 @@
 .d2s-range-ax { inset-block-start: var(--d2-s11); font-size: var(--d2-fs-micro); line-height: var(--d2-lh-micro); color: var(--d2-ink-2); font-variant-numeric: tabular-nums; transform: translateX(-50%); }
 [dir="rtl"] .d2s-range-ax { transform: translateX(50%); }
 .d2s-range-ax.d2s-b { color: var(--d2-ink); font-weight: var(--d2-wt-strong); }
+/* Answers v2: the floor of 30, and one likely range per tool and language on a 0 to 100% scale */
+.d2s-enough { margin-block-start: var(--d2-s3); padding: var(--d2-s3) var(--d2-s4); border-radius: var(--d2-r-control); background: var(--d2-warn-soft); color: var(--d2-ink); }
+.d2s-enough b { display: block; font-weight: var(--d2-wt-strong); font-size: var(--d2-fs-body-sm); line-height: var(--d2-lh-body-sm); }
+.d2s-sure .d2s-enough p { margin-block-start: var(--d2-s1); color: var(--d2-ink); }
+.d2s-rg { margin-block: var(--d2-s4) var(--d2-s3); display: grid; gap: var(--d2-s4); }
+.d2s-rg-h { display: flex; justify-content: space-between; gap: var(--d2-s3); font-size: var(--d2-fs-body-sm); line-height: var(--d2-lh-body-sm); }
+.d2s-rg-h b { font-weight: var(--d2-wt-strong); min-inline-size: 0; }
+.d2s-rg-bar { position: relative; margin-block-start: var(--d2-s2); block-size: var(--d2x-tn-bar); border-radius: var(--d2-r-pill); background: var(--d2-tint); }
+.d2s-rg-bar > span { position: absolute; inset-block: 0; }
+.d2s-rg-band { border-radius: var(--d2-r-pill); background: var(--d2-ink-veil); box-shadow: inset 0 0 0 var(--d2-rule-2) var(--d2-carbon); }
+.d2s-rg-pt { inline-size: var(--d2x-tn-bar); margin-inline-start: calc(var(--d2x-tn-bar) / -2); border-radius: 50%; background: var(--d2-carbon); box-shadow: 0 0 0 var(--d2-rule-2) var(--d2-surface); }
+.d2s-sure .d2s-rg-t, .d2s-sure .d2s-rg-r { margin-block-start: var(--d2-s1); font-size: var(--d2-fs-small); line-height: var(--d2-lh-small); }
 .d2s-tools { margin-block-start: var(--d2-s4); padding: var(--d2-s1) var(--d2-s6); }
 .d2s-tools li { display: grid; grid-template-columns: var(--d2x-tmark) minmax(0, 1fr) var(--d2x-tool-meter) var(--d2x-tool-meter); gap: var(--d2-s4); align-items: center; padding-block: var(--d2-s4); }
 .d2s-tools li + li { box-shadow: 0 calc(-1 * var(--d2-rule)) 0 var(--d2-hair); }
@@ -201,7 +213,8 @@
 .d2s-srcs li + li { box-shadow: 0 calc(-1 * var(--d2-rule)) 0 var(--d2-hair); }
 .d2s-srcs b { display: block; font-weight: var(--d2-wt-strong); }
 .d2s-srcs small { display: block; font-size: var(--d2-fs-small); color: var(--d2-ink-2); }
-.d2s-cites { display: flex; align-items: center; gap: var(--d2-s2h); font-size: var(--d2-fs-body-sm); }
+.d2s-cites { display: flex; flex-wrap: wrap; align-items: center; gap: var(--d2-s1) var(--d2-s2h); font-size: var(--d2-fs-body-sm); }
+.d2s-cites small { flex-basis: 100%; font-size: var(--d2-fs-small); color: var(--d2-ink-2); }
 .d2s-meter { flex: 1; block-size: var(--d2x-meter); border-radius: var(--d2-r-pill); background: var(--d2-tint); overflow: hidden; }
 .d2s-meter i { display: block; block-size: 100%; background: var(--d2-carbon); border-radius: var(--d2-r-pill); }
 .d2s-quote { margin: var(--d2-s4) 0 0; padding: var(--d2-s6) var(--d2-s7); border-radius: var(--d2-r-card); background: var(--d2-surface); box-shadow: var(--d2-shadow-card); font-size: var(--d2-fs-body); line-height: var(--d2-lh-body); color: var(--d2-ink-2); }

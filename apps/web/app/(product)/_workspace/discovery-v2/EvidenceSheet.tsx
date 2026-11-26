@@ -4,7 +4,7 @@
 // names the exact change. A modal dialog: focus moves in, Tab stays in, Esc closes, focus returns.
 
 import { useEffect, useRef, type KeyboardEvent } from "react";
-import type { AskView, Person } from "./adapter";
+import { personFor, type AskView, type Person } from "./adapter";
 import { T, dayName, type D2Lang } from "./copy";
 import { Ic } from "./icons";
 import { Av, Avs, Hl, Kbd, Ltr, day, dayTime } from "./parts";
@@ -75,7 +75,7 @@ export function EvidenceSheet({ ask, lang, approvers, onClose, onApprove, onDecl
                 <p>{ask.day ? <>{dayName(ask.day, lang)} <Ltr>{ask.confirmed.text}</Ltr></> : <Ltr>{ask.confirmed.text}</Ltr>}</p>
                 {ask.confirmed.at ? (
                   <p className="d2-src">
-                    {ask.confirmed.by ? <Av person={approvers.find((a) => a.name === ask.confirmed?.by) ?? { name: ask.confirmed.by, initial: ask.confirmed.by.slice(0, 1).toUpperCase(), tone: "n", role: "" }} size="sm" /> : null}
+                    {ask.confirmed.by ? <Av person={personFor(ask.confirmed.by, approvers)} size="sm" /> : null}
                     {ask.confirmed.by ? t.confirmedBy(ask.confirmed.by, dayTime(ask.confirmed.at, lang)) : t.confirmedWhen(dayTime(ask.confirmed.at, lang))}
                   </p>
                 ) : null}

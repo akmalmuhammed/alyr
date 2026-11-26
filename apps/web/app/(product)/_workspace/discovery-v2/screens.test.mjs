@@ -49,9 +49,9 @@ test("checks: the family title and trade come from the packs", () => {
   assert.equal(v.tradeTitle, "Car care");
 });
 
-test("checks: a family pack with rules of its own makes its own group", () => {
-  const packs = packsFixture("en").map((p) => (p.id === "appointments" ? { ...p, rules: ["photos_few"] } : p));
-  const v = checks({ packs });
+test("checks: the API's marks group the rules: first-party is own data, a non-core pack is the family's", () => {
+  const c = checksFixture("en");
+  const v = checks({ checks: { ...c, rules: c.rules.map((r) => (r.id === "photos_few" ? { ...r, pack: "appointments" } : r)) } });
   assert.deepEqual(v.groups.map((g) => g.id), ["core", "own", "family"]);
   assert.equal(v.groups[2].title, "Appointments");
   assert.deepEqual(v.groups[2].rows.map((r) => r.ruleId), ["photos_few"]);
@@ -178,13 +178,41 @@ test("parsePackChoice and parseChecksBlock read what is there", () => {
   assert.equal(parseChecksBlock({ family: "food", matched: 3 }).matched, 3);
 });
 
-test("parseAnswers: no range or cited pages unless the API sends them", () => {
-  const a = parseAnswers({ enabled: true, last: { run_id: "r", named: 1, counted: 2, measured: true, answers: [{ id: "1", lang: "en", status: "ok", named: true }] } });
-  assert.equal(a.range, null);
-  assert.equal(a.cited, null);
-  assert.equal(a.last.answers.length, 1);
-  assert.deepEqual(parseAnswers({ range: { low: 2, high: 7 } }).range, { low: 2, high: 7 });
-  assert.equal(parseAnswers({ range: { low: 7, high: 2 } }).range, null);
+test("parseAnswers reads G's shape: groups per tool and language, ranges in percent, cited hosts", () => {
+  const a = parseAnswers({
+    enabled: true,
+    last: {
+      run_id: "r", named: 1, counted: 2, answers: [{ id: "1", lang: "en", status: "ok", named: true, sources: [{ host: "a.example", title: "A", check: "differs" }, { title: "no host" }] }],
+      groups: [
+        { engine: "sample", lang: "en", named: 1, counted: 2, range: { low: 9, high: 91 }, share: 50, change: { state: "not_enough", reason: "Too few." } },
+        { engine: "sample", lang: "ar", named: 0, counted: 0, range: { low: 0, high: 0 }, change: { state: "made_up" } },
+        { lang: "en", named: 1, counted: 1 },
+      ],
+      sources: [{ host: "a.example", titles: ["A"], answers: 1, answers_without_you: 0, check: "weird" }],
+    },
+  });
+  assert.equal(a.last.groups.length, 2, "a group with no tool is left out");
+  assert.deepEqual(a.last.groups[0].range, { low: 9, high: 91 });
+  assert.equal(a.last.groups[0].share, null, "a share only from 30 answers, whatever the API sends");
+  assert.equal(a.last.groups[0].change.state, "not_enough");
+  assert.equal(a.last.groups[1].range, null, "nothing counted, no range");
+  assert.equal(a.last.groups[1].change.state, null);
+  assert.deepEqual(a.last.answers[0].sources.map((x) => x.check), ["differs"]);
+  assert.equal(a.last.sources[0].check, "not_read");
+  assert.equal(parseAnswers({ last: { run_id: "r", groups: [{ engine: "t", lang: "en", counted: 3, range: { low: 70, high: 20 } }] } }).last.groups[0].range, null);
+  assert.equal(parseAnswers({}).last, null);
+});
+
+test("answers: the sample never reaches 30, so it is not enough to name a share or a change", () => {
+  const v = buildAnswers(answersFixture("en"));
+  assert.equal(v.state, "content");
+  assert.equal(v.notEnough, true);
+  assert.equal(v.most, 2);
+  assert.equal(v.groups.length, 6, "three tools, two languages, each on its own");
+  assert.ok(v.groups.every((g) => g.share === null && g.change.state === "not_enough" && g.change.reason));
+  assert.equal(v.cited[0].host, "maps.example");
+  const ar = buildAnswers(answersFixture("ar"));
+  assert.ok(ar.groups.every((g) => g.change.reason && /[\u0600-\u06ff]/.test(g.change.reason)));
 });
 
 test("bidiValue holds Arabic values' times and numbers left to right, and leaves Latin alone", () => {

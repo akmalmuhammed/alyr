@@ -36,7 +36,7 @@ export function DiscoveryPreview({ lang, state, source, sheet, fan, change, tab 
   const f = useMemo(() => fixture(lang, source), [lang, source]);
   const view = useMemo(() => {
     const input = state === "empty"
-      ? { ...f, waiting: [], recent: [], overview: { ...f.overview, up_next: [], done: [], proposals: { waiting: 0, approved: 0, failed: 0, next: null } } }
+      ? { ...f, waiting: [], recent: [], asks: { ...f.asks, open: [] }, overview: { ...f.overview, up_next: [], done: [], proposals: { waiting: 0, approved: 0, failed: 0, next: null } } }
       : f;
     return buildThisWeek({ ...input, extras: f.extras, now: FIXTURE_NOW, lang });
   }, [f, state, lang]);
@@ -45,12 +45,21 @@ export function DiscoveryPreview({ lang, state, source, sheet, fan, change, tab 
   const at = new Date(FIXTURE_NOW + 60_000).toISOString();
   const later = (p: Proposal): Promise<Proposal> => new Promise((done) => setTimeout(() => done(p), 400));
   const actions: ThisWeekActions = {
-    approve: (p) => later({ ...p, status: "approved", decided: { by, channel: "portal", at }, can: { approve: false, decline: false, undo: false } }),
-    read: (p) => later({ ...p, status: "applied", applied_at: at, verification: "pending", undo_until: new Date(FIXTURE_NOW + 7 * 864e5).toISOString(), can: { approve: false, decline: false, undo: true } }),
-    decline: (p) => later({ ...p, status: "declined", decided: { by, channel: "portal", at }, can: { approve: false, decline: false, undo: false } }),
-    undo: (p) => later({ ...p, status: "undone", undone: { by, channel: "portal", at }, can: { approve: false, decline: false, undo: false } }),
+    approve: (p) => later({ ...p, status: "approved", decided: { by, channel: "portal", at, reason: "" }, can: { approve: false, decline: false, undo: false } }),
+    read: (p) => later({ ...p, status: "applied", applied_at: at, verification: "pending", undo_until: new Date(FIXTURE_NOW + 7 * 864e5).toISOString(), can: { approve: false, decline: false, undo: true },
+      life: { state: "sent", at, text: "" }, life_history: [{ state: "approved", at, text: "" }, { state: "sent", at, text: "" }], next_check_at: new Date(FIXTURE_NOW + 20 * 36e5).toISOString() }),
+    decline: (p) => later({ ...p, status: "declined", decided: { by, channel: "portal", at, reason: "" }, can: { approve: false, decline: false, undo: false } }),
+    undo: (p) => later({ ...p, status: "undone", undone: { by, channel: "portal", at, reason: "" }, can: { approve: false, decline: false, undo: false } }),
     skip: () => new Promise((done) => setTimeout(done, 300)),
-    changeAfter: change ? (p, draft) => later({ ...p, status: "approved", decided: { by, channel: "portal", at }, can: { approve: false, decline: false, undo: false }, after: { ...p.after, lines: p.after.lines.map((l) => (l.day === "fri" ? { ...l, text: `${draft.open} to ${draft.close}` } : l)) } }) : undefined,
+    // The API answers an edited approval with a new proposal: the changed value, `approved_as: "edited"`.
+    changeAfter: change ? (p, after) => later({
+      ...p, id: `${p.id}-edited`, status: "approved", approved_as: "edited", edited_from: p.id,
+      decided: { by, channel: "portal", at, reason: "" }, can: { approve: false, decline: false, undo: false },
+      after: { ...p.after, lines: p.after.lines.map((l) => {
+        const span = (after as Record<string, unknown>)[l.day];
+        return Array.isArray(span) ? { ...l, text: `${span[0]} – ${span[1]}` } : l;
+      }) },
+    }) : undefined,
     hrefs: { checks: "#checks", changes: "#changes", reports: "#reports", settings: "#settings", classic: "#classic" },
     sayError: () => (lang === "ar" ? "تعذّر ذلك. لم يتغيّر شيء." : "That did not work. Nothing changed."),
     pollMs: 700,

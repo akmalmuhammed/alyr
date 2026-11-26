@@ -271,6 +271,25 @@ export const T = {
     readLive: (when: string) => `Read ${when}`,
     openNow: "Open",
     closesAt: (time: string) => `Closes ${time}`,
+    // Polish pass (agent P): the loop's words
+    removedText: "Removed after 30 days",
+    removedTip: "Google's text is kept at most 30 days, then removed. What ALYR sent stays.",
+    alsoNoticed: (count: number) => (count === 1
+      ? "Also noticed: one more change waits its turn. ALYR asks it when one of these closes."
+      : `Also noticed: ${n(count)} more changes wait their turn. ALYR asks one when one of these closes.`),
+    undoFor: (days: number) => (days === 1 ? "Undo for 1 day after it is sent" : `Undo for ${n(days)} days after it is sent`),
+    editedNote: "Approved with a changed value",
+    editHoursLabel: (day: string) => `${day} hours`,
+    editPhoneLabel: "New phone number",
+    editChoiceLabel: "Choose the value",
+    editFactNote: (field: string) => `It also becomes your confirmed ${field.toLowerCase()} in ALYR.`,
+    editInvalid: "Check the value: it cannot be sent as it is.",
+    railRejected: (where: WhereKey) => (where === "google" ? "Refused by Google" : "Refused"),
+    railChangedBack: "Changed back",
+    checkAround: (when: string) => `Checked again about 20 hours after sending, ${when}`,
+    checkedResult: (when: string) => `Checked ${when}`,
+    notNowReason: "Not now",
+    declinedReason: "Declined",
   },
   ar: {
     sample: "شاشة مثال لنشاط عناية بالسيارات وهمي. الأسماء والأرقام مختلقة، وليست نتائج ALYR.",
@@ -469,6 +488,25 @@ export const T = {
     readLive: (when: string) => `قُرئ ${when}`,
     openNow: "مفتوح",
     closesAt: (time: string) => `يغلق ${ar(time)}`,
+    // Polish pass (agent P): the loop's words
+    removedText: "حُذف بعد 30 يومًا",
+    removedTip: "يُحتفظ بنص Google مدة 30 يومًا على الأكثر ثم يُحذف. ويبقى ما أرسلته ALYR.",
+    alsoNoticed: (count: number) => (count === 1
+      ? "لوحظ أيضًا: تغيير آخر ينتظر دوره. تسأل عنه ALYR حين يُغلق أحد هذه القرارات."
+      : `لوحظ أيضًا ما ينتظر دوره: ${counted(count, N.change, "ar")}. تسأل ALYR عن واحد منها حين يُغلق أحد هذه القرارات.`),
+    undoFor: (days: number) => (days === 1 ? "يمكن التراجع خلال يوم واحد بعد الإرسال" : `يمكن التراجع خلال ${counted(days, { en: ["day", "days"], ar: ["يوم واحد", "يومين", "أيام", "يوماً"] }, "ar")} بعد الإرسال`),
+    editedNote: "اعتُمد بقيمة معدّلة",
+    editHoursLabel: (day: string) => `ساعات ${day}`,
+    editPhoneLabel: "رقم الهاتف الجديد",
+    editChoiceLabel: "اختر القيمة",
+    editFactNote: (field: string) => `ويصبح أيضًا ${field} المؤكَّد لديك في ALYR.`,
+    editInvalid: "راجع القيمة: لا يمكن إرسالها كما هي.",
+    railRejected: (where: WhereKey) => (where === "google" ? "رفضته Google" : "رُفض"),
+    railChangedBack: "أُعيد إلى ما كان",
+    checkAround: (when: string) => `يُفحص مجددًا بعد نحو 20 ساعة من الإرسال، ${when}`,
+    checkedResult: (when: string) => `فُحص ${when}`,
+    notNowReason: "ليس الآن",
+    declinedReason: "رُفض",
   },
 };
 

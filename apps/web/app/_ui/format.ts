@@ -328,7 +328,10 @@ export function initials(name: string | null | undefined, fallback = "·"): stri
   const words = (name ?? "").trim().split(/\s+/).filter(Boolean);
   if (!words.length || PHONE_ONLY.test(words.join(" "))) return fallback;
   if (ARABIC.test(words.join(" "))) {
-    const first = words[0].replace(/^ال/, "") || words[0];
+    // A direction mark, a tatweel or a vowel sign before the name is not its first letter.
+    const word = words.find((w) => LETTER_OR_DIGIT.test(w)) ?? words[0];
+    const bare = Array.from(word).filter((ch) => LETTER_OR_DIGIT.test(ch) && ch !== "ـ").join("");
+    const first = bare.replace(/^ال/, "") || bare;
     return Array.from(first)[0] ?? fallback;
   }
   const letters = words.map((word) => Array.from(word).find((char) => LETTER_OR_DIGIT.test(char)) ?? "");

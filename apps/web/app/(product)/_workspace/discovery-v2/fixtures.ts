@@ -1,13 +1,15 @@
 // Fixtures for the Discovery v2 preview and tests, shaped exactly like the API's answers
 // (discoveryApi.ts types), for one fictional car care business ("Nuqta Car Care", the approved
 // prototype's sample world). The API words its own sentences in the reader's language, so the
-// fixtures do too. `extras` is what the API does not send yet (adapter.ts `Extras`); the preview
+// fixtures do too. `asks` and `block` are the overview's loop blocks (agent D); `extras` is what the
+// API does not send yet (adapter.ts `Extras`: C's first-party bars, F's listing read); the preview
 // draws it to show the approved design, the product hides it until the workstream lands.
 //
 // The clock is the prototype's: Thursday 12 November 2026, 09:40 in Doha.
 
 import type { ChecksAnswer, Fact, Finding, Overview, Proposal, Side, TeamMember } from "../discoveryApi.ts";
 import type { Extras } from "./adapter.ts";
+import type { AsksBlock, ChecksBlock } from "./api2.ts";
 import type { D2Lang } from "./copy.ts";
 
 export const FIXTURE_NOW = Date.parse("2026-11-12T06:40:00Z");
@@ -28,9 +30,10 @@ function hoursSide(lang: D2Lang, friday: string | null): Side {
   return {
     text: `${w.sat} ${w.to} ${w.thu} ${span}${lang === "ar" ? "؛ " : "; "}${w.fri} ${fri}`,
     lines: (["sat", "sun", "mon", "tue", "wed", "thu", "fri"] as const).map((day) => ({ day, text: day === "fri" ? fri : span })),
+    removed: false,
   };
 }
-const plain = (text: string): Side => ({ text, lines: [] });
+const plain = (text: string): Side => ({ text, lines: [], removed: false });
 
 function proposal(over: Partial<Proposal> & Pick<Proposal, "id" | "field" | "field_label" | "before" | "after">): Proposal {
   return {
@@ -39,6 +42,8 @@ function proposal(over: Partial<Proposal> & Pick<Proposal, "id" | "field" | "fie
     context: null, evidence: [], proposer: "rule", proposed_at: iso("2026-11-12T06:40:00Z"), expires_at: iso("2026-11-26T06:40:00Z"),
     decided: null, undone: null, applied_at: null, undo_until: null, failure: null, verification: null, sample: false,
     can: { approve: true, decline: true, undo: false }, already: false,
+    queue: "open", opened_at: iso("2026-11-12T06:40:00Z"), approved_as: null, edited_from: null, life: null, life_history: [], receipt: null,
+    undo_window_days: 7, next_check_at: null, verified_at: null, edit: null, also_fixes: null, expire_reason: "",
     ...over,
   };
 }
@@ -59,6 +64,8 @@ export type Fixture = {
   checks: ChecksAnswer;
   facts: Fact[];
   team: TeamMember[];
+  asks: AsksBlock;
+  block: ChecksBlock;
   extras: Extras;
 };
 
@@ -72,6 +79,8 @@ export function fixture(lang: D2Lang, source: "google" | "sample" = "google"): F
     why: ar ? "تختلف ساعات الجمعة على الملف التجاري عن الساعات التي أكّدتها." : "Friday hours on the listing differ from the hours you confirmed.",
     rule: ar ? "يعرض الملف التجاري ساعات تختلف عن التي أكّدتها لهذا الفرع." : "The listing shows different hours from the ones you confirmed for this branch.",
     before: hoursSide(lang, null), after: hoursSide(lang, "13:00–22:00"),
+    edit: { kind: "hours", step_minutes: 30 },
+    also_fixes: { checks: 2, rules: ["hours_vs_activity"], from: 10, to: 12, of: 14 },
     evidence: [
       { label: ar ? "الجمعة" : "Friday", value: ar ? "مغلق" : "Closed", where: ar ? "صفحة Google" : "Google page", seen_at: iso("2026-11-12T06:40:00Z"), day_only: false },
       { label: ar ? "الجمعة" : "Friday", value: "13:00–22:00", where: ar ? "موقعك" : "Your website", seen_at: iso("2026-11-12T06:40:00Z"), day_only: false },
@@ -83,7 +92,7 @@ export function fixture(lang: D2Lang, source: "google" | "sample" = "google"): F
     why: ar ? "من يتصل من الملف التجاري يصل إلى رقم لم تؤكّده." : "Callers from the listing reach a number you did not confirm.",
     rule: ar ? "يعرض الملف التجاري رقم هاتف يختلف عن الذي أكّدته لهذا الفرع." : "The listing shows a different phone number from the one you confirmed for this branch.",
     before: plain("+974 5555 0110"), after: plain("+974 5555 0101"),
-    proposed_at: iso("2026-11-12T06:40:00Z"),
+    proposed_at: iso("2026-11-12T06:40:00Z"), edit: { kind: "phone" },
   });
   const link = finding({
     id: "f-link", title: ar ? "أضف رابط واتساب إلى موقعك." : "Add the WhatsApp link to your website.",
@@ -93,21 +102,22 @@ export function fixture(lang: D2Lang, source: "google" | "sample" = "google"): F
   const category = proposal({
     id: "p-category", field: "category", field_label: ar ? "التصنيف الرئيسي" : "Main category", rule_id: "category_missing", type: "set_category", status: "applied", location,
     before: plain(W[lang].none), after: plain(ar ? "غسيل السيارات" : "Car wash"),
-    decided: { by: ar ? "هناء" : "Hana", channel: "portal", at: iso("2026-11-09T07:10:00Z") }, applied_at: iso("2026-11-09T07:11:00Z"),
-    undo_until: iso("2026-11-16T07:11:00Z"), verification: "confirmed", can: { approve: false, decline: false, undo: true },
+    decided: { by: ar ? "هناء" : "Hana", channel: "portal", at: iso("2026-11-09T07:10:00Z"), reason: "" }, applied_at: iso("2026-11-09T07:11:00Z"),
+    undo_until: iso("2026-11-16T07:11:00Z"), verification: "confirmed", can: { approve: false, decline: false, undo: true }, queue: null,
+    life: { state: "live", at: iso("2026-11-10T03:12:00Z"), text: "" }, verified_at: iso("2026-11-10T03:12:00Z"),
   });
   const name = proposal({
     id: "p-name", field: "name", field_label: ar ? "اسم المنشأة" : "Business name", rule_id: "name_conflict", type: "set_name", status: "applied", location,
     before: plain("Nuqta Car Wash"), after: plain("Nuqta Car Care"),
-    decided: { by: ar ? "عمر" : "Omar", channel: "whatsapp", at: iso("2026-11-09T06:30:00Z") }, applied_at: iso("2026-11-09T06:31:00Z"),
-    undo_until: iso("2026-11-16T06:31:00Z"), verification: "confirmed", can: { approve: false, decline: false, undo: true },
+    decided: { by: ar ? "عمر" : "Omar", channel: "whatsapp", at: iso("2026-11-09T06:30:00Z"), reason: "" }, applied_at: iso("2026-11-09T06:31:00Z"),
+    undo_until: iso("2026-11-16T06:31:00Z"), verification: "confirmed", can: { approve: false, decline: false, undo: true }, queue: null,
   });
   const doneFindings = [
     finding({ id: "f-site-phone", rule_id: "phone_conflict", status: "verified", title: ar ? "رقم الهاتف على موقعك" : "Phone number on your website", last_seen_at: iso("2026-11-07T05:40:00Z") }),
     finding({ id: "f-site-hours", rule_id: "hours_conflict", status: "verified", title: ar ? "ساعات الجمعة على موقعك" : "Friday hours on your website", last_seen_at: iso("2026-11-07T05:40:00Z") }),
   ];
   const finished = iso("2026-11-12T06:40:00Z");
-  const rules = Array.from({ length: 16 }, (_, i) => ({ id: `rule_${i + 1}`, part: (["presence", "website", "whatsapp", "reviews"] as const)[i % 4], label: `Check ${i + 1}` }));
+  const rules = Array.from({ length: 16 }, (_, i) => ({ id: `rule_${i + 1}`, part: (["presence", "website", "whatsapp", "reviews"] as const)[i % 4], label: `Check ${i + 1}`, pack: "core", first_party: false }));
   const states = ["pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "fail", "fail", "fail", "fail", "not_measured", "not_measured"] as const;
   return {
     overview: {
@@ -125,6 +135,17 @@ export function fixture(lang: D2Lang, source: "google" | "sample" = "google"): F
       value: { sat: ["07:00", "22:00"], sun: ["07:00", "22:00"], mon: ["07:00", "22:00"], tue: ["07:00", "22:00"], wed: ["07:00", "22:00"], thu: ["07:00", "22:00"], fri: ["13:00", "22:00"] },
     }],
     team: [{ id: "u-hana", name: ar ? "هناء" : "Hana", role: "owner" }, { id: "u-omar", name: ar ? "عمر" : "Omar", role: "admin" }],
+    asks: {
+      cap: 3,
+      open: [{ kind: "proposal", queue: "open", proposal: hours }, { kind: "proposal", queue: "open", proposal: phone }],
+      alsoNoticed: [],
+      nextCheckAt: iso("2026-11-19T06:40:00Z"),
+      nextChangeCheckAt: null,
+    },
+    block: {
+      run_id: "run-1", family: "appointments", trade: "car_care", matched: 10, measured: 14, not_measured: 2, total: 16,
+      previous: { matched: 8, measured: 14, at: iso("2026-11-05T06:40:00Z") },
+    },
     extras: {
       firstParty: {
         [hours.id]: {
@@ -138,9 +159,6 @@ export function fixture(lang: D2Lang, source: "google" | "sample" = "google"): F
         },
       },
       listing: { [hours.id]: { rating: 4.6, reviews: 212, category: ar ? "مغسلة سيارات في الدوحة" : "Car wash in Doha", openLine: ar ? "يغلق 22:00" : "Closes 22:00" } },
-      previous: { matched: 8, at: iso("2026-11-05T06:40:00Z") },
-      alsoFixes: { [hours.id]: { checks: 2, from: 10, to: 12, of: 14 } },
-      nextCheckAt: iso("2026-11-19T06:40:00Z"),
     },
   };
 }
@@ -149,8 +167,15 @@ export function fixture(lang: D2Lang, source: "google" | "sample" = "google"): F
 export function approvedHours(f: Fixture, lang: D2Lang): Proposal {
   const p = f.waiting[0];
   return {
-    ...p, status: "applied", decided: { by: lang === "ar" ? "هناء" : "Hana", channel: "portal", at: iso("2026-11-12T06:41:00Z") },
+    ...p, status: "applied", decided: { by: lang === "ar" ? "هناء" : "Hana", channel: "portal", at: iso("2026-11-12T06:41:00Z"), reason: "" },
     applied_at: iso("2026-11-12T06:41:00Z"), undo_until: iso("2026-11-19T06:41:00Z"), verification: "pending",
-    can: { approve: false, decline: false, undo: true },
+    can: { approve: false, decline: false, undo: true }, queue: null, approved_as: "unedited",
+    life: { state: "pending_review", at: iso("2026-11-12T06:42:00Z"), text: lang === "ar" ? "تراجع Google التعديل قبل أن يظهر." : "Google is reviewing the edit before it shows." },
+    life_history: [
+      { state: "approved", at: iso("2026-11-12T06:41:00Z"), text: "" },
+      { state: "sent", at: iso("2026-11-12T06:41:00Z"), text: "" },
+      { state: "pending_review", at: iso("2026-11-12T06:42:00Z"), text: "" },
+    ],
+    next_check_at: iso("2026-11-13T02:41:00Z"),
   };
 }

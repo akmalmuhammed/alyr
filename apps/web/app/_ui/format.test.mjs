@@ -323,6 +323,13 @@ test("an Arabic name gives one letter, past the article", () => {
   assert.equal(initials("ال"), "ا");
 });
 
+test("an Arabic name after a direction mark, a tatweel or a vowel sign still gives its first letter", () => {
+  assert.equal(initials("‏هناء"), "ه");
+  assert.equal(initials("ـعمر"), "ع");
+  assert.equal(initials("‏ ‏عمر الكعبي"), "ع");
+  assert.equal(initials("ُهناء"), "ه");
+});
+
 test("a name that is only a phone number, or nothing, gives the fallback", () => {
   assert.equal(initials("+974 5555 0101"), "·");
   assert.equal(initials(""), "·");

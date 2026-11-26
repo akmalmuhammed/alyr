@@ -141,3 +141,52 @@ test("no word of the screen's copy is an AI word, an ellipsis or an em dash", ()
   walk(T.ar, "ar");
   assert.deepEqual(Object.keys(T.ar).sort(), Object.keys(T.en).sort());
 });
+
+// ── polish pass: Change it, the life of a change, a removed before ──
+
+test("Change it starts from the proposed value and sends the whole week with only that day changed", async () => {
+  const { afterFromDraft, draftFor, draftText } = await import("./logic.ts");
+  const d = draftFor(hours);
+  assert.deepEqual(d, { kind: "hours", day: "fri", open: "13:00", close: "22:00" });
+  const week = afterFromDraft(hours, { ...d, open: "13:30" });
+  assert.deepEqual(week.fri, ["13:30", "22:00"]);
+  assert.deepEqual(week.sat, ["07:00", "22:00"]);
+  assert.equal(Object.keys(week).length, 7);
+  assert.equal(afterFromDraft(hours, { ...d, open: "23:00" }), null, "a day that closes before it opens is not sent");
+  assert.equal(draftText(hours, { ...d, open: "13:30" }, "en"), "Friday 13:30–22:00");
+  const arWeek = afterFromDraft(ar.waiting[0], draftFor(ar.waiting[0]));
+  assert.deepEqual(arWeek.fri, ["13:00", "22:00"], "read from the Arabic lines too");
+  const phone = en.waiting[1];
+  assert.deepEqual(afterFromDraft(phone, { kind: "phone", phone: "+974 5555 0199" }), { phone: "+97455550199" });
+  assert.equal(afterFromDraft(phone, { kind: "phone", phone: "call me" }), null);
+  const choice = { ...phone, edit: { kind: "choice", options: [{ category: "Car wash" }, { category: "Car detailing" }] }, after: { text: "Car detailing", lines: [], removed: false } };
+  assert.deepEqual(draftFor(choice), { kind: "choice", index: 1 });
+  assert.deepEqual(afterFromDraft(choice, { kind: "choice", index: 0 }), { category: "Car wash" });
+  assert.equal(draftFor({ ...hours, edit: null }), null, "not drawn where the API does not allow it");
+});
+
+test("the life of a change follows the loop: Google's review, refused, changed back", () => {
+  const at = "2026-11-12T07:00:00Z";
+  const sent = { status: "applied", verification: "pending", decided: null, applied_at: at };
+  assert.deepEqual(railOf({ ...sent, life: { state: "pending_review", at, text: "" }, life_history: [{ state: "pending_review", at, text: "" }] }).map((s) => s.state), ["done", "done", "now", "todo"]);
+  assert.deepEqual(railOf({ ...sent, life: { state: "rejected", at, text: "" }, life_history: [] }).map((s) => s.state), ["done", "done", "attn", "todo"]);
+  assert.deepEqual(railOf({ ...sent, life: { state: "changed_back", at, text: "" }, life_history: [] }).map((s) => s.state), ["done", "done", "done", "attn"]);
+  assert.equal(stageOf({ ...sent, life: { state: "live", at, text: "" } }), "live");
+  assert.equal(stageOf({ ...sent, life: { state: "changed_back", at, text: "" } }), "notLive");
+});
+
+test("a before removed after 30 days says so in both languages, never None or empty", () => {
+  const gone = { ...hours, before: { text: "removed after 30 days (Google's terms)", lines: [], removed: true } };
+  assert.equal(beforeAfter(gone, "en").before, "Removed after 30 days");
+  assert.equal(beforeAfter(gone, "ar").before, "حُذف بعد 30 يومًا");
+  assert.ok(beforeAfter(gone, "en").after);
+});
+
+test("numbers in the v2 screens are Western digits: nothing is formatted with an Arabic locale", async () => {
+  const { readdirSync, readFileSync } = await import("node:fs");
+  const here = new URL(".", import.meta.url);
+  for (const name of readdirSync(here).filter((n) => /\.(ts|tsx)$/.test(n))) {
+    const text = readFileSync(new URL(name, here), "utf8");
+    assert.doesNotMatch(text, /toLocaleString\(\s*\)|toLocaleString\(\s*["']ar|Intl\.\w+Format\(\s*["']ar(?![^"']*nu-latn)/, name);
+  }
+});

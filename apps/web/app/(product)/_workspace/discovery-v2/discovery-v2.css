@@ -244,6 +244,7 @@
 .d2-diff .d2-to { color: var(--d2-g-arrow); }
 .d2-new { font-weight: var(--d2-wt-strong); color: var(--d2-g-ink); font-variant-numeric: tabular-nums; }
 .d2-select { font: inherit; font-weight: var(--d2-wt-strong); block-size: var(--d2-chip); border-radius: var(--d2-r-tiny); border: var(--d2-rule) solid var(--d2-line-strong); background: var(--d2-g-paper); color: var(--d2-g-ink); padding-inline: var(--d2-s1); font-variant-numeric: tabular-nums; }
+.d2-input { inline-size: 16ch; max-inline-size: 100%; }
 .d2-g-foot { margin-block-start: var(--d2-s1h); padding-block-start: var(--d2-s1h); border-block-start: var(--d2-rule) solid var(--d2-g-line); color: var(--d2-g-soft); font-size: var(--d2-fs-micro); display: flex; justify-content: space-between; gap: var(--d2-s2); }
 
 /* ---------- First-party bars ---------- */
@@ -307,6 +308,7 @@
 .d2-what { font-weight: var(--d2-wt-strong); }
 .d2[data-lang="ar"] .d2-what { font-weight: var(--d2-wt-medium); }
 .d2-pair { display: inline-flex; align-items: center; gap: var(--d2-s2); flex-wrap: wrap; margin-block-start: var(--d2-s2); }
+.d2-chip-from.d2-chip-removed { text-decoration: none; color: var(--d2-ink-2); }
 .d2-chip-from { background: transparent; box-shadow: inset 0 0 0 var(--d2-rule) var(--d2-hair-strong); color: var(--d2-ink-2); text-decoration: line-through; text-decoration-color: var(--d2-ink-3); }
 .d2-chip-to { background: var(--d2-tint); font-weight: var(--d2-wt-strong); }
 .d2-who { margin-block-start: var(--d2-s2h); display: flex; flex-wrap: wrap; gap: var(--d2-s1h) var(--d2-s3); align-items: center; font-size: var(--d2-fs-body-sm); line-height: var(--d2-lh-body-sm); color: var(--d2-ink-2); }
@@ -317,6 +319,7 @@
 .d2-undo { display: inline-flex; align-items: center; gap: var(--d2-s1h); block-size: var(--d2-control-sm); padding-inline: var(--d2-s2h) var(--d2-s3); border-radius: var(--d2-r-key); font-size: var(--d2-fs-body-sm); font-weight: var(--d2-wt-strong); color: var(--d2-ink); background: var(--d2-surface); box-shadow: var(--d2-shadow-control); }
 .d2-undo:hover:not(:disabled) { box-shadow: var(--d2-shadow-control-hover); }
 .d2-statusline { margin-block-start: var(--d2-s8); display: flex; flex-wrap: wrap; gap: var(--d2-s1h) var(--d2-s3h); align-items: center; font-size: var(--d2-fs-body-sm); color: var(--d2-ink-2); }
+.d2-also { margin-block-start: var(--d2-s3); max-inline-size: var(--d2-maxch-sub); }
 .d2-empty { margin-block-start: var(--d2-s7); padding: var(--d2-s6) var(--d2-s7); border-radius: var(--d2-r-card); background: var(--d2-group); color: var(--d2-ink-2); box-shadow: var(--d2-shadow-group); }
 
 /* ---------- The agent bar and the toast lane: they float at the foot of the page ---------- */

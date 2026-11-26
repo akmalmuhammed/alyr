@@ -4,7 +4,7 @@
 // the status line: when ALYR checked, how many checks match, how many were not measured.
 
 import type { Person, ReceiptRow } from "./adapter";
-import { toneOf } from "./adapter";
+import { personFor } from "./adapter";
 import { T, type D2Lang } from "./copy";
 import { allMatch, joinNames, stageOf, type Tally } from "./logic";
 import { Ic, TickDraw } from "./icons";
@@ -24,7 +24,7 @@ export function ReceiptsList({ lang, rows, people, tally, checkedAt, checksHref,
   const changes = rows.filter((r): r is Extract<ReceiptRow, { kind: "change" }> => r.kind === "change");
   const matched = rows.length > 0 && allMatch(changes.map((r) => r.p)) && rows.every((r) => r.kind === "change" || r.f.status === "verified");
   const deciders = [...new Set(changes.map((r) => r.p.decided?.by ?? "").filter(Boolean))];
-  const whoPeople: Person[] = deciders.map((name) => people.find((p) => p.name === name) ?? { name, initial: name.slice(0, 1).toUpperCase(), tone: toneOf(name, people), role: "" });
+  const whoPeople: Person[] = deciders.map((name) => personFor(name, people));
   return (
     <section className="d2-since" aria-labelledby="d2-since-title">
       <div className="d2-since-head">
@@ -67,12 +67,12 @@ export function ReceiptsList({ lang, rows, people, tally, checkedAt, checksHref,
                 <div>
                   <div className="d2-what">{t.exactField(r.what, r.where)}</div>
                   <div className="d2-pair">
-                    <span className="d2-chip d2-chip-from"><Ltr>{r.before}</Ltr></span>
+                    {p.before.removed ? <span className="d2-chip d2-chip-from d2-chip-removed" data-tip={t.removedTip}>{r.before}</span> : <span className="d2-chip d2-chip-from"><Ltr>{r.before}</Ltr></span>}
                     <Ic name="arrow" size="xs" flip className="d2-to" />
                     <span className="d2-chip d2-chip-to"><Ltr>{r.after}</Ltr></span>
                   </div>
                   <div className="d2-who">
-                    {by ? <span className="d2-actor"><Av person={people.find((x) => x.name === by) ?? { name: by, initial: by.slice(0, 1).toUpperCase(), tone: "n", role: "" }} />{t.approvedSent(by)}</span> : null}
+                    {by ? <span className="d2-actor"><Av person={personFor(by, people)} />{t.approvedSent(by)}</span> : null}
                     {pill}
                   </div>
                 </div>

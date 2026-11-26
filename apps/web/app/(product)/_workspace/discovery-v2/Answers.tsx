@@ -1,18 +1,20 @@
 "use client";
 
-// Answers, Discovery v2 (workstream U2), on the Answers check's API (spec 068): "Named in N of M
+// Answers, Discovery v2, on the Answers check's v2 API (workstream G, PR #362): "Named in N of M
 // answers", one card of dots per language and one row per answer tool with a dot meter per
-// language (never added into one score), the comparison with the check before, one answer quoted
-// word for word as third-party text, and how it is measured (the API's own rule and limits).
-// The likely range and the pages the answers cited are drawn only when the API sends them
-// (workstream G); until then they are hidden, never estimated here.
+// language (never added into one score). "How sure is this?" gives each tool in each language its
+// own likely range (Wilson, 95%) on a 0 to 100% scale; a share and a change are named only from 30
+// answers, so below that the screen says so plainly (`not_enough`: the sample never reaches 30)
+// and shows the API's own reason for each. Then the pages the answers cited, with whether each
+// matches what the owner confirmed, one answer quoted word for word as third-party text, and how
+// it is measured (the API's method, rule, range note and limits).
 
 import type { ReactNode } from "react";
-import type { AnswerRange, AnswersAnswer, CitedPage } from "./api2";
+import type { AnswerGroup, AnswersAnswer, CitedHost } from "./api2";
 import { T2 } from "./copy2";
 import type { D2Lang } from "./copy";
 import { ScreenFrame, SourceTile, StatePill } from "./frame";
-import { Ltr, day, dayTime } from "./parts";
+import { Ltr, dayTime } from "./parts";
 import { markName, type AnswersView, type LangTally } from "./screens";
 
 export function Answers({ lang, view, api, tabs, foot }: { lang: D2Lang; view: AnswersView; api: AnswersAnswer; tabs: ReactNode; foot?: ReactNode }) {
@@ -31,7 +33,6 @@ export function Answers({ lang, view, api, tabs, foot }: { lang: D2Lang; view: A
   }
 
   const topic = t.topic(api.trade, api.city);
-  const prev = api.previous && api.previous.measured ? api.previous : null;
   const q = view.quote;
   return (
     <ScreenFrame lang={lang} foot={foot}>
@@ -47,21 +48,22 @@ export function Answers({ lang, view, api, tabs, foot }: { lang: D2Lang; view: A
         {view.sample && api.sampleNote ? <p className="d2-small d2-muted">{api.sampleNote}</p> : null}
       </section>
 
-      {api.range || prev ? (
-        <section className="d2s-sec">
-          <div className={`d2s-sure${api.range && prev ? "" : " d2s-sure-one"}`}>
-            {api.range ? <Sure lang={lang} range={api.range} now={view.named} total={view.counted} /> : null}
-            {prev ? (
-              <div className="d2s-sure-c2">
-                <h2>{t.compareTitle(day(prev.asked_at, lang))}</h2>
-                <p>{t.compareBody(prev.named, prev.counted, view.named, view.counted)}</p>
-                <div className="d2s-tn" role="img" aria-label={t.compareAria(day(prev.asked_at, lang), prev.named, prev.counted, day(view.askedAt, lang), view.named, view.counted)}>
-                  <Bar label={day(prev.asked_at, lang)} value={prev.named} of={prev.counted} />
-                  <Bar label={day(view.askedAt, lang)} value={view.named} of={view.counted} now />
+      {view.groups.length ? (
+        <section className="d2s-sec" aria-labelledby="d2s-sure-title">
+          <div className="d2s-sure d2s-sure-one">
+            <div className="d2s-sure-c1">
+              <h2 id="d2s-sure-title">{t.sureTitle}</h2>
+              {view.notEnough ? (
+                <div className="d2s-enough" role="note">
+                  <b>{t.notEnoughTitle}</b>
+                  <p>{t.notEnoughBody(view.most)}</p>
                 </div>
-                {api.caution ? <p className="d2-small">{api.caution}</p> : null}
-              </div>
-            ) : null}
+              ) : null}
+              <ul className="d2s-rg">
+                {view.groups.map((g) => <RangeRow key={`${g.engine}-${g.lang}`} lang={lang} g={g} name={t.groupName(g.engine_label, g.lang_label || langName(g.lang))} />)}
+              </ul>
+              {api.rangeNote ? <p className="d2-small d2-muted">{api.rangeNote}</p> : null}
+            </div>
           </div>
         </section>
       ) : null}
@@ -81,14 +83,14 @@ export function Answers({ lang, view, api, tabs, foot }: { lang: D2Lang; view: A
         <p className="d2-small d2-muted d2s-gap">{t.toolsNote}</p>
       </section>
 
-      {api.cited && api.cited.length ? <Cited lang={lang} pages={api.cited} total={view.counted} /> : null}
+      <Cited lang={lang} api={api} hosts={view.cited} total={view.counted} />
 
       {q ? (
         <section className="d2s-sec">
           <h2 className="d2-section">{t.quoteTitle}</h2>
           <blockquote className="d2s-quote" lang={q.lang === "ar" ? "ar" : "en"} dir={q.lang === "ar" ? "rtl" : "ltr"}>
             <div className="d2s-q-head" lang={lang} dir={lang === "ar" ? "rtl" : "ltr"}>
-              <span>{t.quoteHead(q.engine_label, langName(q.lang), dayTime(view.askedAt, lang))}</span>
+              <span>{t.quoteHead(q.said_by || q.engine_label, langName(q.lang), dayTime(view.askedAt, lang))}</span>
               <span className="d2s-q-tag">{t.thirdParty}</span>
             </div>
             <p className="d2s-q-asked" lang={lang} dir={lang === "ar" ? "rtl" : "ltr"}>{t.questionAsked} <span>{q.question}</span></p>
@@ -97,7 +99,7 @@ export function Answers({ lang, view, api, tabs, foot }: { lang: D2Lang; view: A
                 <p key={i}>{markName(para, q.matched).map((part, j) => (part.mark ? <mark key={j}>{part.text}</mark> : <span key={j}>{part.text}</span>))}</p>
               ))}
             </div>
-            <div className="d2s-q-foot" lang={lang} dir={lang === "ar" ? "rtl" : "ltr"}><span>{t.quoteFoot}</span></div>
+            <div className="d2s-q-foot" lang={lang} dir={lang === "ar" ? "rtl" : "ltr"}><span>{api.quoteNote || t.quoteFoot}</span></div>
           </blockquote>
         </section>
       ) : null}
@@ -130,53 +132,60 @@ function Meter({ lang, name, tally }: { lang: D2Lang; name: string; tally: LangT
   );
 }
 
-function Bar({ label, value, of, now = false }: { label: string; value: number; of: number; now?: boolean }) {
-  const share = of > 0 ? Math.round((value / of) * 1000) / 10 : 0;
-  return (
-    <div className={`d2s-tn-r${now ? " d2s-now" : ""}`}>
-      <span>{label}</span>
-      <span className="d2s-tn-b"><i style={{ inlineSize: `${share}%` }} /></span>
-      <b className="d2-tnum">{value.toLocaleString("en")}</b>
-    </div>
-  );
-}
-
-/** TODO(G): drawn only when the API sends the likely range. */
-function Sure({ lang, range, now, total }: { lang: D2Lang; range: AnswerRange; now: number; total: number }) {
+/** One tool in one language: its count, its likely range on a 0 to 100% scale with the count's
+ * own share as a point, the share only from 30 answers, and the API's reason for the change state. */
+function RangeRow({ lang, g, name }: { lang: D2Lang; g: AnswerGroup; name: string }) {
   const t = T2[lang];
-  const at = (v: number) => `${total > 0 ? Math.round((v / total) * 1000) / 10 : 0}%`;
+  const now = g.counted > 0 ? Math.round((g.named / g.counted) * 1000) / 10 : 0;
   return (
-    <div className="d2s-sure-c1">
-      <h2>{t.sureTitle}</h2>
-      <p>{t.sureBody(range.low, range.high, total)}</p>
-      <div className="d2s-range" aria-hidden="true">
-        <span className="d2s-range-track" />
-        <span className="d2s-range-band" style={{ insetInlineStart: at(range.low), inlineSize: `calc(${at(range.high)} - ${at(range.low)})` }} />
-        <span className="d2s-range-pt" style={{ insetInlineStart: at(now) }} />
-        {[0, range.low, now, range.high, total].filter((v, i, a) => a.indexOf(v) === i).map((v) => (
-          <span key={v} className={`d2s-range-ax${v === now ? " d2s-b" : ""}`} style={{ insetInlineStart: at(v) }}>{v.toLocaleString("en")}</span>
-        ))}
+    <li>
+      <div className="d2s-rg-h">
+        <b>{name}</b>
+        <span className="d2-tnum">{t.meterOf(g.named, g.counted)}</span>
       </div>
-    </div>
+      {g.range ? (
+        <>
+          <div className="d2s-rg-bar" role="img" aria-label={t.sureAria(name, g.named, g.counted, g.range.low, g.range.high)} data-tip={t.rangeScale}>
+            <span className="d2s-rg-band" style={{ insetInlineStart: `${g.range.low}%`, inlineSize: `${Math.max(0, g.range.high - g.range.low)}%` }} />
+            <span className="d2s-rg-pt" style={{ insetInlineStart: `${now}%` }} />
+          </div>
+          <p className="d2s-rg-t"><span className="d2-tnum">{t.sureRange(g.range.low, g.range.high)}</span>{g.share !== null ? <> · <span className="d2-tnum">{t.sureShare(g.share)}</span></> : null}</p>
+        </>
+      ) : null}
+      {g.change.reason ? <p className="d2s-rg-r">{g.change.reason}</p> : null}
+    </li>
   );
 }
 
-/** TODO(G): drawn only when the API sends the cited pages. */
-function Cited({ lang, pages, total }: { lang: D2Lang; pages: CitedPage[]; total: number }) {
+function Cited({ lang, api, hosts, total }: { lang: D2Lang; api: AnswersAnswer; hosts: CitedHost[]; total: number }) {
   const t = T2[lang];
   return (
     <section className="d2s-sec">
-      <h2 className="d2-section">{t.citedTitle}</h2>
-      <ul className="d2s-card d2s-srcs">
-        {pages.map((page) => (
-          <li key={`${page.title}-${page.host}`}>
-            <SourceTile where={page.title} />
-            <div><b>{page.title}</b>{page.host ? <small><Ltr>{page.host}</Ltr></small> : null}</div>
-            <div className="d2s-cites"><span className="d2s-meter"><i style={{ inlineSize: `${total ? (page.cites / total) * 100 : 0}%` }} /></span><span className="d2-tnum">{t.citedOf(page.cites, total)}</span></div>
-            {page.state ? <StatePill tone={page.state === "matches" ? "ok" : page.state === "differs" ? "warn" : "nm"}>{t.citedState[page.state]}</StatePill> : <span />}
-          </li>
-        ))}
-      </ul>
+      <h2 className="d2-section">{api.sourcesTitle || t.citedTitle}</h2>
+      {api.sourcesNote ? <p className="d2-small d2-muted d2s-gap">{api.sourcesNote}</p> : null}
+      {hosts.length ? (
+        <ul className="d2s-card d2s-srcs">
+          {hosts.map((h) => {
+            const title = h.titles[0] || h.host;
+            const without = t.citedNoYou(h.answersWithoutYou);
+            return (
+              <li key={h.host}>
+                <SourceTile where={title} />
+                <div>
+                  <b>{title}</b>
+                  <small><Ltr>{h.host}</Ltr>{h.engineLabels.length ? <> · {t.citedTools(h.engineLabels.join(lang === "ar" ? "، " : ", "))}</> : null}</small>
+                </div>
+                <div className="d2s-cites">
+                  <span className="d2s-meter"><i style={{ inlineSize: `${total ? Math.min(100, (h.answers / total) * 100) : 0}%` }} /></span>
+                  <span className="d2-tnum">{t.citedOf(h.answers, total)}</span>
+                  {without ? <small>{without}</small> : null}
+                </div>
+                <StatePill tone={h.check === "matches" ? "ok" : h.check === "differs" ? "warn" : "nm"}>{h.check_label || t.citedState[h.check]}</StatePill>
+              </li>
+            );
+          })}
+        </ul>
+      ) : <p className="d2-small d2-muted">{t.citedEmpty}</p>}
     </section>
   );
 }
@@ -185,7 +194,7 @@ function Method({ lang, api }: { lang: D2Lang; api: AnswersAnswer }) {
   const t = T2[lang];
   return (
     <div className="d2s-method">
-      <b>{t.methodTitle}</b> {api.rule} {api.limits} {t.notPartOfChecks}
+      <b>{t.methodTitle}</b> {api.method} {api.rule} {api.limits} {t.notPartOfChecks}
     </div>
   );
 }

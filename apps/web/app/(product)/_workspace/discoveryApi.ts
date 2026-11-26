@@ -64,10 +64,32 @@ export const PROPOSAL_STATUSES: readonly ProposalStatus[] = ["proposed", "approv
 export const DAYS: readonly DayKey[] = ["sat", "sun", "mon", "tue", "wed", "thu", "fri"];
 export const FACT_KEYS: readonly FactKey[] = ["hours", "phone", "category", "name", "whatsapp"];
 
-/** One side of a change: one line of text (WhatsApp's and a table cell's) and, for hours, seven rows. */
-export type Side = { text: string; lines: { day: DayKey; text: string }[] };
-export type Decided = { by: string; channel: Channel | ""; at: string | null };
+/** One side of a change: one line of text (WhatsApp's and a table cell's) and, for hours, seven rows.
+ * `removed`: Google's text of this side was removed after 30 days (`retention.py`); the screens say
+ * so in their own words and never draw it as an empty value. */
+export type Side = { text: string; lines: { day: DayKey; text: string }[]; removed: boolean };
+/** `reason` (Discovery 2.0, the loop): `not_now` (asked again after 14 days, only if still found) or `declined`. */
+export type Decided = { by: string; channel: Channel | ""; at: string | null; reason: "not_now" | "declined" | "" };
 export type ReviewContext = { rating: number; posted_at: string | null; author_name: string; body: string; language: string };
+
+/** The life of a change after the tap (Discovery 2.0, the loop). `pending_review`: Google holds the
+ * edit for its own review; `rejected` and `changed_back` are exits, each with the API's plain words. */
+export type LifeState = "approved" | "sent" | "pending_review" | "live" | "rejected" | "changed_back";
+export const LIFE_STATES: readonly LifeState[] = ["approved", "sent", "pending_review", "live", "rejected", "changed_back"];
+export type LifeStep = { state: LifeState; at: string | null; text: string };
+/** What "Change it" may change: the hours (in steps), the phone number, or one of the values the owner confirmed. */
+export type EditSpec =
+  | { kind: "hours"; step_minutes: number }
+  | { kind: "phone" }
+  | { kind: "choice"; options: Record<string, string>[] };
+export type AlsoFixes = { checks: number; rules: string[]; from: number; to: number; of: number };
+/** The receipt of a sent change: how it was approved, its undo window, and the check about 20 hours later. */
+export type ProposalReceipt = {
+  at: string | null; edited: boolean; approved_text: string;
+  undo: { days: number | null; until: string | null } | null;
+  next_check_at: string | null;
+  verified: { at: string | null; state: LifeState | ""; text: string } | null;
+};
 
 export type Proposal = {
   id: string; finding_id: string; rule_id: string; type: string; target: string; status: ProposalStatus; severity: Severity;
@@ -84,6 +106,23 @@ export type Proposal = {
   can: { approve: boolean; decline: boolean; undo: boolean };
   /** On the answers of approve, decline and undo only. */
   already: boolean;
+  // Discovery 2.0, the loop (agent D). Absent from an older API: nulls and empty lists.
+  /** "open" (one of at most three asks) or "also_noticed" (waits its turn); null once decided. */
+  queue: "open" | "also_noticed" | null;
+  opened_at: string | null;
+  approved_as: "unedited" | "edited" | null;
+  edited_from: string | null;
+  life: LifeStep | null;
+  life_history: LifeStep[];
+  receipt: ProposalReceipt | null;
+  /** How many days a sent change of this kind can be undone, before approving; null when it cannot. */
+  undo_window_days: number | null;
+  /** When the check about 20 hours after sending looks again (an applied change only). */
+  next_check_at: string | null;
+  verified_at: string | null;
+  edit: EditSpec | null;
+  also_fixes: AlsoFixes | null;
+  expire_reason: string;
 };
 export type HistoryRow = { at: string | null; event: string; by: string; channel: string; text: string };
 export type ProposalDetail = Proposal & { history: HistoryRow[] };
@@ -137,7 +176,8 @@ export type FindingsAnswer = { items: Finding[]; counts: Counts };
 export type CheckState = "pass" | "fail" | "not_measured";
 /** What a cell shows: a state, or "fixed" for a check that passes now and failed in the check-up before. */
 export type MarkKind = CheckState | "fixed";
-export type CheckRule = { id: string; part: PartKey; label: string };
+/** `pack`: the pack that brought the check into the last check-up ("core" before any); `first_party`: it reads ALYR's own records. */
+export type CheckRule = { id: string; part: PartKey; label: string; pack: string; first_party: boolean };
 export type ChecksRow = { checks: Record<string, CheckState>; fixed: string[] };
 export type ChecksPlace = ChecksRow & { id: string; name: string };
 export type ChecksAnswer = {
@@ -295,7 +335,7 @@ function parseSide(raw: unknown): Side {
     const l = rec(item);
     return isDay(l.day) ? [{ day: l.day, text: str(l.text) }] : [];
   });
-  return { text: str(r.text), lines };
+  return { text: str(r.text), lines, removed: r.removed === true };
 }
 
 function isDay(value: unknown): value is DayKey {
@@ -305,7 +345,55 @@ function isDay(value: unknown): value is DayKey {
 function parseDecided(raw: unknown): Decided | null {
   const r = rec(raw);
   if (Object.keys(r).length === 0) return null;
-  return { by: str(r.by), channel: r.channel === "whatsapp" || r.channel === "portal" ? r.channel : "", at: strOrNull(r.at) };
+  return {
+    by: str(r.by), channel: r.channel === "whatsapp" || r.channel === "portal" ? r.channel : "", at: strOrNull(r.at),
+    reason: r.reason === "not_now" || r.reason === "declined" ? r.reason : "",
+  };
+}
+
+function parseLifeStep(raw: unknown): LifeStep | null {
+  const r = rec(raw);
+  return typeof r.state === "string" && (LIFE_STATES as readonly string[]).includes(r.state)
+    ? { state: r.state as LifeState, at: strOrNull(r.at), text: str(r.text) } : null;
+}
+
+function parseEdit(raw: unknown): EditSpec | null {
+  const r = rec(raw);
+  if (r.kind === "hours") return { kind: "hours", step_minutes: Math.max(1, Math.round(num(r.step_minutes) ?? 30)) };
+  if (r.kind === "phone") return { kind: "phone" };
+  if (r.kind === "choice") {
+    const options = arr(r.options).flatMap((o) => {
+      const entries = Object.entries(rec(o)).filter(([, x]) => typeof x === "string" && x !== "");
+      return entries.length === 1 ? [Object.fromEntries(entries) as Record<string, string>] : [];
+    });
+    return options.length ? { kind: "choice", options } : null;
+  }
+  return null;
+}
+
+function parseAlsoFixes(raw: unknown): AlsoFixes | null {
+  const r = rec(raw);
+  const checks = num(r.checks), from = num(r.from), to = num(r.to), of = num(r.of);
+  if (checks === null || from === null || to === null || of === null || checks < 2 || of <= 0) return null;
+  return { checks, rules: arr(r.rules).map((x) => str(x)).filter(Boolean), from, to, of };
+}
+
+function parseReceipt(raw: unknown): ProposalReceipt | null {
+  const r = rec(raw);
+  if (Object.keys(r).length === 0) return null;
+  const undo = rec(r.undo);
+  const verified = rec(r.verified);
+  const state = verified.state;
+  return {
+    at: strOrNull(r.at), edited: r.edited === true, approved_text: str(r.approved_text),
+    undo: Object.keys(undo).length ? { days: num(undo.days), until: strOrNull(undo.until) } : null,
+    next_check_at: strOrNull(r.next_check_at),
+    verified: Object.keys(verified).length ? {
+      at: strOrNull(verified.at),
+      state: typeof state === "string" && (LIFE_STATES as readonly string[]).includes(state) ? (state as LifeState) : "",
+      text: str(verified.text),
+    } : null,
+  };
 }
 
 function parseContext(raw: unknown): { review: ReviewContext } | null {
@@ -342,6 +430,19 @@ export function parseProposal(raw: unknown): Proposal {
     // Never worked out here: a person may do what the API says they may, and nothing when it says nothing.
     can: { approve: can.approve === true, decline: can.decline === true, undo: can.undo === true },
     already: r.already === true,
+    queue: r.queue === "open" || r.queue === "also_noticed" ? r.queue : null,
+    opened_at: strOrNull(r.opened_at),
+    approved_as: r.approved_as === "unedited" || r.approved_as === "edited" ? r.approved_as : null,
+    edited_from: strOrNull(r.edited_from),
+    life: parseLifeStep(r.life),
+    life_history: arr(r.life_history).flatMap((x) => { const step = parseLifeStep(x); return step ? [step] : []; }),
+    receipt: parseReceipt(r.receipt),
+    undo_window_days: num(r.undo_window_days),
+    next_check_at: strOrNull(r.next_check_at),
+    verified_at: strOrNull(r.verified_at),
+    edit: parseEdit(r.edit),
+    also_fixes: parseAlsoFixes(r.also_fixes),
+    expire_reason: str(r.expire_reason),
   };
 }
 
@@ -525,7 +626,7 @@ export function parseChecks(raw: unknown): ChecksAnswer {
   const rules = arr(r.rules).flatMap((x) => {
     const v = rec(x);
     const id = str(v.id), label = str(v.label), part = str(v.part);
-    return id && label && PART_KEYS.includes(part) ? [{ id, label, part: part as PartKey }] : [];
+    return id && label && PART_KEYS.includes(part) ? [{ id, label, part: part as PartKey, pack: str(v.pack) || "core", first_party: v.first_party === true }] : [];
   });
   const known = new Set(rules.map((x) => x.id));
   const measured = r.measured === true;
@@ -654,7 +755,12 @@ export const discovery = {
   /** The tap itself: it carries the hash of the change the person was shown, so only that change can be approved. */
   approve: (lang: Lang, id: string, change_hash: string) =>
     call(`/proposals/${encodeURIComponent(id)}/approve${q({ lang })}`, parseProposal, "POST", { change_hash }),
-  decline: (lang: Lang, id: string) => call(`/proposals/${encodeURIComponent(id)}/decline${q({ lang })}`, parseProposal, "POST"),
+  /** `not_now`: asked again after 14 days, only if a check still finds it (Discovery 2.0, the loop). */
+  decline: (lang: Lang, id: string, reason?: "not_now" | "declined") =>
+    call(`/proposals/${encodeURIComponent(id)}/decline${q({ lang })}`, parseProposal, "POST", reason ? { reason } : undefined),
+  /** "Change it": approve a changed value in one tap. The answer is a new proposal (`approved_as: "edited"`). */
+  change: (lang: Lang, id: string, change_hash: string, after: Record<string, unknown>, update_fact = true) =>
+    call(`/proposals/${encodeURIComponent(id)}/change${q({ lang })}`, parseProposal, "POST", { change_hash, after, update_fact }),
   undo: (lang: Lang, id: string) => call(`/proposals/${encodeURIComponent(id)}/undo${q({ lang })}`, parseProposal, "POST"),
   facts: (lang: Lang, location_id: string) => call(`/facts${q({ lang, location_id })}`, parseFacts),
   setFact: (lang: Lang, fact: { location_id: string; key: FactKey; value: Record<string, unknown> }) =>
