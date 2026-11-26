@@ -15,6 +15,14 @@ from datetime import datetime
 from typing import Protocol, runtime_checkable
 from uuid import UUID
 
+from alyr.modules.discovery import normalize
+
+# The sources whose text is Google's (a snapshot's `source`, a stored review's `source`, an
+# evidence item's `source`, a proposal's `connector_kind`). Google allows a place ID to be kept;
+# Business Profile content at most 30 days, and Places names, addresses and reviews not at all
+# (research R2, R6). `retention.py` removes such text after `retention.KEEP_FOR`.
+GOOGLE_SOURCES = frozenset({"google", "places", "gbp"})
+
 # {"sun": ("07:00", "22:00"), "fri": None, ...}: a day with no (open, close) is closed. Days are
 # `sun mon tue wed thu fri sat`.
 DAYS = ("sun", "mon", "tue", "wed", "thu", "fri", "sat")
@@ -46,11 +54,11 @@ def normal(field: str, value: object) -> object:
         days = {d: tuple(v) for d, v in value.items() if v and d in WEEK}
         return tuple(sorted(days.items()))
     if field == "phone":
-        found = re.sub(r"\D", "", value.get("phone") or "")
-        found = found[2:] if found.startswith("00") else found
-        return found[3:] if found.startswith("974") and len(found) > 8 else found
+        # One number in any writing (Arabic-Indic digits, 00974, spaces) is one value.
+        text = value.get("phone") or ""
+        return normalize.phone_key(text) or re.sub(r"\D", "", normalize.ascii_digits(text))
     if field == "whatsapp_link":
-        found = re.search(r"wa\.me/\+?(\d+)", value.get("url") or "")
+        found = re.search(r"wa\.me/\+?(\d+)", normalize.ascii_digits(value.get("url") or ""))
         return found.group(1) if found else (value.get("url") or "").strip().casefold()
     key = {"category": "category", "name": "name", "review_reply": "reply"}[field]
     return " ".join((value.get(key) or "").split()).casefold()
@@ -139,6 +147,16 @@ class Snapshot:
     source: str  # the connector's kind; the source of every review in it
     taken_at: datetime
     places: list[PlaceSnapshot] = field(default_factory=list)
+    # True only when it was read through the owner's connected Google Business Profile: the one
+    # source that sees whether a listing is claimed and the owner's replies. Google's public read
+    # has no such fields, so `listing_unclaimed` and `review_unanswered` are not measured without
+    # it (`rules.owner_side_measured`; a hand-recorded round is a person reading the page).
+    business_profile: bool = False
+
+    @property
+    def from_google(self) -> bool:
+        """Its text is Google's, and is kept at most 30 days (`retention.py`)."""
+        return self.source in GOOGLE_SOURCES
 
     def of(self, location_id: UUID) -> PlaceSnapshot | None:
         for place in self.places:
