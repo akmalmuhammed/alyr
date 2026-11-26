@@ -16,10 +16,19 @@ Exact fractions, never floats, so a score is the same on every machine. A score 
 ranking and not a forecast, and nothing here is invented.
 """
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from fractions import Fraction
 
-from alyr.modules.discovery.rules import FAIL, NOT_MEASURED, PARTS, PASS, RULE_BY_ID, Outcome
+from alyr.modules.discovery.rules import (
+    FAIL,
+    NOT_MEASURED,
+    PARTS,
+    PASS,
+    RULE_BY_ID,
+    Outcome,
+    Rule,
+)
 
 # What each part is worth in the total before the unmeasured ones are left out.
 PART_WEIGHTS = {"presence": 40, "reviews": 25, "website": 15, "whatsapp": 10, "ai": 10}
@@ -45,13 +54,22 @@ def _half_up(value: Fraction) -> int:
     return int((value + Fraction(1, 2)) // 1)
 
 
-def part_values(outcomes: list[Outcome], answers: AnswersTally | None = None) -> dict[str, dict]:
+def part_values(
+    outcomes: list[Outcome], answers: AnswersTally | None = None,
+    rule_by_id: Mapping[str, Rule] | None = None,
+) -> dict[str, dict]:
+    """`rule_by_id` is the registry the outcomes came from (the engine's, with the first-party
+    rules); a rule of a part that is not one of `PARTS` counts in "N of M checks match" but not in
+    the score."""
+    rule_by_id = RULE_BY_ID if rule_by_id is None else rule_by_id
     passed = {p: Fraction(0) for p in PARTS}
     counted = {p: Fraction(0) for p in PARTS}
     for outcome in outcomes:
         if outcome.state == NOT_MEASURED:
             continue
-        rule = RULE_BY_ID[outcome.rule_id]
+        rule = rule_by_id[outcome.rule_id]
+        if rule.part not in counted:
+            continue
         counted[rule.part] += rule.weight
         if outcome.state == PASS:
             passed[rule.part] += rule.weight
@@ -84,7 +102,8 @@ def total(parts: dict[str, dict]) -> int | None:
 
 
 def score(
-    outcomes: list[Outcome], answers: AnswersTally | None = None
+    outcomes: list[Outcome], answers: AnswersTally | None = None,
+    rule_by_id: Mapping[str, Rule] | None = None,
 ) -> tuple[int | None, dict[str, dict]]:
-    parts = part_values(outcomes, answers)
+    parts = part_values(outcomes, answers, rule_by_id)
     return total(parts), parts
