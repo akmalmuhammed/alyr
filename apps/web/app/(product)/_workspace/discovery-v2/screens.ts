@@ -80,7 +80,12 @@ export function buildChecks(input: {
   const fam = packs.find((p) => p.kind === "family" && p.id === block?.family) ?? null;
   const trade = fam?.trades.find((t) => t.key === block?.trade) ?? null;
   const base = { checkedAt: checks?.finished_at ?? null, family: fam?.id ?? null, familyTitle: fam?.title ?? null, tradeTitle: trade?.title ?? null };
-  const t = tally(checks);
+  // One count across the screens (This week's headline, the tab, Checks): the overview's own, the
+  // checks that apply to this business with "Not measured" left out; summed from the rows only when
+  // the API sends no block.
+  const t = block && block.run_id && block.measured > 0
+    ? { matched: block.matched, measured: block.measured, notMeasured: block.not_measured, total: block.total }
+    : tally(checks);
   if (!checks || !checks.measured || !t) {
     return { ...base, state: "notMeasured", tally: null, groups: [], counts: { all: 0, differ: 0, ok: 0, nm: 0 } };
   }
@@ -132,6 +137,24 @@ export function buildChecks(input: {
     nm: rows.filter((r) => r.kind === "nm").length,
   };
   return { ...base, state: "content", tally: t, groups, counts };
+}
+
+/** What a group draws: each difference on its own (its sentence and evidence), and the checks that
+ * match or were not measured once per check, with the places they hold for (56 rows become 16). */
+export type CheckLine =
+  | { kind: "differ"; row: CheckRowView }
+  | { kind: "ok" | "nm"; key: string; ruleId: string; label: string; places: string[] };
+
+export function linesOf(rows: readonly CheckRowView[]): CheckLine[] {
+  const out: CheckLine[] = [];
+  for (const row of rows) {
+    if (row.kind === "differ") { out.push({ kind: "differ", row }); continue; }
+    const key = `${row.kind}:${row.ruleId}`;
+    const same = out.find((l): l is Extract<CheckLine, { kind: "ok" | "nm" }> => l.kind !== "differ" && l.key === key);
+    if (same) { if (row.place) same.places.push(row.place); continue; }
+    out.push({ kind: row.kind, key, ruleId: row.ruleId, label: row.label, places: row.place ? [row.place] : [] });
+  }
+  return out;
 }
 
 /** Rows a filter shows; a group with none is not drawn. */
@@ -319,7 +342,8 @@ export function checksFor(packs: readonly Pack[], family: string, trade: string 
 export const families = (packs: readonly Pack[]): Pack[] => packs.filter((p) => p.kind === "family");
 
 /** One tile of "What ALYR already has": where it came from is said beside it. */
-export type KnownFact = { key: string; label: string; value: string; sub?: string; subLang?: "en" | "ar"; prov: "you" | "alyr" | "source"; ltr?: boolean };
+/** `prov`: "you" only for what a person confirmed; "sample" for what only the fictional sample wrote. */
+export type KnownFact = { key: string; label: string; value: string; sub?: string; subLang?: "en" | "ar"; prov: "you" | "sample" | "alyr" | "source"; ltr?: boolean };
 
 const DAY_SHORT: Record<D2Lang, Record<DayKey, string>> = {
   en: { sat: "Sat", sun: "Sun", mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri" },
@@ -356,23 +380,24 @@ export function knownFacts(input: { place: Place | null; facts: readonly Fact[];
   const t = T2[input.lang];
   const out: KnownFact[] = [];
   const confirmed = (key: string) => input.facts.find((f) => f.key === key && !f.default);
+  const who = (key: string): KnownFact["prov"] => (confirmed(key)?.source === "sample" ? "sample" : "you");
   const { place } = input;
   if (place && (place.name || place.name_ar)) {
     const main = input.lang === "ar" ? place.name_ar || place.name : place.name || place.name_ar;
     const other = input.lang === "ar" ? (place.name_ar ? place.name : "") : (place.name ? place.name_ar : "");
-    out.push({ key: "name", label: t.fName, value: main, sub: other && other !== main ? other : undefined, subLang: input.lang === "ar" ? "en" : "ar", prov: confirmed("name") ? "you" : "alyr" });
+    out.push({ key: "name", label: t.fName, value: main, sub: other && other !== main ? other : undefined, subLang: input.lang === "ar" ? "en" : "ar", prov: confirmed("name") ? who("name") : "alyr" });
   }
   const wa = factText(confirmed("whatsapp")) || place?.whatsapp_e164 || "";
-  if (wa) out.push({ key: "whatsapp", label: t.fWhatsapp, value: wa, prov: confirmed("whatsapp") ? "you" : "alyr", ltr: true });
+  if (wa) out.push({ key: "whatsapp", label: t.fWhatsapp, value: wa, prov: confirmed("whatsapp") ? who("whatsapp") : "alyr", ltr: true });
   const phone = factText(confirmed("phone"));
-  if (phone) out.push({ key: "phone", label: t.fPhone, value: phone, prov: "you", ltr: true });
+  if (phone) out.push({ key: "phone", label: t.fPhone, value: phone, prov: who("phone"), ltr: true });
   const hours = confirmed("hours");
   if (hours) {
     const lines = hoursLines(hours.value, input.lang);
-    out.push({ key: "hours", label: t.fHours, value: lines[0], sub: lines.slice(1).join(" · ") || undefined, subLang: input.lang, prov: "you", ltr: true });
+    out.push({ key: "hours", label: t.fHours, value: lines[0], sub: lines.slice(1).join(" · ") || undefined, subLang: input.lang, prov: who("hours"), ltr: true });
   }
   const category = factText(confirmed("category"));
-  if (category) out.push({ key: "category", label: t.fCategory, value: category, prov: "you" });
+  if (category) out.push({ key: "category", label: t.fCategory, value: category, prov: who("category") });
   const source = t.sourceKinds[input.sourceKind.startsWith("google") ? "google" : input.sourceKind];
   if (source) out.push({ key: "source", label: t.fSource, value: source, prov: "source" });
   return out;

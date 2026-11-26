@@ -239,6 +239,7 @@ export function LiveSetup({ lang, canManage, onDone, tabs }: { lang: D2Lang; can
     <Setup lang={lang} packs={data.packs} choice={choice} onChoose={setChoice} canManage={canManage} tabs={tabs}
       google={<GoogleMapsLink lang={lang} canManage={canManage} />}
       known={knownFacts({ place: data.place, facts: data.facts, sourceKind: data.sourceKind, lang })}
-      stage={stage} error={error} onCheckNow={() => void checkNow()} />
+      stage={stage} error={error} onCheckNow={() => void checkNow()}
+      noSource={!data.sourceKind} connectHref={canManage ? "/app/connections" : null} />
   );
 }

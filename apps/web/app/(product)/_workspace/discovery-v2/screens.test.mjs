@@ -78,6 +78,23 @@ test("checks: several places name the place on each row", () => {
   assert.ok(v.groups[0].rows.every((r) => r.place === "West Bay" || r.place === "Lusail"));
 });
 
+test("checks: a match or a not measured is drawn once per check, with its places", async () => {
+  const { linesOf } = await import("./screens.ts");
+  const c = checksFixture("en");
+  const two = { ...c, business: null, places: [{ id: "a", name: "West Bay", ...c.business }, { id: "b", name: "Lusail", ...c.business }] };
+  const v = checks({ checks: two });
+  const lines = linesOf(v.groups[0].rows);
+  const ok = lines.filter((l) => l.kind === "ok");
+  assert.ok(ok.every((l) => l.places.length === 2));
+  assert.equal(lines.filter((l) => l.kind === "differ").length, v.groups[0].rows.filter((r) => r.kind === "differ").length);
+});
+
+test("checks: the headline counts what the overview counts", () => {
+  const block = { run_id: "r", family: null, trade: null, matched: 42, measured: 55, not_measured: 22, total: 77, previous: null };
+  const v = checks({ block });
+  assert.deepEqual([v.tally.matched, v.tally.measured, v.tally.notMeasured], [42, 55, 22]);
+});
+
 test("familyRules: a trade's overlay adds its rules", () => {
   const packs = packsFixture("en").map((p) => (p.id === "health" ? { ...p, rules: ["x_rule"] } : p));
   assert.ok(familyRules(packs, "appointments", "clinic").has("x_rule"));

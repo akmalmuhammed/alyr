@@ -15,7 +15,7 @@ import { T2 } from "./copy2";
 import { Filters, ScreenFrame, StatePill, Val, type PillTone } from "./frame";
 import { Ic } from "./icons";
 import { joinNames, stageOf as stage, whereOf } from "./logic";
-import { Av, day, dayTime } from "./parts";
+import { Av, Say, day, dayTime } from "./parts";
 import { Mark } from "../shellParts";
 import { beforeAfter } from "./logic";
 import { filterReceipts, type ProofView, type ChangeReceipt, type Receipt, type ReceiptFilter, type ReceiptStatus } from "./screens";
@@ -48,16 +48,16 @@ export function Proof({ lang, view, tabs, foot, people, sourceKind, onUndo, busy
       <section className="d2-brief">
         {view.receipts.length && view.since ? (
           <>
-            <h1 className="d2-display">{t.proofTitle(view.receipts.length, day(view.since, lang))}</h1>
+            <h1 className="d2-display"><Say lang={lang}>{t.proofTitle(view.receipts.length, day(view.since, lang))}</Say></h1>
             <p className="d2-sub">{t.proofSub}</p>
             <p className="d2-figline">
-              {view.matches ? <StatePill tone="ok">{t.sumMatch(view.matches)}</StatePill> : null}
-              {view.counts.undone ? <StatePill tone="plain">{t.sumUndone(view.counts.undone)}</StatePill> : null}
-              {view.counts.expired ? <StatePill tone="plain">{t.sumExpired(view.counts.expired)}</StatePill> : null}
+              {view.matches ? <StatePill tone="ok"><Say lang={lang}>{t.sumMatch(view.matches)}</Say></StatePill> : null}
+              {view.counts.undone ? <StatePill tone="plain"><Say lang={lang}>{t.sumUndone(view.counts.undone)}</Say></StatePill> : null}
+              {view.counts.expired ? <StatePill tone="plain"><Say lang={lang}>{t.sumExpired(view.counts.expired)}</Say></StatePill> : null}
               {deciders.length || view.byYou ? (
                 <span className="d2-meta d2s-who">
                   <span className="d2-avs">{deciders.map((p) => <Av key={p.name} person={p} tip={p.name} />)}{view.byYou ? <Av tone="you" /> : null}</span>
-                  {t.decidedBy(joinNames([...deciders.map((p) => p.name), ...(view.byYou ? [t.you] : [])], lang, "and"))}
+                  <Say lang={lang}>{t.decidedBy(joinNames([...deciders.map((p) => p.name), ...(view.byYou ? [t.you] : [])], lang, "and"))}</Say>
                 </span>
               ) : null}
             </p>
@@ -74,18 +74,18 @@ export function Proof({ lang, view, tabs, foot, people, sourceKind, onUndo, busy
         <section className="d2s-receipts" aria-labelledby="d2s-ledger-title">
           <div className="d2s-rstrip d2-on-carbon d2-cut">
             <span className="d2s-ch-mk" aria-hidden="true"><Mark /></span>
-            <h2 id="d2s-ledger-title">{t.ledger}</h2><span className="d2s-rstrip-sub">{t.ledgerSub}</span>
-            <span className="d2s-rstrip-end">{t.ledgerEnd}</span>
+            <h2 id="d2s-ledger-title">{t.ledger}</h2><span className="d2s-rstrip-sub"><Say lang={lang}>{t.ledgerSub}</Say></span>
+            <span className="d2s-rstrip-end"><Say lang={lang}>{t.ledgerEnd}</Say></span>
           </div>
           <div className="d2s-rtools"><Filters label={t.filtersLabel} items={filters} value={filter} onChange={setFilter} /></div>
           {shown.map((r) => <ReceiptCard key={r.id} r={r} lang={lang} sourceKind={sourceKind} personOf={personOf} onUndo={onUndo} busy={busyId !== null} />)}
-          {google ? <p className="d2s-foot-note">{t.googleNote}</p> : null}
+          {google ? <p className="d2s-foot-note"><Say lang={lang}>{t.googleNote}</Say></p> : null}
         </section>
       ) : null}
 
       <div className="d2s-caution">
         <span className="d2s-caution-ic"><Ic name="why" size="sm" /></span>
-        <div><b>{t.cautionTitle}</b><p>{t.cautionBody}</p></div>
+        <div><b>{t.cautionTitle}</b><p><Say lang={lang}>{t.cautionBody}</Say></p></div>
       </div>
     </ScreenFrame>
   );
@@ -115,8 +115,8 @@ function ReceiptCard({ r, lang, sourceKind, personOf, onUndo, busy }: {
     ];
     return (
       <article className="d2s-rc" data-kind="you">
-        <div className="d2s-rc-d"><b>{day(r.when, lang)}</b>{r.f.location?.name ?? ""}</div>
-        <div className="d2s-rc-main"><h3>{r.f.title}</h3><Trail steps={steps} lang={lang} /></div>
+        <div className="d2s-rc-d"><b><Say lang={lang}>{day(r.when, lang)}</Say></b><Say lang={lang}>{r.f.location?.name ?? ""}</Say></div>
+        <div className="d2s-rc-main"><h3><Say lang={lang}>{r.f.title}</Say></h3><Trail steps={steps} lang={lang} /></div>
         <div className="d2s-rc-st">
           <StatePill tone={TONE[r.status]}>{r.status === "youMatches" ? t.stMatches : t.stPending}</StatePill>
           <small>{t.noUndoOutside}</small>
@@ -175,9 +175,9 @@ function ReceiptCard({ r, lang, sourceKind, personOf, onUndo, busy }: {
   const sub = r.status === "expired" || r.status === "declined" || r.status === "fixed" ? t.nothingChanged : r.status === "undone" ? t.sinceDay(day(p.undone?.at, lang)) : "";
   return (
     <article className="d2s-rc" data-kind={r.kind}>
-      <div className="d2s-rc-d"><b>{day(r.when, lang)}</b>{t.where[where]}</div>
+      <div className="d2s-rc-d"><b><Say lang={lang}>{day(r.when, lang)}</Say></b><Say lang={lang}>{t.where[where]}</Say></div>
       <div className="d2s-rc-main">
-        <h3>{t1.exactField(p.field_label, where)}</h3>
+        <h3><Say lang={lang}>{t1.exactField(p.field_label, where)}</Say></h3>
         <div className="d2-pair">
           {p.before.removed ? <span className="d2-chip d2-chip-from d2-chip-removed" data-tip={t1.removedTip}>{ba.before}</span> : <span className="d2-chip d2-chip-from"><Val text={ba.before} /></span>}
           <Ic name="arrow" size="xs" flip className="d2-to" />
@@ -187,11 +187,11 @@ function ReceiptCard({ r, lang, sourceKind, personOf, onUndo, busy }: {
       </div>
       <div className="d2s-rc-st">
         <StatePill tone={TONE[r.status]}>{word}</StatePill>
-        {sub ? <small>{sub}</small> : null}
+        {sub ? <small><Say lang={lang}>{sub}</Say></small> : null}
         {r.kind === "approved" && p.can.undo && p.undo_until ? (
           <>
             <button className="d2-undo" type="button" onClick={() => onUndo(r)} disabled={busy} data-tip={t1.undoTip(ba.before, where)}><Ic name="undo" size="xs" flip />{t1.undo}</button>
-            <small>{t1.untilDate(day(p.undo_until, lang))}</small>
+            <small><Say lang={lang}>{t1.untilDate(day(p.undo_until, lang))}</Say></small>
           </>
         ) : null}
       </div>
@@ -205,7 +205,7 @@ function Trail({ steps, lang }: { steps: Step[]; lang: D2Lang }) {
       {steps.map((s, i) => (
         <li key={i} className={s.open ? "d2s-open" : undefined}>
           <NodeMark node={s.node} />
-          <span><b>{s.title}</b>{s.text ? <> · <span className="d2s-trail-t">{s.text}</span></> : null}</span>
+          <span><b><Say lang={lang}>{s.title}</Say></b>{s.text ? <> · <span className="d2s-trail-t"><Say lang={lang}>{s.text}</Say></span></> : null}</span>
         </li>
       ))}
     </ol>
