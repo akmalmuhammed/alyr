@@ -6,7 +6,7 @@
 // fixtures. Keyboard: A approves, C opens Change it (where the API takes it), N is Not now, ? opens
 // Why, Esc closes, Ctrl Z undoes from the toast, Ctrl K opens search.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Finding, Proposal } from "../discoveryApi";
 import type { AskView, ReceiptRow, ThisWeekView } from "./adapter";
 import { T, type D2Lang } from "./copy";
@@ -43,11 +43,13 @@ export type ThisWeekActions = {
 
 type ToastState = ToastData & { undoId: string | null };
 
-export function ThisWeek({ lang, view, actions, now, initial }: {
+export function ThisWeek({ lang, view, actions, now, initial, tabs }: {
   lang: D2Lang;
   view: ThisWeekView;
   actions: ThisWeekActions;
   now: number;
+  /** Discovery v2's tabs (U2), drawn above the brief. */
+  tabs?: ReactNode;
   /** For previews and tests: proposals as they are after a decision in this visit. */
   initial?: { overrides?: Record<string, Proposal>; fan?: boolean; sheet?: boolean };
 }) {
@@ -236,6 +238,7 @@ export function ThisWeek({ lang, view, actions, now, initial }: {
   return (
     <div className="d2" data-lang={lang} dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
       <div className="d2-col">
+        {tabs}
         {view.sample ? <p className="d2-sr">{t.sample}</p> : null}
         <PageBrief lang={lang} state={view.state} count={view.total} decided={decided.size} remaining={remaining} onItsWay={onItsWay}
           checkedAt={view.checkedAt} recordedOn={view.recordedOn} sample={view.sample} tally={view.tally} previous={view.previous} />
