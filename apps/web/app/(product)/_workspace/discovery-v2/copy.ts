@@ -290,7 +290,7 @@ export const T = {
     downFrom: (from: number, date: string) => `انخفاضاً من ${n(from)} يوم ${date}`,
     notMeasured: (count: number) => `${counted(count, N.check, "ar")} لم يُقَس بعد`,
     needsYou: "يحتاج قرارك",
-    inProgress: "قيد التنفيذ",
+    inProgress: "في الطريق",
     attention: "يحتاج نظرة",
     askOf: (i: number, of: number) => `القرار ${n(i)} من ${n(of)}`,
     asked: (asked: string, until: string) => `طُرح ${asked}، ينتظر حتى ${until}`,
