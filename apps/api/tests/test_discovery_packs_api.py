@@ -300,7 +300,7 @@ def test_a_new_family_added_as_data_is_picked_and_run_with_no_code_change(shop, 
         list(packs.PACKS) + [new], [r.id for r in engine.ALL_RULES],
         [r.id for r in engine.FIRSTPARTY_RULES]))
     listed = {p["id"]: p for p in shop.owner.get(f"{BASE}/packs").json()["items"]}
-    assert listed["mobile_services"]["total_checks"] == 11
+    assert listed["mobile_services"]["total_checks"] == CORE - 1  # it skips one core rule
     assert put_pack(shop.owner, "mobile_services", "mobile_car_wash").status_code == 200
     run_check_up(shop.owner)
     kept = last_run(shop)
