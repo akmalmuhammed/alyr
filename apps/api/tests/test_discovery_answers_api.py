@@ -27,6 +27,14 @@ OLD_STEPS = [
     "findings.save", "reviews.save", "proposals.build", "proposals.verify", "score.compute"]
 
 
+@pytest.fixture(autouse=True)
+def fresh_pool():
+    """The pooled answers are shared across businesses on purpose and the test database lives
+    for the whole run: start each test with none, so a test's scripted engine never counts another
+    test's answers."""
+    owner_sql("delete from discovery_answer_pool_runs")
+
+
 @pytest.fixture
 def shop(client_factory, monkeypatch):
     shop = discovery_shop(client_factory, monkeypatch, roles=("owner", "agent"))
@@ -73,7 +81,10 @@ def test_before_anything_is_set_up_the_check_is_off_and_says_so(shop):
     assert body["settings"]["trade"] is None and body["engines"][0]["kind"] == "sample"
     assert {"key": "car_care", "label": "car care"} in body["options"]["trades"]
     assert {"key": "doha", "label": "Doha"} in body["options"]["cities"]
-    assert body["rule"].startswith("By rule:") and "not a trend" in body["caution"]
+    # Discovery 2.0: the caution now says why no position is shown (R4: "a rank is noise").
+    assert body["rule"].startswith("By rule:") and "not shown" in body["caution"]
+    assert body["method"] == (
+        "These are sample answers, made up for the sample business. No answer tool was asked.")
     assert shop.owner.get(f"{BASE}/overview").json()["answers"] is None
     ar = answers_of(shop.owner, "ar")
     assert ar["headline"] == "لم يُطرح أي سؤال بعد." and ar["rule"].startswith("بالقاعدة")
@@ -99,8 +110,9 @@ def test_enabling_with_the_sample_connection_on_chooses_car_care_in_doha(shop):
         "best car care in Doha", "where can I find good car care in Doha?",
         "recommended car care in Doha"]
     overview = shop.owner.get(f"{BASE}/overview").json()["answers"]
+    # Discovery 2.0: no merged share or change; counts per tool and language in `groups`.
     assert overview == {"enabled": True, "measured": False, "named": 0, "counted": 0,
-                        "share": None, "sample": False, "change": None}
+                        "sample": False, "asked_at": None, "groups": []}
 
 
 def test_enabling_without_a_trade_and_a_city_and_without_the_sample_is_refused(
@@ -136,8 +148,8 @@ def test_a_change_is_on_the_activity_record_with_its_channel_and_no_change_is_no
     acts = owner_sql("select detail, channel from activity where tenant_id = $1 and subject = "
                      "'discovery' and action = 'answers.settings'", shop.tenant_id)
     assert len(acts) == 1 and acts[0]["channel"] == "portal"
-    assert json.loads(acts[0]["detail"]) == {
-        "enabled": True, "trade": "car_care", "city": "doha", "engines": "sample"}
+    assert json.loads(acts[0]["detail"]) == {  # Discovery 2.0 adds the area ("" = whole city)
+        "enabled": True, "trade": "car_care", "city": "doha", "area": "", "engines": "sample"}
 
 
 # ── a check-up with the check off and on ────────────────────────────────────────────────
@@ -151,7 +163,7 @@ def test_with_the_check_off_a_check_up_has_exactly_the_steps_it_had_and_the_part
     assert rows_of(shop.tenant_id) == []
 
 
-def test_with_the_check_on_a_check_up_asks_six_questions_and_measures_the_part(shop):
+def test_with_the_check_on_a_check_up_asks_six_questions_and_counts_them_outside_the_score(shop):
     switch_on(shop.owner)
     run = run_check_up(shop.owner)
     assert [s["tool"] for s in run["steps"]] == [*OLD_STEPS[:-1], "ai.answers", "score.compute"]
@@ -159,41 +171,45 @@ def test_with_the_check_on_a_check_up_asks_six_questions_and_measures_the_part(s
     assert step["ok"] is True
     assert step["summary"] == (
         "Asked 6 public questions: your business was named in 1 of 6 answers counted.")
-    assert run["score_parts"]["ai"] == {"value": 17, "measured": True, "weight": 10}
+    # Discovery 2.0 (DECISIONS 7): the answers are not part of the score any more.
+    assert run["score_parts"]["ai"] == {"value": None, "measured": False, "weight": 10}
     rows = rows_of(shop.tenant_id)
     assert len(rows) == 6 and {r["engine"] for r in rows} == {"sample"}
     assert {r["question"] for r in rows} == {q.text for q in questions.build("car_care", "doha")}
     assert [r["named"] for r in rows].count(True) == 1 and all(r["status"] == "ok" for r in rows)
     body = answers_of(shop.owner)
     last = body["last"]
-    assert (last["named"], last["counted"], last["share"], last["measured"], last["sample"]) == (
-        1, 6, 17, True, True)
+    assert (last["named"], last["counted"], last["sample"]) == (1, 6, True)
     assert body["headline"] == "Named in 1 of 6 answers."
     assert len(last["answers"]) == 6 and all(a["text"] and a["engine_label"] == "Sample answers"
                                              for a in last["answers"])
     named = [a for a in last["answers"] if a["named"]]
-    assert [(a["question_key"], a["lang"], a["position"], a["list_size"]) for a in named] == [
-        ("where", "en", 5, 5)]
+    # Never a position (R4: "a rank is noise"); which answer named it is still shown.
+    assert [(a["question_key"], a["lang"]) for a in named] == [("where", "en")]
+    assert all("position" not in a and "list_size" not in a for a in last["answers"])
     assert last["competitors"] and last["competitors"][0]["answers"] >= 1
     assert len(last["competitors"]) <= 8
-    assert body["change"] is None and len(body["history"]) == 1
+    assert [g["change"]["state"] for g in last["groups"]] == ["first", "first"]
+    assert "change" not in body and len(body["history"]) == 1
 
 
-def test_the_sample_business_climbs_across_four_check_ups_and_the_score_moves_with_it(shop):
+def test_the_sample_business_climbs_across_four_check_ups_in_each_language(shop):
     switch_on(shop.owner)
-    runs = [run_check_up(shop.owner) for _ in range(4)]
-    assert [r["score_parts"]["ai"]["value"] for r in runs] == [17, 33, 67, 100]
-    scores = [r["score"] for r in runs]
-    assert scores == sorted(scores) and scores[0] < scores[-1]
+    for _ in range(4):
+        assert run_check_up(shop.owner)["score_parts"]["ai"]["measured"] is False
     body = answers_of(shop.owner)
     assert body["headline"] == "Named in 6 of 6 answers."
-    assert [h["share"] for h in body["history"]] == [100, 67, 33, 17]  # newest first
-    assert body["change"] == {"share_change": 33, "since_run_id": body["previous"]["run_id"]}
-    assert body["previous"]["share"] == 67
-    best = {(a["question_key"], a["lang"]): a["position"] for a in body["last"]["answers"]}
-    assert best == {("best", "en"): 2, ("where", "en"): 1, ("recommended", "en"): 5,
-                    ("best", "ar"): 2, ("where", "ar"): 1, ("recommended", "ar"): 3}
-    assert run_check_up(shop.owner)["score_parts"]["ai"]["value"] == 100  # past the last stage
+    assert [h["named"] for h in body["history"]] == [6, 4, 2, 1]  # newest first
+    per_lang = [{g["lang"]: g["named"] for g in h["groups"]} for h in body["history"]]
+    assert per_lang == [{"en": 3, "ar": 3}, {"en": 3, "ar": 1}, {"en": 1, "ar": 1},
+                        {"en": 1, "ar": 0}]
+    assert body["previous"]["named"] == 4
+    # 3 answers a language: a change is never named below 30, whatever the counts did.
+    for g in body["last"]["groups"]:
+        assert g["change"]["state"] == "not_enough" and g["share"] is None
+        assert g["change"]["since"]["counted"] == 3
+    assert run_check_up(shop.owner)["status"] == "done"  # past the last stage
+    assert answers_of(shop.owner)["last"]["named"] == 6
 
 
 def test_the_overview_and_the_report_carry_the_answers(shop):
@@ -201,15 +217,20 @@ def test_the_overview_and_the_report_carry_the_answers(shop):
     for _ in range(3):
         run_check_up(shop.owner)
     overview = shop.owner.get(f"{BASE}/overview").json()
-    since = overview["answers"]["change"]["since_run_id"]
-    assert overview["answers"] == {
-        "enabled": True, "measured": True, "named": 4, "counted": 6, "share": 67, "sample": True,
-        "change": {"share_change": 34, "since_run_id": since}}
-    assert overview["score_parts"]["ai"]["value"] == 67
+    answers = overview["answers"]
+    assert {k: answers[k] for k in ("enabled", "measured", "named", "counted", "sample")} == {
+        "enabled": True, "measured": True, "named": 4, "counted": 6, "sample": True}
+    assert [(g["engine"], g["lang"], g["named"], g["counted"], g["change"])
+            for g in answers["groups"]] == [
+        ("sample", "en", 3, 3, "not_enough"), ("sample", "ar", 1, 3, "not_enough")]
+    assert answers["groups"][0]["range"] == {"low": 44, "high": 100}
+    assert overview["score_parts"]["ai"]["measured"] is False
     report = shop.owner.get(f"{BASE}/reports/{this_month()}").json()
-    assert report["answers"] == {"share_start": 17, "share_end": 67, "named": 4, "counted": 6,
-                                 "sample": True}
-    assert report["by_part"]["ai"]["measured"] is True
+    assert {k: report["answers"][k] for k in ("named", "counted", "sample")} == {
+        "named": 4, "counted": 6, "sample": True}
+    assert report["answers"]["first"]["named"] == 1
+    assert [g["named"] for g in report["answers"]["groups"]] == [3, 1]
+    assert report["by_part"]["ai"]["measured"] is False
     empty = shop.owner.get(f"{BASE}/reports/2020-01").json()
     assert empty["answers"] is None
 
@@ -280,7 +301,9 @@ def test_an_engine_that_fails_makes_error_rows_stops_after_three_and_never_fails
     assert run["score_parts"]["ai"]["measured"] is False
     body = answers_of(shop.owner)
     assert body["headline"] == "Too few answers were counted to measure."
-    assert body["last"]["measured"] is False and body["last"]["share"] is None
+    assert body["last"]["counted"] == 0
+    assert [(g["lang"], g["asked"], g["counted"], g["range"]) for g in body["last"]["groups"]] == [
+        ("en", 3, 0, None)]  # three failures stop the engine before Arabic
     assert all(a["error"] == "The source could not answer." for a in body["last"]["answers"])
     assert "abc123" not in json.dumps(body) and "Mariam" not in json.dumps(body)
 
@@ -345,6 +368,10 @@ def test_a_real_engine_is_held_to_its_monthly_cap_across_check_ups(shop, monkeyp
     owner_sql("update discovery_answer_settings set monthly_ask_cap = 8 where tenant_id = $1",
               shop.tenant_id)
     run_check_up(shop.owner)
+    # Discovery 2.0: within six days a check-up counts the pooled answers and asks nothing.
+    assert engine.calls == 6
+    owner_sql("update discovery_answer_pool_runs set started_at = now() - interval '7 days'")
+    run_check_up(shop.owner)
     assert engine.calls == 8  # two more asked, then the cap
     last = answers_of(shop.owner)["last"]
     assert [a["status"] for a in last["answers"]].count("ok") == 2
@@ -376,6 +403,7 @@ def test_an_engine_is_sent_only_built_public_questions_and_nothing_of_the_shop(s
     assert len(engine.seen) == 6
     for request in engine.seen:
         assert type(request) is questions.EngineRequest and (request.text, request.lang) in built
+        assert request.location == questions.Location("QA", "Doha", "")  # closed lists only
         for secret in secrets:
             assert secret.lower() not in request.text.lower(), (secret, request.text)
     assert {r["question"] for r in rows_of(shop.tenant_id)} == {t for t, _ in built}
@@ -434,8 +462,8 @@ def test_an_answer_is_stored_and_shown_as_data_and_never_acts(shop, monkeypatch)
     switch_on_fake(shop)
     run_check_up(shop.owner)
     last = answers_of(shop.owner)["last"]
-    assert all(a["text"] == hostile for a in last["answers"])
-    assert last["answers"][0]["position"] == 1 and last["answers"][0]["named"] is True
+    assert all(a["text"] == hostile and a["third_party"] for a in last["answers"])
+    assert last["answers"][0]["named"] is True
     assert owner_sql("select count(*) from discovery_proposals where tenant_id = $1 and status "
                      "in ('approved', 'applied')", shop.tenant_id)[0]["count"] == 0
     assert owner_sql("select count(*) from messages where tenant_id = $1",

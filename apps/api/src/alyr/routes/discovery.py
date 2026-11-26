@@ -119,6 +119,9 @@ class AnswersSettingsIn(Strict):
     enabled: bool | None = None
     trade: str | None = Field(default=None, max_length=40)
     city: str | None = Field(default=None, max_length=40)
+    # Discovery 2.0: an area of the city (closed list), "" for the whole city. Passed to an answer
+    # tool as the asker's location, never in the question.
+    area: str | None = Field(default=None, max_length=40)
     engines: list[str] | None = Field(default=None, max_length=10)
 
 
