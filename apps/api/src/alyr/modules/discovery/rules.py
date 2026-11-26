@@ -87,6 +87,11 @@ class Context:
     locations: list[Location]
     previous: Mapping[str, Previous] = field(default_factory=dict)
     now: datetime | None = None
+    # What ALYR's own records say (`firstparty.first_party_facts`); None when not read, and a rule
+    # that needs it is then `not_measured`.
+    first_party: object | None = None
+    # The business's pack (`packs`): `core`, a family (`food`) or family and trade (`food/bakery`).
+    pack: str | None = None
 
     def places(self):
         """Each place with what the connector said about it (None if it said nothing)."""

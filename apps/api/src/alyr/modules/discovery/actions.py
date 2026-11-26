@@ -259,6 +259,8 @@ async def get_overview(conn: asyncpg.Connection, caller: Caller, args: dict) -> 
         "delta": delta,
         "proposals": await proposals.overview_block(conn, caller, scope, lang),
         "answers": await answers_service.overview_block(conn, lang),
+        # "N of M checks match", for the business's pack and each pack in it (Discovery 2.0).
+        "checks": await pack_service.checks_block(conn),
     }
 
 
@@ -1055,3 +1057,6 @@ async def set_my_asks(conn: asyncpg.Connection, caller: Caller, args: dict) -> d
 
 # Phase 3 (spec 068, D-168): the Answers check. Its actions are in their own file.
 from alyr.modules.discovery import answers_actions  # noqa: E402,F401
+
+# Discovery 2.0: the check packs' actions (`packs/service.py`).
+from alyr.modules.discovery.packs import service as pack_service  # noqa: E402
