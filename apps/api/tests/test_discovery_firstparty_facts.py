@@ -157,6 +157,7 @@ def test_the_last_four_weeks_of_orders_and_bookings_counted_by_day_and_hour():
     assert (fp.whatsapp, fp.whatsapp_source) == ("+97455550150", "owner")
     assert (fp.name_en, fp.name_ar) == ("Nuqta Car Care", "نقطة للعناية بالسيارات")
     assert fp.confirmed_hours == {loc: REAL_HOURS}
+    assert fp.place_whatsapp == {loc: "+97455550150"}
     assert fp.seasons == firstparty.SEASONS
 
 

@@ -52,14 +52,14 @@ RULE_WORDS: dict[str, dict[str, tuple[str, str]]] = {
     },
     "own_links_present": {
         "title": (
-            "The booking, order or WhatsApp link is missing",
-            "رابط الحجز أو الطلب أو واتساب غير موجود",
+            "The link to the booking or order page is missing",
+            "رابط صفحة الحجز أو الطلب غير موجود",
         ),
         "rule": (
-            "the listing or the website does not carry the business's own booking page, order "
-            "page or WhatsApp link",
-            "صفحة Google أو الموقع الإلكتروني لا يحمل صفحة الحجز أو صفحة الطلب أو رابط واتساب "
-            "الخاص بالمنشأة",
+            "the listing or the website does not link to the business's own booking page or "
+            "order page on ALYR",
+            "صفحة Google أو الموقع الإلكتروني لا يربط بصفحة الحجز أو صفحة الطلب الخاصة "
+            "بالمنشأة على ALYR",
         ),
         "why": (
             "A customer who finds the business has to call or search again to book or order, "
@@ -179,10 +179,8 @@ LABELS: dict[str, tuple[str, str]] = {
     "fp_confirmed_hours": ("Hours the owner confirmed", "الساعات التي أكدها المالك"),
     "fp_booking_link": ("Link to the booking page", "رابط صفحة الحجز"),
     "fp_order_link": ("Link to the order page", "رابط صفحة الطلب"),
-    "fp_whatsapp_link": ("WhatsApp link to the business's number", "رابط واتساب لرقم المنشأة"),
     "fp_expected_booking": ("The business's booking page", "صفحة الحجز الخاصة بالمنشأة"),
     "fp_expected_order": ("The business's order page", "صفحة الطلب الخاصة بالمنشأة"),
-    "fp_expected_whatsapp": ("The business's WhatsApp link", "رابط واتساب الخاص بالمنشأة"),
     "fp_confirmed_whatsapp": (
         "The business's confirmed WhatsApp number", "رقم واتساب المؤكد للمنشأة"),
     "fp_name_en": ("The business's name in English", "اسم المنشأة بالإنجليزية"),
@@ -202,7 +200,7 @@ VALUES: dict[str, tuple[str, str]] = {
 CHECK_NAMES: dict[str, tuple[str, str]] = {
     "hours_vs_activity": (
         "Hours cover orders and bookings", "الساعات تشمل الطلبات والحجوزات"),
-    "own_links_present": ("Booking, order and WhatsApp links", "روابط الحجز والطلب وواتساب"),
+    "own_links_present": ("Booking and order links", "روابط الحجز والطلب"),
     "whatsapp_number_mismatch": ("WhatsApp number matches", "رقم واتساب مطابق"),
     "bilingual_name_rule": ("Name in one language", "الاسم بلغة واحدة"),
     "season_due": ("Seasonal hours", "ساعات المواسم"),

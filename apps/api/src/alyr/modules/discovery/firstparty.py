@@ -26,7 +26,7 @@ Words are in `words_firstparty.py`. The engine (workstream B) puts the facts on
 
 import re
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta
 from urllib.parse import urlsplit
 from uuid import UUID
@@ -155,6 +155,15 @@ class FirstPartyFacts:
     name_ar: str
     confirmed_hours: Mapping[UUID, Hours]  # place id -> the hours a person confirmed
     seasons: tuple[Season, ...]
+    # place id -> the WhatsApp number a person confirmed for that place (a branch may answer on its
+    # own number). The business's `whatsapp` stands for a place only when it is the only place.
+    place_whatsapp: Mapping[UUID, str] = field(default_factory=dict)
+
+    def whatsapp_of(self, location, places: int) -> str | None:
+        """The number a place's WhatsApp links should point to: the one confirmed for it, else the
+        number typed for it when it was listed, else the business's when it has one place only."""
+        return (self.place_whatsapp.get(location.id) or location.whatsapp_e164
+                or (self.whatsapp if places == 1 else None))
 
     @property
     def window_start(self) -> date:
@@ -255,9 +264,16 @@ async def first_party_facts(
             "select location_id, value from discovery_facts "
             "where key = 'hours' and source in ('owner', 'sample')")
     }
+    per_place = {
+        r["location_id"]: number_text
+        for r in await conn.fetch(
+            "select location_id, value->>'phone' as phone from discovery_facts "
+            "where key = 'whatsapp' and source in ('owner', 'sample')")
+        if (number_text := _e164(r["phone"]))
+    }
     return FirstPartyFacts(
         tenant_id, tz, today, min(firsts) if firsts else None, activity, links, whatsapp, source,
-        shop["name"] or "", shop["name_ar"] or "", hours, SEASONS,
+        shop["name"] or "", shop["name_ar"] or "", hours, SEASONS, per_place,
     )
 
 
@@ -432,9 +448,11 @@ def _whatsapp_seen(listing, web) -> list[tuple[str, str, list[str] | None]]:
 def _own_links_present(ctx: Context) -> list[Outcome]:
     rule_id = "own_links_present"
     fp = _fp(ctx)
+    # The booking and order pages. A missing WhatsApp link is `whatsapp_link_missing`'s finding and
+    # a link to another number `whatsapp_number_mismatch`'s: one problem, one finding.
     expected = [] if fp is None else [
-        (kind, url) for kind, url in (("booking", fp.links.booking), ("order", fp.links.order),
-                                      ("whatsapp", fp.links.whatsapp)) if url
+        (kind, url) for kind, url in (("booking", fp.links.booking), ("order", fp.links.order))
+        if url
     ]
     if not expected:
         return _all_outcomes(rule_id, ctx)
@@ -442,28 +460,18 @@ def _own_links_present(ctx: Context) -> list[Outcome]:
     for loc in ctx.locations:
         place = ctx.snapshot.of(loc.id)
         listing, web = _listing(place), _website(place)
-        whatsapp = {where: shown for where, _, shown in _whatsapp_seen(listing, web)}
         # TODO(E): `Website.links`, every link on the owner's pages; a listing source that reports
         # the links it shows (booking, order, chat) sets `Listing.links`. Absent: not measured.
         sources = [(where, getattr(src, "links", None)) for where, src in
                    (("listing", listing), ("website", web)) if src is not None]
         measured, missing = False, []
         for where, links in sources:
+            if links is None:
+                continue
+            measured = True
             for kind, url in expected:
-                if kind == "whatsapp":
-                    shown = whatsapp.get(where)
-                    if shown is None and links is None:
-                        continue
-                    measured = True
-                    numbers = [link_number(s) for s in (shown or [])]
-                    numbers += [link_number(s) for s in (links or []) if "wa.me" in s]
-                    if any(numbers):
-                        continue  # present; a link to another number is the number check's
+                if not any(same_page(link, url) for link in links):
                     missing.append((kind, where))
-                elif links is not None:
-                    measured = True
-                    if not any(same_page(link, url) for link in links):
-                        missing.append((kind, where))
         if not measured:
             out.append(Outcome(rule_id, loc.id, NOT_MEASURED))
             continue
@@ -484,14 +492,25 @@ def _own_links_present(ctx: Context) -> list[Outcome]:
 def _whatsapp_number_mismatch(ctx: Context) -> list[Outcome]:
     rule_id = "whatsapp_number_mismatch"
     fp = _fp(ctx)
-    mine = number(fp.whatsapp) if fp is not None else ""
-    if not mine:
+    if fp is None:
         return _all_outcomes(rule_id, ctx)
     out = []
     for loc in ctx.locations:
+        confirmed = fp.whatsapp_of(loc, len(ctx.locations))
+        mine = number(confirmed)
+        if not mine:
+            out.append(Outcome(rule_id, loc.id, NOT_MEASURED))  # no number to compare with
+            continue
         place = ctx.snapshot.of(loc.id)
+        listing, web = _listing(place), _website(place)
+        # `whatsapp_link_missing` already sets the listing's and the website's own WhatsApp link
+        # against the number typed for the place: when that is the confirmed number, a wrong one of
+        # those two links is its finding, not a second one here.
+        covered = number(loc.whatsapp_e164) == mine
+        primary = {link for link in (listing and listing.whatsapp_link, web and web.whatsapp_link)
+                   if link}
         shown = []
-        for where, label, links in _whatsapp_seen(_listing(place), _website(place)):
+        for where, label, links in _whatsapp_seen(listing, web):
             for link in dict.fromkeys(links or ()):
                 found = link_number(link)
                 if found:
@@ -500,11 +519,13 @@ def _whatsapp_number_mismatch(ctx: Context) -> list[Outcome]:
             out.append(Outcome(rule_id, loc.id, NOT_MEASURED))  # no number shown to compare
             continue
         wrong = [Evidence(label, link, where) for label, link, where, found in shown
-                 if found != mine]
+                 if found != mine and not (covered and link in primary)]
         if not wrong:
-            out.append(Outcome(rule_id, loc.id, PASS))
+            left = any(found != mine for _, _, _, found in shown)
+            # A wrong link the other rule reports: this check cannot say "matches".
+            out.append(Outcome(rule_id, loc.id, NOT_MEASURED if left else PASS))
             continue
-        wrong.append(Evidence("fp_confirmed_whatsapp", fp.whatsapp or "", "business"))
+        wrong.append(Evidence("fp_confirmed_whatsapp", confirmed or "", "business"))
         out.append(Outcome(rule_id, loc.id, FAIL, tuple(wrong)))
     return out
 

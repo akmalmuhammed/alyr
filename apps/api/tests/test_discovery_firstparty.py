@@ -265,26 +265,18 @@ def test_the_listing_is_checked_when_its_source_reports_links():
     got = single("own_links_present", context(at(loc, lst=lst), fp=facts()))
     assert got.state == FAIL
     assert [(e.label, e.where) for e in got.evidence if e.value == "~fp_missing"] == [
-        ("fp_order_link", "listing"), ("fp_whatsapp_link", "listing")]
+        ("fp_order_link", "listing")]
 
 
-def test_without_a_links_field_only_the_whatsapp_link_is_measured():
-    """Today's snapshot has no list of links: booking and order links are not measured, never
-    reported missing."""
+def test_without_a_links_field_nothing_is_measured_and_whatsapp_is_left_to_its_own_checks():
+    """Today's snapshot has no list of links: the booking and order pages are not measured, never
+    reported missing. A missing WhatsApp link is `whatsapp_link_missing`'s finding, a wrong one
+    `whatsapp_number_mismatch`'s: one problem, one finding."""
     loc = nuqta()
-    got = single("own_links_present", context(at(loc, web=website(whatsapp_link="")), fp=facts()))
-    assert got.state == FAIL
-    assert [e.label for e in got.evidence] == ["fp_whatsapp_link", "fp_expected_whatsapp"]
-    fine = single("own_links_present", context(at(loc, web=website(whatsapp_link=WA_LINK)),
-                                               fp=facts()))
-    assert fine.state == PASS
-
-
-def test_a_whatsapp_link_to_another_number_is_left_to_the_number_check():
-    loc = nuqta()
-    got = single("own_links_present", context(
-        at(loc, web=website(whatsapp_link="https://wa.me/97455550999")), fp=facts()))
-    assert got.state == PASS
+    for link in ("", WA_LINK, "https://wa.me/97455550999"):
+        got = single("own_links_present", context(at(loc, web=website(whatsapp_link=link)),
+                                                   fp=facts()))
+        assert got.state == NM, link
 
 
 def test_a_link_the_business_does_not_have_is_never_asked_for():
@@ -309,16 +301,48 @@ def test_own_links_present_is_not_measured_when_it_cannot_tell(why, fp_more, par
 # ── whatsapp_number_mismatch ──────────────────────────────────────────────────────────────
 
 
-def test_a_whatsapp_link_on_the_listing_to_another_number_fires():
-    loc = nuqta()
-    wrong = "https://wa.me/97455550999"
+WRONG = "https://wa.me/97455550999"
+
+
+def test_a_whatsapp_link_to_another_number_than_the_business_confirmed_fires():
+    """The place has no number of its own typed in: the business's confirmed number stands."""
+    loc = location(whatsapp=None)
     got = single("whatsapp_number_mismatch",
-                 context(at(loc, lst=listing(whatsapp_link=wrong)), fp=facts()))
+                 context(at(loc, lst=listing(whatsapp_link=WRONG)), fp=facts()))
     assert got.state == FAIL
     assert got.evidence == (
-        rules.Evidence("listing_whatsapp", wrong, "listing"),
+        rules.Evidence("listing_whatsapp", WRONG, "listing"),
         rules.Evidence("fp_confirmed_whatsapp", WHATSAPP, "business"),
     )
+
+
+def test_a_number_the_owner_confirmed_for_the_place_wins_over_the_one_typed_for_it():
+    loc = nuqta()  # typed in as +97455550150
+    fp = facts(place_whatsapp={loc.id: "+97455550177"})
+    got = single("whatsapp_number_mismatch",
+                 context(at(loc, web=website(whatsapp_link=WA_LINK)), fp=fp))
+    assert got.state == FAIL
+    assert got.evidence[-1] == rules.Evidence("fp_confirmed_whatsapp", "+97455550177", "business")
+
+
+def test_a_wrong_link_the_older_rule_already_reports_is_not_reported_twice():
+    """`whatsapp_link_missing` sets the listing's and website's link against the number typed for
+    the place; when that is the confirmed number, this check neither repeats it nor says
+    "matches"."""
+    loc = nuqta()
+    got = single("whatsapp_number_mismatch",
+                 context(at(loc, lst=listing(whatsapp_link=WRONG)), fp=facts()))
+    assert got.state == NM
+
+
+def test_with_several_places_a_branch_is_set_against_its_own_number_only():
+    a = location("Nuqta Car Care - West Bay", "West Bay", whatsapp=None)
+    b = location("Nuqta Car Care - Al Wakra", "Al Wakra", whatsapp="+97455550160")
+    lst = listing(whatsapp_link="https://wa.me/97455550160")
+    got = {o.location_id: o.state for o in check("whatsapp_number_mismatch", context(
+        at(a, lst=lst), at(b, lst=lst), fp=facts()))}
+    # Branch A has no number of its own, and the business's is not a branch's: not measured.
+    assert got == {a.id: NM, b.id: PASS}
 
 
 @pytest.mark.parametrize("link", [
@@ -343,13 +367,13 @@ def test_every_whatsapp_number_the_website_shows_is_checked():
 
 
 @pytest.mark.parametrize("why, fp_more, parts", [
-    ("no confirmed number", {"whatsapp": None}, {"web": website(whatsapp_link="https://wa.me/1")}),
+    ("no confirmed number", {"whatsapp": None}, {"web": website(whatsapp_link=WRONG)}),
     ("no WhatsApp link anywhere", {}, {"web": website(whatsapp_link="")}),
     ("nothing read", {}, {}),
 ])
 def test_whatsapp_number_mismatch_is_not_measured_when_there_is_nothing_to_compare(
         why, fp_more, parts):
-    loc = nuqta()
+    loc = location(whatsapp=None)
     got = single("whatsapp_number_mismatch", context(at(loc, **parts), fp=facts(**fp_more)))
     assert got.state == NM, why
 
