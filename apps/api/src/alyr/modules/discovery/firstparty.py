@@ -322,7 +322,14 @@ def link_number(link: str) -> str:
     if found:
         digits = re.sub(r"\D", "", found.group(1))
         return normalize.phone_key("+" + (digits[2:] if digits.startswith("00") else digits))
-    return number(text) if re.fullmatch(r"[\d\s()+-]{6,}", text.strip()) else ""
+    if not re.fullmatch(r"[\d\s()+-]{6,}", text.strip()):
+        return ""
+    # The website connector gives a wa.me number as digits with its country code and no "+"
+    # ("971501234567"); a shorter one is a local number.
+    digits = re.sub(r"\D", "", text)
+    if not text.strip().startswith("+") and len(digits) >= 10:
+        return normalize.phone_key("+" + digits.removeprefix("00")) or number(text)
+    return number(text)
 
 
 def _listing(place):

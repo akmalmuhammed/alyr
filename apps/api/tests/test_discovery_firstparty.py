@@ -358,6 +358,16 @@ def test_the_same_number_written_another_way_passes(link):
     assert got.state == PASS, link
 
 
+@pytest.mark.parametrize("written, read", [
+    ("97455550150", "97455550150"),  # the website connector's form: country code, no "+"
+    ("971501234567", "971501234567"),  # a UAE number in that form stays a UAE number
+    ("+974 5555 0150", "97455550150"),
+    ("5555 0150", "97455550150"),  # a local number is read in Qatar
+])
+def test_a_bare_number_is_read_with_its_country_code(written, read):
+    assert firstparty.link_number(written) == read
+
+
 def test_every_whatsapp_number_the_website_shows_is_checked():
     loc = nuqta()
     web = linked_website(whatsapp_link=WA_LINK, whatsapp_links=[WA_LINK, "97455550999"])
