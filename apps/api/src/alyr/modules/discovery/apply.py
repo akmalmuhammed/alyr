@@ -14,7 +14,8 @@ message: a result goes to the person on WhatsApp through `notify`, a function th
 
 import logging
 from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime
+from dataclasses import replace
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import asyncpg
@@ -33,6 +34,8 @@ from alyr.modules.discovery.proposals import (
     channel_of,
     person_may_decide,
 )
+from alyr.modules.items import alerts
+from alyr.modules.items import clock as shop_clock
 
 log = logging.getLogger("alyr.discovery")
 
@@ -40,6 +43,14 @@ JOB = APPLY_JOB
 # A started apply that is older than this may be taken again (its worker died).
 STARTED_STALE = "10 minutes"
 Notify = Callable[[asyncpg.Connection, UUID], Awaitable[None]]
+# The check after a change was applied (Discovery 2.0): about 20 hours later, so a result on
+# WhatsApp can arrive inside the person's 24-hour window (T2 2.1, "a timing trap"); never in the
+# shop's quiet hours, where it moves to the evening before. A change the platform still reviews is
+# looked at again every few hours, and after three days left for the weekly check-up.
+VERIFY_AFTER = timedelta(hours=20)
+EVENING = (21, 30)
+LOOK_AGAIN = timedelta(hours=4)
+PENDING_FOR = timedelta(days=3)
 
 
 # ── where the sample connector keeps what its fictional owner changed ────────────────────
@@ -246,13 +257,18 @@ async def _applied(
     """The connector accepted the write: `applied` only now, never before."""
     proposal_id = row["id"]
     async with db.tenant(tenant_id) as conn:
+        zone = (await shop_clock.load(conn, receipt.at)).tz
         done = await conn.fetchrow(
             "update discovery_proposals set status = 'applied', applied_at = $2, receipt = $3, "
             "undo_until = $4, verification = 'pending', failure_code = null, "
-            "apply_started_at = null, updated_at = now() "
+            "apply_started_at = null, life = 'sent', life_history = life_history || "
+            "jsonb_build_array(jsonb_build_object('state', 'sent', 'at', $2::timestamptz)), "
+            "verify_at = $5, updated_at = now() "
             "where id = $1 and status = 'approved' returning id",
-            proposal_id, receipt.at, {"ref": receipt.ref, "at": receipt.at.isoformat()},
-            receipt.undo_until,
+            proposal_id, receipt.at,
+            {"ref": receipt.ref, "at": receipt.at.isoformat(),
+             "edited": row["approved_as"] == "edited"},
+            receipt.undo_until, verify_time(receipt.at, zone),
         )
         if done is None:
             return "skipped"
@@ -274,9 +290,22 @@ async def _applied(
             conn, "discovery", proposal_id, "proposal.apply", team.ALYR,
             detail={"type": row["type"], "ref": receipt.ref}, channel="system",
         )
-        if notify is not None:
-            await notify(conn, proposal_id)
+        # No message now: the person had their confirmation at the tap, and their one result
+        # comes with the check about 20 hours from now (`check_changes`, then `asks`).
     return "applied"
+
+
+def verify_time(applied_at: datetime, zone) -> datetime:
+    """About 20 hours after it was applied; if that falls in the shop's quiet hours, the evening
+    before at 21:30 (still well inside the person's 24-hour window)."""
+    due = applied_at + VERIFY_AFTER
+    local = due.astimezone(zone)
+    if not alerts.in_quiet_hours(local):
+        return due
+    evening = local.replace(hour=EVENING[0], minute=EVENING[1], second=0, microsecond=0)
+    if local.hour < 12:
+        evening -= timedelta(days=1)
+    return max(evening, applied_at + timedelta(hours=1))
 
 
 # ── the sweep puts a lost apply back on the queue ───────────────────────────────────────
@@ -366,3 +395,141 @@ async def undo(
         detail={"type": row["type"]}, channel=channel_of(caller),
     )
     return row, False
+
+
+# ── the life of a change after it was applied (Discovery 2.0) ───────────────────────────
+
+
+async def _step(
+    conn, proposal_id: UUID, state: str, at: datetime, *, record: bool = True, **more
+) -> None:
+    """One step of a change's life: the state, appended to its history, and on the record (a
+    change seen live is on the record as its `proposal.verify`)."""
+    sets = ", ".join(f"{k} = ${i}" for i, k in enumerate(more, start=4))
+    await conn.execute(
+        "update discovery_proposals set life = $2, life_history = life_history || "
+        "jsonb_build_array(jsonb_build_object('state', $2::text, 'at', $3::timestamptz)), "
+        f"updated_at = now(){', ' + sets if sets else ''} where id = $1",
+        proposal_id, state, at, *more.values(),
+    )
+    if record:
+        await team.record(
+            conn, "discovery", proposal_id, "proposal.life", team.ALYR,
+            detail={"state": state}, channel="system",
+        )
+
+
+async def _reverted(conn, row, connector, ctx) -> None:
+    """The platform did not keep the change: the finding is open again now (the problem is
+    back), and the sample's own listing shows the old value again."""
+    put_back = getattr(connector, "platform_reverted", None)
+    if put_back is not None:
+        place = await conn.fetchrow(
+            "select * from discovery_locations where id = $1", row["location_id"])
+        await put_back(change_of(row, place), replace(ctx, state=ConnState(conn)))
+    await conn.execute(
+        "update discovery_findings set status = 'open', updated_at = now() "
+        "where id = $1 and status in ('owner_done', 'verified')",
+        row["finding_id"],
+    )
+
+
+async def check_changes(
+    db: Database, tenant_id: UUID, now: datetime | None = None, get_connector=None
+) -> dict:
+    """Follow every applied change through its life, from the sweep (hourly):
+
+    * the platform's own state, where the source says it (the sample simulates Google's edit
+      stages: under review, accepted, not accepted, changed back): `pending_review`, `rejected`,
+      `changed_back`;
+    * the check about 20 hours after it was applied (`verify_at`): a live read that shows the
+      approved value is `live` (verification `confirmed`, `verified_at`, and on the receipt); one
+      that does not is `not_confirmed`. A change still under review is looked at again in a few
+      hours, and after three days left to the weekly check-up.
+
+    Nothing is written to any source here and nothing is sent: the one result of an ask goes out
+    from `asks.send_results`, which the sweep calls next. Returns counts by what was recorded."""
+    now = now or datetime.now(UTC)
+    get_connector = get_connector or connectors.get
+    done = {"pending_review": 0, "live": 0, "rejected": 0, "changed_back": 0, "not_confirmed": 0}
+    async with db.tenant(tenant_id) as conn:
+        rows = await conn.fetch(
+            "select * from discovery_proposals where status = 'applied' and ("
+            "life in ('sent', 'pending_review') or (life = 'live' and undo_until > $1)) "
+            "order by applied_at, id",
+            now,
+        )
+        stage = {}
+        for kind in {r["connector_kind"] for r in rows}:
+            stage[kind] = await stage_of(conn, kind)
+        overrides = await load_overrides(conn) if rows else {}
+    for row in rows:
+        try:
+            connector = get_connector(row["connector_kind"])
+        except ConnectorError:
+            continue
+        ctx = WriteContext(now=now, idempotency_key=str(row["id"]),
+                           stage=stage[row["connector_kind"]], overrides=overrides,
+                           state=DbState(db, tenant_id))
+        receipt = Receipt((row["receipt"] or {}).get("ref", ""), row["applied_at"],
+                          row["undo_until"])
+        async with db.tenant(tenant_id) as conn:
+            place = await conn.fetchrow(
+                "select * from discovery_locations where id = $1", row["location_id"])
+        if place is None:
+            continue
+        change = change_of(row, place)
+        states = getattr(connector, "edit_state", None)
+        try:
+            platform, at = await states(change, receipt, ctx) if states else ("live", now)
+            seen = await connector.read_current(change, ctx)
+        except (WriteError, ConnectorError):
+            continue  # the source could not be read now: the next sweep tries again
+        due = row["verify_at"] is not None and row["verify_at"] <= now
+        async with db.tenant(tenant_id) as conn:
+            if platform in ("rejected", "changed_back") and (
+                platform == "rejected" or row["life"] == "live" or due
+            ):
+                await _step(conn, row["id"], platform, at, verification="not_confirmed",
+                            verify_at=None)
+                await _reverted(conn, row, connector, ctx)
+                done[platform] += 1
+                continue
+            if platform == "pending":
+                if row["life"] == "sent":
+                    await _step(conn, row["id"], "pending_review", at)
+                    done["pending_review"] += 1
+                if due:
+                    again = now + LOOK_AGAIN
+                    await conn.execute(
+                        "update discovery_proposals set verify_at = $2 where id = $1",
+                        row["id"], again if now - row["applied_at"] < PENDING_FOR else None,
+                    )
+                continue
+            if not due or row["life"] == "live":
+                continue
+            if same(change.field, seen, change.after):
+                await _step(
+                    conn, row["id"], "live", now, record=False, verification="confirmed",
+                    verify_at=None,
+                    verified_at=now,
+                    receipt=(row["receipt"] or {}) | {
+                        "verified": {"at": now.isoformat(), "state": "live"}},
+                )
+                await team.record(
+                    conn, "discovery", row["id"], "proposal.verify", team.ALYR,
+                    detail={"result": "confirmed", "by": "check"}, channel="system",
+                )
+                done["live"] += 1
+            else:
+                await conn.execute(
+                    "update discovery_proposals set verification = 'not_confirmed', "
+                    "verify_at = null, updated_at = now() where id = $1",
+                    row["id"],
+                )
+                await team.record(
+                    conn, "discovery", row["id"], "proposal.verify", team.ALYR,
+                    detail={"result": "not_confirmed", "by": "check"}, channel="system",
+                )
+                done["not_confirmed"] += 1
+    return done

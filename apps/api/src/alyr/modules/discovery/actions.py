@@ -260,7 +260,11 @@ async def get_overview(conn: asyncpg.Connection, caller: Caller, args: dict) -> 
         "proposals": await proposals.overview_block(conn, caller, scope, lang),
         "answers": await answers_service.overview_block(conn, lang),
         # "N of M checks match", for the business's pack and each pack in it (Discovery 2.0).
-        "checks": await pack_service.checks_block(conn),
+        "checks": await pack_service.checks_block(conn) | {
+            "previous": await _loop().previous_checks(conn)},
+        # The loop (Discovery 2.0): at most three open asks, the rest "Also noticed", and when
+        # ALYR checks next.
+        "asks": await _loop().asks_block(conn, caller, scope, lang),
     }
 
 
@@ -828,7 +832,8 @@ async def _proposal_answer(
     scope = await proposals.scope_of(conn, caller)
     row = await conn.fetchrow(f"{proposals._PROPOSAL} where p.id = $1", proposal_id)
     reviews = await proposals._reviews_of(conn, [row])
-    return proposals.view(row, caller, scope, lang, datetime.now(UTC), reviews, already=already)
+    return proposals.view(row, caller, scope, lang, datetime.now(UTC), reviews, already=already,
+                          extra=await proposals.extras_for(conn, [row]))
 
 
 @register("discovery.proposals", READERS, MODULE)
@@ -870,8 +875,47 @@ async def approve_proposal(conn: asyncpg.Connection, caller: Caller, args: dict)
 async def decline_proposal(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
     lang = await _lang(conn, args.get("lang"))
     scope = await proposals.scope_of(conn, caller)
-    row, already = await proposals.decline(conn, caller, scope, args["id"])
+    row, already = await proposals.decline(
+        conn, caller, scope, args["id"], args.get("reason") or "declined"
+    )
     return await _proposal_answer(conn, caller, lang, row["id"], already)
+
+
+@register("discovery.approve_edited", READERS, MODULE)
+async def approve_edited(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
+    """"Change it": a person changes the proposed value and approves that, in one tap. The same
+    refusals as an approval (the engine, the agent door, no login), and the value is checked by
+    the change's type (`proposals.checked_edit`)."""
+    lang = await _lang(conn, args.get("lang"))
+    scope = await proposals.scope_of(conn, caller)
+    row, already = await proposals.approve_edited(
+        conn, caller, scope, args["id"], args.get("change_hash"), args.get("after"),
+        update_fact=bool(args.get("update_fact", True)),
+    )
+    return await _proposal_answer(conn, caller, lang, row["id"], already)
+
+
+@register("discovery.asks", READERS, MODULE)
+async def list_asks(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
+    """The business's open asks (at most three) and the rest, "Also noticed", for the places the
+    caller manages, and when ALYR checks next."""
+    lang = await _lang(conn, args.get("lang"))
+    scope = await proposals.scope_of(conn, caller)
+    return await _loop().asks_block(conn, caller, scope, lang)
+
+
+@register("discovery.loop_metrics", CHANGERS, MODULE)
+async def loop_metrics(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
+    """How this business's changes were decided: approved as proposed, approved with a changed
+    value, not now, declined, and the approve-unedited rate (counts only). Owner and admin."""
+    return await _loop().metrics(conn)
+
+
+def _loop():
+    """The loop's reads (`loop.py`), which read `actions.finding_views` in turn."""
+    from alyr.modules.discovery import loop
+
+    return loop
 
 
 @register("discovery.undo_proposal", READERS, MODULE)

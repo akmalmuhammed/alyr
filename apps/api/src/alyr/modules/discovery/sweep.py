@@ -2,12 +2,14 @@
 `discovery` on, each shop in its own tenant transaction, as background work (customers' jobs first,
 D-078).
 
-It removes Google's text older than 30 days (`retention.py`, for every shop), expires proposals
-past their 14 days, puts approved proposals that were never started or were
-lost back on the queue, starts a scheduled check-up when the shop switched that on and one is due,
-and asks the people who should be asked. It does nothing for a shop with the module off. It sends
-nothing itself: asking is `asks.send_due`, handed in by the worker (`send_asks`), which goes through
-the outbound layer.
+It removes Google's text older than 30 days (`retention.py`, for every shop), expires open asks
+past their 14 days and opens the next ones (at most three, `proposals.promote`), puts approved
+proposals that were never started or were lost back on the queue, starts a scheduled check-up when
+the shop switched that on and one is due, follows each applied change through its life
+(`apply.check_changes`: the check about 20 hours after it was applied), and asks the people who
+should be asked (and sends each ask's one result). It does nothing for a shop with the module
+off. It sends nothing itself: asking is `asks.send_due`, handed in by the worker (`send_asks`),
+which goes through the outbound layer.
 """
 
 import logging
@@ -54,7 +56,8 @@ async def sweep_shop(
     db: Database, tenant_id: UUID, send_asks: SendAsks | None = None, now: datetime | None = None
 ) -> dict:
     now = now or datetime.now(UTC)
-    done = {"expired": 0, "requeued": 0, "scheduled": False, "asked": 0, "removed": 0}
+    done = {"expired": 0, "requeued": 0, "scheduled": False, "asked": 0, "removed": 0,
+            "checked": 0}
     async with db.tenant(tenant_id) as conn:
         # Google's text older than 30 days goes whether or not the module is still on: switching
         # Discovery off does not make it any less Google's (retention.py).
@@ -63,8 +66,16 @@ async def sweep_shop(
         if not await module_on(conn, KEY):
             return done
         done["expired"] = await proposals.expire_due(conn, now)
+        await proposals.promote(conn, now)  # an expired ask makes room for the next
         done["requeued"] = await apply.requeue_lost(conn, now)
         done["scheduled"] = await schedule_if_due(conn, now)
+    # The life of each applied change: under review, live (the check about 20 hours after it was
+    # applied), not accepted or changed back. Short transactions of its own; it sends nothing (the
+    # one result of an ask goes out with the asks, below).
+    try:
+        done["checked"] = sum((await apply.check_changes(db, tenant_id, now)).values())
+    except Exception:  # noqa: BLE001 - a source that fails here must not stop the asks
+        log.exception("could not check the changes of shop %s", tenant_id)
     if send_asks is not None:
         # In a transaction of its own: a failure in asking never undoes the housekeeping above.
         async with db.tenant(tenant_id) as conn:
@@ -78,7 +89,7 @@ async def sweep_all(
     """Every shop with Discovery on, one transaction each; one failing never stops the others."""
     async with db.unscoped() as conn:
         shops = [r["id"] for r in await conn.fetch("select id from tenants")]
-    total = {"expired": 0, "requeued": 0, "scheduled": 0, "asked": 0, "removed": 0}
+    total = {"expired": 0, "requeued": 0, "scheduled": 0, "asked": 0, "removed": 0, "checked": 0}
     for tenant_id in shops:
         try:
             result = await sweep_shop(db, tenant_id, send_asks, now)

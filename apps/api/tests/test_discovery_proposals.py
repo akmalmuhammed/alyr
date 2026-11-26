@@ -385,7 +385,9 @@ def sweep_now(shop, client=None):
 
 def test_the_sweep_expires_a_proposal_after_14_days_and_it_can_not_be_approved(shop):
     p = find(shop.owner, "hours_missing", "Al Sadd")
+    # Discovery 2.0: an open ask (only an open ask's 14 days run)
     owner_sql("update discovery_proposals set proposed_at = now() - interval '15 days', "
+              "opened_at = now() - interval '15 days', "
               "expires_at = now() - interval '1 day' where id = $1", UUID(p["id"]))
     # unswept, it is already closed to approval
     late = shop.owner.post(f"{BASE}/proposals/{p['id']}/approve",
@@ -518,7 +520,9 @@ def test_a_declined_change_is_not_asked_again_for_14_days(shop):
 
 def test_an_expired_by_time_or_undone_or_unconfirmed_change_is_not_asked_again(shop):
     p = find(shop.owner, "whatsapp_link_missing", "Al Sadd")
+    # Discovery 2.0: only an open ask's 14 days run (an "Also noticed" one waits its turn)
     owner_sql("update discovery_proposals set proposed_at = now() - interval '15 days', "
+              "opened_at = now() - interval '15 days', "
               "expires_at = now() - interval '1 day' where id = $1", UUID(p["id"]))
     sweep_now(shop)
     assert get(shop.owner, p["id"])["expire_reason"] == "time"
