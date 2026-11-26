@@ -46,6 +46,7 @@ from alyr.modules.discovery import words as _words
 from alyr.modules.discovery.answers import service as answers
 from alyr.modules.discovery.apply import load_overrides
 from alyr.modules.discovery.connectors import ConnectorError, Location, RunContext, Snapshot
+from alyr.modules.discovery.connectors import places as places_read
 from alyr.modules.discovery.connectors.manual import STALE_AFTER_DAYS
 from alyr.modules.discovery.errors import DiscoveryError
 from alyr.modules.discovery.packs import store as pack_store
@@ -613,38 +614,27 @@ def _evidence(outcome: rules.Outcome, snapshot: Snapshot) -> list[dict]:
     # the connection of the run (Discovery 2.0).
     site = place.website if place and isinstance(place.website, connectors.SiteWebsite) else None
     # What Google's public listing said, read live (`connectors/places.py`): labelled `google`, so
-    # `retention.py` removes it after 30 days, and dated when it was read. A finding about the
-    # whole business (the name) quotes each place's listing: Google's if any place's was.
-    live = [p.listing for p in snapshot.places if isinstance(p.listing, connectors.PlacesListing)]
-    google = (
-        place.listing if place and isinstance(place.listing, connectors.PlacesListing)
-        else live[0] if live and place is None else None
-    )
+    # `retention.py` removes it after 30 days, and dated when it was read. A listing merged from a
+    # recorded round and the live read is Google's only in the fields Google won
+    # (`places_read.is_google`). A finding about the whole business (the name) quotes each place's
+    # listing: Google's if any place's quoted field was.
+    listings = [place.listing] if place else [p.listing for p in snapshot.places]
 
-    def when(where: str) -> str:
-        if site and where == "website" and site.read_at:
-            return site.read_at.isoformat()
-        if google and where == "listing" and google.read_at:
-            return google.read_at.isoformat()
-        return seen
+    def google_of(label: str):
+        return next((x for x in listings if places_read.is_google(x, label)), None)
 
-    def source(where: str) -> str:
-        if site and where == "website":
-            return "website"
-        if google and where == "listing":
-            return google.source
-        return snapshot.source
+    def item(e) -> dict:
+        google = google_of(e.label) if e.where == "listing" else None
+        if site and e.where == "website":
+            when, source = (site.read_at.isoformat() if site.read_at else seen), "website"
+        elif google is not None:
+            when, source = (google.read_at.isoformat() if google.read_at else seen), google.source
+        else:
+            when, source = seen, snapshot.source
+        return {"label": e.label, "value": e.value, "where": e.where, "seen_at": when,
+                "source": source}
 
-    return [
-        {
-            "label": e.label,
-            "value": e.value,
-            "where": e.where,
-            "seen_at": when(e.where),
-            "source": source(e.where),
-        }
-        for e in outcome.evidence
-    ]
+    return [item(e) for e in outcome.evidence]
 
 
 def _recorded_after(snapshot: Snapshot, location_id: UUID | None) -> datetime | None:

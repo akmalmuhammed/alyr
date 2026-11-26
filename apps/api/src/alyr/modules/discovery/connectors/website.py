@@ -58,6 +58,7 @@ from alyr.modules.discovery.connectors.base import (
     Snapshot,
     Website,
 )
+from alyr.modules.discovery.connectors.places import merge_listing
 
 KIND = "website"
 USER_AGENT = "ALYR-Discovery (+https://alyr.qa)"
@@ -161,17 +162,21 @@ def merge(primary: Snapshot, extra: Snapshot) -> Snapshot:
     """The run's snapshot with what an added source read. The main source keeps its word: a place
     whose website it already describes (what staff recorded, say) keeps that; a place it left
     without one gets the added source's; a place it did not cover at all is added as the added
-    source read it. The same for the listing (the Google Places read): a place whose listing the
-    main source did not describe (`found` None) takes the added source's; one it did describe keeps
-    it."""
+    source read it. The listing (the Google Places read) is merged field by field, the read with
+    the later observed time winning (`places.merge_listing`)."""
     added = {p.location_id: p for p in extra.places}
     places = []
     for place in primary.places:
         more = added.pop(place.location_id, None)
         if more is not None and place.website is None and more.website is not None:
             place = replace(place, website=more.website)
-        if more is not None and place.listing.found is None and more.listing.found is not None:
-            place = replace(place, listing=more.listing)
+        if more is not None:
+            listing = merge_listing(
+                place.listing, place.observed_at or primary.taken_at,
+                more.listing, getattr(more.listing, "read_at", None) or extra.taken_at,
+            )
+            if listing is not place.listing:
+                place = replace(place, listing=listing)
         places.append(place)
     places.extend(added.values())
     return replace(primary, places=places)

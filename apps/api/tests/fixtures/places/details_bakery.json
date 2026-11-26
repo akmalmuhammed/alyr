@@ -27,5 +27,6 @@
   "websiteUri": "https://bakery.example/",
   "rating": 4.6,
   "userRatingCount": 212,
+  "primaryType": "bakery",
   "displayName": {"text": "Test Bakery Al Sadd", "languageCode": "en"}
 }

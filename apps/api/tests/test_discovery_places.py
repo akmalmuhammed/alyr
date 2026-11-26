@@ -215,7 +215,8 @@ def test_one_get_to_googles_places_host_with_the_key_in_a_header_and_a_tight_mas
     assert "key" not in request.url.params  # never in the address, where logs keep it
     assert request.headers["X-Goog-FieldMask"].split(",") == [
         "displayName", "nationalPhoneNumber", "internationalPhoneNumber", "websiteUri",
-        "regularOpeningHours", "businessStatus", "googleMapsUri", "rating", "userRatingCount"]
+        "regularOpeningHours", "businessStatus", "googleMapsUri", "rating", "userRatingCount",
+        "primaryType"]
     for banned in ("reviews", "photos", "formattedAddress", "editorialSummary", "*"):
         assert banned not in request.headers["X-Goog-FieldMask"].split(",")
     assert {p.location_id for p in snapshot.places} == {a.id, b.id}
@@ -346,20 +347,83 @@ def test_merged_into_a_recorded_round_the_owner_side_still_needs_the_profile(mon
     assert outcome("rating_low", merged, [a])[a.id].state == rules.PASS
 
 
-def test_merge_keeps_a_listing_the_main_source_described():
+LIVE = places.PlacesListing(found=True, name="Live name", phone="+974 5555 0123",
+                             hours={"sun": ("06:00", "22:00")}, rating=4.6, review_count=212,
+                             read_at=NOW)
+
+
+def recorded(a: Location, seen: datetime, **listing) -> Snapshot:
+    staff = Listing(found=True, claimed=True, name="Recorded name", phone="+974 4444 0000",
+                    categories=["Bakery"], **listing)
+    return Snapshot("manual", NOW, [PlaceSnapshot(a.id, staff, observed_at=seen)])
+
+
+def test_merge_a_live_read_after_the_recorded_round_wins_each_field_it_said():
+    a = place(PID)
+    merged = connectors.merge(recorded(a, NOW - timedelta(days=9)),
+                              Snapshot("places", NOW, [PlaceSnapshot(a.id, LIVE)]))
+    listing = merged.of(a.id).listing
+    assert merged.source == "manual"
+    assert (listing.name, listing.phone, listing.rating) == ("Live name", "+974 5555 0123", 4.6)
+    # what the live read did not say stays the round's
+    assert listing.claimed is True and listing.categories == ["Bakery"]
+    assert listing.google_fields == {"found", "name", "phone", "hours", "rating", "review_count"}
+    assert merged.of(a.id).observed_at == NOW - timedelta(days=9)
+
+
+def test_merge_a_recorded_round_after_the_live_read_keeps_its_word():
+    a = place(PID)
+    later = NOW + timedelta(hours=2)
+    merged = connectors.merge(recorded(a, later, hours={"sun": ("07:00", "21:00")}),
+                              Snapshot("places", NOW, [PlaceSnapshot(a.id, LIVE)]))
+    listing = merged.of(a.id).listing
+    assert (listing.name, listing.phone) == ("Recorded name", "+974 4444 0000")
+    assert listing.hours == {"sun": ("07:00", "21:00")}
+    # only what the round left unsaid comes from the live read
+    assert (listing.rating, listing.review_count) == (4.6, 212)
+    assert listing.google_fields == {"rating", "review_count"}
+
+
+def test_merge_on_equal_times_the_connection_keeps_its_word_and_fills_from_the_live_read():
     a, b, c = place(PID), place(PID2, area="Lusail"), place(PID, area="Wakra")
     staff = Listing(found=True, name="As recorded")
     primary = Snapshot("manual", NOW, [
         PlaceSnapshot(a.id, staff),
         PlaceSnapshot(b.id, Listing(found=None), Website(url="https://b.example")),
     ])
-    live = places.PlacesListing(found=True, name="Live", read_at=NOW)
-    extra = Snapshot("places", NOW, [PlaceSnapshot(p.id, live) for p in (a, b, c)])
+    extra = Snapshot("places", NOW, [PlaceSnapshot(p.id, LIVE) for p in (a, b, c)])
     merged = connectors.merge(primary, extra)
-    assert merged.source == "manual"
-    assert merged.of(a.id).listing is staff
-    assert merged.of(b.id).listing is live and merged.of(b.id).website.url == "https://b.example"
-    assert merged.of(c.id).listing is live
+    assert merged.of(a.id).listing.name == "As recorded"
+    assert merged.of(a.id).listing.phone == "+974 5555 0123"  # the round did not say
+    assert merged.of(b.id).listing.name == "Live name"
+    assert merged.of(b.id).website.url == "https://b.example"
+    assert merged.of(c.id).listing is LIVE
+
+
+def test_a_merged_listing_labels_only_googles_fields_and_keeps_only_the_rounds(monkeypatch):
+    a = place(PID)
+    merged = connectors.merge(
+        recorded(a, NOW + timedelta(hours=2), hours={"sun": ("07:00", "21:00")}),
+        Snapshot("places", NOW, [PlaceSnapshot(a.id, LIVE)]))
+    listing = merged.of(a.id).listing
+    assert places.is_google(listing, "rating") and places.is_google(listing, "review_count")
+    assert not places.is_google(listing, "listing_phone")
+    assert not places.is_google(listing, "listing_hours")
+    seen = proposals._listing_values(listing)
+    assert seen["phone"] == {"phone": "+974 4444 0000"}  # the round's, kept as before
+    merged = connectors.merge(recorded(a, NOW - timedelta(days=1)),
+                              Snapshot("places", NOW, [PlaceSnapshot(a.id, LIVE)]))
+    assert "phone" not in proposals._listing_values(merged.of(a.id).listing)  # Google's, not kept
+
+
+def test_the_category_type_is_read_into_the_snapshot(monkeypatch):
+    serve(monkeypatch, {PID: answer("details_bakery.json"), PID2: answer("details_bare.json")})
+    a, b = place(PID), place(PID2, area="Lusail")
+    snapshot = read(a, b)
+    assert snapshot.of(a.id).listing.primary_type == "bakery"
+    assert snapshot.of(b.id).listing.primary_type is None
+    # kept for a rule; no rule reads it yet, so the category check is not measured from it
+    assert snapshot.of(a.id).listing.categories is None
 
 
 # ── what is kept ───────────────────────────────────────────────────────────────────────────

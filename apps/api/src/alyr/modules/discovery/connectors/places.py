@@ -5,8 +5,8 @@
   parsed from a Google Maps link or pasted as it is, `place_id_of`), with a field mask of only what
   a rule reads: the name, the phone (national and international), the website address, the regular
   opening hours, the business status, the Google Maps address of the listing, the rating and how
-  many ratings. No reviews, no photos, no address, no text search by name (it costs more and
-  guesses).
+  many ratings, and Google's main type for the place (its category). No reviews, no photos, no
+  address, no text search by name (it costs more and guesses).
 * **What is kept.** Only the place ID, which Google lets be kept for good. Everything Google
   returns lives in the run's snapshot; what a rule quotes as evidence is labelled `google` with the
   time it was read, so `retention.py` removes it after 30 days, and none of it becomes a finding's
@@ -28,7 +28,7 @@ import asyncio
 import json
 import os
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from datetime import datetime
 from typing import ClassVar
 from urllib.parse import parse_qs, unquote, urlsplit
@@ -63,6 +63,7 @@ FIELDS = (
     "googleMapsUri",
     "rating",
     "userRatingCount",
+    "primaryType",  # the category (decision 9), kept in the snapshot for a rule
 )
 FIELD_MASK = ",".join(FIELDS)
 
@@ -153,16 +154,71 @@ def _google_host(host: str) -> bool:
 # ── what a read gives the rules ─────────────────────────────────────────────────────────────
 
 
+# The fields of a listing the rules read, each of which a merge takes from one source or the other.
+LISTING_FIELDS = frozenset(f.name for f in fields(Listing))
+
+
 @dataclass(frozen=True)
 class PlacesListing(Listing):
-    """A `Listing` read live on Google's public page. `live_only`: none of it becomes a stored
-    value beyond the evidence `retention.py` removes after 30 days."""
+    """A `Listing` read live on Google's public page, or a listing merged from one
+    (`merge_listing`): `google_fields` names the fields that are Google's. Those never become a
+    stored value beyond the evidence `retention.py` removes after 30 days."""
 
     live_only: ClassVar[bool] = True
     source: str = SOURCE
     read_at: datetime | None = None
     business_status: str | None = None  # OPERATIONAL, CLOSED_TEMPORARILY, CLOSED_PERMANENTLY
     website_uri: str | None = None
+    # Google's main type for the place ("bakery", "car_wash"): kept for a category rule.
+    primary_type: str | None = None
+    google_fields: frozenset[str] = LISTING_FIELDS
+
+
+# Which field of the listing a piece of evidence quotes (`rules.py`'s labels on "listing").
+EVIDENCE_FIELD = {
+    "listing_status": "found", "claimed": "claimed", "listing_hours": "hours",
+    "listing_phone": "phone", "listing_name": "name", "categories": "categories",
+    "photos": "photo_count", "rating": "rating", "review_count": "review_count",
+    "listing_whatsapp": "whatsapp_link",
+}
+
+
+def is_google(listing: Listing | None, label: str) -> bool:
+    """Whether evidence with this label, read on this listing, is Google's. A label not in
+    `EVIDENCE_FIELD` on a listing with any Google field counts as Google's: the safe side, since
+    Google's text is the one removed after 30 days."""
+    if not isinstance(listing, PlacesListing):
+        return False
+    field_name = EVIDENCE_FIELD.get(label)
+    return field_name is None or field_name in listing.google_fields
+
+
+def merge_listing(main: Listing, main_at: datetime, added: Listing,
+                  added_at: datetime) -> Listing:
+    """One listing from the connection's and an added source's, field by field: the read with the
+    later observed time wins (a round staff recorded after the live read keeps its word; a live
+    read after the round replaces what the round said). A field one of them did not say (None) is
+    the other's. On equal times the connection keeps its word. A source that adds no listing facts
+    (the website reader's `Listing(found=None)`) changes nothing."""
+    if not isinstance(added, PlacesListing):
+        return main
+    taken: dict[str, object] = {}
+    google: set[str] = set()
+    for name in LISTING_FIELDS:
+        mine, theirs = getattr(main, name), getattr(added, name)
+        if theirs is not None and name in added.google_fields and (
+                mine is None or added_at > main_at):
+            taken[name] = theirs
+            google.add(name)
+        else:
+            taken[name] = mine
+    if not google:
+        return main
+    return PlacesListing(
+        **taken, source=added.source, read_at=added.read_at,
+        business_status=added.business_status, website_uri=added.website_uri,
+        primary_type=added.primary_type, google_fields=frozenset(google),
+    )
 
 
 def hours_of(value: dict | None) -> Hours | None:
@@ -235,6 +291,7 @@ def listing_of(body: dict, read_at: datetime) -> PlacesListing:
         read_at=read_at,
         business_status=body.get("businessStatus") or None,
         website_uri=body.get("websiteUri") or None,
+        primary_type=body.get("primaryType") or None,
     )
 
 
