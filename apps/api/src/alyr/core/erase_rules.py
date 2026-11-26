@@ -239,6 +239,10 @@ RULES: dict[str, Rule] = {
         "mcp_signals": "a kind, a business's ID and a time, for an alert's counts; kept two days",
         "business_templates": "the kinds of business ALYR's staff made; a shop only reads them",
         "business_type_settings": "ALYR's switches per kind of business",
+        "answer_pool_runs": "a public question asked of an answer tool, shared by "
+        "every business of a trade and city; no business in it",
+        "answer_pool": "the answers to those public questions (third-party text); no "
+        "business in it",
         "platform_admins": "ALYR's own staff",
         "platform_settings": "ALYR's own settings",
         "price_items": "ALYR's price list",

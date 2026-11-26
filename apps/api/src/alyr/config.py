@@ -48,6 +48,11 @@ class Settings(BaseSettings):
     # after choosing providers and reading their terms (ALY-51, ALY-329). The sample engine needs
     # neither and never reaches outside ALYR.
     discovery_ai_live: bool = False
+    # Discovery 2.0 (DECISIONS 6): name the answer tools in the Answers method line ("asked through
+    # the developer interfaces of ..."). OFF: until the lead switches it on after legal review
+    # (ALY-51), a tool is "Answer tool 1", "Answer tool 2". A provider adds its name in
+    # modules/discovery/answers/engines.py NAMES.
+    discovery_answers_name_tools: bool = False
     # First retry delay; it doubles on each further attempt.
     jobs_backoff_seconds: float = 5.0
     # How many jobs one process runs at once (a customer's own jobs still one at a time, in

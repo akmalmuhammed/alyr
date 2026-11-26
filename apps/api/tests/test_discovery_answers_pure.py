@@ -42,10 +42,29 @@ def ask(engine, question, stage=0, **more):
 # ── the questions ───────────────────────────────────────────────────────────────────────
 
 
-def test_what_an_engine_is_sent_has_exactly_two_fields_and_nothing_of_a_shop():
-    assert [f.name for f in dataclasses.fields(questions.EngineRequest)] == ["text", "lang"]
+def test_what_an_engine_is_sent_has_exactly_three_fields_and_nothing_of_a_shop():
+    # Discovery 2.0 (DECISIONS 7): the third field is the asker's place, from closed lists only.
+    assert [f.name for f in dataclasses.fields(questions.EngineRequest)] == [
+        "text", "lang", "location"]
+    assert [f.name for f in dataclasses.fields(questions.Location)] == ["country", "city", "area"]
     assert [f.name for f in dataclasses.fields(questions.PublicQuestion)] == [
         "key", "lang", "text"]
+
+
+def test_a_location_is_built_only_from_the_closed_lists():
+    assert questions.location_of("doha", "west_bay") == questions.Location("QA", "Doha", "West Bay")
+    assert questions.location_of("dubai") == questions.Location("AE", "Dubai", "")
+    assert set(questions.COUNTRY) == set(questions.CITIES)
+    assert set(questions.AREAS) <= set(questions.CITIES)
+    for bad in (("doha", "West Bay"), ("dubai", "west_bay"), ("doha", "my street 5")):
+        with pytest.raises(ValueError):
+            questions.location_of(*bad)
+    with pytest.raises(ValueError):
+        questions.location_of("atlantis")
+    for areas in questions.AREAS.values():
+        for key, (en, ar) in areas.items():
+            assert re.fullmatch(r"[a-z_]{1,40}", key) and not re.search(r"\d", en + ar)
+            assert re.search("[؀-ۿ]", ar) and not re.search("[؀-ۿ]", en)
 
 
 def test_every_trade_and_city_makes_six_built_questions_with_no_digit_name_or_address():
@@ -310,28 +329,15 @@ def presence_pass():
     return [Outcome("listing_missing", uuid.uuid4(), PASS)]
 
 
-def test_fewer_than_four_counted_answers_leave_the_part_unmeasured_and_out_of_the_total():
-    assert scoring.MIN_ANSWERS == 4
-    for tally in (None, scoring.AnswersTally(3, 3), scoring.AnswersTally(0, 0)):
+def test_answers_never_enter_the_score_however_many_were_counted():
+    # Discovery 2.0 (DECISIONS 7, R4 7.2 item 2): the answers are reported beside the score, per
+    # tool and language with a range; they used to be the `ai` part from 4 answers.
+    for tally in (None, scoring.AnswersTally(3, 3), scoring.AnswersTally(0, 0),
+                  scoring.AnswersTally(3, 6), scoring.AnswersTally(40, 40)):
         total, parts = scoring.score(presence_pass(), tally)
         assert parts["ai"] == {"value": None, "measured": False, "weight": 10}
         assert total == 100  # presence alone, its weight renormalised
-
-
-def test_four_or_more_counted_answers_measure_the_part_by_share_named():
-    total, parts = scoring.score(presence_pass(), scoring.AnswersTally(3, 6))
-    assert parts["ai"] == {"value": 50, "measured": True, "weight": 10}
-    # (100 * 40 + 50 * 10) / 50, the weights renormalised among the measured parts
-    assert total == 90
-    assert scoring.score(presence_pass(), scoring.AnswersTally(4, 4))[1]["ai"]["value"] == 100
-    assert scoring.score(presence_pass(), scoring.AnswersTally(0, 4))[1]["ai"]["value"] == 0
-
-
-def test_the_share_rounds_half_up_and_is_exact():
-    assert scoring.score([], scoring.AnswersTally(5, 8))[1]["ai"]["value"] == 63  # 62.5
-    assert scoring.score([], scoring.AnswersTally(1, 6))[1]["ai"]["value"] == 17  # 16.67
-    total, _ = scoring.score([], scoring.AnswersTally(2, 6))
-    assert total == 33  # only the answers part was measured
+    assert scoring.score([], scoring.AnswersTally(5, 8)) == (None, scoring.score([])[1])
 
 
 def test_the_check_off_changes_nothing_in_a_score():
@@ -380,7 +386,8 @@ NETWORK = {"httpx", "requests", "aiohttp", "urllib", "http", "socket", "ssl", "s
            "websockets", "boto3", "anthropic", "openai", "google", "grpc"}
 FILES = PACKAGE + [SRC / "answers_actions.py", SRC / "answer_words.py"]
 ALLOWED_TABLES = {"discovery_answers", "discovery_answer_settings", "discovery_runs",
-                  "discovery_locations", "discovery_connections", "tenants"}
+                  "discovery_locations", "discovery_connections", "tenants",
+                  "answer_pool_runs", "answer_pool"}
 
 
 def imports_of(path: Path) -> set[str]:
@@ -396,7 +403,7 @@ def imports_of(path: Path) -> set[str]:
 
 def test_the_scan_sees_the_package_it_guards():
     assert {"questions.py", "reading.py", "engines.py", "sample_engine.py", "service.py",
-            "__init__.py"} <= {p.name for p in PACKAGE}
+            "__init__.py", "stats.py", "sources.py", "pool.py"} <= {p.name for p in PACKAGE}
 
 
 @pytest.mark.parametrize("path", FILES, ids=lambda p: p.name)

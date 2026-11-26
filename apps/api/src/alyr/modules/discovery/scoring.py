@@ -6,9 +6,10 @@
   counting as much as its rule's `weight`. A check that was `not_measured` is not a check.
 * A part with no measured check has `measured = false` and `value = null`: the screen says "Not
   measured yet", never a number.
-* `ai` is the Answers check (spec 068): the share of counted answers that name the business,
-  each answer one check, measured only from `MIN_ANSWERS` counted answers. With the check off,
-  or too few answers, it stays `measured = false` and out of the total, as in Phase 1.
+* `ai` is never measured here: the Answers check (spec 068) is a sample of what other tools say,
+  not a check ALYR can verify, so since Discovery 2.0 (DECISIONS 7, research R4 7.2 item 2) it is
+  reported beside the score, per tool and per language with its range (`answers/stats.py`), and
+  never inside the total. `answers` is still accepted, and ignored, so a caller need not change.
 * The total is the weighted mean of the measured parts only, their `weight`s renormalised to add
   up to 100 among themselves; rounded half up; `null` when nothing was measured.
 
@@ -82,12 +83,6 @@ def part_values(
             "value": _half_up(100 * passed[part] / counted[part]) if measured else None,
             "measured": measured,
             "weight": PART_WEIGHTS[part],
-        }
-    if answers is not None and answers.measured:
-        parts["ai"] = {
-            "value": _half_up(Fraction(100 * answers.named, answers.counted)),
-            "measured": True,
-            "weight": PART_WEIGHTS["ai"],
         }
     return parts
 
