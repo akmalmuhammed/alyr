@@ -374,3 +374,30 @@ async def put_answers_settings(
         request, staff, "discovery.set_answers", lang=lang,
         **body.model_dump(exclude_unset=True),
     )
+
+
+# ── Discovery 2.0: check packs (which checks fit this kind of business) ──────────────────
+
+
+class PackIn(Strict):
+    family: str = Field(min_length=1, max_length=40)
+    trade: str | None = Field(default=None, max_length=40)
+
+
+@router.get("/packs")
+async def packs(request: Request, lang: str | None = Lang, staff: Staff = Depends(current_staff)):
+    return await _act(request, staff, "discovery.packs", lang=lang)
+
+
+@router.get("/pack")
+async def pack(request: Request, lang: str | None = Lang, staff: Staff = Depends(current_staff)):
+    return await _act(request, staff, "discovery.pack", lang=lang)
+
+
+@router.put("/pack")
+async def set_pack(
+    body: PackIn, request: Request, lang: str | None = Lang, staff: Staff = Depends(current_staff)
+):
+    return await _act(
+        request, staff, "discovery.set_pack", family=body.family, trade=body.trade, lang=lang
+    )
