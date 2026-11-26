@@ -4,17 +4,24 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { approversOf, buildThisWeek, confirmedFor, initialOf, personFor, toneOf } from "./adapter.ts";
+import { parseOverviewPlus } from "./api2.ts";
+import { T } from "./copy.ts";
 import { FIXTURE_NOW, approvedHours, fixture } from "./fixtures.ts";
 
 const f = fixture("en");
 const build = (over = {}) => buildThisWeek({ ...f, now: FIXTURE_NOW, lang: "en", ...over });
 
-test("asks and owner tasks are counted together, in the API's order", () => {
+test("with the loop, only open asks are counted; what only the owner can change is named apart", () => {
   const v = build();
   assert.equal(v.state, "content");
-  assert.equal(v.total, 3);
-  assert.deepEqual(v.asks.map((a) => [a.p.id, a.index, a.of]), [["p-hours", 1, 3], ["p-phone", 2, 3]]);
-  assert.deepEqual(v.owner.map((x) => x.id), ["f-link"]);
+  assert.equal(v.total, 2);
+  assert.deepEqual(v.asks.map((a) => [a.p.id, a.index, a.of]), [["p-hours", 1, 2], ["p-phone", 2, 2]]);
+  assert.deepEqual(v.owner, []);
+  assert.equal(v.ownerOnly, 1, "the WhatsApp link on the website: the owner's to add, under Also noticed");
+  // An older API (no asks block): the owner's tasks stay among the tickets, as before.
+  const old = build({ asks: null });
+  assert.equal(old.total, 3);
+  assert.deepEqual(old.owner.map((x) => x.id), ["f-link"]);
   assert.equal(v.asks[0].where, "google");
   assert.equal(v.asks[0].exact, "Friday 13:00–22:00");
 });
@@ -48,8 +55,8 @@ test("at most the open asks are tickets; the rest are counted as Also noticed", 
   // a seasonal ask counts toward the open ones, among the owner's tasks
   const season = { ...f.overview.up_next[0], id: "f-season", rule_id: "season_due" };
   const w = build({ asks: { ...f.asks, open: [...f.asks.open, { kind: "season", queue: "open", finding: season }] } });
-  assert.deepEqual(w.owner.map((x) => x.id), ["f-season", "f-link"]);
-  assert.equal(w.total, 4);
+  assert.deepEqual(w.owner.map((x) => x.id), ["f-season"]);
+  assert.equal(w.total, 3);
 });
 
 test("with extras each piece lands on its ask", () => {
@@ -105,4 +112,33 @@ test("the latest receipt is the newest approved or sent change; the sample sourc
   assert.ok(v.sample);
   assert.equal(v.asks[0].where, "listing");
   assert.equal(v.asks[0].lead.pre, "Your listing says you’re ");
+});
+
+test("one count drives This week: headline = tab badge = agent bar = every ticket's 'of N'", () => {
+  // The sample's shape: three open asks, more waiting their turn, owner-only findings beside them.
+  const more = [3, 4, 5].map((i) => ({ ...f.waiting[1], id: `p-more-${i}`, finding_id: `f-more-${i}`, queue: "also_noticed", expires_at: null }));
+  const third = { ...f.waiting[1], id: "p-third", finding_id: "f-third" };
+  const owner2 = { ...f.overview.up_next[0], id: "f-claim", rule_id: "listing_unclaimed" };
+  const raw = {
+    ...f.overview, up_next: [f.overview.up_next[0], owner2],
+    checks: f.block,
+    asks: {
+      cap: 3, next_check_at: null, next_change_check_at: null,
+      open_asks: [...f.waiting, third].map((proposal) => ({ kind: "proposal", queue: "open", proposal })),
+      also_noticed: more.map((proposal) => ({ kind: "proposal", queue: "also_noticed", proposal })),
+    },
+  };
+  const plus = parseOverviewPlus(raw);
+  const v = buildThisWeek({ ...f, overview: plus.overview, asks: plus.asks, block: plus.checks, now: FIXTURE_NOW, lang: "en" });
+  const badge = plus.asks.open.length; // DiscoveryV2's tab badge
+  const bar = v.total - 0; // ThisWeek's agent bar before any decision (leftCount)
+  assert.equal(badge, 3);
+  assert.equal(v.total, badge);
+  assert.equal(bar, badge);
+  assert.ok(v.asks.every((a) => a.of === badge));
+  assert.equal(T.en.needs(v.total), "Three things need you this week.");
+  assert.equal(v.alsoNoticed, 3);
+  assert.equal(v.ownerOnly, 2);
+  assert.match(T.en.alsoNoticed(v.alsoNoticed), /^Also noticed:/);
+  assert.match(T.en.ownerOnly(v.ownerOnly), /^Also noticed:/);
 });

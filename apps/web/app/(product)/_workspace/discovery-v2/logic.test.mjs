@@ -190,3 +190,18 @@ test("numbers in the v2 screens are Western digits: nothing is formatted with an
     assert.doesNotMatch(text, /toLocaleString\(\s*\)|toLocaleString\(\s*["']ar|Intl\.\w+Format\(\s*["']ar(?![^"']*nu-latn)/, name);
   }
 });
+
+test("the ticket's sentence follows what was found: nothing there, or something different (every ask kind)", () => {
+  const side = (text, lines = []) => ({ text, lines, removed: false });
+  const lead = (field, before, lang = "en") => { const l = leadFor({ field, before: side(before), after: side("x"), title: "t" }, "website", lang); return `${l.pre}${l.hl}${l.post}`; };
+  assert.equal(lead("whatsapp_link", "none"), "Your website has no WhatsApp link.");
+  assert.equal(lead("whatsapp_link", "https://wa.me/97455550999"), "Your website’s WhatsApp link goes to a different number.");
+  assert.equal(lead("whatsapp_link", "https://wa.me/97455550999", "ar"), "رابط واتساب في موقعك يوصل إلى رقم مختلف.");
+  assert.equal(lead("whatsapp_link", "لا شيء", "ar"), "موقعك بلا رابط واتساب.");
+  assert.equal(lead("phone", "none"), "Your website shows no phone number.");
+  assert.equal(lead("phone", "+974 5555 0110"), "Your website shows a different phone number.");
+  assert.equal(lead("name", "none"), "Your website shows no business name.");
+  assert.equal(lead("name", "Nuqta Car Wash"), "Your website spells your name differently.");
+  assert.equal(lead("category", "none"), "Your website has no main category.");
+  assert.equal(lead("category", "Car repair"), "Your website shows a different main category.");
+});

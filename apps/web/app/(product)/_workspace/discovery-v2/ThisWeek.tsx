@@ -72,7 +72,8 @@ export function ThisWeek({ lang, view, actions, now, initial, tabs }: {
   const currentP = current ? overrides[current.p.id] ?? current.p : null;
   const rest = view.asks.slice(1).filter((a) => !decided.has(a.p.id));
   const owner = view.owner.filter((f) => !decided.has(f.id));
-  const leftCount = view.total - decided.size;
+  /** The one count of the page: open asks not yet decided in this visit (headline, ticket, tab, bar). */
+  const leftCount = Math.max(0, view.total - decided.size);
   const today = dayKeyAt(now);
 
   const showToast = useCallback((data: Omit<ToastState, "id">) => {
@@ -260,13 +261,14 @@ export function ThisWeek({ lang, view, actions, now, initial, tabs }: {
         <WaitingFan lang={lang} asks={rest} owner={owner} startIndex={2} of={view.total} open={fan} onToggle={() => setFan((v) => !v)}
           onApprove={(a) => void approve(a)} onDecline={(a) => void decline(a)} onWhy={openSheet} onSkip={(f) => void skip(f)} busyId={busy?.id ?? null} />
         {view.alsoNoticed > 0 ? <p className="d2-small d2-muted d2-also">{t.alsoNoticed(view.alsoNoticed)}</p> : null}
+        {view.ownerOnly > 0 ? <p className="d2-small d2-muted d2-also"><a className="d2-link" href={actions.hrefs.checks}>{t.ownerOnly(view.ownerOnly)}</a></p> : null}
 
         <ReceiptsList lang={lang} rows={view.receipts.map((r) => (r.kind === "change" && overrides[r.p.id] ? { ...r, p: overrides[r.p.id] } : r))}
           people={view.approvers} tally={view.tally} checkedAt={view.checkedAt} checksHref={actions.hrefs.checks}
           onUndo={(r) => void undo(r.p, r.p.id)} busyId={busy?.id ?? null} />
       </div>
 
-      <AgentBar lang={lang} asks={view.asks.filter((a) => !decided.has(a.p.id)).length} latest={latest} nextCheckAt={view.nextCheckAt} onSearch={search} onAsks={focusAsk}
+      <AgentBar lang={lang} asks={Math.max(0, leftCount)} latest={latest} nextCheckAt={view.nextCheckAt} onSearch={search} onAsks={focusAsk}
         toast={toastShown ? <Toast toast={toastShown} lang={lang} onUndo={toastUndo} onDismiss={() => setToast(null)} /> : null} />
 
       {sheet ? (

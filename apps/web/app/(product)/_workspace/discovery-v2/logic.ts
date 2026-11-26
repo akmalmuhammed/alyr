@@ -55,10 +55,11 @@ export function leadFor(p: Pick<Proposal, "field" | "before" | "after" | "title"
       if (day) return isClosedText(lineOf(p.before, day)) ? t.leadClosed(where, day) : t.leadDayHours(where, day);
       return t.leadHours(where);
     }
-    case "phone": return t.leadPhone(where);
-    case "name": return t.leadName(where);
+    // The sentence follows what was found: nothing there, or something different.
+    case "phone": return empty(p.before.text) ? t.leadNoPhone(where) : t.leadPhone(where);
+    case "name": return empty(p.before.text) ? t.leadNoName(where) : t.leadName(where);
     case "category": return empty(p.before.text) ? t.leadNoCategory(where) : t.leadCategory(where);
-    case "whatsapp_link": return t.leadNoWhatsapp(where);
+    case "whatsapp_link": return empty(p.before.text) ? t.leadNoWhatsapp(where) : t.leadWhatsappOther(where);
     case "review_reply": return t.leadReview;
     default: return { pre: p.title, hl: "", post: "" };
   }

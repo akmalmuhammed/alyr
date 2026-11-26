@@ -76,6 +76,8 @@ export type ThisWeekView = {
   total: number;
   /** Asks that wait their turn behind the open ones (at most three open, DECISIONS #16). */
   alsoNoticed: number;
+  /** Things only the owner can change (no proposal): named under "Also noticed", not counted as asks. */
+  ownerOnly: number;
   receipts: ReceiptRow[];
   approvers: Person[];
   /** The weekly check-up, when it is on. */
@@ -201,7 +203,13 @@ export function buildThisWeek(input: ThisWeekInput): ThisWeekView {
   const asked = new Set([...waiting, ...(asks ? asks.alsoNoticed.flatMap((i) => (i.kind === "proposal" ? [i.proposal] : [])) : [])].map((p) => p.finding_id));
   const ownerOpen = [overview.next, ...overview.up_next]
     .filter((f): f is Finding => !!f && f.kind === "owner" && f.status === "open" && f.proposals_waiting === 0 && !asked.has(f.id));
-  const owner = [...seasons, ...ownerOpen.filter((f) => !seasons.some((s) => s.id === f.id))];
+  const others = ownerOpen.filter((f) => !seasons.some((s) => s.id === f.id));
+  // With the loop's cap (at most three open asks) one count drives the page: the headline, every
+  // ticket's "of N", the tab and the agent bar are the open asks (a seasonal ask among them). What
+  // only the owner can change is not an ask: it is named under "Also noticed". An older API
+  // without the block keeps the owner's tasks among the tickets, as before.
+  const owner = asks ? seasons : [...seasons, ...others];
+  const ownerOnly = asks ? others.length : 0;
   const total = waiting.length + owner.length;
   const views = waiting.map((p, i) => askView(p, i + 1, total, { ...input, sourceKind }));
 
@@ -235,6 +243,7 @@ export function buildThisWeek(input: ThisWeekInput): ThisWeekView {
     owner,
     total,
     alsoNoticed: asks ? asks.alsoNoticed.length : 0,
+    ownerOnly,
     receipts,
     approvers: approversOf(input.team),
     nextCheckAt: asks?.nextCheckAt ?? null,

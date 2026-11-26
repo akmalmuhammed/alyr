@@ -255,6 +255,27 @@ export function buildAnswers(a: AnswersAnswer): AnswersView {
   };
 }
 
+/** An answer tool's text as plain paragraphs: `**…**` becomes a strong part with its markers
+ * removed, and every other character stays text (React escapes it: no markup from an answer is
+ * ever drawn as HTML). The matched name is marked inside either kind of part. */
+export function answerParas(text: string, matched: string): { text: string; strong: boolean; mark: boolean }[][] {
+  return text.split(/\n+/).map((line) => line.trim()).filter(Boolean).map((line) => {
+    const out: { text: string; strong: boolean; mark: boolean }[] = [];
+    line.split(/(\*\*[^*]+\*\*)/g).filter(Boolean).forEach((chunk) => {
+      const strong = /^\*\*[^*]+\*\*$/.test(chunk);
+      const plain = strong ? chunk.slice(2, -2) : chunk.replace(/\*\*/g, "");
+      for (const part of markName(plain, matched)) out.push({ text: part.text, strong, mark: part.mark });
+    });
+    return out;
+  }).filter((para) => para.length);
+}
+
+/** A sentence cut around each percent ("79%", "6 to 79%" keeps its own words), so a screen can
+ * hold every percent left to right. */
+export function percentRuns(text: string): { text: string; pct: boolean }[] {
+  return text.split(/(\d+(?:[.,]\d+)?\s?%)/g).filter(Boolean).map((part) => ({ text: part, pct: /%$/.test(part) }));
+}
+
 /** The answer's text cut into parts around the matched name, so the name can be marked. */
 export function markName(text: string, name: string): { text: string; mark: boolean }[] {
   if (!name) return [{ text, mark: false }];

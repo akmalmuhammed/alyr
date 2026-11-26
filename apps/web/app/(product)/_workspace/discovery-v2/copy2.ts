@@ -162,8 +162,9 @@ export const T2 = {
     // Answers v2 (G #362): per tool and language, a likely range, and the floor of 30
     notEnoughTitle: "Too few answers to say how sure this is",
     notEnoughBody: (most: number) => `A share and a change are named only from 30 answers for one tool in one language. This check-up counted at most ${n(most)}, so each range below is wide and no change is named.`,
-    sureRange: (low: number, high: number) => `Likely between ${n(low)}% and ${n(high)}%`,
-    sureShare: (share: number) => `${n(share)}% of answers`,
+    // A percent is drawn in its own <bdi> by the screen (`Pct`): the words come as parts around it.
+    sureRange: (low: number, high: number) => ({ pre: "Likely between ", a: `${n(low)}%`, mid: " and ", b: `${n(high)}%`, post: "" }),
+    sureShare: (share: number) => ({ pre: "", a: `${n(share)}%`, post: " of answers" }),
     sureAria: (name: string, named: number, total: number, low: number, high: number) => `${name}: named in ${n(named)} of ${n(total)}, likely between ${n(low)}% and ${n(high)}%`,
     groupName: (tool: string, lang: string) => `${tool} · ${lang}`,
     rangeScale: "0% to 100%",
@@ -361,8 +362,8 @@ export const T2 = {
     // Answers v2 (G #362): per tool and language, a likely range, and the floor of 30
     notEnoughTitle: "الإجابات أقل من أن تبيّن مدى ثبات هذا الرقم",
     notEnoughBody: (most: number) => `لا تُذكر نسبة ولا تغيّر إلا من 30 إجابة لأداة واحدة بلغة واحدة. وقد عدّ هذا الفحص ${n(most)} على الأكثر، لذا جاء كل نطاق أدناه واسعاً ولا يُذكر أي تغيّر.`,
-    sureRange: (low: number, high: number) => `على الأرجح بين ${ar(`${n(low)}%`)} و${ar(`${n(high)}%`)}`,
-    sureShare: (share: number) => `${ar(`${n(share)}%`)} من الإجابات`,
+    sureRange: (low: number, high: number) => ({ pre: "على الأرجح بين ", a: `${n(low)}%`, mid: " و", b: `${n(high)}%`, post: "" }),
+    sureShare: (share: number) => ({ pre: "", a: `${n(share)}%`, post: " من الإجابات" }),
     sureAria: (name: string, named: number, total: number, low: number, high: number) => `${name}: ذُكر نشاطك في ${n(named)} من ${n(total)}، على الأرجح بين ${ar(`${n(low)}%`)} و${ar(`${n(high)}%`)}`,
     groupName: (tool: string, lang: string) => `${tool} · ${lang}`,
     rangeScale: "من 0% إلى 100%",

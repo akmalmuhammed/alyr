@@ -15,7 +15,10 @@ import { T2 } from "./copy2";
 import type { D2Lang } from "./copy";
 import { ScreenFrame, SourceTile, StatePill } from "./frame";
 import { Ltr, dayTime } from "./parts";
-import { markName, type AnswersView, type LangTally } from "./screens";
+import { answerParas, percentRuns, type AnswersView, type LangTally } from "./screens";
+
+/** The API's sentence with each percent held left to right in its own <bdi> (Arabic keeps «79%» in order). */
+const withPercents = (text: string) => percentRuns(text).map((part, i) => (part.pct ? <Ltr key={i}>{part.text}</Ltr> : <span key={i}>{part.text}</span>));
 
 export function Answers({ lang, view, api, tabs, foot }: { lang: D2Lang; view: AnswersView; api: AnswersAnswer; tabs: ReactNode; foot?: ReactNode }) {
   const t = T2[lang];
@@ -93,10 +96,13 @@ export function Answers({ lang, view, api, tabs, foot }: { lang: D2Lang; view: A
               <span>{t.quoteHead(q.said_by || q.engine_label, langName(q.lang), dayTime(view.askedAt, lang))}</span>
               <span className="d2s-q-tag">{t.thirdParty}</span>
             </div>
-            <p className="d2s-q-asked" lang={lang} dir={lang === "ar" ? "rtl" : "ltr"}>{t.questionAsked} <span>{q.question}</span></p>
+            <p className="d2s-q-asked" lang={lang} dir={lang === "ar" ? "rtl" : "ltr"}>{t.questionAsked} <bdi>{q.question}</bdi></p>
             <div className="d2s-q-text">
-              {q.text.split(/\n+/).filter(Boolean).map((para, i) => (
-                <p key={i}>{markName(para, q.matched).map((part, j) => (part.mark ? <mark key={j}>{part.text}</mark> : <span key={j}>{part.text}</span>))}</p>
+              {answerParas(q.text, q.matched).map((para, i) => (
+                <p key={i}>{para.map((part, j) => {
+                  const inner = part.mark ? <mark>{part.text}</mark> : part.text;
+                  return part.strong ? <strong key={j}>{inner}</strong> : <span key={j}>{inner}</span>;
+                })}</p>
               ))}
             </div>
             <div className="d2s-q-foot" lang={lang} dir={lang === "ar" ? "rtl" : "ltr"}><span>{api.quoteNote || t.quoteFoot}</span></div>
@@ -149,10 +155,13 @@ function RangeRow({ lang, g, name }: { lang: D2Lang; g: AnswerGroup; name: strin
             <span className="d2s-rg-band" style={{ insetInlineStart: `${g.range.low}%`, inlineSize: `${Math.max(0, g.range.high - g.range.low)}%` }} />
             <span className="d2s-rg-pt" style={{ insetInlineStart: `${now}%` }} />
           </div>
-          <p className="d2s-rg-t"><span className="d2-tnum">{t.sureRange(g.range.low, g.range.high)}</span>{g.share !== null ? <> · <span className="d2-tnum">{t.sureShare(g.share)}</span></> : null}</p>
+          <p className="d2s-rg-t">
+            <span className="d2-tnum">{(() => { const r = t.sureRange(g.range.low, g.range.high); return <>{r.pre}<Ltr>{r.a}</Ltr>{r.mid}<Ltr>{r.b}</Ltr>{r.post}</>; })()}</span>
+            {g.share !== null ? <> · <span className="d2-tnum">{(() => { const s = t.sureShare(g.share); return <>{s.pre}<Ltr>{s.a}</Ltr>{s.post}</>; })()}</span></> : null}
+          </p>
         </>
       ) : null}
-      {g.change.reason ? <p className="d2s-rg-r">{g.change.reason}</p> : null}
+      {g.change.reason ? <p className="d2s-rg-r">{withPercents(g.change.reason)}</p> : null}
     </li>
   );
 }

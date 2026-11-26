@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { parseAnswers, parseChecksBlock, parsePackChoice, parsePacks } from "./api2.ts";
 import { BLOCK, answersFixture, checksFixture, findingsFixture, packsFixture, proofFixture, setupFixture } from "./fixtures2.ts";
-import { bidiValue, buildAnswers, buildChecks, buildProof, checksFor, familyRules, filterReceipts, filterRows, hoursLines, knownFacts, markName, receiptOf } from "./screens.ts";
+import { answerParas, percentRuns, bidiValue, buildAnswers, buildChecks, buildProof, checksFor, familyRules, filterReceipts, filterRows, hoursLines, knownFacts, markName, receiptOf } from "./screens.ts";
 
 const titles = { core: "Core", own: "Your own data" };
 const checks = (over = {}) => buildChecks({ checks: checksFixture("en"), findings: findingsFixture("en"), packs: packsFixture("en"), block: BLOCK, waiting: [], titles, ...over });
@@ -219,4 +219,18 @@ test("bidiValue holds Arabic values' times and numbers left to right, and leaves
   assert.deepEqual(bidiValue("Fri 13:00–22:00"), { rtl: false, text: "Fri 13:00–22:00" });
   assert.equal(bidiValue("الجمعة 13:00–22:00").text, "الجمعة \u206613:00\u2060–\u206022:00\u2069");
   assert.equal(bidiValue("رقم +974 5555 0101").text, "رقم \u2066+974 5555 0101\u2069");
+});
+test("an answer's text is plain text: **…** becomes strong, nothing else is markup, the name is marked", () => {
+  const paras = answerParas("Options:\n1. **Basma Car Spa** - quick\n4. **Nuqta Car Care** - open every day\n<b>x</b> and a stray ** here", "Nuqta Car Care");
+  assert.equal(paras.length, 4);
+  assert.deepEqual(paras[1], [{ text: "1. ", strong: false, mark: false }, { text: "Basma Car Spa", strong: true, mark: false }, { text: " - quick", strong: false, mark: false }]);
+  assert.deepEqual(paras[2][1], { text: "Nuqta Car Care", strong: true, mark: true });
+  assert.ok(paras.flat().every((p) => !p.text.includes("**")), "no markers left");
+  assert.equal(paras[3].map((p) => p.text).join(""), "<b>x</b> and a stray  here", "tags stay text (React escapes them)");
+});
+
+test("percents are cut out so a screen holds each one left to right", () => {
+  assert.deepEqual(percentRuns("لا تغيير (من 6 إلى 79% قبل)").filter((p) => p.pct).map((p) => p.text), ["79%"]);
+  assert.deepEqual(percentRuns("from 6% to 79 %").filter((p) => p.pct).map((p) => p.text), ["6%", "79 %"]);
+  assert.equal(percentRuns("no percent").length, 1);
 });
