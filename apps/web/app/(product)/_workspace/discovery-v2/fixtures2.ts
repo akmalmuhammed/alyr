@@ -60,12 +60,12 @@ export function checksFixture(lang: D2Lang): ChecksAnswer {
   };
 }
 
-const ev = (label: string, value: string, where: string, at = "2026-11-12T06:40:00Z"): Evidence => ({ label, value, where, seen_at: iso(at), day_only: false });
+const ev = (label: string, value: string, where: string, at = "2026-11-12T06:40:00Z"): Evidence => ({ label, value, where, seen_at: iso(at), day_only: false, sentence: "" });
 
 function finding(over: Partial<Finding> & Pick<Finding, "id" | "title" | "rule_id">): Finding {
   return {
     kind: "agent", severity: "high", status: "open", why: "", what_happens: "", what_is_needed: "", evidence: [], location: null,
-    first_seen_at: iso("2026-11-12T06:40:00Z"), last_seen_at: iso("2026-11-12T06:40:00Z"), steps: [], proposals: [], needs_fact: null, can_propose: false, proposals_waiting: 0,
+    first_seen_at: iso("2026-11-12T06:40:00Z"), last_seen_at: iso("2026-11-12T06:40:00Z"), steps: [], proposals: [], needs_fact: null, can_propose: false, proposals_waiting: 0, website_steps: [],
     ...over,
   };
 }
@@ -101,7 +101,7 @@ function proposal(over: Partial<Proposal> & Pick<Proposal, "id" | "field" | "fie
     proposed_at: null, expires_at: null, decided: null, undone: null, applied_at: null, undo_until: null, failure: null, verification: null, sample: false,
     can: { approve: false, decline: false, undo: false }, already: false,
     queue: null, opened_at: null, approved_as: null, edited_from: null, life: null, life_history: [], receipt: null,
-    undo_window_days: 7, next_check_at: null, verified_at: null, edit: null, also_fixes: null, expire_reason: "",
+    undo_window_days: 7, next_check_at: null, verified_at: null, edit: null, also_fixes: null, expire_reason: "", closed_at: null,
     ...over,
   };
 }
@@ -120,7 +120,7 @@ export function proofFixture(lang: D2Lang): { proposals: Proposal[]; done: Findi
         approved_as: "edited", life: { state: "live", at: iso("2026-11-10T08:10:00Z"), text: "" },
         receipt: { at: iso("2026-11-09T12:02:00Z"), edited: true, approved_text: "", undo: { days: 7, until: iso("2026-11-16T12:02:00Z") }, next_check_at: null, verified: { at: iso("2026-11-10T08:10:00Z"), state: "live", text: "" } } }),
       proposal({ id: "p-phone", field: "phone", field_label: pick(lang, "Phone number", "رقم الهاتف"), status: "expired", before: removed(lang), after: plain("+974 5555 0101"),
-        proposed_at: iso("2026-10-15T06:00:00Z"), expires_at: iso("2026-10-29T06:00:00Z") }),
+        proposed_at: iso("2026-10-15T06:00:00Z"), expires_at: iso("2026-10-29T06:00:00Z"), expire_reason: "time", closed_at: iso("2026-10-29T06:10:00Z") }),
       proposal({ id: "p-sat", field: "hours", field_label: pick(lang, "Saturday hours", "ساعات السبت"), status: "undone", before: hours("07:00–22:00"), after: hours("07:00–23:00"),
         proposed_at: iso("2026-10-27T06:00:00Z"), decided: { by: hana, channel: "portal", at: iso("2026-10-27T16:40:00Z"), reason: "" }, applied_at: iso("2026-10-27T16:41:00Z"),
         undone: { by: hana, channel: "portal", at: iso("2026-10-28T07:05:00Z"), reason: "" } }),

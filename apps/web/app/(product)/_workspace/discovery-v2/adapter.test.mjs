@@ -17,7 +17,8 @@ test("with the loop, only open asks are counted; what only the owner can change 
   assert.equal(v.total, 2);
   assert.deepEqual(v.asks.map((a) => [a.p.id, a.index, a.of]), [["p-hours", 1, 2], ["p-phone", 2, 2]]);
   assert.deepEqual(v.owner, []);
-  assert.equal(v.ownerOnly, 1, "the WhatsApp link on the website: the owner's to add, under Also noticed");
+  assert.equal(v.ownerOnly, 1, "the WhatsApp link on the website: the owner's to add, named apart");
+  assert.deepEqual(v.onlyYou.map((o) => o.f.id), ["f-link"]);
   // An older API (no asks block): the owner's tasks stay among the tickets, as before.
   const old = build({ asks: null });
   assert.equal(old.total, 3);
@@ -71,12 +72,17 @@ test("an avatar's letter is never a dot or a mark, in either language", () => {
   assert.equal(initialOf("هناء"), "ه");
   assert.equal(initialOf("‏عمر"), "ع");
   assert.equal(initialOf("+974 5555 0101"), "9");
+  // one letter, so a stack of avatars never clips a second one
+  assert.equal(initialOf("Fatima Al-Noor"), "F");
+  assert.equal(initialOf("Amira Saleh"), "A");
   assert.equal(personFor("عمر", []).initial, "ع");
   assert.equal(personFor("Omar", approversOf([{ id: "2", name: "Omar", role: "admin" }])).tone, "h");
 });
 
 test("what the owner confirmed is read from the facts, for the changed day", () => {
-  assert.deepEqual(confirmedFor(f.waiting[0], f.facts, "en"), { text: "13:00–22:00", by: "Hana", at: f.facts[0].confirmed_at });
+  assert.deepEqual(confirmedFor(f.waiting[0], f.facts, "en"), { text: "13:00–22:00", by: "Hana", at: f.facts[0].confirmed_at, sample: false });
+  // a fact only the sample wrote is never "You confirmed"
+  assert.equal(confirmedFor(f.waiting[0], [{ ...f.facts[0], source: "sample", confirmed_by_name: "" }], "en").sample, true);
   assert.equal(confirmedFor(f.waiting[1], f.facts, "en"), null);
   assert.equal(confirmedFor(f.waiting[0], [{ ...f.facts[0], default: true }], "en"), null);
   assert.equal(confirmedFor(f.waiting[0], [{ ...f.facts[0], location_id: "elsewhere" }], "en"), null);
@@ -139,6 +145,17 @@ test("one count drives This week: headline = tab badge = agent bar = every ticke
   assert.equal(T.en.needs(v.total), "Three things need you this week.");
   assert.equal(v.alsoNoticed, 3);
   assert.equal(v.ownerOnly, 2);
-  assert.match(T.en.alsoNoticed(v.alsoNoticed), /^Also noticed:/);
-  assert.match(T.en.ownerOnly(v.ownerOnly), /^Also noticed:/);
+  // "Also noticed" is a banned phrase (honesty scan): plain counts instead.
+  assert.equal(T.en.waitTurn(v.alsoNoticed), "3 more changes wait their turn. ALYR asks one when one of these closes.");
+  assert.equal(T.en.onlyYou(v.ownerOnly), "2 more things only you can change");
+  for (const lang of ["en", "ar"]) for (const k of ["waitTurn", "onlyYou"]) assert.doesNotMatch(T[lang][k](2), /noticed|لوحظ/i);
+});
+
+test("a website difference is the owner's step, with the exact text, even when the listing is asked", () => {
+  const step = { field: "phone", field_label: "Phone number", where: "the website", before: { text: "+974 5555 0129", lines: [], removed: false }, after: { text: "+974 5555 0112", lines: [], removed: false }, location: null };
+  const asked = { ...f.overview.up_next[0], id: "f-phone-both", kind: "agent", rule_id: "phone_conflict", proposals_waiting: 1, website_steps: [step] };
+  const v = build({ open: [asked, ...f.overview.up_next] });
+  const mine = v.onlyYou.find((o) => o.f.id === "f-phone-both");
+  assert.ok(mine, "drawn among the owner's steps");
+  assert.equal(mine.steps[0].after.text, "+974 5555 0112");
 });

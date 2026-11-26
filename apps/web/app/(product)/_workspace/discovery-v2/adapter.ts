@@ -8,7 +8,7 @@
 // Pure: no React, no fetch, so `adapter.test.mjs` runs it under `node --test`.
 
 import { initials } from "../../../_ui/format.ts";
-import type { AlsoFixes, ChecksAnswer, DayKey, Fact, Finding, Overview, Proposal, TeamMember } from "../discoveryApi.ts";
+import type { AlsoFixes, ChecksAnswer, DayKey, Fact, Finding, Overview, Proposal, TeamMember, WebsiteStep } from "../discoveryApi.ts";
 import type { AsksBlock, ChecksBlock } from "./api2.ts";
 import type { D2Lang, WhereKey } from "./copy.ts";
 import { beforeAfter, changedDays, exactText, leadFor, oneDay, sinceLastWeek, spanText, tally, whereOf, type LeadParts, type Tally } from "./logic.ts";
@@ -35,7 +35,12 @@ export type Extras = {
 
 export type Tone = "h" | "o" | "n";
 export type Person = { name: string; initial: string; tone: Tone; role: string };
-export type Confirmed = { text: string; by: string; at: string | null };
+/** What was confirmed for a field. `sample`: only the fictional sample business wrote it (no person
+ * confirmed it), so the screen never says "You confirmed". */
+export type Confirmed = { text: string; by: string; at: string | null; sample: boolean };
+/** Something only the owner can change (ALYR writes nothing to a website): the finding, and for a
+ * website difference the exact text to put there. */
+export type OnlyYou = { f: Finding; steps: WebsiteStep[] };
 
 export type AskView = {
   p: Proposal;
@@ -76,8 +81,9 @@ export type ThisWeekView = {
   total: number;
   /** Asks that wait their turn behind the open ones (at most three open, DECISIONS #16). */
   alsoNoticed: number;
-  /** Things only the owner can change (no proposal): named under "Also noticed", not counted as asks. */
+  /** Things only the owner can change: named apart, not counted as asks. */
   ownerOnly: number;
+  onlyYou: OnlyYou[];
   receipts: ReceiptRow[];
   approvers: Person[];
   /** The weekly check-up, when it is on. */
@@ -97,6 +103,9 @@ export type ThisWeekInput = {
   team: readonly TeamMember[] | null;
   /** The overview's `asks` block (the loop): at most three open asks, the rest "Also noticed". */
   asks?: AsksBlock | null;
+  /** Every open finding (`GET /findings?status=open`), for what only the owner can change; the
+   * overview's first five when absent. */
+  open?: readonly Finding[];
   /** The overview's `checks` block: "N of M" counted as the packs count it, and the check-up before. */
   block?: ChecksBlock | null;
   extras?: Extras;
@@ -109,7 +118,8 @@ const TONES: Tone[] = ["h", "o", "n"];
 /** The letter on a person's avatar: never «·» and never a mark (an Arabic name gives its first
  * letter past the article; a name with no letter at all gives its first character). */
 export function initialOf(name: string): string {
-  const first = initials(name, "");
+  // One letter: two letters do not fit an avatar in a stack (QA: «FA» was clipped).
+  const first = Array.from(initials(name, ""))[0] ?? "";
   if (/\p{L}/u.test(first)) return first;
   const letter = Array.from(name).find((ch) => /[\p{L}\p{N}]/u.test(ch));
   return (letter ?? "").toLocaleUpperCase("en");
@@ -152,7 +162,7 @@ export function confirmedFor(p: Proposal, facts: readonly Fact[], lang: D2Lang):
     const v = Object.values(fact.value).find((x) => typeof x === "string");
     text = typeof v === "string" ? v : p.after.text;
   }
-  return { text, by: fact.confirmed_by_name, at: fact.confirmed_at };
+  return { text, by: fact.confirmed_by_name, at: fact.confirmed_at, sample: fact.source === "sample" };
 }
 
 export function askView(p: Proposal, index: number, of: number, input: Pick<ThisWeekInput, "facts" | "extras" | "lang"> & { sourceKind: string }): AskView {
@@ -209,7 +219,15 @@ export function buildThisWeek(input: ThisWeekInput): ThisWeekView {
   // only the owner can change is not an ask: it is named under "Also noticed". An older API
   // without the block keeps the owner's tasks among the tickets, as before.
   const owner = asks ? seasons : [...seasons, ...others];
-  const ownerOnly = asks ? others.length : 0;
+  // What only the owner can change: an owner's task nobody is asked about, and every website
+  // difference (ALYR never writes to a website), even where the listing side is asked as a change.
+  const pool = input.open ?? [overview.next, ...overview.up_next].filter((f): f is Finding => !!f);
+  const onlyYou: OnlyYou[] = asks
+    ? pool.filter((f) => f.status === "open" && !seasons.some((s) => s.id === f.id)
+        && (f.website_steps.length > 0 || (f.kind === "owner" && f.proposals_waiting === 0 && !asked.has(f.id))))
+      .map((f) => ({ f, steps: f.website_steps }))
+    : [];
+  const ownerOnly = onlyYou.length;
   const total = waiting.length + owner.length;
   const views = waiting.map((p, i) => askView(p, i + 1, total, { ...input, sourceKind }));
 
@@ -244,6 +262,7 @@ export function buildThisWeek(input: ThisWeekInput): ThisWeekView {
     total,
     alsoNoticed: asks ? asks.alsoNoticed.length : 0,
     ownerOnly,
+    onlyYou,
     receipts,
     approvers: approversOf(input.team),
     nextCheckAt: asks?.nextCheckAt ?? null,

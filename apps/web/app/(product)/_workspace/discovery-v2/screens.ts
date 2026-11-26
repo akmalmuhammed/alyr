@@ -140,21 +140,35 @@ export const filterRows = (rows: readonly CheckRowView[], filter: CheckFilter): 
 
 // ── Proof ──────────────────────────────────────────────
 
-export type ReceiptKind = "approved" | "you" | "undone" | "expired" | "declined";
+export type ReceiptKind = "approved" | "you" | "fixed" | "changed" | "undone" | "expired" | "declined";
 export type ReceiptFilter = "all" | ReceiptKind;
-export type ReceiptStatus = "matches" | "sent" | "notMatching" | "approved" | "failed" | "undone" | "expired" | "declined" | "youMatches" | "youPending";
+export type ReceiptStatus = "matches" | "sent" | "notMatching" | "approved" | "failed" | "undone" | "expired" | "declined" | "fixed" | "changed" | "youMatches" | "youPending";
 
-/** A receipt of a proposal (approved, undone, expired or not now). */
+/** A receipt of a proposal (approved, undone, expired, fixed, changed or not now). */
 export type ChangeReceipt = { kind: Exclude<ReceiptKind, "you">; id: string; p: Proposal; status: ReceiptStatus; when: string | null };
 export type Receipt = ChangeReceipt | { kind: "you"; id: string; f: Finding; status: ReceiptStatus; when: string | null };
 
-/** Where a proposal is on the receipts: approved (with its life), undone, expired or not now. */
+/** Where a proposal is on the receipts. An ask that closed without a decision is dated when it
+ * closed (`closed_at`), never by its expiry date, and says why it closed: only one whose 14 days ran
+ * out is "Expired"; one the next check found fixed is "fixed"; one a person set aside reads as not
+ * now; one approved with a changed value is "changed" (its new approval carries the receipt, see
+ * `buildProof`). One a newer check replaced, or the owner marked done (that finding has its own
+ * receipt), is not drawn. */
 export function receiptOf(p: Proposal): Receipt | null {
   const stage = stageOf(p);
   if (stage === "waiting") return null;
-  const when = p.undone?.at ?? p.applied_at ?? p.decided?.at ?? (stage === "expired" ? p.expires_at : null) ?? p.proposed_at;
+  if (stage === "expired") {
+    const when = p.closed_at ?? p.proposed_at;
+    switch (p.expire_reason) {
+      case "superseded": case "finding_done": return null;
+      case "finding_gone": return { kind: "fixed", id: p.id, p, status: "fixed", when };
+      case "finding_skipped": return { kind: "declined", id: p.id, p, status: "declined", when };
+      case "edited": return { kind: "changed", id: p.id, p, status: "changed", when };
+      default: return { kind: "expired", id: p.id, p, status: "expired", when };
+    }
+  }
+  const when = p.undone?.at ?? p.applied_at ?? p.decided?.at ?? p.proposed_at;
   if (stage === "undone") return { kind: "undone", id: p.id, p, status: "undone", when };
-  if (stage === "expired") return { kind: "expired", id: p.id, p, status: "expired", when };
   if (stage === "declined") return { kind: "declined", id: p.id, p, status: "declined", when };
   const status: ReceiptStatus = stage === "live" ? "matches" : stage === "notLive" ? "notMatching" : stage === "sent" ? "sent" : stage === "failed" ? "failed" : "approved";
   return { kind: "approved", id: p.id, p, status, when };
@@ -175,12 +189,15 @@ export type ProofView = {
 const ms = (iso: string | null) => (iso ? Date.parse(iso) || 0 : 0);
 
 export function buildProof(proposals: readonly Proposal[], doneFindings: readonly Finding[]): ProofView {
-  const fromProposals = proposals.map(receiptOf).filter((r): r is Receipt => r !== null);
+  // "Change it" closes the ask shown and approves a new one with the changed value: one receipt.
+  const replaced = new Set(proposals.map((p) => p.edited_from).filter((id): id is string => !!id));
+  const fromProposals = proposals.filter((p) => !replaced.has(p.id)).map(receiptOf).filter((r): r is Receipt => r !== null);
   const yours: Receipt[] = doneFindings
-    .filter((f) => f.kind === "owner" && (f.status === "owner_done" || f.status === "verified"))
+    // Done by the owner: marked done (a website step is one), or an owner's task the check then saw.
+    .filter((f) => f.status === "owner_done" || (f.status === "verified" && f.kind === "owner"))
     .map((f) => ({ kind: "you", id: f.id, f, status: f.status === "verified" ? "youMatches" : "youPending", when: f.last_seen_at }));
   const receipts = [...fromProposals, ...yours].sort((a, b) => ms(b.when) - ms(a.when));
-  const counts: Record<ReceiptFilter, number> = { all: receipts.length, approved: 0, you: 0, undone: 0, expired: 0, declined: 0 };
+  const counts: Record<ReceiptFilter, number> = { all: receipts.length, approved: 0, you: 0, fixed: 0, changed: 0, undone: 0, expired: 0, declined: 0 };
   for (const r of receipts) counts[r.kind] += 1;
   const deciders: string[] = [];
   for (const r of [...receipts].reverse()) {
@@ -190,7 +207,7 @@ export function buildProof(proposals: readonly Proposal[], doneFindings: readonl
   const oldest = receipts.length ? receipts[receipts.length - 1].when : null;
   return {
     receipts, counts, since: oldest,
-    matches: receipts.filter((r) => r.status === "matches" || r.status === "youMatches").length,
+    matches: receipts.filter((r) => r.status === "matches" || r.status === "youMatches" || r.status === "fixed").length,
     deciders, byYou: counts.you > 0,
   };
 }

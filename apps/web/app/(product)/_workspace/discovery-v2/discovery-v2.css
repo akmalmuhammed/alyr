@@ -11,7 +11,9 @@
   font-weight: var(--d2-wt-body);
   -webkit-font-smoothing: antialiased;
   background: var(--d2-canvas);
-  min-block-size: 100%;
+  /* The page fills the window under the shell's top bar, so ALYR's bar sits at the foot of the
+     window on a short page too, never in the middle of it. */
+  min-block-size: max(100%, calc(100dvh - var(--d2-shell-top)));
   display: flex;
   flex-direction: column;
 }
@@ -311,6 +313,9 @@
 .d2-chip-from.d2-chip-removed { text-decoration: none; color: var(--d2-ink-2); }
 .d2-chip-from { background: transparent; box-shadow: inset 0 0 0 var(--d2-rule) var(--d2-hair-strong); color: var(--d2-ink-2); text-decoration: line-through; text-decoration-color: var(--d2-ink-3); }
 .d2-chip-to { background: var(--d2-tint); font-weight: var(--d2-wt-strong); }
+/* A long value (a review reply, a week of hours) wraps inside its chip instead of leaving the card. */
+.d2-pair { max-inline-size: 100%; }
+.d2-pair .d2-chip { max-inline-size: 100%; white-space: normal; overflow-wrap: anywhere; block-size: auto; min-block-size: var(--d2-chip); padding-block: var(--d2-s1); }
 .d2-who { margin-block-start: var(--d2-s2h); display: flex; flex-wrap: wrap; gap: var(--d2-s1h) var(--d2-s3); align-items: center; font-size: var(--d2-fs-body-sm); line-height: var(--d2-lh-body-sm); color: var(--d2-ink-2); }
 .d2-actor { display: inline-flex; align-items: center; gap: var(--d2-s2); }
 .d2-act { display: flex; flex-direction: column; align-items: flex-end; gap: var(--d2-s1h); text-align: end; }
@@ -325,6 +330,11 @@
 /* ---------- The agent bar and the toast lane: they float at the foot of the page ---------- */
 .d2-foot { position: sticky; inset-block-end: var(--d2-s5); z-index: 40; display: flex; flex-direction: column; align-items: center; gap: var(--d2-s4); padding-inline: var(--d2-s9); pointer-events: none; margin-block-start: var(--d2-s8); }
 .d2-toast-lane { inline-size: min(100%, var(--d2-bar-width)); display: flex; justify-content: flex-end; }
+/* A toast takes the bar's middle while it shows: it covers no text on the page. */
+.d2-bar-toast { flex: 1; min-inline-size: 0; display: flex; align-items: center; }
+.d2-bar-toast .d2-toast { inline-size: 100%; background: transparent; box-shadow: none; padding-block: 0; padding-inline: var(--d2-s3) var(--d2-s1); border-radius: var(--d2-r-key); }
+.d2-bar-toast .d2-toast .d2-tx { min-inline-size: 0; display: flex; align-items: baseline; gap: var(--d2-s2); white-space: nowrap; overflow: hidden; }
+.d2-bar-toast .d2-toast .d2-tx small { overflow: hidden; text-overflow: clip; }
 .d2-agentbar {
   pointer-events: auto; inline-size: min(100%, var(--d2-bar-width)); block-size: var(--d2-bar); display: flex; align-items: center; gap: var(--d2-s1);
   padding-inline: var(--d2-s2h) var(--d2-s2); color: var(--d2-chalk); background: var(--d2-glass);
@@ -474,3 +484,16 @@ button.d2-seg:hover { background: var(--d2-on-carbon-hover); }
 
 /* The dev preview has no shell: the page is the canvas. */
 .d2-preview .d2 { min-block-size: 100dvh; }
+
+/* What only the owner can change (QA #4, #9): ALYR writes nothing to a website, so each website
+   difference is a step with the exact text to put there. */
+.d2-onlyyou { margin-block-start: var(--d2-s10); }
+.d2-onlyyou-sub { margin-block-start: var(--d2-s2); max-inline-size: var(--d2-maxch-sub); }
+.d2-step { margin-block-start: var(--d2-s2); display: grid; gap: var(--d2-s2); }
+.d2-step-k { display: inline-flex; align-items: center; gap: var(--d2-s1h); font-size: var(--d2-fs-small); color: var(--d2-ink-2); }
+.d2-copyrow { display: flex; align-items: center; flex-wrap: wrap; gap: var(--d2-s2); min-inline-size: 0; }
+.d2-copy-lab { font-size: var(--d2-fs-small); color: var(--d2-ink-2); }
+.d2-copytext { font: inherit; font-weight: var(--d2-wt-strong); font-variant-numeric: tabular-nums; padding: var(--d2-s1) var(--d2-s3); border-radius: var(--d2-r-tiny); background: var(--d2-tint); overflow-wrap: anywhere; max-inline-size: 100%; }
+.d2-nosource { display: flex; align-items: center; justify-content: space-between; gap: var(--d2-s5); }
+.d2-nosource b { color: var(--d2-ink); }
+.d2-t-receipt span { text-wrap: pretty; }

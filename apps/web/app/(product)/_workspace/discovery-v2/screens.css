@@ -209,7 +209,8 @@
 .d2s-dm i { inline-size: var(--d2x-dot-sm); block-size: var(--d2x-dot-sm); border-radius: 50%; background: var(--d2-surface); box-shadow: inset 0 0 0 var(--d2-rule-3) var(--d2-hair-strong); }
 .d2s-dmeter b { margin-inline-start: auto; font-weight: var(--d2-wt-strong); }
 .d2s-srcs { margin-block-start: var(--d2-s4); padding: var(--d2-s1) var(--d2-s6); }
-.d2s-srcs li { display: grid; grid-template-columns: var(--d2x-dot) minmax(0, 1fr) var(--d2x-srcs-cites) var(--d2x-srcs-state); gap: var(--d2-s4); align-items: center; padding-block: var(--d2-s4); }
+.d2s-srcs li { display: grid; grid-template-columns: var(--d2x-dot) minmax(0, 1fr) var(--d2x-srcs-cites) minmax(var(--d2x-srcs-state), max-content); gap: var(--d2-s4); align-items: center; padding-block: var(--d2-s4); }
+.d2s-srcs li > .d2-pill, .d2s-srcs li > :last-child { justify-self: end; max-inline-size: 100%; }
 .d2s-srcs li + li { box-shadow: 0 calc(-1 * var(--d2-rule)) 0 var(--d2-hair); }
 .d2s-srcs b { display: block; font-weight: var(--d2-wt-strong); }
 .d2s-srcs small { display: block; font-size: var(--d2-fs-small); color: var(--d2-ink-2); }

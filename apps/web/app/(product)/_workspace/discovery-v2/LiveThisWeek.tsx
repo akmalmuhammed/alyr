@@ -21,16 +21,21 @@ type Load = { kind: "loading" } | { kind: "error"; message: string } | { kind: "
 const classic = (view: Parameters<typeof viewHref>[0]) => `${viewHref(view)}${viewHref(view).includes("?") ? "&" : "?"}ui=1`;
 
 /** `tabs`: Discovery v2's tabs (U2), drawn above the brief; `checksHref`: the v2 Checks tab. */
-export function LiveThisWeek({ lang, onSearch, tabs, checksHref, proofHref }: { lang: D2Lang; onSearch?: () => void; tabs?: ReactNode; checksHref?: string; proofHref?: string }) {
+export function LiveThisWeek({ lang, onSearch, tabs, checksHref, proofHref, setupHref, onCount }: {
+  lang: D2Lang; onSearch?: () => void; tabs?: ReactNode; checksHref?: string; proofHref?: string; setupHref?: string;
+  /** The open asks left (the tab's count), each time it changes. */
+  onCount?: (count: number) => void;
+}) {
   const [load, setLoad] = useState<Load>({ kind: "loading" });
 
   const read = useCallback(async () => {
     try {
-      const [plus, recent, checks, team] = await Promise.all([
+      const [plus, recent, checks, team, open] = await Promise.all([
         discovery2.overview(lang),
         discovery.proposals(lang, { status: "done" }),
         discovery.checks(lang).catch(() => null),
         discovery.team().catch(() => null),
+        discovery.findings(lang, { status: "open" }).then((a) => a.items).catch(() => undefined),
       ]);
       // An API without the loop's `asks` block: every waiting proposal, as before.
       const waiting = plus.asks ? [] : (await discovery.proposals(lang, { status: "proposed" })).items;
@@ -39,7 +44,7 @@ export function LiveThisWeek({ lang, onSearch, tabs, checksHref, proofHref }: { 
         : waiting.find((p) => p.status === "proposed");
       const facts = first?.location ? await discovery.facts(lang, first.location.id).catch(() => []) : [];
       const now = Date.now();
-      setLoad({ kind: "ready", now, view: buildThisWeek({ overview: plus.overview, asks: plus.asks, block: plus.checks, waiting, recent: recent.items, checks, facts, team, now, lang }) });
+      setLoad({ kind: "ready", now, view: buildThisWeek({ overview: plus.overview, asks: plus.asks, block: plus.checks, waiting, recent: recent.items, checks, facts, team, open, now, lang }) });
     } catch (error) {
       setLoad({ kind: "error", message: sayError(error, lang) });
     }
@@ -60,10 +65,13 @@ export function LiveThisWeek({ lang, onSearch, tabs, checksHref, proofHref }: { 
     undo: (p) => discovery.undo(lang, p.id),
     read: (p) => discovery.proposal(lang, p.id),
     skip: async (f) => { await discovery.setStatus(lang, f.id, "skipped"); },
+    markDone: async (f) => { await discovery.setStatus(lang, f.id, "owner_done"); },
+    // A quiet read after each decision: the counts and the asks are the API's again.
+    refresh: () => { void read(); },
     changeAfter: (p, after) => discovery.change(lang, p.id, p.change_hash, after),
     onSearch,
-    hrefs: { checks: checksHref ?? classic("home"), changes: proofHref ?? classic("proposals"), reports: classic("reports"), settings: classic("settings"), classic: classic("home") },
+    hrefs: { checks: checksHref ?? classic("home"), changes: proofHref ?? classic("proposals"), reports: classic("reports"), settings: classic("settings"), classic: classic("home"), setup: setupHref },
     sayError: (error) => sayError(error, lang),
   };
-  return <ThisWeek lang={lang} view={load.view} actions={actions} now={load.now} tabs={tabs} />;
+  return <ThisWeek lang={lang} view={load.view} actions={actions} now={load.now} tabs={tabs} onCount={onCount} />;
 }

@@ -31,7 +31,9 @@ export const STATUSES: readonly FindingStatus[] = ["open", "skipped", "owner_don
 export const PARTS_SHOWN: readonly PartKey[] = ["presence", "reviews", "website", "whatsapp"];
 
 /** `day_only`: the evidence is a day (a recorded observation), and `where` already says which; no time of day is drawn. */
-export type Evidence = { label: string; value: string; where: string; seen_at: string | null; day_only: boolean };
+/** `sentence` (Discovery 2.0): a whole sentence when the evidence found nothing ("Your website has no
+ * WhatsApp link."), drawn instead of the label and "None"; "" otherwise. */
+export type Evidence = { label: string; value: string; where: string; seen_at: string | null; day_only: boolean; sentence: string };
 export type Step = { seq: number; tool: string; summary: string; ok: boolean; started_at: string | null; ended_at: string | null };
 export type PlaceRef = { id: string; name: string };
 
@@ -47,6 +49,9 @@ export type Finding = {
   needs_fact: { key: FactKey; location_id: string } | null;
   /** Phase 2: whether this person may ask for a proposal now. */
   can_propose: boolean;
+  /** Discovery 2.0: what the owner changes on their own website (ALYR never writes there), with
+   * the exact text. Empty when the fix is not on the website. */
+  website_steps: WebsiteStep[];
   /** Phase 2: on a list row, how many of its proposals wait for approval. */
   proposals_waiting: number;
 };
@@ -68,6 +73,8 @@ export const FACT_KEYS: readonly FactKey[] = ["hours", "phone", "category", "nam
  * `removed`: Google's text of this side was removed after 30 days (`retention.py`); the screens say
  * so in their own words and never draw it as an empty value. */
 export type Side = { text: string; lines: { day: DayKey; text: string }[]; removed: boolean };
+/** One change the owner makes on their own website, worded as a proposal's change is. */
+export type WebsiteStep = { field: string; field_label: string; where: string; before: Side; after: Side; location: PlaceRef | null };
 /** `reason` (Discovery 2.0, the loop): `not_now` (asked again after 14 days, only if still found) or `declined`. */
 export type Decided = { by: string; channel: Channel | ""; at: string | null; reason: "not_now" | "declined" | "" };
 export type ReviewContext = { rating: number; posted_at: string | null; author_name: string; body: string; language: string };
@@ -123,6 +130,8 @@ export type Proposal = {
   edit: EditSpec | null;
   also_fixes: AlsoFixes | null;
   expire_reason: string;
+  /** When an ask closed without a decision (expired, replaced, fixed, or changed with "Change it"). */
+  closed_at: string | null;
 };
 export type HistoryRow = { at: string | null; event: string; by: string; channel: string; text: string };
 export type ProposalDetail = Proposal & { history: HistoryRow[] };
@@ -289,7 +298,7 @@ function parsePlace(raw: unknown): PlaceRef | null {
 
 function parseEvidence(raw: unknown): Evidence {
   const r = rec(raw);
-  return { label: str(r.label), value: str(r.value), where: str(r.where), seen_at: strOrNull(r.seen_at), day_only: r.day_only === true };
+  return { label: str(r.label), value: str(r.value), where: str(r.where), seen_at: strOrNull(r.seen_at), day_only: r.day_only === true, sentence: str(r.sentence) };
 }
 
 export function parseStep(raw: unknown, index = 0): Step {
@@ -319,6 +328,10 @@ export function parseFinding(raw: unknown): Finding {
     needs_fact: parseNeed(r.needs_fact),
     can_propose: r.can_propose === true,
     proposals_waiting: count(r.proposals_waiting),
+    website_steps: arr(r.website_steps).flatMap((item) => {
+      const v = rec(item);
+      return str(v.field) ? [{ field: str(v.field), field_label: str(v.field_label), where: str(v.where), before: parseSide(v.before), after: parseSide(v.after), location: parsePlace(v.location) }] : [];
+    }),
   };
 }
 
@@ -443,6 +456,7 @@ export function parseProposal(raw: unknown): Proposal {
     edit: parseEdit(r.edit),
     also_fixes: parseAlsoFixes(r.also_fixes),
     expire_reason: str(r.expire_reason),
+    closed_at: strOrNull(r.closed_at),
   };
 }
 

@@ -37,8 +37,9 @@ export function Proof({ lang, view, tabs, foot, people, sourceKind, onUndo, busy
   const google = view.receipts.some((r) => r.kind !== "you" && whereOf(r.p.target, sourceKind) === "google");
   const personOf = (name: string): Person => personFor(name, people);
   const deciders = view.deciders.map(personOf);
-  const filters = (["all", "approved", "you", "undone", "expired", "declined"] as const)
-    .filter((k) => k === "all" || k === "approved" || view.counts[k] > 0)
+  // "Done by you" is always offered: a website change is the owner's to make (DECISIONS #8).
+  const filters = (["all", "approved", "you", "fixed", "changed", "undone", "expired", "declined"] as const)
+    .filter((k) => k === "all" || k === "approved" || k === "you" || view.counts[k] > 0)
     .map((key) => ({ key, label: t.proofFilters[key], count: view.counts[key] }));
 
   return (
@@ -91,7 +92,7 @@ export function Proof({ lang, view, tabs, foot, people, sourceKind, onUndo, busy
 }
 
 const TONE: Record<ReceiptStatus, PillTone> = {
-  matches: "ok", youMatches: "ok", sent: "nm", youPending: "nm", approved: "nm", notMatching: "warn", failed: "warn", undone: "plain", expired: "plain", declined: "plain",
+  matches: "ok", youMatches: "ok", fixed: "ok", sent: "nm", youPending: "nm", approved: "nm", notMatching: "warn", failed: "warn", undone: "plain", expired: "plain", declined: "plain", changed: "plain",
 };
 
 type Node = "ask" | "alyr" | "ok" | "no" | "eye" | "wait" | "you" | { person: Person };
@@ -109,7 +110,7 @@ function ReceiptCard({ r, lang, sourceKind, personOf, onUndo, busy }: {
   const t1 = T[lang];
   if (r.kind === "you") {
     const steps: Step[] = [
-      { node: "you", title: t.doneYou, text: t.doneYouBody },
+      { node: "you", title: t.doneYou, text: t.doneYouStep },
       r.f.status === "verified" ? { node: "ok", title: t.nextSaw, text: day(r.when, lang) } : { node: "wait", open: true, title: t.nextWait, text: "" },
     ];
     return (
@@ -131,14 +132,23 @@ function ReceiptCard({ r, lang, sourceKind, personOf, onUndo, busy }: {
   // The loop opens an ask when it becomes one of the three; before that it was only noticed.
   const askedAt = p.opened_at ?? p.proposed_at;
   if (askedAt) steps.push({ node: "ask", title: t.asked, text: dayTime(askedAt, lang) });
+  const closed = day(r.when, lang);
   if (r.kind === "expired") {
-    steps.push({ node: "ask", open: true, title: t.nobodyDecided(day(p.expires_at, lang)), text: "" });
+    steps.push({ node: "ask", open: true, title: t.closedNoDecision(closed), text: "" });
     steps.push({ node: "no", title: t.nothingApplied, text: t.nothingAppliedBody });
+  } else if (r.kind === "fixed") {
+    steps.push({ node: "ok", title: t.fixedStep(closed), text: "" });
+    steps.push({ node: "no", title: t.nothingApplied, text: t.fixedBody });
+  } else if (r.kind === "changed") {
+    steps.push({ node: "you", title: t.changedStep(closed), text: t.changedBody });
+  } else if (r.kind === "declined" && p.status === "expired") {
+    steps.push({ node: "you", title: t.setAside(closed), text: "" });
+    steps.push({ node: "no", title: t.nothingApplied, text: t.setAsideBody });
   } else if (r.kind === "declined") {
     steps.push({ node: by ? { person: personOf(by) } : "no", title: t.declinedBy(by), text: [dayTime(p.decided?.at, lang), t.channel[p.decided?.channel ?? ""]].filter(Boolean).join(", ") });
     steps.push({ node: "no", title: t.nothingApplied, text: p.decided?.reason === "declined" ? "" : t.notNowBody });
   } else {
-    if (by) steps.push({ node: { person: personOf(by) }, title: t.approvedBy(by), text: [dayTime(p.decided?.at, lang), t.channel[p.decided?.channel ?? ""], p.approved_as === "edited" ? t1.editedNote : ""].filter(Boolean).join(", ") });
+    if (by) steps.push({ node: { person: personOf(by) }, title: p.approved_as === "edited" ? t.changedAndApproved(by) : t.approvedBy(by), text: [dayTime(p.decided?.at, lang), t.channel[p.decided?.channel ?? ""]].filter(Boolean).join(", ") });
     if (p.status === "failed") steps.push({ node: "no", title: t.notSent, text: p.failure?.message ?? "" });
     else if (p.applied_at) steps.push({ node: "alyr", title: t.sentBy, text: `${t.sentTo[where]} · ${dayTime(p.applied_at, lang)}` });
     else steps.push({ node: "alyr", open: true, title: t.sendingNow, text: "" });
@@ -161,8 +171,8 @@ function ReceiptCard({ r, lang, sourceKind, personOf, onUndo, busy }: {
       }
     }
   }
-  const word = { matches: t.stMatches, sent: t.stSent, notMatching: t.stNotMatching, approved: t.stApproved, failed: t.stFailed, undone: t.stUndone, expired: t.stExpired, declined: t.stDeclined, youMatches: t.stMatches, youPending: t.stPending }[r.status];
-  const sub = r.status === "expired" || r.status === "declined" ? t.nothingChanged : r.status === "undone" ? t.sinceDay(day(p.undone?.at, lang)) : "";
+  const word = { matches: t.stMatches, sent: t.stSent, notMatching: t.stNotMatching, approved: t.stApproved, failed: t.stFailed, undone: t.stUndone, expired: t.stExpired, declined: t.stDeclined, fixed: t.stFixed, changed: t.stChanged, youMatches: t.stMatches, youPending: t.stPending }[r.status];
+  const sub = r.status === "expired" || r.status === "declined" || r.status === "fixed" ? t.nothingChanged : r.status === "undone" ? t.sinceDay(day(p.undone?.at, lang)) : "";
   return (
     <article className="d2s-rc" data-kind={r.kind}>
       <div className="d2s-rc-d"><b>{day(r.when, lang)}</b>{t.where[where]}</div>

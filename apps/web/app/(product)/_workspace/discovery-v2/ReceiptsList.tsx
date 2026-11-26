@@ -93,7 +93,7 @@ export function ReceiptsList({ lang, rows, people, tally, checkedAt, checksHref,
         {checkedAt ? <span>{t.checkedAt(dayTime(checkedAt, lang))}</span> : null}
         {tally ? <><span className="d2-sep" aria-hidden="true">·</span><span>{t.matchLine(tally.matched, tally.measured)}</span></> : null}
         {tally && tally.notMeasured ? <><span className="d2-sep" aria-hidden="true">·</span><span>{t.notMeasuredLine(tally.notMeasured)}</span></> : null}
-        {tally ? <><span className="d2-sep" aria-hidden="true">·</span><a className="d2-link" href={checksHref}>{t.seeAll(tally.total)}</a></> : null}
+        {tally ? <><span className="d2-sep" aria-hidden="true">·</span><a className="d2-link" href={checksHref}>{t.seeAll}</a></> : null}
       </p>
     </section>
   );

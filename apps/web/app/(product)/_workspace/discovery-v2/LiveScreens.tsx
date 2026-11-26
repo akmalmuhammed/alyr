@@ -61,7 +61,7 @@ export function LiveChecks({ lang, tabs, foot, hrefs }: { lang: D2Lang; tabs: Re
   const [error, setError] = useState("");
   const { toast, show, hide } = useToast();
   const alive = useRef(true);
-  useEffect(() => () => { alive.current = false; }, []);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
 
   const read = useCallback(async (): Promise<ChecksView | null> => {
     try {
@@ -115,7 +115,7 @@ export function LiveChecks({ lang, tabs, foot, hrefs }: { lang: D2Lang; tabs: Re
 
 type ProofData = { proposals: Proposal[]; done: Finding[]; team: TeamMember[] | null; sourceKind: string };
 
-export function LiveProof({ lang, tabs, foot }: { lang: D2Lang; tabs: ReactNode; foot: Foot }) {
+export function LiveProof({ lang, tabs, foot, onChanged }: { lang: D2Lang; tabs: ReactNode; foot: Foot; onChanged?: () => void }) {
   const [load, setLoad] = useState<Load<ProofData>>({ kind: "loading" });
   const [busy, setBusy] = useState<string | null>(null);
   const { toast, show, hide } = useToast();
@@ -150,6 +150,7 @@ export function LiveProof({ lang, tabs, foot }: { lang: D2Lang; tabs: ReactNode;
       const next = await discovery.undo(lang, r.p.id);
       setLoad({ kind: "ready", value: { ...data, proposals: data.proposals.map((p) => (p.id === next.id ? next : p)) } });
       show(T[lang].toastUndone, T[lang].toastUndoneBody(beforeAfter(r.p, lang).before, whereOf(r.p.target, data.sourceKind)));
+      onChanged?.();
     } catch (e) {
       show(T[lang].toastUndone, sayError(e, lang));
     } finally {
@@ -190,7 +191,7 @@ export function LiveSetup({ lang, canManage, onDone, tabs }: { lang: D2Lang; can
   const [stage, setStage] = useState<SetupStage>("idle");
   const [error, setError] = useState("");
   const alive = useRef(true);
-  useEffect(() => () => { alive.current = false; }, []);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
 
   const read = useCallback(async () => {
     try {
