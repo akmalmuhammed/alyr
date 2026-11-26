@@ -31,6 +31,8 @@ from alyr.modules.discovery import words as w
 from alyr.modules.discovery.connectors.base import hours_to_json, same
 from alyr.modules.discovery.errors import DiscoveryError
 
+w.ERRORS.update(pw.ERRORS)
+
 APPLY_JOB = "discovery.apply"
 LIVE = ("proposed", "approved")
 STATUSES = ("proposed", "approved", "declined", "expired", "applied", "failed", "undone")
@@ -42,6 +44,15 @@ MAX_LIVE_REPLIES = 3
 RETRY_LIMIT = 3
 FACT_KEY = {"hours": "hours", "phone": "phone", "category": "category", "whatsapp_link": "whatsapp"}
 _ORDER = "case severity when 'high' then 0 when 'medium' then 1 else 2 end"
+# At most three open asks per business (DECISIONS #16, R5 "the firehose"); the rest are "Also
+# noticed" and wait their turn, the worst first, then the oldest. A seasonal ask (C's
+# `season_due`, an owner finding with no proposal) takes a place among the three.
+OPEN_ASKS = 3
+SEASONAL_RULES = ("season_due",)
+# What "Change it" may change, and how (`edit_of`): hours in 30-minute steps per day, a phone
+# number that is a valid number, a name or a category only from what the owner confirmed.
+EDIT_STEP_MINUTES = 30
+LIFE_STATES = ("approved", "sent", "pending_review", "live", "rejected", "changed_back")
 
 
 # ── who may do what: roles and the branch scope ─────────────────────────────────────────
@@ -325,7 +336,16 @@ async def _active_connector(conn: asyncpg.Connection):
         connector = connectors.get(kind)
     except connectors.ConnectorError:
         return kind, frozenset()
-    return kind, frozenset(getattr(connector, "writes", None) or ())
+    # B's health overlay guard, on every path that builds proposals outside a check-up (a fact
+    # confirmed, "Prepare change", a finding's `can_propose`): a pack's `never_edit` fields (a
+    # clinic's service text) are never written, the same as in the check-up (`engine.py`).
+    from alyr.modules.discovery import engine, packs  # engine imports this module
+    from alyr.modules.discovery.packs import store as pack_store
+
+    selection = await pack_store.selection(conn, engine.PACKS)
+    return kind, packs.allowed_writes(
+        frozenset(getattr(connector, "writes", None) or ()), selection.never_edit
+    )
 
 
 async def _cool_hashes(conn: asyncpg.Connection, now: datetime) -> set:
@@ -455,7 +475,75 @@ async def build(
                         "by": who.kind},
                 channel=who.channel,
             )
+    if result.made:
+        await promote(conn, now)
     return result
+
+
+# ── the three open asks ─────────────────────────────────────────────────────────────────
+
+
+async def promote(conn: asyncpg.Connection, now: datetime) -> list[UUID]:
+    """Fill the business's open asks up to three, the worst first, then the oldest. An open ask
+    stays open until it is decided or expires; its 14 days start when it is opened. Seasonal asks
+    (open `season_due` findings) take their places first. Idempotent: called after a check-up,
+    a fact, a decision and by the hourly sweep."""
+    seasonal = await conn.fetchval(
+        "select count(*) from discovery_findings where status = 'open' and rule_id = any($1)",
+        list(SEASONAL_RULES),
+    )
+    opened = await conn.fetchval(
+        "select count(*) from discovery_proposals where status = 'proposed' "
+        "and opened_at is not null and expires_at > $1",
+        now,
+    )
+    free = OPEN_ASKS - seasonal - opened
+    if free <= 0:
+        return []
+    rows = await conn.fetch(
+        "update discovery_proposals set opened_at = $1, expires_at = $2, updated_at = now() "
+        "where id in (select id from discovery_proposals where status = 'proposed' "
+        f"and opened_at is null order by {_ORDER}, proposed_at, id limit $3) returning id",
+        now, now + EXPIRES_AFTER, free,
+    )
+    return [r["id"] for r in rows]
+
+
+async def queue_rows(conn: asyncpg.Connection, scope: Scope, now: datetime) -> tuple[list, list]:
+    """(open asks, also noticed) for the places the caller manages: each item `("proposal", row)`
+    or `("season", finding row)`. At most three open asks; the order is severity, then age."""
+    if scope.nothing:
+        return [], []
+    places = None if scope.everywhere else list(scope.places)
+    rows = await conn.fetch(
+        f"{_PROPOSAL} where p.status = 'proposed' "
+        "and (p.opened_at is null or p.expires_at > $1) "
+        "and ($2::uuid[] is null or p.location_id = any($2)) "
+        "order by case p.severity when 'high' then 0 when 'medium' then 1 else 2 end, "
+        "p.proposed_at, p.id",
+        now, places,
+    )
+    seasons = await conn.fetch(
+        "select f.*, l.name as place_name, l.name_ar as place_name_ar from discovery_findings f "
+        "left join discovery_locations l on l.id = f.location_id "
+        "where f.status = 'open' and f.rule_id = any($1) "
+        "and ($2::uuid[] is null or f.location_id is null or f.location_id = any($2))",
+        list(SEASONAL_RULES), places,
+    )
+    rank = {"high": 0, "medium": 1, "low": 2}
+
+    def key(item):
+        kind, row = item
+        at = row["created_at"] if kind == "season" else row["proposed_at"]
+        return (rank.get(row["severity"], 2), at)
+
+    first = sorted(
+        [("season", r) for r in seasons]
+        + [("proposal", r) for r in rows if r["opened_at"] is not None],
+        key=key,
+    )
+    waiting = [("proposal", r) for r in rows if r["opened_at"] is None]
+    return first[:OPEN_ASKS], sorted(first[OPEN_ASKS:] + waiting, key=key)
 
 
 # ── closing: expiry and asks ────────────────────────────────────────────────────────────
@@ -511,7 +599,8 @@ async def expire_closed_findings(conn: asyncpg.Connection) -> int:
 
 async def expire_due(conn: asyncpg.Connection, now: datetime) -> int:
     ids = [r["id"] for r in await conn.fetch(
-        "select id from discovery_proposals where status = 'proposed' and expires_at <= $1", now
+        "select id from discovery_proposals where status = 'proposed' and opened_at is not null "
+        "and expires_at <= $1", now
     )]
     return await expire(conn, ids, "time") if ids else 0
 
@@ -554,10 +643,23 @@ async def verify_step(conn: asyncpg.Connection, run: asyncpg.Record) -> tuple[in
         ok = row["finding_status"] in ("verified", "gone")
         confirmed += ok
         again += not ok
+        # The check-up is a check too: a change it confirms is live (unless the platform already
+        # turned it down or back), and nothing is looked at again for it at 20 hours.
         await conn.execute(
             "update discovery_proposals set verification = $2, verified_run_id = $3, "
-            "updated_at = now() where id = $1",
-            row["id"], "confirmed" if ok else "not_confirmed", run["id"],
+            "verify_at = null, updated_at = now(), "
+            "verified_at = case when $4 then now() else verified_at end, "
+            "life = case when $4 and life is distinct from 'live' "
+            "and life is distinct from 'rejected' and life is distinct from 'changed_back' "
+            "then 'live' else life end, "
+            "life_history = case when $4 and life is distinct from 'live' "
+            "and life is distinct from 'rejected' and life is distinct from 'changed_back' "
+            "then life_history || jsonb_build_array(jsonb_build_object('state', 'live', "
+            "'at', now())) else life_history end, "
+            "receipt = case when $4 then coalesce(receipt, '{}'::jsonb) || jsonb_build_object("
+            "'verified', jsonb_build_object('at', now(), 'state', 'live')) else receipt end "
+            "where id = $1",
+            row["id"], "confirmed" if ok else "not_confirmed", run["id"], ok,
         )
         await team.record(
             conn, "discovery", row["id"], "proposal.verify", team.ALYR,
@@ -600,7 +702,8 @@ async def _reviews_of(conn: asyncpg.Connection, rows) -> dict:
 def _can(row, caller: Caller, scope: Scope, now: datetime, undoable: bool) -> dict:
     status = row["status"]
     mine = scope.covers(row["location_id"]) and caller.role != ENGINE
-    open_ = status == "proposed" and row["expires_at"] > now
+    # An "Also noticed" proposal (not opened yet) waits its turn: its 14 days have not started.
+    open_ = status == "proposed" and (row["opened_at"] is None or row["expires_at"] > now)
     retry = status == "failed" and row["apply_attempts"] < RETRY_LIMIT
     return {
         "approve": bool(mine and person_may_decide(caller) and (open_ or retry)),
@@ -619,9 +722,61 @@ def _undoable(kind: str, target: str, field_: str) -> bool:
         return False
 
 
+def undo_days(kind: str, target: str, field_: str) -> int | None:
+    """How many days an applied change of this kind may be undone, before it is approved (the
+    receipt line "Undo for 7 days"); None when the source cannot put it back."""
+    if not _undoable(kind, target, field_):
+        return None
+    try:
+        days = getattr(connectors.get(kind), "undo_days", None)
+    except connectors.ConnectorError:
+        return None
+    return days if isinstance(days, int) else None
+
+
+def life_view(row, lang: str) -> tuple[dict | None, list[dict]]:
+    """The change's life since the tap: the state now and every step, each with its time and its
+    plain words."""
+    steps = [
+        {"state": s["state"], "at": s["at"], "text": pw.life_text(s["state"], row["target"], lang)}
+        for s in (row["life_history"] or []) if s.get("state") in LIFE_STATES
+    ]
+    if row["life"] is None:
+        return None, steps
+    at = next((s["at"] for s in reversed(steps) if s["state"] == row["life"]), None)
+    return {"state": row["life"], "at": at,
+            "text": pw.life_text(row["life"], row["target"], lang)}, steps
+
+
+def receipt_view(row, lang: str) -> dict | None:
+    """What a receipt says: when it was sent, how it was approved (as proposed or with a changed
+    value), until when it can be undone, when it is looked at again, and what that check saw."""
+    if row["applied_at"] is None:
+        return None
+    stored = row["receipt"] or {}
+    edited = row["approved_as"] == "edited"
+    days = undo_days(row["connector_kind"], row["target"], row["change"]["field"])
+    verified = stored.get("verified")
+    return {
+        "ref": stored.get("ref"),
+        "at": _iso(row["applied_at"]),
+        "edited": edited,
+        "approved_as": row["approved_as"],
+        "approved_text": pw.pick(pw.RECEIPT["edited" if edited else "unedited"], lang),
+        "undo": {"days": days, "until": _iso(row["undo_until"])} if row["undo_until"] else None,
+        "next_check_at": _iso(row["verify_at"]) if row["status"] == "applied" else None,
+        "verified": {
+            "at": verified.get("at"), "state": verified.get("state"),
+            "text": pw.life_text(verified["state"], row["target"], lang)
+            if verified.get("state") in LIFE_STATES else None,
+        } if isinstance(verified, dict) else None,
+    }
+
+
 def view(
     row, caller: Caller, scope: Scope, lang: str, now: datetime, reviews: dict, *,
-    already: bool = False, history: list | None = None,
+    already: bool = False, history: list | None = None, queue: dict | None = None,
+    extra: dict | None = None,
 ) -> dict:
     change = row["change"]
     lines = pw.change_lines(change, lang, row["target"])
@@ -675,6 +830,28 @@ def view(
                     _undoable(row["connector_kind"], row["target"], change["field"])),
         "already": already,
     }
+    # Discovery 2.0, the loop: which queue it waits in, how it was approved, its life since the
+    # tap, the receipt, and the undo window before approving.
+    queued = (queue or {}).get(row["id"]) if row["status"] == "proposed" else None
+    if row["status"] == "proposed" and queued is None:
+        queued = "open" if row["opened_at"] is not None else "also_noticed"
+    out["queue"] = queued
+    if queued == "also_noticed" and row["opened_at"] is None:
+        out["expires_at"] = None  # its 14 days start when it becomes an open ask
+    out["opened_at"] = _iso(row["opened_at"])
+    out["approved_as"] = row["approved_as"]
+    out["edited_from"] = str(row["edited_from"]) if row["edited_from"] else None
+    if out["decided"] is not None:
+        out["decided"]["reason"] = row["decline_reason"] if row["status"] == "declined" else None
+    out["life"], out["life_history"] = life_view(row, lang)
+    out["receipt"] = receipt_view(row, lang)
+    out["undo_window_days"] = undo_days(row["connector_kind"], row["target"], change["field"])
+    out["next_check_at"] = _iso(row["verify_at"]) if row["status"] == "applied" else None
+    out["verified_at"] = _iso(row["verified_at"])
+    out["edit"] = None
+    out["also_fixes"] = None
+    if extra:
+        out.update(extra.get(row["id"], {}))
     if history is not None:
         out["history"] = history
     return out
@@ -691,6 +868,9 @@ async def views(
 
 async def history(conn: asyncpg.Connection, proposal_id: UUID, lang: str) -> list[dict]:
     """The activity rows of one proposal, worded, newest last."""
+    target = await conn.fetchval(
+        "select target from discovery_proposals where id = $1", proposal_id) or "listing"
+    where = pw.where_words(target, lang)
     out = []
     for r in await conn.fetch(
         "select action, detail, actor_name, channel, created_at from activity "
@@ -707,7 +887,14 @@ async def history(conn: asyncpg.Connection, proposal_id: UUID, lang: str) -> lis
         elif action == "proposal.expire":
             key = f"proposal.expire.{detail.get('reason', 'time')}"
         elif action == "proposal.verify":
-            key = f"proposal.verify.{detail.get('result', 'confirmed')}"
+            by_check = ".check" if detail.get("by") == "check" else ""
+            key = f"proposal.verify{by_check}.{detail.get('result', 'confirmed')}"
+        elif action == "proposal.approve" and detail.get("edited"):
+            key = "proposal.approve.edited"
+        elif action == "proposal.decline" and detail.get("reason") == "not_now":
+            key = "proposal.decline.not_now"
+        elif action == "proposal.life":
+            key = f"proposal.life.{detail.get('state')}"
         else:
             key = action
         pair = pw.HISTORY.get(key)
@@ -720,8 +907,63 @@ async def history(conn: asyncpg.Connection, proposal_id: UUID, lang: str) -> lis
             "event": action.removeprefix("proposal."),
             "by": r["actor_name"],
             "channel": r["channel"],
-            "text": pw.pick(pair, lang).format(name=r["actor_name"], via=via, reason=reason),
+            "text": pw.pick(pair, lang).format(name=r["actor_name"], via=via, reason=reason,
+                                               **where),
         })
+    return out
+
+
+# ── what a waiting proposal adds: "Change it" and what it also fixes ────────────────────
+
+
+async def last_tally(conn: asyncpg.Connection) -> tuple[dict, set]:
+    """The last finished check-up's "N of M checks match" (the packs' own count) and the
+    (rule, place) checks it found different."""
+    from alyr.modules.discovery import engine, packs  # engine imports this module
+
+    run = await conn.fetchrow(
+        "select checks from discovery_runs where status = 'done' order by created_at desc limit 1"
+    )
+    entries = [
+        e for e in ((run["checks"] if run else None) or [])
+        if isinstance(e, dict) and e.get("rule") in engine.RULE_BY_ID
+    ]
+    failing = {(e["rule"], e.get("location")) for e in entries if e.get("state") == "fail"}
+    return packs.tally(entries), failing
+
+
+async def extras_for(conn: asyncpg.Connection, rows) -> dict:
+    """For each waiting proposal: `edit` (what "Change it" may change, with the confirmed values a
+    name or category may take) and `also_fixes` (other checks the same change closes: open
+    findings whose live proposal is the very same change, by its hash), or None."""
+    waiting = [r for r in rows if r is not None and r["status"] == "proposed"]
+    if not waiting:
+        return {}
+    locations = {r["id"]: r for r in await conn.fetch("select * from discovery_locations")}
+    facts = await facts_module.load(conn)
+    tally, failing = await last_tally(conn)
+    same_change: dict[str, set] = {}
+    for r in await conn.fetch(
+        "select p.change_hash, f.rule_id, f.location_id from discovery_proposals p "
+        "join discovery_findings f on f.id = p.finding_id "
+        "where p.status = any($1) and f.status = 'open' and p.change_hash = any($2)",
+        list(LIVE), [r["change_hash"] for r in waiting],
+    ):
+        place = str(r["location_id"]) if r["location_id"] else None
+        same_change.setdefault(r["change_hash"], set()).add((r["rule_id"], place))
+    out: dict = {}
+    for row in waiting:
+        fixes = same_change.get(row["change_hash"], set()) & failing
+        also = None
+        if len(fixes) >= 2 and tally["measured"]:
+            also = {
+                "checks": len(fixes),
+                "rules": sorted({rule for rule, _ in fixes if rule != row["rule_id"]}),
+                "from": tally["matched"],
+                "to": min(tally["matched"] + len(fixes), tally["measured"]),
+                "of": tally["measured"],
+            }
+        out[row["id"]] = {"edit": edit_of(row, facts, locations), "also_fixes": also}
     return out
 
 
@@ -764,12 +1006,14 @@ async def list_for(
     if person_may_decide(caller):
         waiting = await conn.fetchval(
             "select count(*) from discovery_proposals where status = 'proposed' "
-            "and expires_at > $1 and ($2::uuid[] is null or location_id = any($2))",
+            "and (opened_at is null or expires_at > $1) "
+            "and ($2::uuid[] is null or location_id = any($2))",
             now, places,
         )
     reviews = await _reviews_of(conn, rows)
+    extra = await extras_for(conn, rows)
     return {
-        "items": [view(r, caller, scope, lang, now, reviews) for r in rows],
+        "items": [view(r, caller, scope, lang, now, reviews, extra=extra) for r in rows],
         "counts": {s: found.get(s, 0) for s in STATUSES},
         "waiting": waiting,
     }
@@ -785,6 +1029,7 @@ async def get_one(
         raise DiscoveryError("not_found", 404)
     now = datetime.now().astimezone()
     return view(row, caller, scope, lang, now, await _reviews_of(conn, [row]),
+                extra=await extras_for(conn, [row]),
                 history=await history(conn, proposal_id, lang))
 
 
@@ -796,7 +1041,8 @@ async def overview_block(conn: asyncpg.Connection, caller: Caller, scope: Scope,
     now = datetime.now().astimezone()
     places = None if scope.everywhere else list(scope.places)
     counts = await conn.fetchrow(
-        "select count(*) filter (where status = 'proposed' and expires_at > $1) as waiting, "
+        "select count(*) filter (where status = 'proposed' "
+        "and (opened_at is null or expires_at > $1)) as waiting, "
         "count(*) filter (where status = 'approved') as approved, "
         "count(*) filter (where status = 'failed') as failed from discovery_proposals "
         "where ($2::uuid[] is null or location_id = any($2))",
@@ -805,15 +1051,18 @@ async def overview_block(conn: asyncpg.Connection, caller: Caller, scope: Scope,
     next_row = None
     if person_may_decide(caller):
         next_row = await conn.fetchrow(
-            f"{_PROPOSAL} where p.status = 'proposed' and p.expires_at > $1 "
+            f"{_PROPOSAL} where p.status = 'proposed' "
+            "and (p.opened_at is null or p.expires_at > $1) "
             "and ($2::uuid[] is null or p.location_id = any($2)) "
-            "order by case p.severity when 'high' then 0 when 'medium' then 1 else 2 end, "
+            "order by (p.opened_at is null), "
+            "case p.severity when 'high' then 0 when 'medium' then 1 else 2 end, "
             "p.proposed_at, p.id limit 1",
             now, places,
         )
     return {
         "waiting": counts["waiting"], "approved": counts["approved"], "failed": counts["failed"],
-        "next": view(next_row, caller, scope, lang, now, await _reviews_of(conn, [next_row]))
+        "next": view(next_row, caller, scope, lang, now, await _reviews_of(conn, [next_row]),
+                     extra=await extras_for(conn, [next_row]))
         if next_row else None,
     }
 
@@ -924,6 +1173,40 @@ async def _locked(
     return row
 
 
+async def _approved(
+    conn: asyncpg.Connection, caller: Caller, proposal_id: UUID, *, edited: bool, retry: bool,
+) -> asyncpg.Record:
+    """`proposed` (or `failed`) becomes `approved`: the person, the door, how it was approved and
+    the first step of its life. Then the apply job, the asks closed, the record, the next ask."""
+    row = await conn.fetchrow(
+        "update discovery_proposals set status = 'approved', decided_by = $2, decided_name = $3, "
+        "decided_channel = $4, decided_at = now(), failure_code = null, apply_started_at = null, "
+        "approved_as = $5, life = 'approved', life_history = life_history || "
+        "jsonb_build_array(jsonb_build_object('state', 'approved', 'at', now())), "
+        "verify_at = null, updated_at = now() where id = $1 returning *",
+        proposal_id, caller.user_id, caller.name or "—", caller.channel,
+        "edited" if edited else "unedited",
+    )
+    await jobs.enqueue(conn, APPLY_JOB, {"proposal_id": str(proposal_id)},
+                       max_attempts=RETRY_LIMIT)
+    await close_asks(conn, [proposal_id], "proposal_decided")
+    await team.record(
+        conn, "discovery", proposal_id, "proposal.approve", caller.actor,
+        detail={"type": row["type"], "retry": retry, "edited": edited},
+        channel=channel_of(caller),
+    )
+    await promote(conn, datetime.now().astimezone())
+    return row
+
+
+def _check_open(row: asyncpg.Record, given_hash: str | None) -> None:
+    status = row["status"]
+    if status in ("declined", "expired", "undone"):
+        raise DiscoveryError("proposal_closed", 409)
+    if given_hash != row["change_hash"]:
+        raise DiscoveryError("proposal_changed", 409)
+
+
 async def approve(
     conn: asyncpg.Connection, caller: Caller, scope: Scope, proposal_id: UUID,
     given_hash: str | None,
@@ -936,36 +1219,186 @@ async def approve(
         raise DiscoveryError("forbidden", 403)
     row = await _locked(conn, caller, scope, proposal_id)
     status = row["status"]
-    if status in ("declined", "expired", "undone"):
-        raise DiscoveryError("proposal_closed", 409)
-    if given_hash != row["change_hash"]:
-        raise DiscoveryError("proposal_changed", 409)
+    _check_open(row, given_hash)
     if status in ("approved", "applied"):
         return row, True
     now = datetime.now().astimezone()
-    if status == "proposed" and row["expires_at"] <= now:
+    if status == "proposed" and row["opened_at"] is not None and row["expires_at"] <= now:
         raise DiscoveryError("proposal_closed", 409)
     if status == "failed" and row["apply_attempts"] >= RETRY_LIMIT:
         raise DiscoveryError("retry_limit", 409)
-    row = await conn.fetchrow(
-        "update discovery_proposals set status = 'approved', decided_by = $2, decided_name = $3, "
-        "decided_channel = $4, decided_at = now(), failure_code = null, apply_started_at = null, "
-        "updated_at = now() where id = $1 returning *",
-        proposal_id, caller.user_id, caller.name or "—", caller.channel,
-    )
-    await jobs.enqueue(conn, APPLY_JOB, {"proposal_id": str(proposal_id)},
-                       max_attempts=RETRY_LIMIT)
+    return await _approved(conn, caller, proposal_id, edited=False,
+                           retry=status == "failed"), False
+
+
+# ── "Change it": approve an edited "after" ──────────────────────────────────────────────
+
+
+def _minutes_ok(span) -> bool:
+    return all(int(t[3:5]) % EDIT_STEP_MINUTES == 0 for t in span)
+
+
+def edit_kind(row) -> str | None:
+    """How a proposal's "after" may be changed before approving it: `hours`, `phone`, `choice`
+    (a name or a category: only values the owner confirmed), or None (a WhatsApp link follows the
+    confirmed number; a review reply is a fixed text)."""
+    field_ = row["change"]["field"]
+    if row["type"] == "reply_to_review" or field_ not in ("hours", "phone", "name", "category"):
+        return None
+    return {"hours": "hours", "phone": "phone"}.get(field_, "choice")
+
+
+def edit_choices(row, facts: dict, locations: dict) -> list[dict]:
+    """The values a name or category may be changed to: what the owner confirmed. A name: the
+    place's confirmed name and the names typed for the place (English and Arabic). A category:
+    every category confirmed for one of the business's places."""
+    field_ = row["change"]["field"]
+    values: list[str] = []
+    if field_ == "name":
+        fact = facts.get((row["location_id"], "name"))
+        place = locations.get(row["location_id"])
+        values = [fact.value["name"] if fact else ""] + (
+            [place["name"], place["name_ar"]] if place is not None else [])
+    elif field_ == "category":
+        values = [f.value["category"] for (_, key), f in sorted(
+            facts.items(), key=lambda kv: (str(kv[0][0]), kv[0][1]))
+            if key == "category" and f.source in ("owner", "sample")]
+    seen: list[str] = []
+    for value in values:
+        if value and value not in seen:
+            seen.append(value)
+    return [{field_: v} for v in seen]
+
+
+def edit_of(row, facts: dict, locations: dict) -> dict | None:
+    """What the screen needs to offer "Change it" for this proposal, or None."""
+    kind = edit_kind(row)
+    if kind is None:
+        return None
+    out: dict = {"kind": kind}
+    if kind == "hours":
+        out["step_minutes"] = EDIT_STEP_MINUTES
+    if kind == "choice":
+        out["options"] = edit_choices(row, facts, locations)
+    return out
+
+
+def checked_edit(row, after: object, facts: dict, locations: dict) -> dict:
+    """The edited "after" in its one plain shape, or a 422 with the words. Hours: a valid week,
+    and every day that differs from the proposal in 30-minute steps. Phone: a valid number. Name
+    and category: one of `edit_choices`."""
+    kind = edit_kind(row)
+    if kind is None:
+        raise DiscoveryError("not_editable", 409)
+    proposed = row["change"]["after"]
+    if kind == "hours":
+        try:
+            week = facts_module.validate("hours", after)
+        except DiscoveryError as error:
+            raise DiscoveryError("bad_edit_hours") from error
+        for day, span in week.items():
+            if span is not None and span != (proposed or {}).get(day) and not _minutes_ok(span):
+                raise DiscoveryError("bad_edit_hours")
+        return week
+    if kind == "phone":
+        return facts_module.validate("phone", after)
+    if not isinstance(after, dict) or after not in edit_choices(row, facts, locations):
+        raise DiscoveryError("bad_edit_choice")
+    return dict(after)
+
+
+async def approve_edited(
+    conn: asyncpg.Connection, caller: Caller, scope: Scope, proposal_id: UUID,
+    given_hash: str | None, after: object, *, update_fact: bool = True,
+) -> tuple[asyncpg.Record, bool]:
+    """"Change it": the person changes the proposed "after" and approves that, in one tap.
+
+    A proposal's change is never edited in place (0121): the one the person was shown expires as
+    `edited`, and a new proposal with their value is made and approved at once, `approved_as =
+    'edited'`, `edited_from` naming the first. The same value as proposed is an ordinary approval;
+    the value it already shows is refused (`nothing_to_change`). With `update_fact` (the default),
+    a changed hours or phone value also becomes the place's confirmed fact, so the next check does
+    not ask for the old one again. A second submit of the same edit answers the first one."""
+    if not person_may_decide(caller):
+        raise DiscoveryError("forbidden", 403)
+    row = await _locked(conn, caller, scope, proposal_id)
+    if row["status"] == "expired" and row["expire_reason"] == "edited":
+        done = await conn.fetchrow(
+            "select * from discovery_proposals where edited_from = $1 "
+            "order by proposed_at desc limit 1", proposal_id,
+        )
+        if done is not None and given_hash == row["change_hash"]:
+            return done, True
+    _check_open(row, given_hash)
+    if row["status"] != "proposed":
+        raise DiscoveryError("proposal_decided", 409)
+    now = datetime.now().astimezone()
+    if row["opened_at"] is not None and row["expires_at"] <= now:
+        raise DiscoveryError("proposal_closed", 409)
+    locations = {r["id"]: r for r in await conn.fetch("select * from discovery_locations")}
+    facts = await facts_module.load(conn)
+    value = checked_edit(row, after, facts, locations)
+    field_ = row["change"]["field"]
+    if same(field_, value, row["change"]["after"]):
+        return await approve(conn, caller, scope, proposal_id, given_hash)
+    if same(field_, value, row["change"]["before"]):
+        raise DiscoveryError("nothing_to_change")
     await close_asks(conn, [proposal_id], "proposal_decided")
-    await team.record(
-        conn, "discovery", proposal_id, "proposal.approve", caller.actor,
-        detail={"type": row["type"], "retry": status == "failed"}, channel=channel_of(caller),
+    await conn.execute(
+        "update discovery_proposals set status = 'expired', expire_reason = 'edited', "
+        "updated_at = now() where id = $1",
+        proposal_id,
     )
-    return row, False
+    await team.record(
+        conn, "discovery", proposal_id, "proposal.expire", caller.actor,
+        detail={"reason": "edited"}, channel=channel_of(caller),
+    )
+    change = {"field": field_, "before": row["change"]["before"], "after": value}
+    new_id = await conn.fetchval(
+        "insert into discovery_proposals (finding_id, location_id, type, target, "
+        "connector_kind, subject_ref, change, change_hash, severity, proposer_kind, "
+        "proposed_by, run_id, proposed_at, expires_at, opened_at, edited_from) "
+        "values ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'engine', $10, $11, $12, $13, $14, $15) "
+        "returning id",
+        row["finding_id"], row["location_id"], row["type"], row["target"],
+        row["connector_kind"], row["subject_ref"], change,
+        change_hash(row["type"], row["target"], row["location_id"], row["subject_ref"], field_,
+                    value),
+        row["severity"], caller.user_id, row["run_id"], now,
+        max(row["expires_at"], now + timedelta(days=1)), row["opened_at"] or now, proposal_id,
+    )
+    await team.record(
+        conn, "discovery", new_id, "proposal.propose", caller.actor,
+        detail={"type": row["type"], "target": row["target"], "by": "person",
+                "edited_from": str(proposal_id)},
+        channel=channel_of(caller),
+    )
+    approved = await _approved(conn, caller, new_id, edited=True, retry=False)
+    if update_fact and field_ in ("hours", "phone"):
+        await facts_module.write(
+            conn, row["location_id"], FACT_KEY[field_], value, source="owner",
+            user_id=caller.user_id, name=caller.name or "—",
+        )
+        await team.record(
+            conn, "discovery", row["location_id"], "fact.set", caller.actor,
+            detail={"key": FACT_KEY[field_], "from": "edited_approval"},
+            channel=channel_of(caller),
+        )
+    return approved, False
+
+
+DECLINE_REASONS = ("declined", "not_now")
 
 
 async def decline(
-    conn: asyncpg.Connection, caller: Caller, scope: Scope, proposal_id: UUID
+    conn: asyncpg.Connection, caller: Caller, scope: Scope, proposal_id: UUID,
+    reason: str = "declined",
 ) -> tuple[asyncpg.Record, bool]:
+    """Decline (the workspace's Decline) or "Not now" (WhatsApp's, and the workspace's): both close
+    the proposal and start the 14-day cool-off; after it, the same change comes back only if a
+    check still finds the difference (DECISIONS #10). It frees its place among the open asks."""
+    if reason not in DECLINE_REASONS:
+        raise DiscoveryError("bad_decline_reason")
     if not person_may_decide(caller):
         raise DiscoveryError("forbidden", 403)
     row = await _locked(conn, caller, scope, proposal_id)
@@ -978,13 +1411,14 @@ async def decline(
         raise DiscoveryError("proposal_decided", 409)
     row = await conn.fetchrow(
         "update discovery_proposals set status = 'declined', decided_by = $2, decided_name = $3, "
-        "decided_channel = $4, decided_at = now(), updated_at = now() where id = $1 returning *",
-        proposal_id, caller.user_id, caller.name or "—", caller.channel,
+        "decided_channel = $4, decided_at = now(), decline_reason = $5, updated_at = now() "
+        "where id = $1 returning *",
+        proposal_id, caller.user_id, caller.name or "—", caller.channel, reason,
     )
     await close_asks(conn, [proposal_id], "proposal_decided")
     await team.record(
         conn, "discovery", proposal_id, "proposal.decline", caller.actor,
-        detail={"type": row["type"]}, channel=channel_of(caller),
+        detail={"type": row["type"], "reason": reason}, channel=channel_of(caller),
     )
+    await promote(conn, datetime.now().astimezone())
     return row, False
-

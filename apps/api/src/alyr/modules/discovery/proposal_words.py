@@ -172,7 +172,29 @@ HISTORY: dict[str, tuple[str, str]] = {
     "proposal.propose.engine": ("A check-up prepared this change.", "أعدّ الفحص هذا التعديل."),
     "proposal.propose.person": ("{name} prepared this change.", "أعدّ {name} هذا التعديل."),
     "proposal.approve": ("{name} approved this change{via}.", "وافق {name} على هذا التعديل{via}."),
+    "proposal.approve.edited": (
+        "{name} changed the proposed value and approved it{via}.",
+        "عدّل {name} القيمة المقترحة ووافق عليها{via}."),
     "proposal.decline": ("{name} declined this change{via}.", "رفض {name} هذا التعديل{via}."),
+    "proposal.decline.not_now": (
+        "{name} said not now{via}. It comes back after 14 days only if it is still different.",
+        "اختار {name} «ليس الآن»{via}. يعود بعد 14 يوماً فقط إن بقي مختلفاً."),
+    "proposal.expire.edited": (
+        "{name} changed the proposed value before approving it. Nothing of this version was "
+        "applied.",
+        "عدّل {name} القيمة المقترحة قبل الموافقة. لم يُطبَّق شيء من هذه الصيغة."),
+    "proposal.life.pending_review": (
+        "{where_cap} is reviewing the change before it shows.",
+        "يراجع {where} التعديل قبل أن يظهر."),
+    "proposal.verify.check.confirmed": (
+        "A check saw the change on {where}.", "رأى الفحص التعديل في {where}."),
+    "proposal.verify.check.not_confirmed": (
+        "The check after it was sent still saw the old value on {where}.",
+        "ما زال الفحص بعد الإرسال يرى القيمة السابقة في {where}."),
+    "proposal.life.rejected": (
+        "{where_cap} did not accept the change.", "لم يقبل {where} التعديل."),
+    "proposal.life.changed_back": (
+        "{where_cap} changed it back to the old value.", "أعاد {where} القيمة السابقة."),
     "proposal.expire.time": (
         "It expired after 14 days. Nothing was applied.", "انتهت مهلته بعد 14 يوماً. لم يُطبَّق شيء."),
     "proposal.expire.finding_gone": (
@@ -203,9 +225,14 @@ VIA = {
 
 BUTTONS: dict[str, tuple[str, str]] = {
     "approve": ("Approve", "موافقة"),
+    "change": ("Change it", "تعديله"),
     "later": ("Not now", "ليس الآن"),
+    # Only on asks sent before the Sunday card (Discovery 2.0): their old buttons still answer.
     "details": ("See details", "التفاصيل"),
 }
+# The Sunday card's three quick replies, in this order (T2 2.3: three, so WhatsApp desktop shows
+# them all and no "See all options").
+CARD_BUTTONS = ("approve", "change", "later")
 ASK_HEAD = (
     "*{shop}*: a change is waiting for your approval.",
     "*{shop}*: يوجد تعديل بانتظار موافقتك.",
@@ -238,8 +265,40 @@ TEMPLATE_AR = (
 # What a tap is answered with.
 REPLY: dict[str, tuple[str, str]] = {
     "approved": (
-        "Approved: {what} at {place}. The change is being applied.",
-        "تمت الموافقة: {what} في {place}. يجري تطبيق التعديل."),
+        "Approved: {what} at {place}. ALYR sends it now, checks it again within a day and sends "
+        "you the result here.",
+        "تمت الموافقة: {what} في {place}. ترسله ALYR الآن، وتتحقق منه مرة أخرى خلال يوم، "
+        "وترسل إليك النتيجة هنا."),
+    "not_now": (
+        "Okay. Nothing changes. ALYR asks again after {date}, only if it is still different.",
+        "حسناً. لا يتغير شيء. تسألك ALYR مرة أخرى بعد {date}، فقط إن بقي مختلفاً."),
+    "change": (
+        "Change it in your workspace: {link} . Nothing changes until you approve it there.",
+        "عدّله في مساحة العمل: {link} . لا يتغير شيء قبل أن توافق عليه هناك."),
+    "change_no_link": (
+        "Open your workspace to change it. Nothing changes until you approve it there.",
+        "افتح مساحة العمل لتعديله. لا يتغير شيء قبل أن توافق عليه هناك."),
+    # The one result of an ask, after the check about 20 hours after it was applied.
+    "result_live": (
+        "Checked: {what} at {place} now shows {after} on {where}. You can undo it in your "
+        "workspace until {date}.",
+        "تم التحقق: {what} في {place} يظهر الآن {after} في {where}. يمكنك التراجع عنه من "
+        "مساحة العمل حتى {date}."),
+    "result_live_no_undo": (
+        "Checked: {what} at {place} now shows {after} on {where}.",
+        "تم التحقق: {what} في {place} يظهر الآن {after} في {where}."),
+    "result_rejected": (
+        "{where_cap} did not accept the change to {what} at {place}. It shows what it showed "
+        "before. The change is in your workspace.",
+        "لم يقبل {where} تعديل {what} في {place}، وما زال يعرض ما كان يعرضه. التعديل في مساحة "
+        "العمل."),
+    "result_changed_back": (
+        "{where_cap} changed {what} at {place} back to {before}. The change is in your workspace.",
+        "أعاد {where} {what} في {place} إلى {before}. التعديل في مساحة العمل."),
+    "result_not_seen": (
+        "The change was sent, but the check still sees {what} at {place} as before. It is in "
+        "your workspace.",
+        "أُرسل التعديل، لكن الفحص ما زال يرى {what} في {place} كما كان. التعديل في مساحة العمل."),
     "already": ("This change was already approved.", "سبقت الموافقة على هذا التعديل."),
     "applied": (
         "Done: {what} at {place} is now {after}. You can undo it in your workspace until {date}.",
@@ -279,6 +338,41 @@ COMMAND_HELP = {
     ),
     "off": ("PROPOSALS OFF: stop sending them to this number",
             "إيقاف التعديلات: أوقف إرسالها إلى هذا الرقم"),
+}
+
+# The refusals of the loop (merged into `words.ERRORS` by `proposals.py`).
+ERRORS: dict[str, tuple[str, str]] = {
+    "not_editable": (
+        "This change cannot be changed before approving: approve it as it is, or say not now.",
+        "لا يمكن تعديل هذا التغيير قبل الموافقة: وافق عليه كما هو، أو اختر «ليس الآن»."),
+    "bad_edit_hours": (
+        "Hours are changed in steps of 30 minutes, like 13:00 or 13:30, with the closing after "
+        "the opening.",
+        "تُعدَّل الساعات بخطوات من 30 دقيقة، مثل 13:00 أو 13:30، ويكون الإغلاق بعد الفتح."),
+    "bad_edit_choice": (
+        "Pick one of the values you confirmed for this business.",
+        "اختر إحدى القيم التي أكّدتها لهذا النشاط."),
+    "nothing_to_change": (
+        "That is what it shows already. Nothing would change.",
+        "هذا ما يظهر حالياً. لن يتغير شيء."),
+    "bad_decline_reason": (
+        "The reason is not_now or declined.", "السبب إما «ليس الآن» أو «رفض»."),
+}
+
+# The life of a change after the tap (Discovery 2.0): one plain line per state, in the reader's
+# language. `{where}` is "the listing" or "the website" (never "Google": for the sample it is not).
+LIFE: dict[str, tuple[str, str]] = {
+    "approved": ("Approved", "تمت الموافقة"),
+    "sent": ("Sent to {where}", "أُرسل إلى {where}"),
+    "pending_review": ("{where_cap} is reviewing it", "قيد المراجعة لدى {where}"),
+    "live": ("Live: a check saw it on {where}", "ظاهر: رآه الفحص في {where}"),
+    "rejected": ("{where_cap} did not accept it", "لم يقبله {where}"),
+    "changed_back": ("{where_cap} changed it back", "أعاده {where} إلى ما كان"),
+}
+# What the receipt says about how it was approved and when it is looked at again.
+RECEIPT = {
+    "edited": ("Approved with a changed value", "تمت الموافقة بقيمة معدّلة"),
+    "unedited": ("Approved as proposed", "تمت الموافقة كما اقتُرح"),
 }
 
 # What the brief line and the Agent's "Needs you now" say; `{n}` is a counted noun.
@@ -443,13 +537,23 @@ def waiting_text(n: int, lang: str) -> str:
     return pick(BRIEF["line"], lang).format(n=counted(n, CHANGES, lang))
 
 
+def where_words(target: str, lang: str) -> dict:
+    """`{where}` and `{where_cap}` for a target, for the life words and the result."""
+    where = pick(WHERE.get(target, WHERE["listing"]), lang)
+    return {"where": where, "where_cap": where[:1].upper() + where[1:] if lang == "en" else where}
+
+
+def life_text(state: str, target: str, lang: str) -> str:
+    return pick(LIFE[state], lang).format(**where_words(target, lang))
+
+
 def all_texts() -> list[str]:
     """Every fixed string, for the tests that look for gaps, ellipses and banned words. The
     review replies are outside the first-person test and are returned by `reply_texts`."""
     out: list[str] = []
     tables = (
         FIELD_LABELS, WHERE, NONE_TEXT, TITLES, RULE_LINES, BUTTONS, REPLY, COMMAND_HELP,
-        HISTORY, VIA, BRIEF, WHERE_FAILURE,
+        HISTORY, VIA, BRIEF, WHERE_FAILURE, LIFE, RECEIPT, ERRORS,
     )
     for table in tables:
         for pair in table.values():

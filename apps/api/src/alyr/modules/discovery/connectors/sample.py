@@ -156,6 +156,15 @@ WRITES = frozenset({
 })
 # A fictional owner may take back what they approved for a week.
 UNDO_DAYS = 7
+# Google's edit stages, simulated the same way every time (Discovery 2.0, T2 4.2; Google's own
+# stages are pending, accepted, not accepted and "updated by Google"). A change to the listing is
+# under review for `REVIEW_DELAY` after it was sent, then shows; the website (the owner's own) has
+# no review. `OUTCOMES` names the (target, field) pairs the simulated platform turns down
+# (`rejected`, when the review ends) or puts back later (`changed_back`, `CHANGED_BACK_AFTER` after
+# it was sent). Empty by default, so the sample's story is unchanged; a test sets it.
+REVIEW_DELAY = timedelta(hours=2)
+CHANGED_BACK_AFTER = timedelta(hours=30)
+OUTCOMES: dict[tuple[str, str], str] = {}
 _ABSENT = object()
 
 
@@ -244,6 +253,7 @@ class SampleConnector:
     kind = KIND
     writes = WRITES
     undoable = WRITES
+    undo_days = UNDO_DAYS
 
     async def snapshot(self, locations: list[Location], ctx: RunContext) -> Snapshot:
         stage = min(ctx.prior_done_runs, LAST_STAGE)
@@ -284,6 +294,31 @@ class SampleConnector:
         if not same(change.field, await self.read_current(change, ctx), change.after):
             raise _gone("It has changed since.", "تغيّر منذ ذلك الحين.")
         await ctx.state.delete(change.location.id, change.target, change.field, change.subject_ref)
+
+    async def edit_state(self, change: Change, receipt: Receipt, ctx: WriteContext):
+        """Where a sent change stands on the (simulated) platform, and since when: `pending`,
+        `live`, `rejected` or `changed_back`. Pure: from the receipt's time, the clock and
+        `OUTCOMES`."""
+        sent = receipt.at
+        if change.target != "listing":
+            return "live", sent
+        reviewed = sent + REVIEW_DELAY
+        if ctx.now < reviewed:
+            return "pending", sent
+        outcome = OUTCOMES.get((change.target, change.field))
+        if outcome == "rejected":
+            return "rejected", reviewed
+        if outcome == "changed_back" and ctx.now >= sent + CHANGED_BACK_AFTER:
+            return "changed_back", sent + CHANGED_BACK_AFTER
+        return "live", reviewed
+
+    async def platform_reverted(self, change: Change, ctx: WriteContext) -> None:
+        """The simulated platform did not keep the change: the listing shows the script's value
+        again (the override goes), so the next check-up sees what customers see."""
+        if ctx.state is not None:
+            await ctx.state.delete(
+                change.location.id, change.target, change.field, change.subject_ref
+            )
 
 
 def _ago(ctx: RunContext, days: int):

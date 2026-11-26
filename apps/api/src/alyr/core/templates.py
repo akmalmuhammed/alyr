@@ -458,11 +458,13 @@ CATALOGUE: dict[str, Template] = {
         samples_ar=("CN-0003", "مخبز قرفة", "127.00 ر.ق", "https://app.alyr.online/d/qirfa?t=a"),
         held=HELD,
     ),
-    # Discovery Phase 2 (spec 066, D-166): the owner is asked about one proposed change, with three
-    # quick-reply buttons. It is sent only outside the owner's 24-hour window (inside it the same
-    # words go as an ordinary message with buttons, `modules/discovery/asks.py`), only to a linked
-    # staff number marked to receive asks, and only while ALYR_DISCOVERY_ASK_TEMPLATE_APPROVED
-    # is on.
+    # Discovery Phase 2 (spec 066, D-166) and 2.0 (the Sunday card): the owner is asked about one
+    # proposed change, with three quick-reply buttons: Approve, Change it (a link to the
+    # workspace's edit comes back), Not now. NEEDS THE FOUNDER'S META SUBMISSION before
+    # ALYR_DISCOVERY_ASK_TEMPLATE_APPROVED may be turned on. It is sent only outside the owner's
+    # 24-hour window (inside it the same words go as an ordinary message with buttons,
+    # `modules/discovery/asks.py`), only to a linked staff number marked to receive asks, and only
+    # while ALYR_DISCOVERY_ASK_TEMPLATE_APPROVED is on.
     # WRITTEN, NOT SUBMITTED to Meta: that is the founder's go, and `templates_sync --create` skips
     # it (`held`). Meta may file it as marketing, in which case it is not used and asks stay inside
     # the window. The blanks are one line each and at most 240 characters. The Arabic is a draft
@@ -477,8 +479,10 @@ CATALOGUE: dict[str, Template] = {
          "Sat to Thu 07:00 to 22:00; Fri 13:00 to 22:00"),
         samples_ar=("نقطة لعناية السيارات", "ساعات العمل", "نقطة لعناية السيارات - السد",
                     "لا شيء", "السبت إلى الخميس 07:00 إلى 22:00؛ الجمعة 13:00 إلى 22:00"),
-        buttons=("Approve", "Not now", "See details"),
-        buttons_ar=("موافقة", "ليس الآن", "التفاصيل"),
+        # Discovery 2.0, the Sunday card: exactly three quick replies (T2 2.3). Never submitted,
+        # so there is no older wording on Meta to replace; the founder's go submits it.
+        buttons=("Approve", "Change it", "Not now"),
+        buttons_ar=("موافقة", "تعديله", "ليس الآن"),
         held=HELD,
     ),
 }
