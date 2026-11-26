@@ -3,6 +3,7 @@
 // week. No React and no browser globals, so `logic.test.mjs` runs it under `node --test`.
 
 import type { ChecksAnswer, ChecksRow, DayKey, Proposal, Side } from "../discoveryApi.ts";
+import { isolate } from "../../../_ui/format.ts";
 import { T, type D2Lang, type WhereKey } from "./copy.ts";
 
 export type LeadParts = { pre: string; hl: string; post: string };
@@ -66,7 +67,7 @@ export function leadFor(p: Pick<Proposal, "field" | "before" | "after" | "title"
 /** The value being decided, short: «Friday 13:00–22:00» for one day of hours, else the after line. */
 export function exactText(p: Pick<Proposal, "field" | "before" | "after">, lang: D2Lang): string {
   const day = oneDay(p);
-  if (day) return `${lang === "ar" ? dayAr(day) : dayEn(day)} ${spanText(lineOf(p.after, day), lang)}`;
+  if (day) return `${lang === "ar" ? dayAr(day) : dayEn(day)} ${lang === "ar" ? isolate(spanText(lineOf(p.after, day), lang)) : spanText(lineOf(p.after, day), lang)}`;
   return p.after.text;
 }
 const dayEn = (d: DayKey) => ({ sat: "Saturday", sun: "Sunday", mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday" })[d];
@@ -94,13 +95,13 @@ function rowTally(row: ChecksRow, rules: readonly string[]): Tally {
   return { matched, measured: matched + failed, notMeasured, total: matched + failed + notMeasured };
 }
 
-/** "10 of 14 checks match": the business row when the API sends one, else every place's row
- * summed. A check that was not measured is never in the 14 (spec: never say a number it did not
+/** "10 of 14 checks match": the business's own row and every place's row, summed (the API keeps
+ * business-wide checks on the business row and the rest on each place). A check that was not measured is never in the 14 (spec: never say a number it did not
  * measure). Null when there was no finished check-up or nothing was measured. */
 export function tally(answer: ChecksAnswer | null): Tally | null {
   if (!answer || !answer.measured) return null;
   const rules = answer.rules.map((r) => r.id);
-  const rows = answer.business ? [answer.business] : answer.places;
+  const rows = [...(answer.business ? [answer.business] : []), ...answer.places];
   if (!rows.length) return null;
   const sum = rows.map((r) => rowTally(r, rules)).reduce((a, b) => ({
     matched: a.matched + b.matched, measured: a.measured + b.measured, notMeasured: a.notMeasured + b.notMeasured, total: a.total + b.total,

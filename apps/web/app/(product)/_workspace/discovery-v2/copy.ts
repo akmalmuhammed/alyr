@@ -27,7 +27,12 @@ const N = {
 
 /** A count with no-break space, without the noun (Arabic needs the digits alone in a few lines). */
 const n = (value: number) => value.toLocaleString("en");
-const ar = (text: string) => isolate(text);
+/** English prose spells three to nine («Three things»); figures stay digits. */
+const WORDS_EN = ["", "", "", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
+const cap = (value: number) => WORDS_EN[value] || n(value);
+/** A range keeps its two ends together: word joiners round the dash, so a line never breaks inside it. */
+export const keep = (text: string) => text.replace(/–/g, "⁠–⁠");
+const ar = (text: string) => isolate(keep(text));
 
 const DAY_EN: Record<DayKey, [one: string, many: string]> = {
   sat: ["Saturday", "Saturdays"], sun: ["Sunday", "Sundays"], mon: ["Monday", "Mondays"], tue: ["Tuesday", "Tuesdays"],
@@ -60,13 +65,15 @@ export const T = {
     sample: "Sample screen of a fictional car care business. The names and numbers are made up; they are not ALYR's results.",
     region: "Discovery, this week",
     // The brief
-    needs: (count: number) => (count === 0 ? "Nothing needs you this week." : count === 1 ? "One thing needs you this week." : count === 2 ? "Two things need you this week." : `${n(count)} things need you this week.`),
-    left: (count: number) => (count === 0 ? "Nothing else needs you this week." : count === 1 ? "One thing left this week." : count === 2 ? "Two things left this week." : `${n(count)} things left this week.`),
+    needs: (count: number) => (count === 0 ? "Nothing needs you this week." : count === 1 ? "One thing needs you this week." : count === 2 ? "Two things need you this week." : `${cap(count)} things need you this week.`),
+    left: (count: number) => (count === 0 ? "Nothing else needs you this week." : count === 1 ? "One thing left this week." : count === 2 ? "Two things left this week." : `${cap(count)} things left this week.`),
     checked: (date: string, time: string) => `ALYR checked your business on ${date} at ${time}.`,
     recorded: (date: string) => `Your listing as ALYR recorded it on ${date}.`,
     sampleSource: "These are the sample business's pages, not yours.",
     notChecked: "ALYR has not checked your business yet.",
     remaining: (names: string) => `Still waiting: ${names}.`,
+    waitingName: (field: string, where: WhereKey) => `the ${field.toLowerCase()} on ${WHERE.en.mid[where]}`,
+    ownerName: { whatsapp_link_missing: "the WhatsApp link on your website" } as Record<string, string>,
     onItsWay: (what: string, where: WhereKey) => `${what} is on its way to ${WHERE.en.mid[where]}.`,
     matchOf: (measured: number) => ({ pre: "", of: ` of ${n(measured)}`, post: " checks match" }),
     upFrom: (from: number, date: string) => `Up from ${n(from)} on ${date}`,
@@ -121,7 +128,7 @@ export const T = {
     // After approve
     approved: "Approved",
     stampBy: (by: string, time: string) => `${by} · ${time}`,
-    afterLeadDay: (day: DayKey, span: string, where: WhereKey) => `${DAY_EN[day][0]} ${span} is on its way to ${WHERE.en.mid[where]}.`,
+    afterLeadDay: (day: DayKey, span: string, where: WhereKey) => `${DAY_EN[day][0]} ${keep(span)} is on its way to ${WHERE.en.mid[where]}.`,
     afterLead: (field: string, where: WhereKey) => `${field} is on its way to ${WHERE.en.mid[where]}.`,
     afterSupport: (where: WhereKey) => (where === "google"
       ? "Google usually reviews an edit before it shows. ALYR checks again on the next check-up and shows here whether customers see it."
@@ -150,6 +157,7 @@ export const T = {
     notNowBody: (date: string) => `ALYR asks again after ${date}, only if it is still different.`,
     // Waiting
     moreWaiting: (count: number) => `${counted(count, N.more, "en")}:`,
+    andMore: (names: string, more: number) => `${names} and ${n(more)} more`,
     youDo: "You do this one",
     youDoReceipt: "Recorded as done by you when the check sees it",
     markDone: "I did it",
@@ -274,6 +282,8 @@ export const T = {
     sampleSource: "هذه صفحات النشاط المثال، لا صفحاتك.",
     notChecked: "لم تفحص ALYR نشاطك بعد.",
     remaining: (names: string) => `ما زال بانتظارك: ${names}.`,
+    waitingName: (field: string, where: WhereKey) => `${field} على ${WHERE.ar.mid[where]}`,
+    ownerName: { whatsapp_link_missing: "رابط واتساب على موقعك" } as Record<string, string>,
     onItsWay: (what: string, where: WhereKey) => `${what}: في الطريق إلى ${WHERE.ar.mid[where]}.`,
     matchOf: (measured: number) => ({ pre: "تتطابق ", of: ` من ${n(measured)}`, post: measured >= 3 && measured <= 10 ? " فحوصات" : " فحصاً" }),
     upFrom: (from: number, date: string) => `ارتفاعاً من ${n(from)} يوم ${date}`,
@@ -302,7 +312,7 @@ export const T = {
     barsLabel: (weeks: number, day: DayKey) => `الطلبات والحجوزات في آخر ${n(weeks)} أيام ${DAY_AR[day]}`,
     orders: "الطلبات",
     bookings: "الحجوزات",
-    barsBand: (where: WhereKey, weeks: number) => `${WHERE.ar.mid[where]} أظهر «مغلق» في الأيام ${n(weeks)} كلها`,
+    barsBand: (where: WhereKey, weeks: number) => (weeks === 4 ? `${WHERE.ar.mid[where]} أظهر «مغلق» في الأربعة` : `${WHERE.ar.mid[where]} أظهر «مغلق» فيها كلها`),
     barValue: (orders: number, bookings: number) => `${n(orders)} + ${n(bookings)}`,
     dayCounts: (orders: number, bookings: number) => `${counted(orders, N.order, "ar")}، ${counted(bookings, N.booking, "ar")}`,
     barTitle: (date: string, orders: number, bookings: number) => `${date}: ${counted(orders, N.order, "ar")}، ${counted(bookings, N.booking, "ar")}`,
@@ -352,6 +362,7 @@ export const T = {
     notNowTitle: "ليس الآن. لن يتغيّر شيء.",
     notNowBody: (date: string) => `تسأل ALYR مجدداً بعد ${date}، فقط إن بقي مختلفاً.`,
     moreWaiting: (count: number) => `${counted(count, N.more, "ar")} بالانتظار:`,
+    andMore: (names: string, more: number) => `${names} و${n(more)} غيرها`,
     youDo: "هذا عليك",
     youDoReceipt: "يُسجَّل أنك أنجزته حين يراه الفحص",
     markDone: "أنجزته",

@@ -38,6 +38,8 @@ export type AskTicketProps = {
   onWhy: () => void;
   error: string;
   peeks: number;
+  /** When the next check runs, if the API says (workstream D). */
+  nextCheckAt: string | null;
 };
 
 export function AskTicket(props: AskTicketProps) {
@@ -81,7 +83,7 @@ export function AskTicket(props: AskTicketProps) {
                     <div className="d2-stamp d2-cut-stamp"><Ic name="check" size="sm" />{t.approved}{p.decided ? <small>{t.stampBy(p.decided.by, time(p.decided.at, lang))}</small> : null}</div>
                     <h2 className="d2-t-lead" id="d2-ask-title">{ask.day ? t.afterLeadDay(ask.day, ask.after, ask.where) : t.afterLead(p.field_label, ask.where)}</h2>
                     <p className="d2-t-support">{stage === "failed" ? t.failed(p.failure?.message ?? "") : t.afterSupport(ask.where)}</p>
-                    <ChangeLifeTrack p={p} where={ask.where} lang={lang} />
+                    <ChangeLifeTrack p={p} where={ask.where} lang={lang} nextCheckAt={props.nextCheckAt} />
                     <div className="d2-t-actions d2-undo-row">
                       {p.can.undo && p.undo_until ? (
                         <>

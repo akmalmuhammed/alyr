@@ -46,7 +46,7 @@ export function EvidenceSheet({ ask, lang, approvers, onClose, onApprove, onDecl
       <aside className="d2-sheet" role="dialog" aria-modal="true" aria-labelledby="d2-why-title" ref={ref} onKeyDown={trap}>
         <div className="d2-sheet-head">
           <span className="d2-crumb">{t.sheetCrumb(ask.index, ask.of)}</span>
-          <span className="d2-sheet-close"><Kbd>{t.esc}</Kbd><button ref={closeRef} className="d2-icon-btn" type="button" onClick={onClose} aria-label={t.close} data-tip={t.close}><Ic name="x" /></button></span>
+          <span className="d2-sheet-close"><Kbd>{t.esc}</Kbd><button ref={closeRef} className="d2-icon-btn" type="button" onClick={onClose} aria-label={t.close}><Ic name="x" /></button></span>
         </div>
         <h2 className="d2-sheet-title" id="d2-why-title">{ask.lead.pre}{ask.lead.hl}{ask.lead.post}</h2>
         <nav className="d2-segm" aria-label={t.sheetNav}>

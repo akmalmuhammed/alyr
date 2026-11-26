@@ -25,7 +25,9 @@ export function WaitingFan({ lang, asks, owner, startIndex, of, open, onToggle, 
   const t = T[lang];
   const count = asks.length + owner.length;
   if (!count) return null;
-  const names = [...asks.map((a) => a.p.field_label), ...owner.map((f) => f.title)].join(t.listSep);
+  const lower = (s: string) => (lang === "en" && /^[A-Z][a-z]*(\s|$)/.test(s) ? s[0].toLowerCase() + s.slice(1) : s);
+  const all = [...new Set([...asks.map((a) => lower(a.p.field_label)), ...owner.map((f) => t.ownerName[f.rule_id]?.replace(/^the /, "") ?? lower(f.title.replace(/[.。]$/, "")))])];
+  const names = all.length > 3 ? t.andMore(all.slice(0, 3).join(t.listSep), all.length - 3) : all.join(t.listSep);
   return (
     <>
       <button className="d2-waiting" type="button" aria-expanded={open} aria-controls="d2-fan" onClick={onToggle}>

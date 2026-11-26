@@ -54,7 +54,7 @@ test("the ticket's sentence marks the part to decide", () => {
 
 test("the exact change is the one day and its new hours, else the after line", () => {
   assert.equal(exactText(hours, "en"), "Friday 13:00–22:00");
-  assert.equal(exactText(ar.waiting[0], "ar"), "الجمعة 13:00–22:00");
+  assert.equal(exactText(ar.waiting[0], "ar"), "الجمعة ⁦13:00–22:00⁩");
   assert.equal(exactText(phone, "en"), "+974 5555 0101");
   assert.deepEqual(beforeAfter(hours, "en"), { before: "Closed", after: "13:00–22:00" });
   assert.deepEqual(beforeAfter({ ...phone, before: { text: "none", lines: [] } }, "en"), { before: "None", after: "+974 5555 0101" });
@@ -66,6 +66,8 @@ test("the tally counts measured checks only, and nothing without a finished chec
   assert.equal(tally({ ...en.checks, measured: false }), null);
   const places = { ...en.checks, business: null, places: [{ id: "a", name: "A", ...en.checks.business }, { id: "b", name: "B", ...en.checks.business }] };
   assert.deepEqual(tally(places), { matched: 20, measured: 28, notMeasured: 4, total: 32 });
+  const both = { ...places, business: en.checks.business };
+  assert.deepEqual(tally(both), { matched: 30, measured: 42, notMeasured: 6, total: 48 });
   const none = { ...en.checks, business: { checks: Object.fromEntries(en.checks.rules.map((r) => [r.id, "not_measured"])), fixed: [] } };
   assert.equal(tally(none), null);
 });
@@ -113,7 +115,8 @@ test("small helpers: the cool-off date, bar steps, today's weekday in Doha", () 
 
 test("the brief's sentence agrees with the count in both languages", () => {
   assert.equal(T.en.needs(1), "One thing needs you this week.");
-  assert.equal(T.en.needs(3), "3 things need you this week.");
+  assert.equal(T.en.needs(3), "Three things need you this week.");
+  assert.equal(T.en.needs(12), "12 things need you this week.");
   assert.equal(T.en.left(2), "Two things left this week.");
   assert.equal(T.ar.needs(1), "أمر واحد يحتاجك هذا الأسبوع.");
   assert.equal(T.ar.left(2), "أمران متبقيان هذا الأسبوع.");

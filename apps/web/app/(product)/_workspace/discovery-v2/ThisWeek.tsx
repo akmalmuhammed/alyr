@@ -228,7 +228,7 @@ export function ThisWeek({ lang, view, actions, now, initial }: {
     else if (st === "approved") latest = t.latestApproved(latestP.field_label);
   }
 
-  const remaining = joinNames([...rest.map((a) => t.exactField(a.p.field_label, a.where)), ...owner.map((f) => f.title)].map((s, i) => (i === 0 || lang === "ar" ? s : s[0].toLowerCase() + s.slice(1))), lang, "and");
+  const remaining = joinNames([...rest.map((a) => t.waitingName(a.p.field_label, a.where)), ...owner.map((f) => t.ownerName[f.rule_id] ?? f.title.replace(/[.。]$/, ""))], lang, "and");
   const currentDecided = current && currentP && decided.has(current.p.id);
   const onItsWay = current && currentP && currentDecided && ["approved", "sent", "live"].includes(stageOf(currentP))
     ? (current.day ? t.afterLeadDay(current.day, current.after, current.where) : t.afterLead(currentP.field_label, current.where)) : "";
@@ -246,7 +246,7 @@ export function ThisWeek({ lang, view, actions, now, initial }: {
             snoozedUntil={snoozed[current.p.id] ?? null}
             draft={draft} onEdit={actions.changeAfter && current.day ? (on) => setDraft(on ? { open: current.after.split("–")[0] ?? "", close: current.after.split("–")[1] ?? "" } : null) : undefined}
             onDraft={setDraft} onApprove={() => void approve(current)} onDecline={() => void decline(current)} onUndo={() => void undo(currentP)}
-            onWhy={() => openSheet(current)} error={error} peeks={Math.min(2, rest.length + owner.length)} />
+            onWhy={() => openSheet(current)} error={error} peeks={Math.min(2, rest.length + owner.length)} nextCheckAt={view.nextCheckAt} />
         ) : view.state !== "content" || !view.total ? (
           <div className="d2-empty"><p>{t.emptyBody}</p></div>
         ) : null}

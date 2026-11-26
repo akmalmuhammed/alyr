@@ -5,9 +5,9 @@ import type { ReactNode } from "react";
 import { T, type D2Lang, type WhereKey } from "./copy";
 import type { Proposal } from "../discoveryApi";
 import { railOf, stageOf } from "./logic";
-import { Ltr, time } from "./parts";
+import { Ltr, dayTime, time } from "./parts";
 
-export function ChangeLifeTrack({ p, where, lang }: { p: Proposal; where: WhereKey; lang: D2Lang }) {
+export function ChangeLifeTrack({ p, where, lang, nextCheckAt = null }: { p: Proposal; where: WhereKey; lang: D2Lang; nextCheckAt?: string | null }) {
   const t = T[lang];
   const steps = railOf(p);
   const stage = stageOf(p);
@@ -16,8 +16,10 @@ export function ChangeLifeTrack({ p, where, lang }: { p: Proposal; where: WhereK
   const sub = (key: (typeof steps)[number]["key"], at: string | null): ReactNode => {
     if (key === "approved") return at ? <><Ltr>{time(at, lang)}</Ltr>{by ? ` · ${by}` : ""}</> : by;
     if (key === "sent") return at ? <Ltr>{time(at, lang)}</Ltr> : stage === "failed" ? "" : t.railWaiting;
-    if (key === "pending") return stage === "sent" ? t.railNext : "";
-    return stage === "live" ? t.matchesNow : stage === "notLive" ? t.notMatching : t.railNext;
+    if (key === "pending") return "";
+    if (stage === "live") return t.matchesNow;
+    if (stage === "notLive") return t.notMatching;
+    return nextCheckAt ? <Ltr>{dayTime(nextCheckAt, lang)}</Ltr> : t.railNext;
   };
   return (
     <ol className="d2-rail" aria-label={t.rail}>

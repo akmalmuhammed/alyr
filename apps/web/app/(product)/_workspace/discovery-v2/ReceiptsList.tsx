@@ -6,7 +6,7 @@
 import type { Person, ReceiptRow } from "./adapter";
 import { toneOf } from "./adapter";
 import { T, type D2Lang } from "./copy";
-import { allMatch, stageOf, type Tally } from "./logic";
+import { allMatch, joinNames, stageOf, type Tally } from "./logic";
 import { Ic, TickDraw } from "./icons";
 import { Av, Ltr, day, dayTime } from "./parts";
 
@@ -32,7 +32,7 @@ export function ReceiptsList({ lang, rows, people, tally, checkedAt, checksHref,
         {whoPeople.length ? (
           <span className="d2-who-sum">
             <span className="d2-avs">{whoPeople.map((p) => <Av key={p.name} person={p} tip={p.name} />)}<Av tone="alyr" tip={t.sentByAlyr} /></span>
-            {[...whoPeople.map((p) => p.name), "ALYR"].join(t.listSep)}
+            {joinNames([...whoPeople.map((p) => p.name), "ALYR"], lang, "and")}
           </span>
         ) : null}
       </div>
