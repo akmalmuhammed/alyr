@@ -60,7 +60,6 @@ from alyr.modules.discovery.connectors.base import (
 
 KIND = "website"
 USER_AGENT = "ALYR-Discovery (+https://alyr.qa)"
-AGENT_TOKEN = "ALYR-Discovery"
 TIMEOUT_SECONDS = 10.0  # one request, connecting and reading
 CONNECT_SECONDS = 3.0
 SITE_SECONDS = 60.0  # one site, all its pages
