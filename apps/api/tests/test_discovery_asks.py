@@ -7,14 +7,13 @@ made up.
 """
 
 import json
-from datetime import datetime, timedelta
+from datetime import timedelta
 from uuid import UUID
 
 import pytest
 
 from alyr.channels.meta import parse_webhook
 from alyr.config import get_settings
-from alyr.modules.discovery import proposal_words as pw
 from discovery_proposals_support import (
     BASE,
     OWNER_PHONE,
