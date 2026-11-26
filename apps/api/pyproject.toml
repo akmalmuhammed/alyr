@@ -18,6 +18,11 @@ dependencies = [
     "pypdfium2>=4.30",
     # Payment providers' keys are kept sealed (AES-256-GCM; ALY-17, core/payment_keys.py).
     "cryptography>=50,<51",
+    # Discovery compares phone numbers in any writing (Arabic-Indic digits, GCC formats):
+    # Google's libphonenumber, Apache-2.0 (modules/discovery/normalize.py).
+    "phonenumbers>=9.0.44,<10",
+    # Discovery's name matching within one script, with a written threshold; MIT.
+    "rapidfuzz>=3.14,<4",
 ]
 
 [dependency-groups]
