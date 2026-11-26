@@ -21,5 +21,9 @@
     "file": "apps/api/src/alyr/modules/items/wa_order.py",
     "match": "#214",
     "reason": "An item code as a customer writes it in WhatsApp (#214), in a comment."
+  },
+  {
+    "file": "apps/web/app/(product)/_workspace/discovery-v2/tokens.css",
+    "reason": "Discovery 2.0 (U1): the approved prototype's tokens, scoped under .d2 in this one file while the design is behind ?ui=2; the listing miniature draws the listing's own greys. Every other Discovery v2 file reads them with var(). Moves into design/tokens.json when the founder flips Discovery to v2."
   }
 ]

@@ -3,9 +3,10 @@
 `start_run` is idempotent: when a run is queued or running it is returned, otherwise a queued run
 is made and a `discovery.run` job is queued with it, in the same transaction. The job runs on the
 existing jobs worker as `background` work, so a customer's message is always claimed first
-(D-078). It loads the places and the connection, asks the connector for a snapshot (one step),
-evaluates the rules (one step per family), saves the findings and the reviews, scores, and writes
-`done`.
+(D-078). It loads the places, the connection and the business's check pack (`packs/`), asks the
+connector for a snapshot (one step), reads ALYR's own records once (`firstparty`, when installed),
+evaluates the rules of the pack (one step per part), saves the findings and the reviews, scores,
+and writes `done` with the pack it ran.
 
 **Every step is a row of `discovery_run_steps`, written in a transaction of its own as the step
 ends**, so a run that fails keeps its log, and the owner reads it. **A step budget and a cost
@@ -20,6 +21,7 @@ prepares proposals from what it found and checks the ones that were applied: two
 never approves or applies anything.
 """
 
+import importlib
 import logging
 import math
 from collections.abc import Awaitable, Callable
@@ -31,15 +33,57 @@ import asyncpg
 from alyr.config import get_settings
 from alyr.core import jobs
 from alyr.db import Database
-from alyr.modules.discovery import answer_words, connectors, observations, proposals, rules, scoring
+from alyr.modules.discovery import (
+    answer_words,
+    connectors,
+    observations,
+    packs,
+    proposals,
+    rules,
+    scoring,
+)
+from alyr.modules.discovery import words as _words
 from alyr.modules.discovery.answers import service as answers
 from alyr.modules.discovery.apply import load_overrides
 from alyr.modules.discovery.connectors import ConnectorError, Location, RunContext, Snapshot
 from alyr.modules.discovery.connectors.manual import STALE_AFTER_DAYS
 from alyr.modules.discovery.errors import DiscoveryError
+from alyr.modules.discovery.packs import store as pack_store
 from alyr.modules.discovery.words import ERRORS, STEP_SUMMARIES
 
 log = logging.getLogger("alyr.discovery")
+
+
+def _optional(name: str):
+    """A module of the first-party checks (workstream C), or None while it is not installed. Only
+    its own absence is tolerated: an error inside it still stops the API at start."""
+    try:
+        return importlib.import_module(f"alyr.modules.discovery.{name}")
+    except ModuleNotFoundError as error:
+        if error.name != f"alyr.modules.discovery.{name}":
+            raise
+        return None
+
+
+_firstparty = _optional("firstparty")
+# Their words join the module's own tables, through this one import (CONTRACTS.md).
+_firstparty_words = _optional("words_firstparty")
+if _firstparty_words is not None:
+    for _table in ("RULE_WORDS", "CHECK_NAMES", "LABELS", "WHERE", "VALUES", "ERRORS",
+                   "HAND_WHAT_HAPPENS_BY_RULE", "STEP_SUMMARIES"):
+        if hasattr(_firstparty_words, _table):
+            getattr(_words, _table).update(getattr(_firstparty_words, _table))
+
+FIRSTPARTY_RULES: tuple[rules.Rule, ...] = tuple(
+    getattr(_firstparty, "FIRSTPARTY_RULES", ()) if _firstparty is not None else ()
+)
+# Every rule a check-up may run, and the packs that choose among them. `PACKS` is read at call time
+# (`engine.PACKS`), so a new pack handed to `packs.Registry.from_data` runs with no other change.
+ALL_RULES: tuple[rules.Rule, ...] = rules.RULES + FIRSTPARTY_RULES
+RULE_BY_ID: dict[str, rules.Rule] = {r.id: r for r in ALL_RULES}
+PACKS = packs.Registry.from_data(
+    packs.PACKS, [r.id for r in ALL_RULES], [r.id for r in FIRSTPARTY_RULES]
+)
 
 JOB = "discovery.run"
 # What a run may take, per shop, written on the run's own row when it is made.
@@ -317,6 +361,7 @@ async def _carry_out(db, tenant_id, run, log_, get_connector) -> None:
         # I/O.
         seen = await observations.latest(conn) if run["connector_kind"] == "manual" else {}
         demo = await is_demo(conn)
+        selection = await pack_store.selection(conn, PACKS)
     if not connected:
         raise RunFailed("no_connection")
     if run["connector_kind"] == "sample" and not demo:
@@ -348,7 +393,11 @@ async def _carry_out(db, tenant_id, run, log_, get_connector) -> None:
     )
     snapshot: Snapshot = await connector.snapshot(locations, ctx)
     # What the source can change: a finding's kind is `agent` only while it can change that.
-    writes = frozenset(getattr(connector, "writes", None) or ())
+    # A pack's `never_edit` fields (a clinic's service text) are taken out of what it may write, so
+    # no proposal is ever made for them.
+    writes = packs.allowed_writes(
+        frozenset(getattr(connector, "writes", None) or ()), selection.never_edit
+    )
     by_hand = bool(getattr(connector, "by_hand", False))
     await log_.note(
         "connector.snapshot",
@@ -357,21 +406,38 @@ async def _carry_out(db, tenant_id, run, log_, get_connector) -> None:
         cost=ctx.spent,
     )
 
-    # 2. The rules, one family at a time.
+    # 1b. What each place's own website says (Discovery 2.0, `connectors/website.py`): read for
+    # every place with a website address, never for the fictional sample, and joined without
+    # overriding what the connection said. One logged step per added source.
+    for extra in connectors.extras_for(run["connector_kind"], locations):
+        tool = f"connector.{extra.kind}"
+        log_.guard(tool)
+        started = clock()
+        read = await extra.snapshot(locations, ctx)
+        snapshot = connectors.merge(snapshot, read)
+        await log_.note(tool, extra.sentence(read), started)
+
+    # 2. The rules of the business's pack, one part at a time.
     async with db.tenant(tenant_id, readonly=True) as conn:
         previous = {
             r["fingerprint"]: rules.Previous(r["fingerprint"], r["status"])
             for r in await conn.fetch("select fingerprint, status from discovery_findings")
         }
-    rule_ctx = rules.Context(snapshot, locations, previous, now=snapshot.taken_at)
+    first_party = await _first_party(db, tenant_id, clock())
+    rule_ctx = rules.Context(
+        snapshot, locations, previous, now=snapshot.taken_at, first_party=first_party,
+        pack=selection.key,
+    )
     outcomes: list[rules.Outcome] = []
-    for part in PARTS_WITH_RULES:
+    chosen = [RULE_BY_ID[rule_id] for rule_id in selection.rule_ids]
+    for part in _parts(chosen):
         tool = f"rules.{part}"
         log_.guard(tool)
         started = clock()
-        done = rules.evaluate(rule_ctx, parts=(part,))
+        done = [o for rule in chosen if rule.part == part for o in rule.check(rule_ctx)]
         outcomes.extend(done)
-        await log_.note(tool, _summary(tool, **_tally(done)), started)
+        sentence = tool if tool in STEP_SUMMARIES else "rules.more"
+        await log_.note(tool, _summary(sentence, **_tally(done)), started)
 
     hits = [o for o in outcomes if o.state == rules.FAIL]
     if len(hits) > MAX_FINDINGS:
@@ -448,29 +514,55 @@ async def _carry_out(db, tenant_id, run, log_, get_connector) -> None:
     # 8. Score, and finish.
     log_.guard("score.compute")
     started = clock()
-    total, parts = scoring.score(outcomes, tally)
+    total, parts = scoring.score(outcomes, tally, RULE_BY_ID)
     async with db.tenant(tenant_id) as conn:
         await log_.add(conn, "score.compute", _summary("score.compute"), started)
         await conn.execute(
             "update discovery_runs set status = 'done', score = $2, score_parts = $3, "
-            "checks = $4, finished_at = now() where id = $1",
+            "checks = $4, pack = $5, finished_at = now() where id = $1",
             run["id"],
             total,
             parts,
-            _checks(outcomes),
+            _checks(outcomes, selection),
+            selection.record(),
         )
 
 
-def _checks(outcomes: list[rules.Outcome]) -> list[dict]:
+def _parts(chosen: list[rules.Rule]) -> list[str]:
+    """The parts to log, in order: the four of Phase 1 always (a pack that skips every rule of one
+    still logs it, with nothing checked), then any other part a pack's rules use."""
+    extra = [p for p in dict.fromkeys(r.part for r in chosen) if p not in PARTS_WITH_RULES]
+    return list(PARTS_WITH_RULES) + extra
+
+
+async def _first_party(db: Database, tenant_id: UUID, now: datetime):
+    """What ALYR's own records say, read once per check-up (`firstparty.first_party_facts`), in a
+    transaction of its own. None when the first-party checks are not installed or the read fails:
+    their rules are then `not_measured`, never guessed, and the check-up goes on."""
+    if _firstparty is None or not hasattr(_firstparty, "first_party_facts"):
+        return None
+    try:
+        async with db.tenant(tenant_id, readonly=True) as conn:
+            return await _firstparty.first_party_facts(conn, tenant_id, now)
+    except Exception:  # noqa: BLE001 - a missing input is "not measured", not a failed check-up
+        log.exception("discovery first-party facts failed for %s", tenant_id)
+        return None
+
+
+def _checks(
+    outcomes: list[rules.Outcome], selection: packs.Selection | None = None
+) -> list[dict]:
     """What each rule found at each place, kept with the run so a screen can tell a check
     that passed from one that was not measured (spec 065, "Checks per place"). The same
     rule outcomes the score was made of; the Answers check (spec 068) is counted apart and
-    is not in this list."""
+    is not in this list. Each says which pack brought it, for "N of M checks match" per pack."""
+    owner = selection.owner if selection is not None else {}
     return [
         {
             "rule": o.rule_id,
             "location": str(o.location_id) if o.location_id else None,
             "state": o.state,
+            "pack": owner.get(o.rule_id, "core"),
         }
         for o in outcomes
     ]
@@ -514,13 +606,17 @@ def _evidence(outcome: rules.Outcome, snapshot: Snapshot) -> list[dict]:
     # dated by the check-up that read it.
     place = snapshot.of(outcome.location_id) if outcome.location_id else None
     seen = (place.observed_at if place and place.observed_at else snapshot.taken_at).isoformat()
+    # What the business's own website said was read from it, at the time it was read, whatever
+    # the connection of the run (Discovery 2.0).
+    site = place.website if place and isinstance(place.website, connectors.SiteWebsite) else None
     return [
         {
             "label": e.label,
             "value": e.value,
             "where": e.where,
-            "seen_at": seen,
-            "source": snapshot.source,
+            "seen_at": site.read_at.isoformat() if site and e.where == "website" and site.read_at
+            else seen,
+            "source": "website" if site and e.where == "website" else snapshot.source,
         }
         for e in outcome.evidence
     ]
@@ -559,7 +655,7 @@ async def _save_findings(
     for outcome in outcomes:
         if outcome.state != rules.FAIL:
             continue
-        rule = rules.RULE_BY_ID[outcome.rule_id]
+        rule = RULE_BY_ID[outcome.rule_id]
         fired.add(outcome.fingerprint)
         evidence = _evidence(outcome, snapshot)
         kind = rules.effective_kind(rule, writes, by_hand)

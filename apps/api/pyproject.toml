@@ -22,6 +22,11 @@ dependencies = [
     # LocalBusiness JSON-LD and microdata, protego its robots.txt (both BSD-3-Clause).
     "extruct>=0.18",
     "protego>=0.4",
+    # Discovery compares phone numbers in any writing (Arabic-Indic digits, GCC formats):
+    # Google's libphonenumber, Apache-2.0 (modules/discovery/normalize.py).
+    "phonenumbers>=9.0.44,<10",
+    # Discovery's name matching within one script, with a written threshold; MIT.
+    "rapidfuzz>=3.14,<4",
 ]
 
 [dependency-groups]

@@ -12,14 +12,23 @@ through the same action as the workspace's button (`discovery.approve_proposal`,
 `whatsapp`), so the two cannot disagree. A typed word never approves: approval on WhatsApp is only
 ever a tap on the ask's own button, and that button approves the ask's own `change_hash`.
 
-When an ask is sent (`send_due`): not at night (22:00 to 07:00 on the shop's clock), not past the
-shop's daily cap (3 by default) for that person, never while an earlier ask of theirs is open
-(24 hours), one ask per proposal per person ever, highest severity first. Inside the person's
-24-hour window the ask is a message with three buttons; outside it, it is the template
-`discovery_ask`, **only when `ALYR_DISCOVERY_ASK_TEMPLATE_APPROVED` is on** (off until Meta has
-approved it). While it is off nothing is sent outside the window and no message is recorded as
-blocked: the proposal waits in the workspace and in the morning brief's line. The outbound layer
-decides consent, the window and a paused client; this module only decides whether to ask.
+When an ask is sent (`send_due`): only about one of the business's (at most three) open asks
+(`proposals.promote`; the rest are "Also noticed" and wait their turn), not at night (22:00 to
+07:00 on the shop's clock), not past the shop's daily cap (3 by default) for that person, never
+while an earlier ask of theirs is open (24 hours), one ask per proposal per person ever, highest
+severity first. Inside the person's 24-hour window the ask is the Sunday card: a message with
+exactly three quick replies, Approve, Change it and Not now; outside it, it is the template
+`discovery_ask` with the same three, **only when `ALYR_DISCOVERY_ASK_TEMPLATE_APPROVED` is on**
+(off until the founder has submitted it and Meta has approved it). While it is off nothing is sent
+outside the window and no message is recorded as blocked: the proposal waits in the workspace and
+in the morning brief's line. The outbound layer decides consent, the window and a paused client;
+this module only decides whether to ask.
+
+Per ask, at most one confirmation and one result: Approve is answered at once (the confirmation),
+and the result goes once (`result_sent_at`), when the check about 20 hours after the change was
+applied has seen it (or the platform turned it down, or it could not be applied), only inside the
+person's window and not at night. "Change it" answers with the link to the workspace's edit (no
+typed value is ever read); "Not now" closes the change for 14 days.
 """
 
 import re
@@ -39,7 +48,8 @@ from alyr.modules.items import clock as shop_clock
 
 TEMPLATE = "discovery_ask"
 PREFIX = "dc:"
-_REPLY = re.compile(r"^dc:([0-9a-f-]{36}):(approve|later|details)$")
+_REPLY = re.compile(r"^dc:([0-9a-f-]{36}):(approve|change|later|details)$")
+RESULT_FOR = timedelta(days=3)
 OPEN_FOR = timedelta(hours=24)
 NEEDS_DAYS_LEFT = timedelta(days=1)
 _SEVERITY = "case p.severity when 'high' then 0 when 'medium' then 1 else 2 end"
@@ -53,12 +63,14 @@ def _place(row: asyncpg.Record, lang: str) -> str:
     return row["place_name_ar"] if lang == "ar" and row["place_name_ar"] else row["place_name"]
 
 
-def _link(proposal_id: UUID | None = None) -> str:
+def _link(proposal_id: UUID | None = None, *, edit: bool = False) -> str:
     base = get_settings().workspace_url.rstrip("/")
     if not base:
         return ""
     path = f"{base}/app/discovery?view=proposals"
-    return f"{path}&p={proposal_id}" if proposal_id else path
+    if not proposal_id:
+        return path
+    return f"{path}&p={proposal_id}" + ("&edit=1" if edit else "")
 
 
 # ── who may be asked ────────────────────────────────────────────────────────────────────
@@ -78,7 +90,7 @@ async def receivers(conn: asyncpg.Connection) -> list[asyncpg.Record]:
 # ── the messages ────────────────────────────────────────────────────────────────────────
 
 
-def _choices(ask_id: UUID, lang: str, keys=("approve", "later", "details")) -> tuple[Choice, ...]:
+def _choices(ask_id: UUID, lang: str, keys=pw.CARD_BUTTONS) -> tuple[Choice, ...]:
     return tuple(
         Choice(f"{PREFIX}{ask_id}:{key}", pw.pick(pw.BUTTONS[key], lang)) for key in keys
     )
@@ -165,6 +177,7 @@ async def send_due(conn: asyncpg.Connection, outbound, now: datetime | None = No
     shop = await shop_clock.load(conn, now)
     if alerts.in_quiet_hours(shop.local):
         return 0  # the next hourly pass after 07:00 sends it
+    await proposals.promote(conn, now)
     cap = await conn.fetchval("select ask_cap_per_day from discovery_settings") or 3
     names = await conn.fetchrow(
         "select name, name_ar from tenants "
@@ -194,7 +207,8 @@ async def send_due(conn: asyncpg.Connection, outbound, now: datetime | None = No
         ):
             continue  # one open ask at a time
         row = await conn.fetchrow(
-            f"{proposals._PROPOSAL} where p.status = 'proposed' and p.expires_at > $1 "
+            f"{proposals._PROPOSAL} where p.status = 'proposed' and p.opened_at is not null "
+            "and p.expires_at > $1 "
             "and not exists (select 1 from discovery_asks a where a.proposal_id = p.id "
             "and a.contact_id = $2) "
             "and (p.proposed_by is distinct from $3 or p.proposed_at <= $4) "
@@ -233,12 +247,44 @@ async def send_due(conn: asyncpg.Connection, outbound, now: datetime | None = No
     return sent
 
 
+def result_text(row: asyncpg.Record, lang: str, tz: str) -> str | None:
+    """The one result of an ask, from where the change stands, or None while it is not known
+    yet (still sent, or still under review)."""
+    shown = pw.change_lines(row["change"], lang, row["target"])
+    values = {"what": shown["field_label"], "place": _place(row, lang),
+              "after": shown["after"]["text"], "before": shown["before"]["text"],
+              **pw.where_words(row["target"], lang)}
+    if row["status"] == "failed":
+        return pw.pick(pw.REPLY["failed"], lang).format(
+            reason=pw.failure(row["failure_code"], row["target"], lang, short=True)
+        )
+    if row["status"] != "applied":
+        return None
+    if row["life"] in ("rejected", "changed_back"):
+        return pw.pick(pw.REPLY[f"result_{row['life']}"], lang).format(**values)
+    if row["life"] == "live":
+        until = row["undo_until"]
+        return pw.pick(pw.REPLY["result_live" if until else "result_live_no_undo"], lang).format(
+            date=pw.shop_date(until, tz, lang) if until else "", **values)
+    if row["verification"] == "not_confirmed":
+        return pw.pick(pw.REPLY["result_not_seen"], lang).format(**values)
+    return None
+
+
 async def notify_result(conn: asyncpg.Connection, outbound, proposal_id: UUID) -> bool:
-    """Tell the person who approved on WhatsApp how it went: applied, or not applied. Sent only
-    while their 24-hour window is open and only as an ordinary message, never a template."""
+    """Tell the person who approved on WhatsApp how it went, once per ask: the change is live, the
+    platform turned it down or put it back, the check did not see it, or it was not applied. Sent
+    only while their 24-hour window is open and only as an ordinary message, never a template."""
     row = await conn.fetchrow(f"{proposals._PROPOSAL} where p.id = $1", proposal_id)
     if row is None or row["decided_channel"] != "whatsapp" or row["decided_by"] is None:
         return False
+    ask = await conn.fetchrow(
+        "select id, result_sent_at from discovery_asks where proposal_id = $1 and user_id = $2 "
+        "and answer = 'approve' order by answered_at desc nulls last limit 1",
+        proposal_id, row["decided_by"],
+    )
+    if ask is not None and ask["result_sent_at"] is not None:
+        return False  # one result per ask
     contact = await conn.fetchrow(
         "select id, lang, consent_service, "
         "coalesce(last_inbound_at > now() - interval '24 hours', false) as window_open "
@@ -248,25 +294,40 @@ async def notify_result(conn: asyncpg.Connection, outbound, proposal_id: UUID) -
     if contact is None or not contact["window_open"] or contact["consent_service"] == "revoked":
         return False
     lang = _lang(contact)
-    shown = pw.change_lines(row["change"], lang, row["target"])
     tz = await conn.fetchval(
         "select timezone from tenants "
         "where id = nullif(current_setting('app.tenant_id', true), '')::uuid"
     )
-    if row["status"] == "applied":
-        until = row["undo_until"]
-        text = pw.pick(pw.REPLY["applied" if until else "applied_no_undo"], lang).format(
-            what=shown["field_label"], place=_place(row, lang), after=shown["after"]["text"],
-            date=pw.shop_date(until, tz, lang) if until else "",
-        )
-    elif row["status"] == "failed":
-        text = pw.pick(pw.REPLY["failed"], lang).format(
-            reason=pw.failure(row["failure_code"], row["target"], lang, short=True)
-        )
-    else:
+    text = result_text(row, lang, tz)
+    if text is None:
         return False
     await outbound.send(conn, OutboundMessage(to=contact["id"], body=pw.lines(lang, text)))
+    if ask is not None:
+        await conn.execute(
+            "update discovery_asks set result_sent_at = now() where id = $1", ask["id"]
+        )
     return True
+
+
+async def send_results(conn: asyncpg.Connection, outbound, now: datetime | None = None) -> int:
+    """The results that are owed: a change approved on WhatsApp in the last three days whose
+    result is known and was not sent. Not at night; each through `notify_result` (once, inside the
+    window)."""
+    now = now or datetime.now(UTC)
+    if alerts.in_quiet_hours((await shop_clock.load(conn, now)).local):
+        return 0
+    rows = await conn.fetch(
+        "select distinct p.id from discovery_asks a join discovery_proposals p "
+        "on p.id = a.proposal_id where a.answer = 'approve' and a.result_sent_at is null "
+        "and p.decided_channel = 'whatsapp' and p.decided_by = a.user_id and p.decided_at > $1 "
+        "and (p.status = 'failed' or (p.status = 'applied' and (p.life in ('live', 'rejected', "
+        "'changed_back') or p.verification = 'not_confirmed')))",
+        now - RESULT_FOR,
+    )
+    sent = 0
+    for r in rows:
+        sent += await notify_result(conn, outbound, r["id"])
+    return sent
 
 
 class Notifier:
@@ -286,6 +347,7 @@ class Sender:
         self._outbound = outbound
 
     async def __call__(self, conn: asyncpg.Connection, now: datetime | None = None) -> int:
+        await send_results(conn, self._outbound, now)
         return await send_due(conn, self._outbound, now)
 
 
@@ -363,13 +425,41 @@ async def handle_reply(
 
     if row["status"] != "proposed":
         return say("closed")
+    if tap == "later":
+        # "Not now" closes the change for 14 days, through the same action as the workspace's
+        # (channel `whatsapp`); it comes back after that only if a check still finds it.
+        try:
+            await actions.run(
+                conn, caller, "discovery.decline_proposal", id=row["id"], reason="not_now",
+                lang=lang,
+            )
+        except DiscoveryError as error:
+            if error.code in ("not_found", "forbidden"):
+                return say("other_branch")
+            return say("closed")
+        except (actions.NotAllowed, actions.NotSwitchedOn):
+            return say("gone")
+        await conn.execute(
+            "update discovery_asks set status = 'answered', answer = 'later', "
+            "closed_reason = null, answered_at = now() where id = $1",
+            ask_id,
+        )
+        back = datetime.now(UTC) + proposals.COOL_OFF
+        return say("not_now", date=pw.shop_date(back, tz, lang))
+    if tap == "change":
+        # The ask stays open while the person changes it in the workspace (no second ask meanwhile).
+        await conn.execute(
+            "update discovery_asks set answer = 'change', answered_at = now() "
+            "where id = $1 and status = 'queued'",
+            ask_id,
+        )
+        link = _link(row["id"], edit=True)
+        return say("change", link=link) if link else say("change_no_link")
     await conn.execute(
         "update discovery_asks set status = 'answered', answer = $2, answered_at = now() "
         "where id = $1 and status = 'queued'",
         ask_id, tap,
     )
-    if tap == "later":
-        return say("later", date=pw.shop_date(row["expires_at"], tz, lang))
     shop = await conn.fetchrow(
         "select name, name_ar from tenants "
         "where id = nullif(current_setting('app.tenant_id', true), '')::uuid"

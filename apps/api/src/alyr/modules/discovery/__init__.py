@@ -7,7 +7,8 @@ door; the workspace routes (`routes/discovery.py`) are a thin layer over them, a
 the MCP connector call the same actions later.
 
 Modules: `connectors/` (where the facts come from), `engine.py` (a run, step by step),
-`rules.py` (the twelve rules), `scoring.py` (the arithmetic), `words.py` (English and Arabic).
+`rules.py` (the twelve rules), `packs/` (which rules fit which kind of business, as data),
+`scoring.py` (the arithmetic), `words.py` (English and Arabic).
 """
 
 KEY = "discovery"

@@ -27,7 +27,7 @@ async def waiting_for(conn: asyncpg.Connection, caller: Caller, now: datetime | 
     now = now or datetime.now(UTC)
     row = await conn.fetchrow(
         "select count(*) as n, min(proposed_at) as oldest from discovery_proposals "
-        "where status = 'proposed' and expires_at > $1 "
+        "where status = 'proposed' and (opened_at is null or expires_at > $1) "
         "and ($2::uuid[] is null or location_id = any($2))",
         now, None if scope.everywhere else list(scope.places),
     )

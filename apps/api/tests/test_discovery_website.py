@@ -271,7 +271,9 @@ def test_an_arabic_site_gives_its_hours_microdata_and_whatsapp_link(monkeypatch)
     assert found.hours_from == "page"
     assert found.whatsapp_links == ("97455550177",)
     assert "phone=" in found.whatsapp_link
-    assert rules.whatsapp_digits(found.whatsapp_link) == "55550177"
+    # the rule reads the decoded link as the same number as a plain wa.me link to it
+    assert rules.whatsapp_digits(found.whatsapp_link) == rules.whatsapp_digits(
+        "https://wa.me/97455550177")
     # "Al Dafna" is not written in Latin letters on the page: not measured, never "not listed"
     assert found.lists_location is None
 
@@ -659,5 +661,5 @@ def test_nothing_from_a_page_is_kept_but_the_snapshot_fields():
         "url", "reachable", "has_location_page", "hours", "phone", "whatsapp_link",
         "lists_location", "https", "robots_allowed", "json_ld_local_business", "json_ld_name",
         "json_ld_phone", "json_ld_hours", "json_ld_address", "whatsapp_links", "hours_from",
-        "pages_read", "redirected_to", "page_speed",
+        "pages_read", "redirected_to", "page_speed", "read_at",
     }

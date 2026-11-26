@@ -81,14 +81,18 @@ def test_a_shop_with_discovery_off_is_left_alone(client_factory, monkeypatch):
     off = discovery_shop(client_factory, monkeypatch, module=False)
     owner_sql("insert into discovery_settings (tenant_id, weekly_run) values ($1, true)",
               off.tenant_id)
-    assert sweep_at(off, midday()) == {"expired": 0, "requeued": 0, "scheduled": 0, "asked": 0}
+    # Discovery 2.0: `checked`, the changes followed through their life
+    assert sweep_at(off, midday()) == {
+        "expired": 0, "requeued": 0, "scheduled": 0, "asked": 0, "removed": 0, "checked": 0}
     assert runs(off) == []
 
 
 def test_the_sweep_asks_through_the_function_it_is_given_and_a_failure_there_changes_no_expiry(
         client_factory, monkeypatch):
     shop = prepared_shop(client_factory, monkeypatch)
+    # Discovery 2.0: an open ask (only an open ask's 14 days run)
     owner_sql("update discovery_proposals set proposed_at = now() - interval '15 days', "
+              "opened_at = now() - interval '15 days', "
               "expires_at = now() - interval '1 day' where id = (select id from "
               "discovery_proposals where tenant_id = $1 limit 1)", shop.tenant_id)
     calls = []

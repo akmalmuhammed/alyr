@@ -67,6 +67,11 @@ def _find(text: str, forms: tuple[str, ...]) -> str | None:
     return None
 
 
+def names(text: str, forms: tuple[str, ...]) -> bool:
+    """Whether `text` names the business, by the same whole-phrase rule as an answer."""
+    return bool(text) and _find(text, forms) is not None
+
+
 def _lead(item: str) -> str:
     text = _LINK.sub(r"\1", item)
     bold = _BOLD.search(text)

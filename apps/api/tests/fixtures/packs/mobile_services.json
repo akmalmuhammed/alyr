@@ -1,0 +1,14 @@
+{
+  "id": "mobile_services",
+  "kind": "family",
+  "family": "mobile_services",
+  "title_en": "Mobile services",
+  "title_ar": "خدمات متنقلة",
+  "trades": [
+    {"key": "mobile_car_wash", "title_en": "Mobile car wash", "title_ar": "غسيل سيارات متنقل"},
+    {"key": "mobile_barber", "title_en": "Mobile barber", "title_ar": "حلاق متنقل"}
+  ],
+  "rules": ["hours_missing", "whatsapp_link_missing"],
+  "overlays": [],
+  "skip": ["website_location_missing"]
+}

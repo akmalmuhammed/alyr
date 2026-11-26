@@ -52,8 +52,26 @@ class AnswersBudgetExceeded(EngineError):
 
 
 @dataclass(frozen=True)
+class Source:
+    """A page an answer tool says its answer drew on: its address, its title and the short passage
+    the tool quoted, when it gives one. Third-party text: kept as data, never opened, never
+    followed (research R4: OpenAI `url_citation`, Claude `cited_text`, Perplexity
+    `search_results`)."""
+
+    url: str
+    title: str = ""
+    snippet: str = ""
+
+
+@dataclass(frozen=True)
 class RawAnswer:
+    """An answer as a tool gave it: the text, the sources it cited and the searches it said it
+    ran (empty when it returns none), and the model it named, for drift control."""
+
     text: str
+    sources: tuple[Source, ...] = ()
+    searches: tuple[str, ...] = ()
+    model: str = ""
 
 
 @dataclass
@@ -122,7 +140,7 @@ class LiveEngine(ABC):
             )
         ctx.spend(self.cost_per_call)
         try:
-            text = await asyncio.wait_for(self._call(request, key), ctx.timeout)
+            answer = await asyncio.wait_for(self._call(request, key), ctx.timeout)
         except EngineError:
             raise
         except TimeoutError as error:
@@ -134,15 +152,46 @@ class LiveEngine(ABC):
             raise EngineError(
                 "engine_failed", "The source could not answer.", "تعذّر على المصدر الإجابة."
             ) from error
-        return RawAnswer(text)
+        return answer if isinstance(answer, RawAnswer) else RawAnswer(str(answer))
 
     @abstractmethod
-    async def _call(self, request: EngineRequest, key: str) -> str:
-        """The one outside request. Receives the built public question and the key."""
+    async def _call(self, request: EngineRequest, key: str) -> "RawAnswer | str":
+        """The one outside request. Receives the built public question (with its location) and
+        the key; returns the answer with the sources and searches the provider gives back."""
 
 
-def label_of(kind: str, lang: str) -> str:
-    pair = SAMPLE_LABEL if kind == "sample" else (kind, kind)
+# The names an answer tool may be called by in the method line, (English, Arabic), by kind. Empty:
+# no provider is built. A provider's file adds its entry, and they are shown only when the
+# `discovery_answers_name_tools` setting is on (DECISIONS 6: a written exception to D-168, switched
+# on by the lead after legal review). Otherwise a tool is "Answer tool 1", "Answer tool 2".
+NAMES: dict[str, tuple[str, str]] = {}
+TOOL_NUMBERED = ("Answer tool {n}", "أداة الإجابة {n}")
+
+
+def variant_of(engine: AnswerEngine, stage: int) -> str:
+    """What an engine's answers depend on besides the question: the sample's stage, a live tool's
+    model. Answers are shared between businesses only within one variant."""
+    if engine.kind == "sample":
+        return f"stage{stage}"
+    return str(getattr(engine, "model", "") or "")[:80]
+
+
+def numbering(kinds_in_order: list[str]) -> dict[str, int]:
+    """Each live kind's number, in the order given (sample is never numbered)."""
+    live = [k for k in dict.fromkeys(kinds_in_order) if k != "sample"]
+    return {k: i for i, k in enumerate(live, start=1)}
+
+
+def label_of(kind: str, lang: str, number: int | None = None, named: bool = False) -> str:
+    """What the owner sees for a tool. The sample is "Sample answers"; a live tool is numbered
+    unless naming is switched on and the tool has a name."""
+    if kind == "sample":
+        pair = SAMPLE_LABEL
+    elif named and kind in NAMES:
+        pair = NAMES[kind]
+    else:
+        n = number or 1
+        pair = (TOOL_NUMBERED[0].format(n=n), TOOL_NUMBERED[1].format(n=n))
     return pair[1] if lang == "ar" else pair[0]
 
 

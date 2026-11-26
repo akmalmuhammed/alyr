@@ -38,6 +38,7 @@ import re
 import time
 import unicodedata
 from dataclasses import dataclass, field, replace
+from datetime import datetime
 from urllib.parse import unquote, urljoin, urlsplit, urlunsplit
 
 import extruct
@@ -110,6 +111,8 @@ class SiteWebsite(Website):
     # The other domain the site sent ALYR to, not followed (its host name only).
     redirected_to: str | None = None
     page_speed: PageSpeed | None = None
+    # When the site was read: the date of its evidence, whatever the run's connection is.
+    read_at: datetime | None = None
 
 
 # ── the connector ────────────────────────────────────────────────────────────────────────────
@@ -137,8 +140,8 @@ class WebsiteConnector:
                     read[key] = SiteFacts(url)  # out of time: this one is not measured
                 else:
                     read[key] = await read_site(url)
-            places.append(PlaceSnapshot(location.id, Listing(found=None),
-                                        read[key].for_location(location, url)))
+            web = replace(read[key].for_location(location, url), read_at=ctx.now)
+            places.append(PlaceSnapshot(location.id, Listing(found=None), web))
         return Snapshot(KIND, ctx.now, places)
 
     @staticmethod

@@ -137,7 +137,9 @@ def test_the_message_buttons_fit_whatsapps_limits():
     for pair in pw.BUTTONS.values():
         for title in pair:
             assert 0 < len(title) <= 20, title  # a button of a message: 20 characters
-    assert set(pw.BUTTONS) == {"approve", "later", "details"}
+    # Discovery 2.0: "change" (the Sunday card's Change it); "details" stays for older asks
+    assert set(pw.BUTTONS) == {"approve", "change", "later", "details"}
+    assert pw.CARD_BUTTONS == ("approve", "change", "later")
 
 
 def test_the_guarantee_line_is_word_for_word():
