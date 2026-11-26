@@ -8,7 +8,8 @@ for this business by rule (`reading.py`: named or not, with its own name forms),
 passage is checked against what this owner confirmed (`sources.py`). One row per answer is kept in
 the business's own `discovery_answers`. It never fails the check-up: a tool that errors makes
 `error` rows and the step says so. Nothing here reaches outside ALYR but an engine, the only engine
-is the sample one, and the only tables it names are `discovery_*` and `tenants`.
+is the sample one, and the only tables it names are `discovery_*`, the shared `answer_pool*` and
+`tenants`.
 
 **Not part of the score.** The answers are a sample of what tools say, not a check ALYR can verify,
 so they stay out of the weighted score and out of "N of M checks match" (DECISIONS 7). They are

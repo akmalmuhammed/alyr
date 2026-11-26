@@ -387,7 +387,7 @@ NETWORK = {"httpx", "requests", "aiohttp", "urllib", "http", "socket", "ssl", "s
 FILES = PACKAGE + [SRC / "answers_actions.py", SRC / "answer_words.py"]
 ALLOWED_TABLES = {"discovery_answers", "discovery_answer_settings", "discovery_runs",
                   "discovery_locations", "discovery_connections", "tenants",
-                  "discovery_answer_pool_runs", "discovery_answer_pool"}
+                  "answer_pool_runs", "answer_pool"}
 
 
 def imports_of(path: Path) -> set[str]:

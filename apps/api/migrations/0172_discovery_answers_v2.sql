@@ -2,19 +2,20 @@
 --
 -- 1. Pooled runs. The questions are built from closed lists (trade, city, area, language) and hold
 --    nothing of any business, so every business with the same trade, city, area and language
---    shares ONE asking of each answer tool: `discovery_answer_pool_runs` is that asking, and
---    `discovery_answer_pool` its answers (third-party text, the sources the tool cited and the
+--    shares ONE asking of each answer tool: `answer_pool_runs` is that asking, and
+--    `answer_pool` its answers (third-party text, the sources the tool cited and the
 --    searches it ran). They have no tenant_id on purpose: nothing in them belongs to a business.
 --    Each business's check-up then counts the shared answers against its own name and its own
 --    confirmed facts, and keeps that count in its own `discovery_answers` rows (row-level security
---    unchanged), with a pointer to the shared answer.
+--    unchanged), with a pointer to the shared answer. The names do not start with `discovery_`
+--    on purpose: every `discovery_*` table is a shop's own (tests/test_discovery_tables.py).
 -- 2. `discovery_answers` gains the sources as this business's check saw them (host, title, and
 --    whether a phone number beside its name matches what the owner confirmed), the searches, the
 --    repeat number, and the pointer.
 -- 3. `discovery_answer_settings.area`: a key of the closed list of areas, passed to an answer
 --    tool as the asker's location, never in the question's text.
 
-create table discovery_answer_pool_runs (
+create table answer_pool_runs (
     id uuid primary key default gen_random_uuid(),
     -- Keys of the closed lists in modules/discovery/answers/questions.py.
     trade text not null check (trade ~ '^[a-z_]{1,40}$'),
@@ -30,12 +31,12 @@ create table discovery_answer_pool_runs (
     complete boolean not null default false,
     started_at timestamptz not null default now()
 );
-create index discovery_answer_pool_runs_cell on discovery_answer_pool_runs
+create index answer_pool_runs_cell on answer_pool_runs
     (trade, city, area, lang, engine, variant, started_at desc);
 
-create table discovery_answer_pool (
+create table answer_pool (
     id uuid primary key default gen_random_uuid(),
-    pool_run_id uuid not null references discovery_answer_pool_runs(id) on delete cascade,
+    pool_run_id uuid not null references answer_pool_runs(id) on delete cascade,
     question_key text not null check (question_key ~ '^[a-z_]{1,30}$'),
     lang text not null check (lang in ('en', 'ar')),
     question text not null check (length(question) <= 300),
@@ -59,7 +60,7 @@ create table discovery_answer_pool (
 do $$
 declare t text;
 begin
-    foreach t in array array['discovery_answer_pool_runs', 'discovery_answer_pool'] loop
+    foreach t in array array['answer_pool_runs', 'answer_pool'] loop
         execute format('alter table %I enable row level security', t);
         execute format('alter table %I force row level security', t);
         execute format('create policy pool_read on %I for select using (true)', t);
@@ -74,7 +75,7 @@ alter table discovery_answer_settings
     add column area text check (area is null or area ~ '^[a-z_]{1,40}$');
 
 alter table discovery_answers
-    add column pool_answer_id uuid references discovery_answer_pool(id) on delete set null,
+    add column pool_answer_id uuid references answer_pool(id) on delete set null,
     add column repeat integer not null default 1 check (repeat between 1 and 20),
     add column area text not null default '' check (area ~ '^[a-z_]{0,40}$'),
     -- [{host, title, check}] where check is matches, differs or not_read (spec: research R4).

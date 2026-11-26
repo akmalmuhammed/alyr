@@ -57,7 +57,7 @@ class Asked:
 async def find(conn: asyncpg.Connection, cell: Cell, now: datetime) -> list[Asked] | None:
     """The answers of the newest complete pooled run of the cell, or None."""
     run = await conn.fetchrow(
-        "select id from discovery_answer_pool_runs where trade = $1 and city = $2 and area = $3 "
+        "select id from answer_pool_runs where trade = $1 and city = $2 and area = $3 "
         "and lang = $4 and engine = $5 and variant = $6 and complete and started_at > $7 "
         "order by started_at desc limit 1",
         cell.trade, cell.city, cell.area, cell.lang, cell.engine, cell.variant, now - FRESH,
@@ -65,7 +65,7 @@ async def find(conn: asyncpg.Connection, cell: Cell, now: datetime) -> list[Aske
     if run is None:
         return None
     rows = await conn.fetch(
-        "select * from discovery_answer_pool where pool_run_id = $1", run["id"]
+        "select * from answer_pool where pool_run_id = $1", run["id"]
     )
     found = [
         Asked(
@@ -83,13 +83,13 @@ async def store(
 ) -> None:
     """Keep a pooled run and its answers; each `Asked` gets its row's id."""
     run_id = await conn.fetchval(
-        "insert into discovery_answer_pool_runs (trade, city, area, lang, engine, variant, "
+        "insert into answer_pool_runs (trade, city, area, lang, engine, variant, "
         "complete, started_at) values ($1, $2, $3, $4, $5, $6, $7, $8) returning id",
         cell.trade, cell.city, cell.area, cell.lang, cell.engine, cell.variant, complete, now,
     )
     for a in asked:
         a.id = await conn.fetchval(
-            "insert into discovery_answer_pool (pool_run_id, question_key, lang, question, "
+            "insert into answer_pool (pool_run_id, question_key, lang, question, "
             "repeat, status, error_code, answer, sources, searches, model, cost_units, asked_at) "
             "values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) returning id",
             run_id, a.question.key, a.question.lang, a.question.text, a.repeat, a.status,

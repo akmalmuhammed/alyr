@@ -32,7 +32,7 @@ def fresh_pool():
     """The pooled answers are shared across businesses on purpose and the test database lives
     for the whole run: start each test with none, so a test's scripted engine never counts another
     test's answers."""
-    owner_sql("delete from discovery_answer_pool_runs")
+    owner_sql("delete from answer_pool_runs")
 
 
 @pytest.fixture
@@ -370,7 +370,7 @@ def test_a_real_engine_is_held_to_its_monthly_cap_across_check_ups(shop, monkeyp
     run_check_up(shop.owner)
     # Discovery 2.0: within six days a check-up counts the pooled answers and asks nothing.
     assert engine.calls == 6
-    owner_sql("update discovery_answer_pool_runs set started_at = now() - interval '7 days'")
+    owner_sql("update answer_pool_runs set started_at = now() - interval '7 days'")
     run_check_up(shop.owner)
     assert engine.calls == 8  # two more asked, then the cap
     last = answers_of(shop.owner)["last"]

@@ -21,7 +21,7 @@ BASE = "/api/discovery"
 
 @pytest.fixture(autouse=True)
 def fresh_pool():
-    owner_sql("delete from discovery_answer_pool_runs")
+    owner_sql("delete from answer_pool_runs")
 
 
 def switch_on(client, **more):
@@ -43,11 +43,11 @@ def sample_shop(client_factory, monkeypatch, roles=("owner",)):
 
 
 def pool_runs() -> list:
-    return owner_sql("select * from discovery_answer_pool_runs order by started_at, lang desc")
+    return owner_sql("select * from answer_pool_runs order by started_at, lang desc")
 
 
 def age_pool():
-    owner_sql("update discovery_answer_pool_runs set started_at = now() - interval '7 days'")
+    owner_sql("update answer_pool_runs set started_at = now() - interval '7 days'")
 
 
 class Scripted:
@@ -240,7 +240,7 @@ def test_a_tools_sources_are_kept_as_host_and_title_only_and_its_odd_addresses_d
     assert json.loads(row["sources"]) == [{"host": "guide.example", "title": "<b>Guide</b>",
                                            "check": "differs"}]
     assert json.loads(row["searches"]) == ["car care Doha"]
-    shared = owner_sql("select sources, model from discovery_answer_pool limit 1")[0]
+    shared = owner_sql("select sources, model from answer_pool limit 1")[0]
     assert json.loads(shared["sources"])[0]["snippet"] == "Nuqta Car Care +97455550199"
     assert shared["model"] == "model-1"
 
@@ -306,9 +306,9 @@ def test_the_pool_holds_no_business_and_another_shop_sees_only_its_own_counts(
     run_check_up(a.owner)
     columns = {r["column_name"] for r in owner_sql(
         "select column_name from information_schema.columns where table_name in "
-        "('discovery_answer_pool_runs', 'discovery_answer_pool')")}
+        "('answer_pool_runs', 'answer_pool')")}
     assert not {c for c in columns if "tenant" in c or "business" in c}
-    dump = json.dumps([dict(r) for r in owner_sql("select * from discovery_answer_pool")],
+    dump = json.dumps([dict(r) for r in owner_sql("select * from answer_pool")],
                       default=str)
     assert "Zanzibar" not in dump and str(a.tenant_id) not in dump
     b = discovery_shop(client_factory, monkeypatch, roles=("owner", "admin", "agent"))
@@ -332,10 +332,10 @@ def test_the_app_role_may_read_and_add_to_the_pool_but_never_change_or_delete_it
         out = {}
         try:
             async with db.tenant(a.tenant_id) as conn:
-                out["read"] = await conn.fetchval("select count(*) from discovery_answer_pool")
+                out["read"] = await conn.fetchval("select count(*) from answer_pool")
             for name, sql in (
-                ("update", "update discovery_answer_pool set answer = 'x'"),
-                ("delete", "delete from discovery_answer_pool_runs"),
+                ("update", "update answer_pool set answer = 'x'"),
+                ("delete", "delete from answer_pool_runs"),
             ):
                 try:
                     async with db.tenant(a.tenant_id) as conn:
@@ -346,7 +346,7 @@ def test_the_app_role_may_read_and_add_to_the_pool_but_never_change_or_delete_it
             try:  # outside a business's transaction nothing may be added
                 async with db.unscoped() as conn:
                     await conn.execute(
-                        "insert into discovery_answer_pool_runs (trade, city, lang, engine) "
+                        "insert into answer_pool_runs (trade, city, lang, engine) "
                         "values ('car_care', 'doha', 'en', 'sample')")
                 out["insert"] = "allowed"
             except asyncpg.PostgresError:
