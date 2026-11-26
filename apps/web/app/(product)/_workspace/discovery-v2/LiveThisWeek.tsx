@@ -5,7 +5,7 @@
 // ask's place, builds the view, and passes the real endpoints as actions. Nothing here invents a
 // value: what the API does not send yet is simply absent (adapter.ts `Extras`).
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { discovery } from "../discoveryApi";
 import { sayError, viewHref } from "../discoveryLogic";
 import { buildThisWeek, type ThisWeekView } from "./adapter";
@@ -18,7 +18,8 @@ type Load = { kind: "loading" } | { kind: "error"; message: string } | { kind: "
 /** The classic screens, until their v2 lands (U2): `ui=1` opens them in the classic look. */
 const classic = (view: Parameters<typeof viewHref>[0]) => `${viewHref(view)}${viewHref(view).includes("?") ? "&" : "?"}ui=1`;
 
-export function LiveThisWeek({ lang, onSearch }: { lang: D2Lang; onSearch?: () => void }) {
+/** `tabs`: Discovery v2's tabs (U2), drawn above the brief; `checksHref`: the v2 Checks tab. */
+export function LiveThisWeek({ lang, onSearch, tabs, checksHref }: { lang: D2Lang; onSearch?: () => void; tabs?: ReactNode; checksHref?: string }) {
   const [load, setLoad] = useState<Load>({ kind: "loading" });
 
   const read = useCallback(async () => {
@@ -55,8 +56,8 @@ export function LiveThisWeek({ lang, onSearch }: { lang: D2Lang; onSearch?: () =
     skip: async (f) => { await discovery.setStatus(lang, f.id, "skipped"); },
     // TODO(D): Change it needs a route that takes a changed after value (api-gaps.md). Until then it is not drawn.
     onSearch,
-    hrefs: { checks: classic("home"), changes: classic("proposals"), reports: classic("reports"), settings: classic("settings"), classic: classic("home") },
+    hrefs: { checks: checksHref ?? classic("home"), changes: classic("proposals"), reports: classic("reports"), settings: classic("settings"), classic: classic("home") },
     sayError: (error) => sayError(error, lang),
   };
-  return <ThisWeek lang={lang} view={load.view} actions={actions} now={load.now} />;
+  return <ThisWeek lang={lang} view={load.view} actions={actions} now={load.now} tabs={tabs} />;
 }
