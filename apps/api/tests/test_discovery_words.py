@@ -23,7 +23,11 @@ FIELDS = ("title", "rule", "why", "what_happens", "what_is_needed")
 
 
 def test_every_rule_has_every_field_in_both_languages_and_the_arabic_is_arabic():
-    assert set(words.RULE_WORDS) == {r.id for r in rules.RULES}
+    # The engine merges the first-party rules' words in (`words_firstparty.py`), so every rule it
+    # can run is worded, and nothing else is.
+    from alyr.modules.discovery import engine
+
+    assert set(words.RULE_WORDS) == {r.id for r in engine.ALL_RULES}
     for rule_id, fields in words.RULE_WORDS.items():
         assert set(fields) == set(FIELDS), rule_id
         for name, (en, ar) in fields.items():

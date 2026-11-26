@@ -17,6 +17,8 @@ from discovery_support import by_rule, discovery_shop, findings, run_check_up, t
 from test_consent import owner_sql
 
 BASE = "/api/discovery"
+# The core pack: the twelve rules and every first-party rule (`firstparty.py`, once installed).
+CORE = len(rules.RULES) + len(engine.FIRSTPARTY_RULES)
 FIXTURE = Path(__file__).resolve().parent / "fixtures" / "packs" / "mobile_services.json"
 
 
@@ -53,10 +55,10 @@ def test_every_role_reads_the_packs_with_titles_in_both_languages_trades_and_cou
     assert list(items) == ["core", "food", "appointments", "home_services", "retail",
                            "stays_schools", "online_only", "health", "online_seller"]
     core = items["core"]
-    assert core["kind"] == "core" and core["checks"] == core["total_checks"] == 12
+    assert core["kind"] == "core" and core["checks"] == core["total_checks"] == CORE
     assert core["title"] == core["title_ar"] and core["title_en"]
     food = items["food"]
-    assert food["total_checks"] == 12 and food["checks"] == 0
+    assert food["total_checks"] == CORE and food["checks"] == 0
     assert {t["key"] for t in food["trades"]} == {"restaurant", "cafe", "bakery"}
     assert all(t["title_en"] and t["title_ar"] and t["title"] == t["title_ar"]
                for t in food["trades"])
@@ -81,7 +83,7 @@ def test_a_business_starts_with_the_pack_of_its_type_and_no_type_means_the_core(
     set_type(shop, "salon")
     answer = shop.owner.get(f"{BASE}/pack").json()
     assert (answer["family"], answer["trade"], answer["chosen"]) == ("appointments", "salon", False)
-    assert answer["business_type"] == "salon" and answer["checks"] == 12
+    assert answer["business_type"] == "salon" and answer["checks"] == CORE
     assert [p["id"] for p in answer["packs"]] == ["core", "appointments"]
     set_type(shop, "clinic")
     clinic = shop.admin.get(f"{BASE}/pack").json()
@@ -298,7 +300,7 @@ def test_a_new_family_added_as_data_is_picked_and_run_with_no_code_change(shop, 
         list(packs.PACKS) + [new], [r.id for r in engine.ALL_RULES],
         [r.id for r in engine.FIRSTPARTY_RULES]))
     listed = {p["id"]: p for p in shop.owner.get(f"{BASE}/packs").json()["items"]}
-    assert listed["mobile_services"]["total_checks"] == 11
+    assert listed["mobile_services"]["total_checks"] == CORE - 1  # it skips one core rule
     assert put_pack(shop.owner, "mobile_services", "mobile_car_wash").status_code == 200
     run_check_up(shop.owner)
     kept = last_run(shop)
