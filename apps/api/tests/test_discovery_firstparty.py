@@ -326,7 +326,6 @@ def test_a_whatsapp_link_on_the_listing_to_another_number_fires():
     "https://wa.me/+974 5555 0150".replace(" ", ""),
     "https://api.whatsapp.com/send?phone=0097455550150",
     "https://wa.me/٩٧٤٥٥٥٥٠١٥٠",  # Arabic-Indic digits are the same number
-    "https://wa.me/55550150",
 ])
 def test_the_same_number_written_another_way_passes(link):
     loc = nuqta()
@@ -501,9 +500,14 @@ def test_nothing_is_empty_none_has_an_ellipsis_or_an_ai_word():
 
 
 def test_no_key_clashes_with_the_existing_words():
-    assert not set(fw.LABELS) & set(words_module.LABELS)
-    assert not set(fw.WHERE) & set(words_module.WHERE)
-    assert not set(fw.VALUES) & set(words_module.VALUES)
+    """The engine merges these tables into `words.py`'s, so none may overwrite one of its own.
+    (Compared with the source, because once the engine is imported the tables hold both.)"""
+    from pathlib import Path
+
+    source = Path(words_module.__file__).read_text(encoding="utf-8")
+    for table in (fw.RULE_WORDS, fw.LABELS, fw.WHERE, fw.VALUES, fw.CHECK_NAMES):
+        for key in table:
+            assert f'"{key}"' not in source, key
 
 
 @pytest.mark.parametrize("value, en, ar", [

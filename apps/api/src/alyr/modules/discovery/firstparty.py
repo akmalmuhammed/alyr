@@ -35,6 +35,7 @@ from zoneinfo import ZoneInfo
 import asyncpg
 
 from alyr.core.normalise import has_arabic, western_digits
+from alyr.modules.discovery import normalize
 from alyr.modules.discovery.connectors.base import DAYS, Hours, hours_from_json
 from alyr.modules.discovery.rules import (
     FAIL,
@@ -44,11 +45,8 @@ from alyr.modules.discovery.rules import (
     Evidence,
     Outcome,
     Rule,
-    digits,
     hours_text,
-    name_key,
     open_days,
-    whatsapp_digits,
 )
 
 WEEKS = 4  # how far back activity is counted
@@ -287,21 +285,27 @@ async def _confirmed_whatsapp(conn, tenant_id: UUID) -> tuple[str | None, str | 
 
 
 def _fp(ctx: Context) -> FirstPartyFacts | None:
-    # `Context.first_party` is added by workstream B; until then the attribute may be absent.
+    # The engine sets `Context.first_party` once per run; a context built elsewhere may not have it.
     return getattr(ctx, "first_party", None)
 
 
 def number(value: str | None) -> str:
-    """A phone number as `rules.digits` compares it, after Arabic-Indic digits become 0-9.
-    TODO(A): use A's phone normalisation (`normalize.py`) once it is merged."""
-    return digits(western_digits(value or ""))
+    """A written phone number as its international digits (`normalize.phone_key`, Qatar when it
+    has no country code), or "" when it is not a number."""
+    return normalize.phone_key(value)
+
+
+_LINK_NUMBER = re.compile(r"(?:wa\.me/|[?&]phone=)\+?([\d\s-]+)")
 
 
 def link_number(link: str) -> str:
-    """The number a WhatsApp link points to, or a bare number as written, or ""."""
-    text = western_digits(link or "")
-    if "wa.me" in text or "phone=" in text:
-        return whatsapp_digits(text.replace(" ", ""))
+    """The number a WhatsApp link points to (a wa.me number always carries its country code), or a
+    bare number as written, or ""."""
+    text = normalize.ascii_digits(link or "")
+    found = _LINK_NUMBER.search(text)
+    if found:
+        digits = re.sub(r"\D", "", found.group(1))
+        return normalize.phone_key("+" + (digits[2:] if digits.startswith("00") else digits))
     return number(text) if re.fullmatch(r"[\d\s()+-]{6,}", text.strip()) else ""
 
 
@@ -508,22 +512,17 @@ def _whatsapp_number_mismatch(ctx: Context) -> list[Outcome]:
 # ── bilingual_name_rule ───────────────────────────────────────────────────────────────────
 
 _SEPARATORS = re.compile(r"[/|·\-–—()\[\]{},،؛:]+")
-_MARKS = re.compile(r"[ؐ-ًؚ-ٰٟۖ-ۭـ]")  # marks, tatweel
-_ARABIC_FORMS = str.maketrans("أإآٱىةؤئ", "اااايهوي")
 _LATIN = re.compile(r"[A-Za-z]")
 
 
 def arabic_key(text: str) -> str:
-    """An Arabic name for comparing: no diacritics or tatweel, one form of alef, ة as ه, ى as ي,
-    no spaces or punctuation, no trailing ذ.م.م.
-    TODO(A): use A's Arabic normalisation (`normalize.py`) once it is merged."""
-    text = _MARKS.sub("", text).translate(_ARABIC_FORMS)
-    text = re.sub(r"[^\w]|[A-Za-z0-9_]", "", text)
-    return text.removesuffix("ذمم")
+    """An Arabic name for comparing (`normalize.name_key`: no diacritics or tatweel, one alef,
+    ة as ه, ى as ي, no legal suffix, no spaces or punctuation), without Latin letters or digits."""
+    return re.sub(r"[A-Za-z0-9]", "", normalize.name_key(_SEPARATORS.sub(" ", text)))
 
 
 def latin_key(text: str, area: str = "") -> str:
-    return name_key(_SEPARATORS.sub(" ", text), area)
+    return normalize.name_key(_SEPARATORS.sub(" ", text), area)
 
 
 def scripts(name: str) -> tuple[str, str]:
