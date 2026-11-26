@@ -320,7 +320,8 @@ async def get_finding(conn: asyncpg.Connection, caller: Caller, args: dict) -> d
     row = await conn.fetchrow(f"{_FINDING} where f.id = $1", args["id"])
     if row is None:
         raise DiscoveryError("not_found", 404)
-    part = rules.RULE_BY_ID[row["rule_id"]].part if row["rule_id"] in rules.RULE_BY_ID else None
+    rule = engine.RULE_BY_ID.get(row["rule_id"])
+    part = rule.part if rule is not None else None
     steps = await conn.fetch(
         "select * from discovery_run_steps where run_id = $1 and tool = any($2) order by seq",
         row["last_run_id"],
@@ -480,7 +481,7 @@ def _states(checks) -> dict[tuple[str | None, str], str]:
         if not isinstance(item, dict):
             continue
         rule, state, place = item.get("rule"), item.get("state"), item.get("location")
-        if rule not in rules.RULE_BY_ID or state not in CHECK_STATES:
+        if rule not in engine.RULE_BY_ID or state not in CHECK_STATES:
             continue
         if place is None or isinstance(place, str):
             found[(place, rule)] = state
@@ -488,7 +489,7 @@ def _states(checks) -> dict[tuple[str | None, str], str]:
 
 
 def _checks_row(place: str | None, now: dict, before: dict) -> dict:
-    checks = {r.id: now[(place, r.id)] for r in rules.RULES if (place, r.id) in now}
+    checks = {r.id: now[(place, r.id)] for r in engine.ALL_RULES if (place, r.id) in now}
     states = list(checks.values())
     return {
         "checks": checks,
@@ -520,11 +521,13 @@ async def get_checks(conn: asyncpg.Connection, caller: Caller, args: dict) -> di
         e["rule"]: e["pack"] for e in ((last["checks"] if last else None) or [])
         if isinstance(e, dict) and isinstance(e.get("rule"), str) and isinstance(e.get("pack"), str)
     }
+    # Every check a check-up may run: the twelve, then the first-party ones (`first_party: true`,
+    # the screen's "Your own data" group), each named in `CHECK_NAMES` in both languages.
     own = {r.id for r in engine.FIRSTPARTY_RULES}
     columns = [
         {"id": r.id, "part": r.part, "label": w.pick(w.CHECK_NAMES[r.id], lang),
          "pack": packs_of.get(r.id, "core"), "first_party": r.id in own}
-        for r in rules.RULES
+        for r in engine.ALL_RULES
     ]
     now = _states(last["checks"]) if last else {}
     answer = {

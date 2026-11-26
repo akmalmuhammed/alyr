@@ -177,17 +177,37 @@ def sql_strings(path: Path):
             yield node.value, node.lineno
 
 
+# (file, the whole statement as written, why it need not name staff). A statement here is matched
+# whole, so a column added to it (a contact id, a name, a number) trips the check again.
+CONTACTS_WITHOUT_STAFF = (
+    ("firstparty.py",
+     "select b.starts_at as at from bookings b join contacts c on c.id = b.contact_id "
+     "where b.status = any('{booked,completed,no_show}'::text[]) "
+     "and coalesce(c.wa_user_id, '') not like 'TEST.%'",
+     "hours_vs_activity counts bookings by day and hour; bookings carry no is_test mark (orders "
+     "do, migration 0056), so the owner's own test customer is left out through its contact. "
+     "Only each booking's start time is selected: no contact id, name or number is taken."),
+)
+
+
 def test_every_query_on_contacts_in_discovery_names_staff_and_none_takes_a_customer():
     """No code in `modules/discovery` takes a customer's contact id: every statement that reads or
     changes `contacts` says `role = 'staff'` (the receivers' query, a linked person's own number,
-    the settings' list of staff numbers)."""
-    seen = 0
+    the settings' list of staff numbers), or is named whole in `CONTACTS_WITHOUT_STAFF` with the
+    reason it takes nothing from a contact."""
+    seen, excused = 0, set()
     for path in FILES:
         for text, line in sql_strings(path):
             if re.search(r"\b(from|update|join)\s+contacts\b", text, re.I):
                 seen += 1
+                named = next((i for i, (name, whole, _) in enumerate(CONTACTS_WITHOUT_STAFF)
+                              if path.name == name and text == whole), None)
+                if named is not None:
+                    excused.add(named)
+                    continue
                 assert "role = 'staff'" in text or "role = $" in text, (path.name, line, text[:80])
     assert seen >= 5
+    assert excused == set(range(len(CONTACTS_WITHOUT_STAFF))), "an exception no longer in use"
 
 
 def test_asks_loads_contacts_only_through_the_staff_query_and_the_sender_of_a_tap():

@@ -13,7 +13,7 @@ from uuid import uuid4
 
 import pytest
 
-from alyr.modules.discovery import firstparty, rules
+from alyr.modules.discovery import firstparty, rules, scoring
 from alyr.modules.discovery import words as words_module
 from alyr.modules.discovery import words_firstparty as fw
 from alyr.modules.discovery.connectors import Listing, Location, Website
@@ -59,9 +59,22 @@ def test_five_first_party_rules_with_the_same_rule_type_and_no_clash_with_the_tw
         assert isinstance(rule, rules.Rule)
         assert rule.part in rules.PARTS and rule.part != "ai", rule.id
         assert rule.kind in rules.KIND_ORDER and rule.severity in rules.SEVERITY_ORDER
-        assert rule.weight >= 1
+        # season_due is an ask the calendar raises, not a fault on a public page: weight 0
+        assert rule.weight == 0 if rule.id == "season_due" else rule.weight >= 1, rule.id
         assert rule.id not in rules.RULE_BY_ID
     assert set(firstparty.RULE_BY_ID) == set(IDS)
+
+
+def test_the_season_ask_never_moves_the_score_and_the_other_four_do():
+    """The same outcomes with season_due passing or failing score the same; each of the other four
+    first-party checks, failing, costs points like any check (scoring by the engine's registry)."""
+    loc = nuqta()
+    base = [rules.Outcome("category_missing", loc.id, PASS)]
+    passing = scoring.score(base + [rules.Outcome("season_due", None, PASS)])
+    failing = scoring.score(base + [rules.Outcome("season_due", None, FAIL)])
+    assert passing == failing == scoring.score(base)
+    for rule_id in IDS[:-1]:
+        assert scoring.score(base + [rules.Outcome(rule_id, loc.id, FAIL)])[0] < 100, rule_id
 
 
 def test_every_rule_is_not_measured_when_there_are_no_first_party_facts():
