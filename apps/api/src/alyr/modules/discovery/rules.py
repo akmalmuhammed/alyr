@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from uuid import UUID
 
+from alyr.modules.discovery import normalize
 from alyr.modules.discovery.connectors.base import (
     DAYS,
     Hours,
@@ -86,6 +87,11 @@ class Context:
     locations: list[Location]
     previous: Mapping[str, Previous] = field(default_factory=dict)
     now: datetime | None = None
+    # What ALYR's own records say (`firstparty.first_party_facts`); None when not read, and a rule
+    # that needs it is then `not_measured`.
+    first_party: object | None = None
+    # The business's pack (`packs`): `core`, a family (`food`) or family and trade (`food/bakery`).
+    pack: str | None = None
 
     def places(self):
         """Each place with what the connector said about it (None if it said nothing)."""
@@ -110,33 +116,35 @@ class Rule:
 
 
 def digits(value: str | None) -> str:
-    """A phone number as digits only, without Qatar's country code, so "+974 5555 0112",
-    "00974 55550112" and "5555 0112" are one number."""
-    found = re.sub(r"\D", "", value or "")
-    if found.startswith("00"):
-        found = found[2:]
-    if found.startswith("974") and len(found) > 8:
-        found = found[3:]
-    return found
+    """A phone number as its international digits, read in Qatar when it has no country code, so
+    "+974 5555 0112", "00974 55550112", "5555 0112" and «٥٥٥٥٠١١٢» are one number; "" when it is
+    not a number (`normalize.phone_key`)."""
+    return normalize.phone_key(value)
 
 
 def whatsapp_digits(link: str) -> str:
-    """The number a WhatsApp link points to (wa.me/<number> or ...?phone=<number>), or ""."""
+    """The number a WhatsApp link points to (wa.me/<number> or ...?phone=<number>), or "". A
+    WhatsApp link always carries the country code, so its digits are read as international."""
+    link = normalize.ascii_digits(link or "")
     found = re.search(r"wa\.me/\+?(\d+)", link) or re.search(r"[?&]phone=\+?(\d+)", link)
-    return digits(found.group(1)) if found else ""
-
-
-_LEGAL = re.compile(r"\b(w\.?\s?l\.?\s?l\.?|l\.?l\.?c\.?|co\.?|ltd\.?|company)\b", re.I)
+    return normalize.phone_key("+" + found.group(1)) if found else ""
 
 
 def name_key(name: str, area: str = "") -> str:
-    """A business name for comparing: lower case, no legal suffix (W.L.L.), no branch part after
-    a dash or bar, no punctuation, no spaces ("Car Care" and "Carcare" are one spelling)."""
-    text = re.split(r"\s[-–—|]\s", name, maxsplit=1)[0]
-    text = _LEGAL.sub(" ", text.casefold())
-    for word in re.findall(r"\w+", area.casefold()):
-        text = re.sub(rf"\b{re.escape(word)}\b", " ", text)
-    return re.sub(r"[\W_]+", "", text)
+    """A business name for comparing, Arabic or Latin (`normalize.name_key`): lower case, folded,
+    no legal suffix (W.L.L., «ذ.م.م»), no branch part after a dash or bar, no punctuation, no
+    spaces ("Car Care" and "Carcare" are one spelling)."""
+    return normalize.name_key(name, area)
+
+
+def owner_side_measured(snapshot: Snapshot) -> bool:
+    """Whether the source can see the owner's side of a listing: whether it is claimed, the owner's
+    replies to reviews, the rating over time. Google's public read (Places) has no such fields
+    (research R2), and the sample stands for that read while the Business Profile is not connected
+    (Discovery decision 9), so only a connected Business Profile says them. A round ALYR staff
+    recorded by hand (`manual`, D-169) is a person reading the public page, which does show the
+    owner's replies and whether the listing is claimed; what they did not record is `None`."""
+    return snapshot.business_profile or snapshot.source == "manual"
 
 
 def open_days(hours: Hours | None) -> dict[str, tuple[str, str]]:
@@ -202,7 +210,7 @@ def _listing_missing(location, place, ctx):
 
 def _listing_unclaimed(location, place, ctx):
     listing = _listing(place)
-    if listing is None or listing.claimed is None:
+    if not owner_side_measured(ctx.snapshot) or listing is None or listing.claimed is None:
         return None
     if listing.claimed:
         return PASS, ()
@@ -235,9 +243,12 @@ def _hours_conflict(location, place, ctx):
 
 def _phone_conflict(location, place, ctx):
     listing, web = _listing(place), place.website
-    if listing is None or web is None or not digits(listing.phone) or not digits(web.phone):
+    if listing is None or web is None:
         return None
-    if digits(listing.phone) == digits(web.phone):
+    same = normalize.same_phone(listing.phone, web.phone)
+    if same is None:
+        return None  # one side has no number to compare
+    if same:
         return PASS, ()
     return FAIL, (
         Evidence("listing_phone", listing.phone, "listing"),
@@ -245,27 +256,53 @@ def _phone_conflict(location, place, ctx):
     )
 
 
+def _spellings(names: list[tuple[str, str, str]]) -> list[list[tuple[str, str, str]]]:
+    """Listings of one script in groups, each group one name (`normalize.same_name`): a name joins
+    the first group it is the same as any member of."""
+    groups: list[list[tuple[str, str, str]]] = []
+    for item in names:
+        for group in groups:
+            if any(normalize.same_name(item[0], o[0], item[2], o[2]) for o in group):
+                group.append(item)
+                break
+        else:
+            groups.append([item])
+    return groups
+
+
 def _name_conflict(ctx: Context) -> list[Outcome]:
     """The business is spelled one way or several, across all its listings: one finding for the
-    whole business, listing every spelling and where it is."""
-    seen: dict[str, list[tuple[str, str]]] = {}
+    whole business, listing every spelling and where it is.
+
+    Names are compared inside one script only (`normalize`): an Arabic listing beside an English
+    one is never a difference. It fails when two listings of one script are different names; it
+    passes only when every listing was compared with the others, so listings in both scripts with
+    no difference inside either are not measured."""
+    by_script: dict[str, list[tuple[str, str, str]]] = {}
     for location, place in ctx.places():
         listing = _listing(place) if place is not None else None
         if listing is None or not listing.name:
             continue
-        seen.setdefault(name_key(listing.name, location.area), []).append(
-            (listing.name, location.area or location.name)
-        )
-    if sum(len(v) for v in seen.values()) < 2:
+        script = normalize.script_of(name_key(listing.name, location.area))
+        if script:
+            by_script.setdefault(script, []).append(
+                (listing.name, location.area or location.name, location.area)
+            )
+    if sum(len(v) for v in by_script.values()) < 2:
         return [Outcome("name_conflict", None, NOT_MEASURED)]
-    if len(seen) == 1:
-        return [Outcome("name_conflict", None, PASS)]
-    evidence = tuple(
-        Evidence("listing_name", f"{name} ({where})", "listing")
-        for variants in seen.values()
-        for name, where in variants
-    )
-    return [Outcome("name_conflict", None, FAIL, evidence)]
+    grouped = [_spellings(names) for names in by_script.values()]
+    differ = [groups for groups in grouped if len(groups) > 1]
+    if differ:
+        evidence = tuple(
+            Evidence("listing_name", f"{name} ({where})", "listing")
+            for groups in differ
+            for group in groups
+            for name, where, _ in group
+        )
+        return [Outcome("name_conflict", None, FAIL, evidence)]
+    if len(by_script) > 1:
+        return [Outcome("name_conflict", None, NOT_MEASURED)]
+    return [Outcome("name_conflict", None, PASS)]
 
 
 def _category_missing(location, place, ctx):
@@ -329,8 +366,8 @@ def _review_unanswered(location, place, ctx):
     """Fails when 3 or more reviews of 3 stars or fewer, older than 7 days, have no reply, or when
     10 or more reviews older than 7 days have not had a single reply (of any stars). The second is
     what a five-star page that nobody ever answered looked like before: passing."""
-    if place.reviews is None:
-        return None
+    if place.reviews is None or not owner_side_measured(ctx.snapshot):
+        return None  # whether the owner replied is not something a public read can see
     now = ctx.now or ctx.snapshot.taken_at
     cutoff = now - UNANSWERED_AFTER
     settled = [r for r in place.reviews if r.posted_at < cutoff]  # old enough to have been answered

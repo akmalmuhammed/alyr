@@ -26,8 +26,8 @@ async def get_answers(conn: asyncpg.Connection, caller: Caller, args: dict) -> d
 
 @register("discovery.set_answers", actions.CHANGERS, actions.MODULE)
 async def set_answers(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
-    """Any of `enabled`, `trade`, `city`, `engines`. Everything is checked against the closed
-    lists before anything is written."""
+    """Any of `enabled`, `trade`, `city`, `area` ("" for the whole city), `engines`. Everything is
+    checked against the closed lists before anything is written."""
     lang = await actions._lang(conn, args.get("lang"))
     current = await answers_service.load_settings(conn)
     trade = args["trade"] if "trade" in args and args["trade"] is not None else current.trade
@@ -58,20 +58,28 @@ async def set_answers(conn: asyncpg.Connection, caller: Caller, args: dict) -> d
         trade not in (None, SAMPLE_TRADE) or city not in (None, SAMPLE_CITY)
     ):
         raise DiscoveryError("sample_only")
-    changed = (enabled, trade, city, wanted) != (
-        current.enabled, current.trade, current.city, current.engines,
+    areas = questions.AREAS.get(city or "", {})
+    if args.get("area") is not None:
+        area = args["area"] or None
+        if area is not None and area not in areas:
+            raise DiscoveryError("bad_area")
+    else:
+        # An area that is not in the (new) city's list goes with the old city.
+        area = current.area if current.area in areas else None
+    changed = (enabled, trade, city, wanted, area) != (
+        current.enabled, current.trade, current.city, current.engines, current.area,
     )
     if changed:
         await conn.execute(
-            "insert into discovery_answer_settings (enabled, trade, city, engines) "
-            "values ($1, $2, $3, $4) on conflict (tenant_id) do update set "
+            "insert into discovery_answer_settings (enabled, trade, city, engines, area) "
+            "values ($1, $2, $3, $4, $5) on conflict (tenant_id) do update set "
             "enabled = excluded.enabled, trade = excluded.trade, city = excluded.city, "
-            "engines = excluded.engines, updated_at = now()",
-            enabled, trade, city, list(wanted),
+            "engines = excluded.engines, area = excluded.area, updated_at = now()",
+            enabled, trade, city, list(wanted), area,
         )
         await actions._record(
             conn, caller, await conn.fetchval(f"select {actions._TENANT}"), "answers.settings",
-            {"enabled": enabled, "trade": trade or "", "city": city or "",
+            {"enabled": enabled, "trade": trade or "", "city": city or "", "area": area or "",
              "engines": ",".join(wanted)},
         )
     return await answers_service.answers_view(conn, lang)

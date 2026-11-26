@@ -216,3 +216,40 @@ A real engine and its key (the founder's, with ALY-51 and ALY-329); the category
 schedule; findings or proposals from answers; the MCP tool for answers (ALY-327). A web search found none of
 the five fictional competitors' names (10 Nov 2026); Google Maps, Instagram and the trademark register
 were not checked.
+
+## Discovery 2.0: version 2 of the counting (backend, branch `aly-disc2-g-answers`)
+
+Why: `D:\alyr-discovery-research` R4 and the lead's DECISIONS 6 and 7 (26 Nov 2026). Six answers asked once
+cannot tell 2 of 6 from 4 of 6 (a 95% range of 30 to 90% for "4 of 6"), a position in a list is noise, and
+the useful output is the pages the tools cited. What changed, and what each part of this spec it replaces:
+
+* **Not in the score.** `scoring.py` ignores the answers; the `ai` part stays "not measured" and out of
+  the total and of "N of M checks match". Replaces "The measurement" (the `ai` part from 4 answers).
+* **Per tool and per language, never merged**, each `named in N of M` with its **range** (Wilson score
+  interval, 95%, `answers/stats.py`), a share only from 30 answers, and a **change** named only when both
+  check-ups counted at least 30 answers from that tool in that language and the ranges do not overlap;
+  otherwise the reason (`first`, `not_enough`, `no_change`, `up`, `down`). **No position** in any answer.
+* **Cited sources and searches.** `RawAnswer` gains `sources` (url, title, quoted passage), `searches` and
+  `model`. Kept per answer as host, title and passage (`answers/sources.py`: http and https only, cut to
+  size, one line); for a business, each source is checked by rule: a passage that names the business and
+  gives a phone number is compared with every phone and WhatsApp number the owner confirmed (`matches`,
+  `differs`), anything else is `not_read`. `GET /answers` aggregates them per host ("Where the answers got
+  their facts") and lists the searches. The sample engine cites made-up `.example` pages.
+* **The area as the asker's location.** `EngineRequest` gains a third field, `location` (country, city,
+  area, all from closed lists; `questions.AREAS`, Doha only); the question text is unchanged. Replaces
+  "exactly two fields". `PUT /answers/settings` takes `area` ("" for the whole city).
+* **Pooled runs** (`answers/pool.py`, migration `0172`): one asking per (trade, city, area, language,
+  tool, variant) is shared by every business in that cell for six days, and counted for each by its own
+  names; the variant is a live tool's model or the sample's stage. Only a complete run is shared. The two
+  pool tables are global with no tenant_id and forced row-level security (read and add only). A
+  business's rows point at the shared answer and cost nothing when they only counted it; the monthly cap
+  counts what the business paid to ask.
+* **The method line** (`method`): "ALYR asked the same public questions through the developer interfaces
+  of Answer tool 1 and Answer tool 2, as if the asker were in West Bay, Doha. ...". A tool is named only
+  when `ALYR_DISCOVERY_ANSWERS_NAME_TOOLS` is on (the lead, after legal review; DECISIONS 6, a written
+  exception to D-168) and its provider has added its name to `engines.NAMES` (empty).
+* Still: no live provider, the flag and keys (D-168), no model, nothing sent but a built question and its
+  closed-list location; tests trip any outbound call.
+
+Tests: `tests/test_discovery_answers_v2_pure.py` and `tests/test_discovery_answers_v2_api.py`; the two
+earlier files were updated where the behaviour changed on purpose (each change says why in a comment).

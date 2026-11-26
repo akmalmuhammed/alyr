@@ -5,8 +5,11 @@ thin doors onto them. Each takes the roles and the module of the action it opens
 what is written once, and each turns Discovery's own refusals (`DiscoveryError`) into the
 `ActionError` the connector shows an app as a sentence. The two that change a finding say which
 status in the door, so a tool cannot be asked for any other: **an app can set a finding to "I did
-this" or "Skip" and nothing else, and can never approve anything.** (There is no "approve" in
-Phase 1; when Phase 2 adds one, it is not added here: spec 067, "Not in this spec".)
+this" or "Skip" and nothing else, and can never approve anything.** Phase 2's approve, decline and
+undo are not opened here, and never will be (spec 067, "Not in this spec"; Discovery 2.0: an app may
+at most list proposals or ask for one to be made, because a change reaches Google only after a
+person's tap in ALYR, research R2). `test_mcp_discovery_proposals_only.py` fails if a door to any
+other Discovery action is added.
 """
 
 from uuid import UUID
@@ -17,6 +20,8 @@ from alyr.modules.discovery import actions as discovery  # noqa: F401  (declares
 from alyr.modules.discovery.errors import DiscoveryError
 
 PREFIX = "mcp."
+# Each door's name to the Discovery action it opens, so a test can see every action an app reaches.
+DOORS: dict[str, str] = {}
 
 
 def _uuid(value) -> UUID:
@@ -43,6 +48,7 @@ def door(name: str, target: str, fixed: dict | None = None, ids: tuple[str, ...]
 
     run.__doc__ = f"The connector's door onto {target}."
     register(PREFIX + name, base.roles, base.module)(run)
+    DOORS[PREFIX + name] = target
 
 
 door("discovery_overview", "discovery.overview")

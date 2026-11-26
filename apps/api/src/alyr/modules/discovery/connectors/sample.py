@@ -15,8 +15,9 @@ fictional owner approved to the state store (`discovery_sample_state`, the busin
 and the script lets it win for its field, so a later check-up shows the effect of an approval.
 
 **Three improvement stages.** Run *n* returns stage `min(n_prior_done_runs, 3)`. Stage 0 is
-deliberately untidy, so every one of the twelve rules fires at least once. Each later stage is the
-owner having fixed something:
+deliberately untidy, so every one of the twelve rules fires at least once (`listing_unclaimed`
+and `review_unanswered` only while `BUSINESS_PROFILE` is on: they need a connected profile).
+Each later stage is the owner having fixed something:
 
 * stage 1: opening hours added at Al Sadd, a category and the right phone on the website for
   Al Wakra, the website's hours at the Industrial Area, two of the four unanswered reviews at
@@ -58,6 +59,13 @@ WA_LINK = "https://wa.me/97455550150"
 WRONG_WA_LINK = "https://wa.me/97455550999"
 
 BUSINESS = "Nuqta Car Care"
+# Whether the sample stands for a business whose Google Business Profile is connected. It is, by
+# default: its proposals write the listing, which only a connected profile could do, and the review
+# reply flow (spec 066) is shown on it. Off, it is a business whose public page is read and whose
+# profile is not connected (Discovery decision 9): whether a listing is claimed and whether the
+# owner replied are then "not measured" (`rules.owner_side_measured`). Which one a shop's sample
+# shows is the lead's call (a connection setting is the natural home for it).
+BUSINESS_PROFILE = True
 BUSINESS_AR = "نقطة لعناية السيارات"
 
 # key, English, Arabic, the area as Google would show it, the area in Arabic
@@ -148,6 +156,15 @@ WRITES = frozenset({
 })
 # A fictional owner may take back what they approved for a week.
 UNDO_DAYS = 7
+# Google's edit stages, simulated the same way every time (Discovery 2.0, T2 4.2; Google's own
+# stages are pending, accepted, not accepted and "updated by Google"). A change to the listing is
+# under review for `REVIEW_DELAY` after it was sent, then shows; the website (the owner's own) has
+# no review. `OUTCOMES` names the (target, field) pairs the simulated platform turns down
+# (`rejected`, when the review ends) or puts back later (`changed_back`, `CHANGED_BACK_AFTER` after
+# it was sent). Empty by default, so the sample's story is unchanged; a test sets it.
+REVIEW_DELAY = timedelta(hours=2)
+CHANGED_BACK_AFTER = timedelta(hours=30)
+OUTCOMES: dict[tuple[str, str], str] = {}
 _ABSENT = object()
 
 
@@ -236,6 +253,7 @@ class SampleConnector:
     kind = KIND
     writes = WRITES
     undoable = WRITES
+    undo_days = UNDO_DAYS
 
     async def snapshot(self, locations: list[Location], ctx: RunContext) -> Snapshot:
         stage = min(ctx.prior_done_runs, LAST_STAGE)
@@ -243,7 +261,7 @@ class SampleConnector:
             _place_at(location, ordinal, stage, ctx, ctx.overrides)
             for ordinal, location in enumerate(locations)
         ]
-        return Snapshot(KIND, ctx.now, places)
+        return Snapshot(KIND, ctx.now, places, business_profile=BUSINESS_PROFILE)
 
     async def read_current(self, change: Change, ctx: WriteContext):
         """What the fictional listing shows now: its script at the stage the last check-up saw,
@@ -276,6 +294,31 @@ class SampleConnector:
         if not same(change.field, await self.read_current(change, ctx), change.after):
             raise _gone("It has changed since.", "تغيّر منذ ذلك الحين.")
         await ctx.state.delete(change.location.id, change.target, change.field, change.subject_ref)
+
+    async def edit_state(self, change: Change, receipt: Receipt, ctx: WriteContext):
+        """Where a sent change stands on the (simulated) platform, and since when: `pending`,
+        `live`, `rejected` or `changed_back`. Pure: from the receipt's time, the clock and
+        `OUTCOMES`."""
+        sent = receipt.at
+        if change.target != "listing":
+            return "live", sent
+        reviewed = sent + REVIEW_DELAY
+        if ctx.now < reviewed:
+            return "pending", sent
+        outcome = OUTCOMES.get((change.target, change.field))
+        if outcome == "rejected":
+            return "rejected", reviewed
+        if outcome == "changed_back" and ctx.now >= sent + CHANGED_BACK_AFTER:
+            return "changed_back", sent + CHANGED_BACK_AFTER
+        return "live", reviewed
+
+    async def platform_reverted(self, change: Change, ctx: WriteContext) -> None:
+        """The simulated platform did not keep the change: the listing shows the script's value
+        again (the override goes), so the next check-up sees what customers see."""
+        if ctx.state is not None:
+            await ctx.state.delete(
+                change.location.id, change.target, change.field, change.subject_ref
+            )
 
 
 def _ago(ctx: RunContext, days: int):

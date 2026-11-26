@@ -119,6 +119,9 @@ class AnswersSettingsIn(Strict):
     enabled: bool | None = None
     trade: str | None = Field(default=None, max_length=40)
     city: str | None = Field(default=None, max_length=40)
+    # Discovery 2.0: an area of the city (closed list), "" for the whole city. Passed to an answer
+    # tool as the asker's location, never in the question.
+    area: str | None = Field(default=None, max_length=40)
     engines: list[str] | None = Field(default=None, max_length=10)
 
 
@@ -298,14 +301,23 @@ async def approve(
     )
 
 
+class DeclineIn(Strict):
+    # Discovery 2.0: "Not now" (`not_now`) or Decline (`declined`, the default with no body).
+    reason: str = Field(default="declined", max_length=20)
+
+
 @router.post("/proposals/{proposal_id}/decline")
 async def decline(
     proposal_id: UUID,
     request: Request,
+    body: DeclineIn | None = None,
     lang: str | None = Lang,
     staff: Staff = Depends(current_staff),
 ):
-    return await _act(request, staff, "discovery.decline_proposal", id=proposal_id, lang=lang)
+    return await _act(
+        request, staff, "discovery.decline_proposal", id=proposal_id,
+        reason=body.reason if body else "declined", lang=lang,
+    )
 
 
 @router.post("/proposals/{proposal_id}/undo")
@@ -374,3 +386,66 @@ async def put_answers_settings(
         request, staff, "discovery.set_answers", lang=lang,
         **body.model_dump(exclude_unset=True),
     )
+
+
+# ── Discovery 2.0: check packs (which checks fit this kind of business) ──────────────────
+
+
+class PackIn(Strict):
+    family: str = Field(min_length=1, max_length=40)
+    trade: str | None = Field(default=None, max_length=40)
+
+
+@router.get("/packs")
+async def packs(request: Request, lang: str | None = Lang, staff: Staff = Depends(current_staff)):
+    return await _act(request, staff, "discovery.packs", lang=lang)
+
+
+@router.get("/pack")
+async def pack(request: Request, lang: str | None = Lang, staff: Staff = Depends(current_staff)):
+    return await _act(request, staff, "discovery.pack", lang=lang)
+
+
+@router.put("/pack")
+async def set_pack(
+    body: PackIn, request: Request, lang: str | None = Lang, staff: Staff = Depends(current_staff)
+):
+    return await _act(
+        request, staff, "discovery.set_pack", family=body.family, trade=body.trade, lang=lang
+    )
+
+
+# ── Discovery 2.0: the loop (agent D): open asks, "Change it", metrics ───────────────────
+# Kept apart from the answers routes (agent G edits those in the same file).
+
+
+class ChangeIn(Strict):
+    # The hash of the change the person was shown, and the value they changed it to.
+    change_hash: str = Field(min_length=1, max_length=64)
+    after: dict
+    # Also make a changed hours or phone value the place's confirmed fact (the default).
+    update_fact: bool = True
+
+
+@router.get("/asks")
+async def asks(request: Request, lang: str | None = Lang, staff: Staff = Depends(current_staff)):
+    return await _act(request, staff, "discovery.asks", lang=lang)
+
+
+@router.post("/proposals/{proposal_id}/change")
+async def change(
+    proposal_id: UUID,
+    body: ChangeIn,
+    request: Request,
+    lang: str | None = Lang,
+    staff: Staff = Depends(current_staff),
+):
+    return await _act(
+        request, staff, "discovery.approve_edited", id=proposal_id, change_hash=body.change_hash,
+        after=body.after, update_fact=body.update_fact, lang=lang,
+    )
+
+
+@router.get("/metrics")
+async def metrics(request: Request, staff: Staff = Depends(current_staff)):
+    return await _act(request, staff, "discovery.loop_metrics")

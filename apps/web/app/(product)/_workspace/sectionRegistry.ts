@@ -50,7 +50,7 @@ export const SECTIONS: SectionDef[] = [
   { key: "connect-ai", route: "/app/connect-ai", depth: 0, gate: "always", crumbUnder: "connections", load: dynamic(() => import("./sections/McpSection")) },
   { key: "catalog", route: "/app/catalog", depth: 0, gate: "nav", load: dynamic(() => import("./sections/CatalogSection")) },
   { key: "documents", route: "/app/documents", depth: 0, gate: "nav", load: dynamic(() => import("./sections/DocumentsSection")) },
-  { key: "discovery", route: "/app/discovery", depth: 0, gate: "nav", load: dynamic(() => import("./sections/DiscoverySection")) },
+  { key: "discovery", route: "/app/discovery", depth: 0, gate: "nav", load: dynamic(() => import("./sections/DiscoverySection")), v2: { load: dynamic(() => import("./discovery-v2/DiscoveryV2Section")), defaultUi: 1 } },
   { key: "inbox", route: "/app/inbox", depth: 0, gate: "nav", load: dynamic(() => import("./sections/InboxSection")), v2: { load: dynamic(() => import("./sections/v2/InboxV2Section")), defaultUi: 1, fill: true } },
   { key: "ledger", route: "/app/ledger", depth: 0, gate: "nav", load: dynamic(() => import("./sections/CreditSection")), v2: { load: dynamic(() => import("./sections/v2/CreditV2Section")), defaultUi: 1 } },
   { key: "orders", route: "/app/orders", depth: 0, gate: "nav", load: dynamic(() => import("./sections/OrdersSection")), v2: { load: dynamic(() => import("./sections/v2/OrdersV2Section")), defaultUi: 1 } },
