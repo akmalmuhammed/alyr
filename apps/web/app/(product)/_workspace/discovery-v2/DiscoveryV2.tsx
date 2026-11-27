@@ -68,6 +68,12 @@ export function DiscoveryV2({ lang, page, go, canManage, onSearch }: {
   }, [lang, canManage]);
 
   const shown: PageKey = page ?? first ?? "week";
+  // Each page change reads the count again: a check-up or a decision elsewhere may have changed it.
+  useEffect(() => {
+    if (shown === "week") return;
+    const id = setTimeout(() => { void recount(); }, 0);
+    return () => clearTimeout(id);
+  }, [shown, recount]);
   const tabs = shown === "setup" && !hasRun ? null : <Tabs lang={lang} current={shown === "setup" ? null : shown} waiting={waiting} hrefOf={pageHref} onGo={go} />;
   const foot = useCallback((toast: ReactNode) => (
     <AgentBar lang={lang} asks={waiting} latest="" nextCheckAt={nextCheckAt} onSearch={onSearch ?? (() => {})} onAsks={() => go("week")} toast={toast} />

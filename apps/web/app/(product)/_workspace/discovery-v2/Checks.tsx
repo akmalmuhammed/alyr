@@ -66,7 +66,7 @@ export function Checks({ lang, view, tabs, foot, hrefs, nextCheckAt, run, onChec
       <div className="d2s-toolbar">
         {view.tally ? (
           <Filters label={t.filtersLabel} value={filter} onChange={setFilter}
-            items={(["all", "differ", "ok", "nm"] as const).map((key) => ({ key, label: t.filters[key], count: view.counts[key] }))} />
+            items={(["all", "differ", "ok", "nm"] as const).map((key) => ({ key, label: t.filters[key], count: key === "all" ? null : view.counts[key] }))} />
         ) : <span />}
         <div className="d2s-toolbar-end">
           {nextCheckAt ? <span><Say lang={lang}>{t.nextCheck(dayTime(nextCheckAt, lang))}</Say></span> : null}
@@ -149,7 +149,10 @@ function Row({ lang, row, hrefs, openCard }: { lang: D2Lang; row: CheckRowView; 
 /** A check that matches (or was not measured) at one or more places: drawn once, with the places. */
 function Line({ lang, line }: { lang: D2Lang; line: Extract<CheckLine, { kind: "ok" | "nm" }> }) {
   const t = T2[lang];
-  const places = line.places.length > 3 ? t.placesMore(line.places.slice(0, 3), line.places.length - 3) : line.places.join(lang === "ar" ? "، " : ", ");
+  // "Nuqta Car Care - West Bay, Nuqta Car Care - Al Wakra" says the business once: West Bay, Al Wakra.
+  const head = line.places[0]?.split(" - ")[0] ?? "";
+  const short = line.places.length > 1 && line.places.every((p) => p.startsWith(`${head} - `)) ? line.places.map((p) => p.slice(head.length + 3)) : line.places;
+  const places = short.length > 4 ? t.placesMore(short.slice(0, 4), short.length - 4) : short.join(lang === "ar" ? "، " : ", ");
   return (
     <li data-kind={line.kind}>
       <span className={`d2s-cmark d2s-cmark-${line.kind}`} aria-hidden="true">{line.kind === "ok" ? <Ic name="check" size="xs" /> : null}</span>

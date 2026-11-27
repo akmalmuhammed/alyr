@@ -20,7 +20,9 @@ export function OnlyYouList({ lang, items, busyId, onDone }: {
 }) {
   const t = T[lang];
   const [copied, setCopied] = useState<string | null>(null);
+  const [all, setAll] = useState(false);
   if (!items.length) return null;
+  const shown = all ? items : items.slice(0, 3);
   const copy = async (key: string, text: string) => {
     try { await navigator.clipboard.writeText(text); setCopied(key); } catch { setCopied(null); }
   };
@@ -29,11 +31,10 @@ export function OnlyYouList({ lang, items, busyId, onDone }: {
       <h2 className="d2-section" id="d2-onlyyou-title"><Say lang={lang}>{t.onlyYou(items.length)}</Say></h2>
       <p className="d2-small d2-muted d2-onlyyou-sub">{t.onlyYouSub}</p>
       <ul className="d2-changes">
-        {items.map(({ f, steps }) => (
+        {shown.map(({ f, steps }) => (
           <li key={f.id}>
-            <span className="d2-when"><Say lang={lang}>{f.location?.name ?? ""}</Say></span>
             <div>
-              <div className="d2-what"><Say lang={lang}>{f.title}</Say></div>
+              <div className="d2-what"><Say lang={lang}>{f.title}</Say>{f.location?.name ? <span className="d2-onlyyou-place"> · <Say lang={lang}>{f.location.name}</Say></span> : null}</div>
               {steps.length ? steps.map((s, i) => {
                 const key = `${f.id}-${i}`;
                 return (
@@ -63,6 +64,11 @@ export function OnlyYouList({ lang, items, busyId, onDone }: {
           </li>
         ))}
       </ul>
+      {items.length > 3 ? (
+        <button className="d2-btn d2-btn-quiet d2-btn-sm d2-onlyyou-more" type="button" aria-expanded={all} onClick={() => setAll((v) => !v)}>
+          <Ic name="down" size="xs" /><Say lang={lang}>{all ? t.showFewer : t.showAll(items.length)}</Say>
+        </button>
+      ) : null}
     </section>
   );
 }

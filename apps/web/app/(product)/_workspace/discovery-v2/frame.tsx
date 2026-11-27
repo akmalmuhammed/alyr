@@ -67,7 +67,7 @@ export function Val({ text }: { text: string }) {
 /** A segmented control of filters, each with its count; `aria-pressed` on the one shown. */
 export function Filters<K extends string>({ label, items, value, onChange }: {
   label: string;
-  items: readonly { key: K; label: string; count: number }[];
+  items: readonly { key: K; label: string; count: number | null }[];
   value: K;
   onChange: (key: K) => void;
 }) {
@@ -75,7 +75,7 @@ export function Filters<K extends string>({ label, items, value, onChange }: {
     <div className="d2s-filters" role="group" aria-label={label}>
       {items.map((item) => (
         <button key={item.key} type="button" aria-pressed={value === item.key} onClick={() => onChange(item.key)}>
-          {item.label} <bdi className="d2s-n">{item.count.toLocaleString("en")}</bdi>
+          {item.label}{item.count !== null ? <> <bdi className="d2s-n">{item.count.toLocaleString("en")}</bdi></> : null}
         </button>
       ))}
     </div>
