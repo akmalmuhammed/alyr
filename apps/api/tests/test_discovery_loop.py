@@ -96,10 +96,12 @@ def facts_of(client, area):
 # ── 1. at most three open asks; the rest are "Also noticed" ─────────────────────────────
 
 
-def test_ten_changes_are_three_open_asks_and_seven_also_noticed_worst_then_oldest(shop):
+def test_six_changes_are_three_open_asks_and_three_also_noticed_worst_then_oldest(shop):
+    # P2: six changes, not ten: the sample's four website changes are owner steps (fix #4).
+    # Six still fill the three open asks and leave three waiting their turn.
     block = open_asks(shop.owner)
     assert block["cap"] == 3
-    assert len(block["open_asks"]) == 3 and len(block["also_noticed"]) == 7
+    assert len(block["open_asks"]) == 3 and len(block["also_noticed"]) == 3
     assert all(i["kind"] == "proposal" and i["queue"] == "open" for i in block["open_asks"])
     rank = {"high": 0, "medium": 1, "low": 2}
     opened = [i["proposal"] for i in block["open_asks"]]
@@ -125,7 +127,7 @@ def test_deciding_an_open_ask_opens_the_next_one(shop):
     assert answer.status_code == 200, answer.text
     assert answer.json()["decided"]["reason"] == "not_now"
     after = open_asks(shop.owner)
-    assert len(after["open_asks"]) == 3 and len(after["also_noticed"]) == 6
+    assert len(after["open_asks"]) == 3 and len(after["also_noticed"]) == 2  # P2: six, fix #4
     assert after["open_asks"][-1]["proposal"]["id"] == first["also_noticed"][0]["proposal"]["id"]
 
 
@@ -241,10 +243,16 @@ def test_the_value_as_proposed_is_an_ordinary_approval(shop):
 
 
 def test_a_phone_is_changed_to_a_valid_number_only_and_not_to_what_it_shows(shop):
-    p = find(shop.owner, "phone_conflict", "Al Wakra")
+    # P2: the sample's phone change was on the website (fix #4); a new confirmed number makes the
+    # listing differ, so a listing phone change is asked.
+    put = shop.owner.put(f"{BASE}/facts", json={
+        "location_id": place_id(shop.owner, "Al Wakra"), "key": "phone",
+        "value": {"phone": "+97455550199"}})
+    assert put.status_code == 200, put.text
+    p = find(shop.owner, "phone_conflict", "Al Wakra", target="listing", status="live")
     assert p["edit"] == {"kind": "phone"}
     assert change(shop.owner, p, {"phone": "123"}, expect=422)["code"] == "bad_phone"
-    assert change(shop.owner, p, {"phone": "+974 5555 0129"}, expect=422)["code"] == (
+    assert change(shop.owner, p, {"phone": "+974 5555 0112"}, expect=422)["code"] == (
         "nothing_to_change")
     done = change(shop.owner, p, {"phone": "+974 5555 0177"})
     assert done["after"]["text"] == "+97455550177" and done["approved_as"] == "edited"
@@ -264,7 +272,8 @@ def test_a_name_is_changed_only_to_a_value_the_owner_confirmed(shop):
 
 
 def test_a_link_and_a_review_reply_cannot_be_changed_only_approved(shop):
-    for rule in ("whatsapp_link_missing", "review_unanswered"):
+    # P2: the WhatsApp link is the owner's website step now (fix #4), so a reply stands for both
+    for rule in ("review_unanswered",):
         p = [x for x in proposals_all(shop) if x["rule_id"] == rule][0]
         assert p["edit"] is None
         answer = change(shop.owner, p, {"url": "https://wa.me/97455550001"}, expect=409)
@@ -330,10 +339,11 @@ def test_the_agent_door_cannot_change_and_approve(shop):
 def test_the_approve_unedited_rate_per_business_and_overall(client_factory, monkeypatch):
     shop = prepared_shop(client_factory, monkeypatch, roles=("owner", "agent"))
     assert shop.owner.get(f"{BASE}/metrics").json()["approve_unedited_rate"] is None
-    approve(shop.owner, find(shop.owner, "whatsapp_link_missing", "Al Sadd"))
+    # P2: listing changes (the website ones are the owner's steps, fix #4)
+    approve(shop.owner, find(shop.owner, "category_missing", "Al Wakra"))
     change(shop.owner, find(shop.owner, "hours_missing", "Al Sadd"),
            dict(WEEK, fri=["14:00", "22:00"]))
-    other = find(shop.owner, "phone_conflict", "Al Wakra")
+    other = find(shop.owner, "name_conflict", "Al Wakra")
     shop.owner.post(f"{BASE}/proposals/{other['id']}/decline", json={"reason": "not_now"})
     counts = shop.owner.get(f"{BASE}/metrics").json()
     assert (counts["unedited"], counts["edited"], counts["approved"], counts["not_now"]) == (
@@ -385,7 +395,12 @@ def test_approved_sent_under_review_then_live_at_the_check_about_20_hours_later(
     assert ar["life"]["text"] == "ظاهر: رآه الفحص في الملف التجاري"
 
 
-def test_the_website_has_no_review_and_is_live_at_the_check(shop):
+def test_the_website_has_no_review_and_is_live_at_the_check(client_factory, monkeypatch):
+    # P2: no connector writes a website (DECISIONS #8, fix #4); the life of a website change is
+    # still code, so it is checked with a sample that may write the website's hours.
+    monkeypatch.setattr(sample.SampleConnector, "writes", sample.WRITES | {("website", "hours")})
+    monkeypatch.setattr(sample.SampleConnector, "undoable", sample.WRITES | {("website", "hours")})
+    shop = prepared_shop(client_factory, monkeypatch)
     p = find(shop.owner, "hours_conflict", "Industrial Area")
     approve(shop.owner, p)
     at = applied_at(shop, p["id"])
@@ -446,7 +461,7 @@ def test_a_change_still_under_review_is_looked_at_again_in_a_few_hours(shop, mon
 
 
 def test_the_check_up_also_makes_an_applied_change_live(shop):
-    p = find(shop.owner, "whatsapp_link_missing", "Al Sadd")
+    p = find(shop.owner, "name_conflict", "Al Wakra")  # P2: a listing change (fix #4)
     approve(shop.owner, p)
     run_check_up(shop.owner)
     done = get(shop.owner, p["id"])

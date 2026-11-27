@@ -314,7 +314,8 @@ def test_a_customer_is_never_asked_whatever_is_written_in_the_database(shop):
 
 def test_a_branch_manager_is_asked_only_about_their_own_place(client_factory, monkeypatch):
     shop = asks_shop(client_factory, monkeypatch)
-    manager, manager_id = branch_manager(client_factory, shop, "Industrial Area", name="Reem")
+    # P2: Al Wakra, a branch with listing changes (Industrial Area's were website ones, fix #4)
+    manager, manager_id = branch_manager(client_factory, shop, "Al Wakra", name="Reem")
     link_phone(manager, shop.slug, "97455500202")
     receive(shop, "97455500202")
     receive(shop, OWNER_PHONE, on=False)
@@ -322,14 +323,14 @@ def test_a_branch_manager_is_asked_only_about_their_own_place(client_factory, mo
     # waiting, they are the open ones (the asks are still only about the manager's own place)
     owner_sql("update discovery_proposals p set status = 'declined', decided_at = now() "
               "from discovery_locations l where l.id = p.location_id and p.tenant_id = $1 "
-              "and p.status = 'proposed' and l.name not like '%Industrial Area'", shop.tenant_id)
+              "and p.status = 'proposed' and l.name not like '%Al Wakra'", shop.tenant_id)
     for _ in range(4):
         if send_asks(shop):
             tap(shop, "97455500202", open_ask(shop)["id"], "later")
     assert asks(shop), "the manager had something to be asked about"
     for ask in asks(shop):
         assert get(shop.owner, str(ask["proposal_id"]))["location"]["name"].endswith(
-            "Industrial Area")
+            "Al Wakra")
     assert {a["contact_id"] for a in asks(shop)} == {contact_of(shop, "97455500202")["id"]}
 
 
@@ -357,10 +358,10 @@ def test_the_commands_work_in_arabic_too(shop):
 def test_proposals_lists_what_waits_for_this_person_and_is_read_only(shop):
     answer = phone_says(shop.owner, shop.slug, OWNER_PHONE, "PROPOSALS")[-1]["body"]
     lines = answer.split("\n")
-    assert lines[0] == "*10 changes waiting for you*"
+    assert lines[0] == "*6 changes waiting for you*"  # P2: no website changes (fix #4)
     assert lines[1].startswith("1. ") and lines[5].startswith("5. ") and "6. " not in answer
     assert "and 5 more" in answer
-    assert len(proposals(shop.owner, "live")) == 10  # nothing changed
+    assert len(proposals(shop.owner, "live")) == 6  # nothing changed
     only_one_waits(shop, "hours_missing", "Al Sadd")
     one = phone_says(shop.owner, shop.slug, OWNER_PHONE, "proposals")[-1]["body"]
     assert one.split("\n")[:2] == ["*1 change waiting for you*",
@@ -500,15 +501,16 @@ def test_a_tap_from_another_shops_number_is_no_longer_available(client_factory, 
 def test_a_tap_after_the_person_lost_the_place_says_it_belongs_to_another_branch(
         client_factory, monkeypatch):
     shop = asks_shop(client_factory, monkeypatch)
-    manager, manager_id = branch_manager(client_factory, shop, "Industrial Area", name="Reem")
+    # P2: Al Wakra's listing category (Industrial Area's change was on the website, fix #4)
+    manager, manager_id = branch_manager(client_factory, shop, "Al Wakra", name="Reem")
     link_phone(manager, shop.slug, "97455500202")
     receive(shop, "97455500202")
     receive(shop, OWNER_PHONE, on=False)
     # Discovery 2.0: only one of the three open asks is sent; make the branch's change the one
-    only_one_waits(shop, "hours_conflict", "Industrial Area")
+    only_one_waits(shop, "category_missing", "Al Wakra")
     send_asks(shop)
     ask = asks(shop)[0]
-    shop.owner.put(f"{BASE}/locations/{place_id(shop.owner, 'Industrial Area')}/managers",
+    shop.owner.put(f"{BASE}/locations/{place_id(shop.owner, 'Al Wakra')}/managers",
                    json={"user_ids": []})
     reply = tap(shop, "97455500202", ask["id"], "approve")[-1]["body"]
     assert reply == "That change belongs to another branch. The owner approves it."

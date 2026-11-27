@@ -44,12 +44,13 @@ def person(shop, role: str, channel: str = "portal") -> Caller:
 
 
 def test_the_line_counts_what_the_caller_may_approve_in_both_languages(shop):
+    # P2: six changes wait, not ten: the sample's four website changes are owner steps (fix #4)
     owner = line(shop, person(shop, "owner"))
-    assert owner == {"key": "discovery_proposals", "count": 10, "oldest_days": 0,
-                     "text": "10 changes waiting for your approval",
+    assert owner == {"key": "discovery_proposals", "count": 6, "oldest_days": 0,
+                     "text": "6 changes waiting for your approval",
                      "href": "/app/discovery?view=proposals"}
     ar = line(shop, person(shop, "admin"), "ar")
-    assert ar["text"] == "10 تعديلات بانتظار موافقتك" and ar["count"] == 10
+    assert ar["text"] == "6 تعديلات بانتظار موافقتك" and ar["count"] == 6
 
 
 def test_one_two_and_three_changes_agree_in_english_and_arabic():
@@ -71,7 +72,7 @@ def test_the_line_is_the_same_whether_or_not_an_ask_was_sent(shop):
     owner_sql("insert into discovery_asks (tenant_id, proposal_id, contact_id, change_hash, "
               "sent_as) select p.tenant_id, p.id, c.id, p.change_hash, 'buttons' from "
               "discovery_proposals p, contacts c where p.tenant_id = $1 and false", shop.tenant_id)
-    assert line(shop, person(shop, "owner"))["count"] == before == 10
+    assert line(shop, person(shop, "owner"))["count"] == before == 6
 
 
 def test_none_when_nothing_waits_when_the_caller_may_approve_nothing_or_discovery_is_off(
@@ -103,7 +104,7 @@ def test_an_expired_change_is_not_counted(shop):
               "opened_at = now() - interval '15 days', "
               "expires_at = now() - interval '1 day' where id = (select id from "
               "discovery_proposals where tenant_id = $1 limit 1)", shop.tenant_id)
-    assert line(shop, person(shop, "owner"))["count"] == 9
+    assert line(shop, person(shop, "owner"))["count"] == 5
 
 
 # ── the Agent's Needs you now, on the workspace home ────────────────────────────────────
@@ -117,18 +118,18 @@ def needs(client, lang: str = "en") -> dict:
 def test_the_agents_needs_you_now_lists_the_item_for_an_owner_or_admin_only(shop):
     for client in (shop.owner, shop.admin):
         item = needs(client)["discovery_proposals"]
-        assert item["count"] == 10 and item["href"] == "/app/discovery?view=proposals"
-        assert plain(item["words"]) == "10 changes waiting for your approval"
+        assert item["count"] == 6 and item["href"] == "/app/discovery?view=proposals"
+        assert plain(item["words"]) == "6 changes waiting for your approval"
         assert plain(item["detail"]) == "Nothing is applied without your tap."
         assert item["rule"] == (
             "RULE · a proposed change is waiting for your approval, not older than 14 days · "
-            "10 changes")
+            "6 changes")
     assert "discovery_proposals" not in needs(shop.agent)
 
 
 def test_the_agents_item_is_in_arabic_too_and_leaves_when_nothing_waits(shop):
     item = needs(shop.owner, "ar")["discovery_proposals"]
-    assert plain(item["words"]) == "10 تعديلات بانتظار موافقتك"
+    assert plain(item["words"]) == "6 تعديلات بانتظار موافقتك"
     assert plain(item["detail"]) == "لا يُطبَّق شيء قبل أن تضغط."
     assert re.search(r"[؀-ۿ]", item["rule"])
     for p in proposals(shop.owner, "live"):
