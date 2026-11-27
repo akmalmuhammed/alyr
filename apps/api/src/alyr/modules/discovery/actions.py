@@ -1139,3 +1139,174 @@ from alyr.modules.discovery import answers_actions, places_actions  # noqa: E402
 
 # Discovery 2.0: the check packs' actions (`packs/service.py`).
 from alyr.modules.discovery.packs import service as pack_service  # noqa: E402
+
+# ── Discovery 2.0: first-party facts and a sentence per check (agent C3) ─────────────────────
+# Added only (actions.py is shared): `GET /first-party` (api-gaps #1 and U2-15) and the plain
+# sentence of each check on `GET /checks` (U2-3), wired by wrapping the registered
+# `discovery.checks`, so the action above is left as it was.
+_WEEKDAYS = ("sun", "mon", "tue", "wed", "thu", "fri", "sat")
+
+import dataclasses as _dc  # noqa: E402
+from datetime import timedelta as _timedelta  # noqa: E402
+
+from alyr.core import actions as _core_actions  # noqa: E402
+from alyr.modules.discovery import check_sentences as _sentences  # noqa: E402
+from alyr.modules.discovery import firstparty as _firstparty  # noqa: E402
+from alyr.modules.discovery import words_firstparty as _fpw  # noqa: E402
+
+
+def _source(key: str, read_at: str, lang: str) -> dict:
+    """Where a first-party fact comes from, and when it was read."""
+    return {"source": key, "source_label": w.pick(_fpw.FACT_SOURCES[key], lang),
+            "read_at": read_at}
+
+
+def _total(counts) -> int | None:
+    return None if counts is None else sum(counts.values())
+
+
+def _hours_grid(days) -> dict:
+    """{weekday: {orders: [24 counts] | None, bookings: [...] | None}}, summed over the 4 weeks."""
+    grid: dict[str, dict] = {}
+    for day in days:
+        cell = grid.setdefault(day.weekday, {
+            "orders": None if day.orders is None else [0] * 24,
+            "bookings": None if day.bookings is None else [0] * 24,
+        })
+        for key, counts in (("orders", day.orders), ("bookings", day.bookings)):
+            for hour, n in (counts or {}).items():
+                cell[key][hour] += n
+    return {d: grid[d] for d in _WEEKDAYS if d in grid}
+
+
+def _activity_view(fp, read_at: str, lang: str) -> dict | None:
+    if fp.activity is None:
+        return None
+    first = fp.activity[0]
+    return {
+        # which of the two are counted at all; a product that is switched off is None below
+        "orders": first.orders is not None,
+        "bookings": first.bookings is not None,
+        "days": [
+            {"date": d.day.isoformat(), "weekday": d.weekday,
+             "orders": _total(d.orders), "bookings": _total(d.bookings)}
+            for d in fp.activity
+        ],
+        "hours": _hours_grid(fp.activity),
+    } | _source("alyr_records", read_at, lang)
+
+
+def _changed_day(change) -> str | None:
+    """The first weekday an hours change moves, or None (not an hours change, or a before that
+    is no longer kept)."""
+    if not isinstance(change, dict) or change.get("field") != "hours":
+        return None
+    before, after = change.get("before"), change.get("after")
+    if not isinstance(before, dict) or not isinstance(after, dict) or before.get("removed"):
+        return None
+    return next((d for d in _WEEKDAYS if before.get(d) != after.get(d)), None)
+
+
+async def _focus(conn: asyncpg.Connection, caller: Caller, fp, proposal_id: UUID) -> dict:
+    """The last 4 of the weekday a proposal changes, for the This week bars. A proposal of another
+    business, or of a place the caller does not manage, is not found."""
+    scope = await proposals.scope_of(conn, caller)
+    row = await conn.fetchrow(
+        "select id, location_id, type, change from discovery_proposals where id = $1",
+        proposal_id)
+    if row is None or scope.nothing or not scope.covers(row["location_id"]):
+        raise DiscoveryError("not_found", 404)
+    day = _changed_day(row["change"]) if row["type"] == "set_hours" else None
+    weeks = [] if day is None else [
+        {"date": d.day.isoformat(), "orders": _total(d.orders), "bookings": _total(d.bookings)}
+        for d in fp.on(day)
+    ]
+    return {"proposal_id": str(row["id"]), "day": day, "weeks": weeks}
+
+
+@register("discovery.first_party", READERS, MODULE)
+async def first_party(conn: asyncpg.Connection, caller: Caller, args: dict) -> dict:
+    """What ALYR's own records say about the business (`firstparty.first_party_facts`), for the
+    This week bars and the "Your own data" group: orders and bookings counted per day and per
+    weekday and hour over the last 4 full weeks, the business's own ALYR pages, its confirmed
+    WhatsApp number and its names, each with its source and when it was read.
+
+    Counts only, never a customer and never money, for every role. Staff (`agent`) get the counts
+    alone (`counts_only`): the pages, the number and the names are left out."""
+    lang = await _lang(conn, args.get("lang"))
+    now = datetime.now(UTC)
+    tenant_id = await conn.fetchval(f"select {_TENANT}")
+    fp = await _firstparty.first_party_facts(conn, tenant_id, now) if tenant_id else None
+    if fp is None:
+        raise DiscoveryError("not_found", 404)
+    read_at = now.isoformat()
+    full = caller.role in CHANGERS
+    answer: dict = {
+        "read_at": read_at,
+        "timezone": fp.timezone,
+        "window": {"from": fp.window_start.isoformat(),
+                   "to": (fp.today - _timedelta(days=1)).isoformat(),
+                   "weeks": _firstparty.WEEKS},
+        # ALYR held orders or bookings from before the 4 weeks began: every day is a real count
+        "covered": fp.measured_from is not None and fp.measured_from <= fp.window_start,
+        "activity": _activity_view(fp, read_at, lang),
+        "counts_only": not full,
+        "links": None,
+        "whatsapp": None,
+        "names": None,
+        "focus": None,
+    }
+    if args.get("proposal_id") is not None:
+        answer["focus"] = await _focus(conn, caller, fp, args["proposal_id"])
+    if not full:
+        return answer
+    answer["links"] = {
+        "booking": fp.links.booking,
+        "order": fp.links.order,
+        "whatsapp": fp.links.whatsapp,
+    } | _source("alyr_pages", read_at, lang)
+    if fp.whatsapp:
+        answer["whatsapp"] = {"number": fp.whatsapp} | _source(
+            fp.whatsapp_source or "business", read_at, lang)
+    answer["names"] = {"en": fp.name_en, "ar": fp.name_ar} | _source("business", read_at, lang)
+    return answer
+
+
+async def _add_sentences(conn: asyncpg.Connection, answer: dict) -> dict:
+    """A `sentences` map on each row of `/checks`: rule id -> `{sentence_en, sentence_ar}`, what
+    was looked at and what it showed. A difference quotes its finding's evidence from the same
+    check-up."""
+    business = answer.get("business")
+    rows = [(row, row.get("id")) for row in answer.get("places") or []]
+    if business:
+        rows.append((business, None))
+    if not rows or not answer.get("run_id"):
+        return answer
+    evidence = {
+        r["fingerprint"]: r["evidence"]
+        for r in await conn.fetch(
+            "select fingerprint, evidence from discovery_findings where last_run_id = $1",
+            UUID(answer["run_id"]))
+    }
+    for row, place in rows:
+        found = {}
+        for rule_id, state in (row.get("checks") or {}).items():
+            said = _sentences.sentences(
+                rule_id, state, evidence.get(rules.fingerprint(rule_id, place)))
+            if said is not None:
+                found[rule_id] = said
+        row["sentences"] = found
+    return answer
+
+
+def _with_sentences(run):
+    async def checks_with_sentences(conn: asyncpg.Connection, caller: Caller, args: dict):
+        return await _add_sentences(conn, await run(conn, caller, args))
+
+    return checks_with_sentences
+
+
+_core_actions.REGISTRY["discovery.checks"] = _dc.replace(
+    _core_actions.REGISTRY["discovery.checks"],
+    run=_with_sentences(_core_actions.REGISTRY["discovery.checks"].run),
+)

@@ -472,3 +472,18 @@ async def change(
 @router.get("/metrics")
 async def metrics(request: Request, staff: Staff = Depends(current_staff)):
     return await _act(request, staff, "discovery.loop_metrics")
+
+
+# ── Discovery 2.0: first-party facts (agent C3) ──────────────────────────────────────────
+# What ALYR's own records say: orders and bookings counted over 4 weeks, the business's own ALYR
+# pages, its confirmed WhatsApp number and names. Counts only; staff get the counts alone.
+
+
+@router.get("/first-party")
+async def first_party(
+    request: Request,
+    lang: str | None = Lang,
+    proposal_id: UUID | None = None,
+    staff: Staff = Depends(current_staff),
+):
+    return await _act(request, staff, "discovery.first_party", lang=lang, proposal_id=proposal_id)
