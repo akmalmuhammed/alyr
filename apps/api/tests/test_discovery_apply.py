@@ -75,10 +75,10 @@ def test_an_approved_change_is_applied_and_the_next_check_up_confirms_it(shop):
         "name", "listing", UUID(p["id"]))
     assert json.loads(override["value"])["name"] == "Nuqta Car Care - Wakra"
     # Applied, not fixed: the finding waits for a check-up to measure it
-    assert finding_status(shop.owner, "whatsapp_link_missing", "Al Sadd") == "owner_done"
+    assert finding_status(shop.owner, "name_conflict") == "owner_done"
 
     run_check_up(shop.owner)  # the sample is at stage 1: the script alone would not fix the name
-    assert finding_status(shop.owner, "whatsapp_link_missing", "Al Sadd") == "verified"
+    assert finding_status(shop.owner, "name_conflict") == "verified"
     confirmed = get(shop.owner, p["id"])
     assert confirmed["verification"] == "confirmed" and confirmed["status"] == "applied"
     assert [h["event"] for h in confirmed["history"]] == [
@@ -103,7 +103,8 @@ def test_the_score_is_higher_than_a_shop_at_the_same_stage_with_no_approval(
         run_check_up(client)
     # Both at stage 1; the script fixes the same things in each; the approvals add two more.
     # (86, 88), not (84, 86): the first-party checks that pass are scored too.
-    assert (score(without.owner), score(with_it.owner)) == (86, 88)
+    # (86, 87): one approval, not two: the website's WhatsApp link is no proposal (P2, fix #4)
+    assert (score(without.owner), score(with_it.owner)) == (86, 87)
     assert finding_status(without.owner, "name_conflict") == "open"
     assert finding_status(with_it.owner, "name_conflict") == "verified"
 

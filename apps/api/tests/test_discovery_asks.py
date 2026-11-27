@@ -360,7 +360,7 @@ def test_proposals_lists_what_waits_for_this_person_and_is_read_only(shop):
     lines = answer.split("\n")
     assert lines[0] == "*6 changes waiting for you*"  # P2: no website changes (fix #4)
     assert lines[1].startswith("1. ") and lines[5].startswith("5. ") and "6. " not in answer
-    assert "and 5 more" in answer
+    assert "and 1 more" in answer  # P2: six changes, five listed (fix #4)
     assert len(proposals(shop.owner, "live")) == 6  # nothing changed
     only_one_waits(shop, "hours_missing", "Al Sadd")
     one = phone_says(shop.owner, shop.slug, OWNER_PHONE, "proposals")[-1]["body"]
