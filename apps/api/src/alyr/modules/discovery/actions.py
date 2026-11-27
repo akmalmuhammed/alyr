@@ -224,8 +224,17 @@ async def get_overview(conn: asyncpg.Connection, caller: Caller, args: dict) -> 
     )
     counts = await _counts(conn)
     open_rows = await conn.fetch(f"{_FINDING} where f.status = 'open' order by {_ORDER}")
-    next_row = next((r for r in open_rows if r["kind"] == "agent"), None) or (
-        open_rows[0] if open_rows else None
+    # The next card: a finding with a change waiting first (a conflict ALYR could write on the
+    # listing may differ only on the website, which is the owner's step: P2), then any of ALYR's.
+    asked = {
+        r["finding_id"] for r in await conn.fetch(
+            "select distinct finding_id from discovery_proposals where status = 'proposed'"
+        )
+    }
+    next_row = (
+        next((r for r in open_rows if r["kind"] == "agent" and r["id"] in asked), None)
+        or next((r for r in open_rows if r["kind"] == "agent"), None)
+        or (open_rows[0] if open_rows else None)
     )
     rest = [r for r in open_rows if next_row is None or r["id"] != next_row["id"]]
     done = await conn.fetch(
