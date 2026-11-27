@@ -504,3 +504,4 @@ button.d2-seg:hover { background: var(--d2-on-carbon-hover); }
 /* A long value in the miniature wraps inside the card (QA: it ran past the edge). */
 .d2-diff { min-inline-size: 0; overflow-wrap: anywhere; }
 .d2-diff .d2-new, .d2-g-hours > div > [role="cell"] { min-inline-size: 0; overflow-wrap: anywhere; }
+.d2-pair .d2-chip .d2-ltr, .d2-pair .d2-chip bdi { white-space: normal; overflow-wrap: anywhere; }
