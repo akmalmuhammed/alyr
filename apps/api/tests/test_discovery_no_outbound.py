@@ -183,6 +183,7 @@ CONTACTS_WITHOUT_STAFF = (
     ("firstparty.py",
      "select b.starts_at as at from bookings b join contacts c on c.id = b.contact_id "
      "where b.status = any('{booked,completed,no_show}'::text[]) "
+     "and b.starts_at >= $1 and b.starts_at < $2 "
      "and coalesce(c.wa_user_id, '') not like 'TEST.%'",
      "hours_vs_activity counts bookings by day and hour; bookings carry no is_test mark (orders "
      "do, migration 0056), so the owner's own test customer is left out through its contact. "

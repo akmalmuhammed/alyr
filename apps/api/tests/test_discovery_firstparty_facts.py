@@ -224,3 +224,17 @@ def test_it_refuses_a_connection_scoped_to_another_shop():
 def test_a_business_that_does_not_exist_has_no_facts():
     missing = uuid4()
     assert read(missing) is None
+
+
+def test_bookings_are_read_for_the_four_weeks_only_and_still_say_when_they_began():
+    """Agent C3: the bookings statement carries the 4 weeks (`starts_at >= $1`), so it never takes
+    every booking the shop ever had; the first booking still dates `measured_from`."""
+    assert "b.starts_at >= $1" in firstparty._BOOKINGS
+    tenant, _ = new_tenant(modules=("bookings",))
+    records = Records(tenant)
+    records.booking(at_hour(date(2026, 9, 4), 11))  # before the 4 weeks
+    records.booking(at_hour(FRIDAYS[0] - timedelta(days=2), 23, 50))  # the evening before them
+    records.booking(at_hour(FRIDAYS[1], 11))
+    fp = read(tenant)
+    assert sum(sum(d.bookings.values()) for d in fp.activity) == 1
+    assert fp.measured_from == date(2026, 9, 4)

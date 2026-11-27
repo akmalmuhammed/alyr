@@ -199,11 +199,19 @@ _ORDERS = "select created_at as at from orders where not is_test and status <> '
 # customer (`TEST.<user>`, core/identity.py) is left out through its contact. The statement takes
 # only the start time of each booking, which is counted by day and hour: no contact id, name or
 # number leaves it. It is the one statement in Discovery on `contacts` that does not say
-# `role = 'staff'`, named with this reason in test_discovery_no_outbound.py.
+# `role = 'staff'`, named with this reason in test_discovery_no_outbound.py. It reads the 4 weeks
+# only (`$1` to `$2`, the bounds `_counts` passes), never every booking the shop ever took.
 _BOOKINGS = (
     "select b.starts_at as at from bookings b join contacts c on c.id = b.contact_id "
     "where b.status = any('{booked,completed,no_show}'::text[]) "
+    "and b.starts_at >= $1 and b.starts_at < $2 "
     "and coalesce(c.wa_user_id, '') not like 'TEST.%'"
+)
+# The day ALYR started holding bookings (`measured_from`): one date, from `bookings` alone (no
+# contact is joined; an owner's test booking also shows that bookings were on by then).
+_FIRST_BOOKING = (
+    "select min(starts_at) from bookings "
+    "where status = any('{booked,completed,no_show}'::text[])"
 )
 
 
@@ -249,9 +257,10 @@ async def first_party_facts(
             for day in (first + timedelta(days=n) for n in range(WEEKS * 7))
         )
     firsts = []
-    for on, sql in ((orders_on, _ORDERS), (bookings_on, _BOOKINGS)):
+    for on, sql in ((orders_on, f"select min(at) from ({_ORDERS}) ev"),
+                    (bookings_on, _FIRST_BOOKING)):
         if on:
-            at = await conn.fetchval(f"select min(at) from ({sql}) ev")
+            at = await conn.fetchval(sql)
             if at is not None:
                 firsts.append(at.astimezone(zone).date())
 
