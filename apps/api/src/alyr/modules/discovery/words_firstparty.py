@@ -262,8 +262,8 @@ PASSES: dict[str, tuple[str, str]] = {
         "أو أكثر من اليوم نفسه في الأسبوع.",
     ),
     "own_links_present": (
-        "Your Google listing or website links to your booking and order pages on ALYR.",
-        "صفحتك على Google أو موقعك الإلكتروني يربط بصفحتَي الحجز والطلب الخاصتين بك على ALYR.",
+        "Your Google listing or website links to your own pages on ALYR.",
+        "صفحتك على Google أو موقعك الإلكتروني يربط بصفحاتك الخاصة على ALYR.",
     ),
     "whatsapp_number_mismatch": (
         "Every WhatsApp link shown opens your confirmed WhatsApp number.",

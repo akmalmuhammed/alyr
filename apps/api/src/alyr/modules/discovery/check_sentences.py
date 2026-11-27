@@ -173,7 +173,7 @@ WHATSAPP_OTHER: dict[str, tuple[str, str]] = {
 }
 REVIEWS_WAITING = (
     "{reviews} on Google have waited more than 7 days for a reply; the oldest, {days}.",
-    "على Google {reviews} تنتظر رداً منذ أكثر من 7 أيام؛ أقدمها منذ {days}.",
+    "{reviews} على Google تنتظر رداً منذ أكثر من 7 أيام؛ أقدمها منذ {days}.",
 )
 REVIEWS_SILENT = (
     "None of your {reviews} on Google older than 7 days has a reply.",
