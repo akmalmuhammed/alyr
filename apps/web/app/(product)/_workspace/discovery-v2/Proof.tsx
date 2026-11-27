@@ -145,10 +145,10 @@ function ReceiptCard({ r, lang, sourceKind, personOf, onUndo, busy }: {
     steps.push({ node: "you", title: t.setAside(closed), text: "" });
     steps.push({ node: "no", title: t.nothingApplied, text: t.setAsideBody });
   } else if (r.kind === "declined") {
-    steps.push({ node: by ? { person: personOf(by) } : "no", title: t.declinedBy(by), text: [dayTime(p.decided?.at, lang), t.channel[p.decided?.channel ?? ""]].filter(Boolean).join(", ") });
+    steps.push({ node: by ? { person: personOf(by) } : "no", title: t.declinedBy(by), text: [dayTime(p.decided?.at, lang), t.channel[p.decided?.channel ?? ""]].filter(Boolean).join(lang === "ar" ? "، " : ", ") });
     steps.push({ node: "no", title: t.nothingApplied, text: p.decided?.reason === "declined" ? "" : t.notNowBody });
   } else {
-    if (by) steps.push({ node: { person: personOf(by) }, title: p.approved_as === "edited" ? t.changedAndApproved(by) : t.approvedBy(by), text: [dayTime(p.decided?.at, lang), t.channel[p.decided?.channel ?? ""]].filter(Boolean).join(", ") });
+    if (by) steps.push({ node: { person: personOf(by) }, title: p.approved_as === "edited" ? t.changedAndApproved(by) : t.approvedBy(by), text: [dayTime(p.decided?.at, lang), t.channel[p.decided?.channel ?? ""]].filter(Boolean).join(lang === "ar" ? "، " : ", ") });
     if (p.status === "failed") steps.push({ node: "no", title: t.notSent, text: p.failure?.message ?? "" });
     else if (p.applied_at) steps.push({ node: "alyr", title: t.sentBy, text: `${t.sentTo[where]} · ${dayTime(p.applied_at, lang)}` });
     else steps.push({ node: "alyr", open: true, title: t.sendingNow, text: "" });

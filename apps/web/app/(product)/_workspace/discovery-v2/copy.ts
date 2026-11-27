@@ -534,7 +534,7 @@ export const T = {
     copied: "نُسخ",
     copyAria: (field: string) => `انسخ ${field} الجديد`,
     markChanged: "غيّرته",
-    showAll: (count: number) => `اعرضها كلها (${count.toLocaleString("en")})`,
+    showAll: (count: number) => `اعرض الكل: ${count.toLocaleString("en")}`,
     showFewer: "اعرض أقل",
     toastDone: "عُلّم منجزاً",
     toastDoneBody: "يطّلع الفحص التالي على صفحتك ويُظهر ما يراه.",
