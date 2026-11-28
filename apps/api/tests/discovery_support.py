@@ -2,10 +2,10 @@
 an agent signed in, builders for snapshots (the rules are tested on hand-made ones), and a way to
 run a check-up through the HTTP routes and wait for it."""
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from uuid import UUID, uuid4
 
-from alyr.modules.discovery import rules
+from alyr.modules.discovery import firstparty, rules
 from alyr.modules.discovery.connectors import (
     Listing,
     Location,
@@ -20,6 +20,12 @@ from test_consent import owner_sql
 from test_sign_in import sign_in
 
 NOW = datetime(2026, 11, 7, 12, 0, tzinfo=UTC)
+# A check-up through the routes runs on the real clock, and ALYR's real calendar makes `season_due`
+# fire from 27 Nov to 18 Dec 2026 (three weeks before National Day), then again before Ramadan: the
+# counts of every check-up test would depend on the day the suite runs. A shop made here sees one
+# season far ahead (`season_due` passes); the calendar itself is tested in
+# test_discovery_firstparty.py, and a test that wants a season due puts one there.
+FAR_SEASONS = (firstparty.Season("national_day", date(2099, 12, 18), 21, fixed=True),)
 WA = "https://wa.me/97455550150"
 
 
@@ -33,6 +39,7 @@ def discovery_shop(client_factory, monkeypatch, *, module: bool = True, gap: int
     real shop, for the tests of that guard."""
     monkeypatch.setenv("ALYR_DEMO_OPEN", "false")
     monkeypatch.setenv("ALYR_DISCOVERY_RUN_GAP_SECONDS", str(gap))
+    monkeypatch.setattr(firstparty, "SEASONS", FAR_SEASONS)
     shop = make_shop(documents=False)
     if demo:
         owner_sql("update tenants set demo_data_allowed = true where id = $1", shop.tenant_id)

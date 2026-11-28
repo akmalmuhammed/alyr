@@ -27,6 +27,9 @@ WHATSAPP = "+97455550150"
 BOOKING = "https://web.test/b/nuqta-car-care"
 ORDER = "https://web.test/s/nuqta-car-care"
 WA_LINK = "https://wa.me/97455550150"
+# ALYR's real calendar, kept as imported: `discovery_support.discovery_shop` swaps the module's for
+# one far ahead, and the hand-made facts here still carry the real one.
+REAL_SEASONS = firstparty.SEASONS
 
 
 def activity(orders: dict[date, dict[int, int]] | None = None,
@@ -63,7 +66,7 @@ def facts(**more) -> firstparty.FirstPartyFacts:
         "name_en": "Nuqta Car Care",
         "name_ar": "نقطة للعناية بالسيارات",
         "confirmed_hours": {},
-        "seasons": firstparty.SEASONS,
+        "seasons": REAL_SEASONS,
     }
     return firstparty.FirstPartyFacts(**(base | more))
 
