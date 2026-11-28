@@ -12,6 +12,23 @@ from fastapi.testclient import TestClient
 from alyr.config import get_settings
 from alyr.migrate import migrate
 
+# Run the whole suite on another day, to prove nothing depends on the day it runs (Discovery 2.0,
+# agent C3): `ALYR_TEST_CLOCK_OFFSET_DAYS=12` moves Python's clock 12 days ahead (freezegun, which
+# is not a dependency: `uv pip install freezegun` first), and the test database must run with the
+# same offset (libfaketime, `FAKETIME=+12d`), or the two clocks disagree. Unset: nothing changes.
+_CLOCK_OFFSET = os.environ.get("ALYR_TEST_CLOCK_OFFSET_DAYS")
+if _CLOCK_OFFSET:
+    from datetime import UTC as _UTC
+    from datetime import datetime as _datetime
+    from datetime import timedelta as _timedelta
+
+    import freezegun
+    import pydantic.v1  # noqa: F401 - subclasses `date` as it loads: load it on the real clock
+
+    freezegun.freeze_time(
+        _datetime.now(_UTC) + _timedelta(days=float(_CLOCK_OFFSET)), tick=True, real_asyncio=True
+    ).start()
+
 # Tests never reach the real photo store (ALY-103). A developer's .env may hold the live R2
 # keys; an empty value in the environment beats the file, so photos stay on local disk.
 # Only the opt-in live smoke test (tests/test_media_r2_live.py) needs the real values.

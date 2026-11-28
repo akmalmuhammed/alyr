@@ -14,7 +14,7 @@ for the native reviewer (ALY-66), written whole per sentence; counts agree throu
 from datetime import date
 
 from alyr.core.words import ORDERS, Noun, counted
-from alyr.modules.agent.words import DAY_SHORT, MONTHS
+from alyr.modules.agent.words import DAY_PLURAL, DAY_SHORT, MONTHS
 
 BOOKINGS: Noun = (("booking", "bookings"), ("حجز واحد", "حجزان", "حجوزات", "حجزاً"))
 
@@ -219,6 +219,133 @@ SEASON_WHEN: dict[str, tuple[str, str]] = {
 }
 CLOSED = ("closed", "مغلق")
 
+# ── GET /first-party: where each fact comes from (agent C3) ──────────────────────────────
+# source key -> the words under a fact on the screen. The WhatsApp number's keys are
+# `FirstPartyFacts.whatsapp_source`.
+FACT_SOURCES: dict[str, tuple[str, str]] = {
+    "alyr_records": ("Orders and bookings in ALYR", "الطلبات والحجوزات في ALYR"),
+    "alyr_pages": ("The business's pages on ALYR", "صفحات المنشأة على ALYR"),
+    "business": ("The business's details in ALYR", "بيانات المنشأة في ALYR"),
+    "owner": ("Confirmed in ALYR", "مؤكَّد في ALYR"),
+    "sample": ("Sample data", "بيانات تجريبية"),
+    "shop_settings": ("The number on the order page", "الرقم في صفحة الطلب"),
+    "meta": ("The number connected to ALYR on WhatsApp", "الرقم المتصل بـ ALYR على واتساب"),
+}
+
+# ── a sentence per check (agent C3) ───────────────────────────────────────────────────────
+# What was looked at and what it showed, in the reader's language, for the Checks screen
+# (`check_sentences.py` gives the twelve core checks theirs). A check that was not measured says
+# `"{subject}: Not measured."`. Each template is whole per language; values are filled in.
+NOT_MEASURED = ("{subject}: Not measured.", "{subject}: لم يُقَس.")
+SUBJECTS: dict[str, tuple[str, str]] = {
+    "hours_vs_activity": (
+        "Your listed hours against orders and bookings in ALYR",
+        "ساعاتك المنشورة مقارنةً بالطلبات والحجوزات في ALYR",
+    ),
+    "own_links_present": (
+        "Links to your booking and order pages on ALYR",
+        "روابط صفحتَي الحجز والطلب الخاصتين بك على ALYR",
+    ),
+    "whatsapp_number_mismatch": (
+        "WhatsApp links against your confirmed number",
+        "روابط واتساب مقارنةً برقمك المؤكد",
+    ),
+    "bilingual_name_rule": (
+        "The name on your Google listing", "الاسم على صفحتك في Google"),
+    "season_due": ("Seasonal dates in ALYR's calendar", "مواعيد المواسم في تقويم ALYR"),
+}
+PASSES: dict[str, tuple[str, str]] = {
+    "hours_vs_activity": (
+        "Over the last 4 weeks, your listed hours cover every time ALYR has orders or bookings "
+        "on 3 or more of the same weekday.",
+        "خلال آخر 4 أسابيع، تشمل ساعاتك المنشورة كل وقت فيه طلبات أو حجوزات في ALYR في 3 أيام "
+        "أو أكثر من اليوم نفسه في الأسبوع.",
+    ),
+    "own_links_present": (
+        "Your Google listing or website links to your own pages on ALYR.",
+        "صفحتك على Google أو موقعك الإلكتروني يربط بصفحاتك الخاصة على ALYR.",
+    ),
+    "whatsapp_number_mismatch": (
+        "Every WhatsApp link shown opens your confirmed WhatsApp number.",
+        "كل روابط واتساب الظاهرة تفتح رقم واتساب المؤكد لديك.",
+    ),
+    "bilingual_name_rule": (
+        "The name on your Google listing is in one language.",
+        "الاسم على صفحتك في Google بلغة واحدة.",
+    ),
+    "season_due": (
+        "By ALYR's calendar, no Ramadan, Eid or National Day is close.",
+        "حسب تقويم ALYR، لا يقترب رمضان أو العيد أو اليوم الوطني.",
+    ),
+}
+# A difference with no evidence left to quote (an older check-up): the rule's own words.
+DIFFERS: dict[str, tuple[str, str]] = {
+    "hours_vs_activity": (
+        "Your listed hours leave out times when ALYR has orders or bookings.",
+        "ساعاتك المنشورة لا تشمل أوقاتاً فيها طلبات أو حجوزات في ALYR.",
+    ),
+    "own_links_present": (
+        "Your Google listing or website has no link to your booking or order page on ALYR.",
+        "لا يوجد في صفحتك على Google أو في موقعك الإلكتروني رابط إلى صفحة الحجز أو الطلب "
+        "الخاصة بك على ALYR.",
+    ),
+    "whatsapp_number_mismatch": (
+        "A WhatsApp link shown opens a number that is not your confirmed number.",
+        "رابط واتساب ظاهر يفتح رقماً غير رقمك المؤكد.",
+    ),
+    "bilingual_name_rule": (
+        "The name on your Google listing carries your English and Arabic names together.",
+        "الاسم على صفحتك في Google يجمع اسمك بالإنجليزية واسمك بالعربية معاً.",
+    ),
+    "season_due": (
+        "By ALYR's calendar, a season is close: Ramadan, Eid or National Day.",
+        "حسب تقويم ALYR، يقترب موسم: رمضان أو العيد أو اليوم الوطني.",
+    ),
+}
+# Where a first-party difference was seen, as the object of a sentence.
+SEEN_ON: dict[str, tuple[str, str]] = {
+    "listing": ("Google listing", "صفحتك على Google"),
+    "website": ("website", "موقعك الإلكتروني"),
+}
+HOURS_DIFFER = (
+    "Your {where} shows {days}, while ALYR has orders or bookings outside those hours on "
+    "{busy} of the last 4 {weekdays}.",
+    "يظهر في {where} ({days})، بينما في ALYR طلبات أو حجوزات خارج هذه الساعات في {busy} من "
+    "آخر 4 أسابيع.",
+)
+HOURS_DIFFER_DAYS = (
+    "Your {where} shows {days}, while ALYR has orders or bookings outside those hours on 3 or "
+    "more of the last 4 of each of those weekdays.",
+    "يظهر في {where} ({days})، بينما في ALYR طلبات أو حجوزات خارج هذه الساعات في 3 أو أكثر "
+    "من آخر 4 أسابيع في كل يوم منها.",
+)
+LINKS_MISSING: dict[str, tuple[str, str]] = {
+    "booking": (
+        "Your {where} has no link to your booking page on ALYR.",
+        "لا يوجد في {where} رابط إلى صفحة الحجز الخاصة بك على ALYR.",
+    ),
+    "order": (
+        "Your {where} has no link to your order page on ALYR.",
+        "لا يوجد في {where} رابط إلى صفحة الطلب الخاصة بك على ALYR.",
+    ),
+    "both": (
+        "Your {where} has no link to your booking page or your order page on ALYR.",
+        "لا يوجد في {where} رابط إلى صفحة الحجز ولا إلى صفحة الطلب الخاصتين بك على ALYR.",
+    ),
+}
+NUMBER_DIFFERS = (
+    "A WhatsApp link on your {where} opens {shown}, not your confirmed number {confirmed}.",
+    "رابط واتساب في {where} يفتح {shown}، لا رقمك المؤكد {confirmed}.",
+)
+NAME_TWICE = (
+    "The name on your Google listing, {name}, carries your English and Arabic names together.",
+    "الاسم على صفحتك في Google، {name}، يجمع اسمك بالإنجليزية واسمك بالعربية معاً.",
+)
+SEASON_CLOSE = (
+    "By ALYR's calendar, a season is close: {seasons}.",
+    "حسب تقويم ALYR، يقترب موسم: {seasons}.",
+)
+
 
 def _pick(pair: tuple[str, str], lang: str) -> str:
     return pair[1] if lang == "ar" else pair[0]
@@ -263,6 +390,132 @@ def rule_text(rule_id: str, field: str, lang: str) -> str:
     return _pick(RULE_WORDS[rule_id][field], lang)
 
 
+# ── a sentence per check (agent C3) ───────────────────────────────────────────────────────
+
+_ISOLATE = ("⁨", "⁩")  # a number or a Latin name inside an Arabic sentence
+
+
+def _iso(text: str, lang: str) -> str:
+    return f"{_ISOLATE[0]}{text}{_ISOLATE[1]}" if lang == "ar" else text
+
+
+def _quotable(value) -> bool:
+    """A stored value a sentence may quote: text, and not Google's text removed after 30 days."""
+    return isinstance(value, str) and bool(value) and value != "~removed"
+
+
+def link_shown(link: str) -> str:
+    """The number a WhatsApp link opens, as +digits, or the link as shown."""
+    digits = "".join(ch for ch in link.split("?", 1)[0].split("/")[-1] if ch.isdigit())
+    if "phone=" in link:
+        digits = "".join(ch for ch in link.split("phone=", 1)[1].split("&", 1)[0] if ch.isdigit())
+    return f"+{digits.removeprefix('00')}" if len(digits) >= 8 else link
+
+
+def _join(parts: list[str], lang: str) -> str:
+    return ("، " if lang == "ar" else "; ").join(parts)
+
+
+def _hours_sentence(evidence: list[dict], lang: str) -> str | None:
+    per_where: dict[str, list[tuple[str, int]]] = {}
+    current: list | None = None
+    for item in evidence:
+        label, value, where = item.get("label"), item.get("value"), item.get("where")
+        if label in ("fp_listing_day", "fp_website_day") and _quotable(value):
+            current = [value, 0]
+            per_where.setdefault(where, []).append(current)  # type: ignore[arg-type]
+        elif (isinstance(label, str) and label.startswith("fp_outside_") and current is not None
+              and _quotable(value) and value.startswith("~fp_act:")):
+            counts = value.split(":")[2:]
+            if sum(int(n) for n in counts if n.isdigit()) > 0:
+                current[1] += 1
+    sentences = []
+    for where, days in per_where.items():
+        if where not in SEEN_ON:
+            return None
+        shown = _join([value_text(day, lang) or day for day, _ in days], lang)
+        place = _pick(SEEN_ON[where], lang)
+        if len(days) == 1:
+            weekday = days[0][0][len("~fp_day:"):].split(":", 1)[0]
+            names = ("sun", "mon", "tue", "wed", "thu", "fri", "sat")
+            sentences.append(_pick(HOURS_DIFFER, lang).format(
+                where=place, days=shown, busy=days[0][1],
+                weekdays=DAY_PLURAL["en"][names.index(weekday)]))
+        else:
+            sentences.append(_pick(HOURS_DIFFER_DAYS, lang).format(where=place, days=shown))
+    return " ".join(sentences) or None
+
+
+def _links_sentence(evidence: list[dict], lang: str) -> str | None:
+    missing: dict[str, set[str]] = {}
+    for item in evidence:
+        label = item.get("label")
+        if label in ("fp_booking_link", "fp_order_link") and item.get("where") in SEEN_ON:
+            missing.setdefault(item["where"], set()).add(label[3:-5])
+    sentences = []
+    for where, kinds in missing.items():
+        key = "both" if len(kinds) > 1 else next(iter(kinds))
+        sentences.append(_pick(LINKS_MISSING[key], lang).format(
+            where=_pick(SEEN_ON[where], lang)))
+    return " ".join(sentences) or None
+
+
+def _number_sentence(evidence: list[dict], lang: str) -> str | None:
+    confirmed = next((e.get("value") for e in evidence
+                      if e.get("label") == "fp_confirmed_whatsapp"), None)
+    if not _quotable(confirmed):
+        return None
+    sentences = []
+    for item in evidence:
+        if (item.get("label") in ("listing_whatsapp", "website_whatsapp")
+                and item.get("where") in SEEN_ON and _quotable(item.get("value"))):
+            sentences.append(_pick(NUMBER_DIFFERS, lang).format(
+                where=_pick(SEEN_ON[item["where"]], lang),
+                shown=_iso(link_shown(item["value"]), lang), confirmed=_iso(confirmed, lang)))
+    return " ".join(dict.fromkeys(sentences)) or None
+
+
+def _name_sentence(evidence: list[dict], lang: str) -> str | None:
+    name = next((e.get("value") for e in evidence if e.get("label") == "listing_name"), None)
+    if not _quotable(name):
+        return None
+    return _pick(NAME_TWICE, lang).format(name=_iso(name, lang))
+
+
+def _season_sentence(evidence: list[dict], lang: str) -> str | None:
+    seasons = [value_text(e["value"], lang) for e in evidence
+               if e.get("label") == "fp_season" and _quotable(e.get("value"))]
+    seasons = [s for s in seasons if s]
+    if not seasons:
+        return None
+    return _pick(SEASON_CLOSE, lang).format(seasons=_join(seasons, lang))
+
+
+_DIFFER_SENTENCES = {
+    "hours_vs_activity": _hours_sentence,
+    "own_links_present": _links_sentence,
+    "whatsapp_number_mismatch": _number_sentence,
+    "bilingual_name_rule": _name_sentence,
+    "season_due": _season_sentence,
+}
+
+
+def check_sentence(rule_id: str, state: str, evidence: list[dict] | None, lang: str) -> str:
+    """What a first-party check looked at and what it showed, as one or two sentences in the
+    reader's language. `state` is `pass`, `fail` or `not_measured`; `evidence` is the stored
+    evidence of the check's open finding (a difference), which the sentence quotes. A difference
+    with no evidence left to quote says the rule's own words."""
+    if state == "pass":
+        return _pick(PASSES[rule_id], lang)
+    if state == "fail":
+        try:
+            found = _DIFFER_SENTENCES[rule_id](list(evidence or []), lang)
+        except (ValueError, IndexError, KeyError, TypeError):
+            found = None  # evidence in a shape this code does not know: never a broken sentence
+        return found or _pick(DIFFERS[rule_id], lang)
+    return _pick(NOT_MEASURED, lang).format(subject=_pick(SUBJECTS[rule_id], lang))
+
+
 def all_texts() -> list[str]:
     """Every string this file can say, for the tests that look for gaps, ellipses and banned
     words."""
@@ -270,8 +523,11 @@ def all_texts() -> list[str]:
     for fields in RULE_WORDS.values():
         for pair in fields.values():
             out.extend(pair)
-    for table in (LABELS, WHERE, VALUES, CHECK_NAMES, SEASON_NAMES, SEASON_WHEN):
+    for table in (LABELS, WHERE, VALUES, CHECK_NAMES, SEASON_NAMES, SEASON_WHEN, FACT_SOURCES,
+                  SUBJECTS, PASSES, DIFFERS, SEEN_ON, LINKS_MISSING):
         for pair in table.values():
             out.extend(pair)
-    out.extend(CLOSED)
+    for pair in (CLOSED, NOT_MEASURED, HOURS_DIFFER, HOURS_DIFFER_DAYS, NUMBER_DIFFERS,
+                 NAME_TWICE, SEASON_CLOSE):
+        out.extend(pair)
     return out
