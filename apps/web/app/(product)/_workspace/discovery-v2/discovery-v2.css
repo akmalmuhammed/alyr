@@ -525,7 +525,7 @@ button.d2-seg:hover { background: var(--d2-on-carbon-hover); }
 .d2-own-v { font-size: var(--d2-fs-micro); line-height: var(--d2-lh-micro); font-weight: var(--d2-wt-strong); color: var(--d2-ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .d2-own-bar { inline-size: var(--d2-own-col); block-size: calc((var(--d2-own-plot) - var(--d2-s6)) * var(--d2-f, 0)); display: flex; flex-direction: column-reverse; gap: var(--d2-s-1); }
 .d2-own-bar i { display: block; flex-basis: 0; min-block-size: var(--d2-rule-3); border-radius: var(--d2-r-mark); }
-.d2-own-col[data-busiest] .d2-own-v { background: var(--d2-volt); color: var(--d2-on-volt); padding-inline: var(--d2-s1h); border-radius: var(--d2-r-pill); }
+.d2-own-col[data-busiest] .d2-own-v { background: var(--d2-carbon); color: var(--d2-chalk); padding-inline: var(--d2-s1h); border-radius: var(--d2-r-pill); }
 .d2-own-x { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); margin-block-start: var(--d2-s2); text-align: center; font-size: var(--d2-fs-small); line-height: var(--d2-lh-small); color: var(--d2-ink-2); }
 .d2-own-x span { display: flex; flex-direction: column; align-items: center; gap: var(--d2-s-1); min-inline-size: 0; }
 .d2-own-x span[data-busiest] { color: var(--d2-ink); font-weight: var(--d2-wt-strong); }
@@ -549,6 +549,6 @@ button.d2-seg:hover { background: var(--d2-on-carbon-hover); }
 .d2-fold-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--d2-s3); padding-block: var(--d2-s3h); }
 .d2-fold-t { min-inline-size: 0; }
 .d2-fold-tag { display: inline-flex; align-items: center; gap: var(--d2-s1); min-block-size: var(--d2-chip); padding-inline: var(--d2-s2h); border-radius: var(--d2-r-pill); background: var(--d2-tint); font-size: var(--d2-fs-small); line-height: var(--d2-lh-small); color: var(--d2-ink-2); white-space: nowrap; }
-.d2-fold-btn { display: inline-flex; align-items: center; gap: var(--d2-s1); }
-.d2-fold-btn[aria-expanded="true"] .d2-i { transform: rotate(180deg); }
+.d2-fold-tg { display: inline-flex; align-items: center; gap: var(--d2-s1); }
+.d2-fold-tg[aria-expanded="true"] .d2-i { transform: rotate(180deg); }
 .d2-fold-body { padding-block: 0 var(--d2-s5); display: flex; align-items: flex-end; justify-content: space-between; gap: var(--d2-s4); flex-wrap: wrap; }

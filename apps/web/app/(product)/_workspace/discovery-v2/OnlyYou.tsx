@@ -45,7 +45,7 @@ export function OnlyYouList({ lang, items, busyId, onDone }: {
               <div className="d2-fold-row">
                 <span className="d2-fold-t"><span className="d2-what"><Say lang={lang}>{f.title}</Say></span>{f.location?.name ? <span className="d2-onlyyou-place"> · <Say lang={lang}>{f.location.name}</Say></span> : null}</span>
                 <span className="d2-fold-tag"><Ic name={steps.length ? "globe" : "person"} size="xs" />{steps.length ? t3.stepWebsite : t3.stepYourself}</span>
-                <button className="d2-btn d2-btn-quiet d2-btn-sm d2-fold-btn" type="button" aria-expanded={isOpen} aria-controls={bodyId} onClick={() => setOpen(isOpen ? null : f.id)}>
+                <button className="d2-btn d2-btn-quiet d2-btn-sm d2-fold-tg" type="button" aria-expanded={isOpen} aria-controls={bodyId} onClick={() => setOpen(isOpen ? null : f.id)}>
                   {isOpen ? t3.stepHide : t3.stepShow}<Ic name="down" size="xs" />
                 </button>
               </div>

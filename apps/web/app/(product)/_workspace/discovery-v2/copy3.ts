@@ -102,7 +102,7 @@ export const T3 = {
     nextManual: "The next count comes with the next check-up started from Checks.",
     soFarTitle: "Counted so far",
     // ── Set up ──
-    sameCount: (count: number) => `Each kind is checked against ${counted(count, N.check, "en")}; the kind decides which ones.`,
+    sameCount: (count: number) => `Each kind is checked against ${counted(count, N.check, "en")}.`,
   },
   ar: {
     ownTitle: "سجلاتك في ALYR",
@@ -159,7 +159,7 @@ export const T3 = {
     nextAt: (when: string) => `يسأل الفحص الأسبوعي مجدداً ${isolate(when)}.`,
     nextManual: "يأتي العدّ التالي مع الفحص التالي الذي يبدأ من صفحة الفحوصات.",
     soFarTitle: "ما حُسب حتى الآن",
-    sameCount: (count: number) => `لكل نوع ${counted(count, N.check, "ar")}، والنوع يحدّد أيّها.`,
+    sameCount: (count: number) => `ولكل نوع ${counted(count, N.check, "ar")}.`,
   },
 };
 
