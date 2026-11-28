@@ -5,6 +5,8 @@ that changes behaviour; internal-only work can be grouped. Versions follow phase
 (`0.<phase>.<n>`), tagged on main when a phase demo works (docs/hygiene.md).
 
 ## Unreleased
+- The two Cloudflare Workers now send a request only to their own destination. On app.alyr.qa and api.alyr.qa the edge Worker used to read a path that starts with `//` as the name of another host, and the site Worker did the same on `alyr.qa/ingest`; both now join the path to the destination as text and refuse anything else with 404. The site Worker also no longer forwards an `Authorization` header to PostHog. A trailing-slash redirect from the API, reached through app.alyr.qa, now points back at app.alyr.qa, not at the API's Cloud Run address. Pen test of 22 to 24 Nov (F-05, F-06, F-01), ALY-266; no new dependency, regression tests in both Workers. Live only once both Workers are deployed.
+- The API answers 422 (`unsavable_text`, in English and Arabic) when a JSON body, the address or the query holds a NUL character or half of an emoji, before any route runs; these used to end as a bare 500 halfway through (pen test F-07, F-08). Whole emoji, Arabic and a typed `\u0000` still save; webhooks from Meta and payment providers are left to their own routes.
 - Internal: the sample bakery's start date, and so the report samples' week-on-week bars, no longer depend on the real date (the nightly coverage run of 25 Nov failed on it): `ensure_qirfa_tenant` takes the sample's own `now`, like the salon and home-services samples; no migration, no new dependency, no captured sample file changed
 
 ## v0.3.28 (22 Nov 2026)

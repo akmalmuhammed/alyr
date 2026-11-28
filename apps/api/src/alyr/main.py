@@ -10,7 +10,7 @@ from alyr.channels.meta import MetaChannel
 from alyr.channels.simulator import SimulatorChannel
 from alyr.config import get_settings, poll_cache_seconds
 from alyr.core import account as account_notes
-from alyr.core import admission, origin, ratelimit
+from alyr.core import admission, origin, ratelimit, text_input
 from alyr.core.admission import BUSY
 from alyr.core.card_billing import CardBilling
 from alyr.core.channel_credentials import Credentials
@@ -145,6 +145,7 @@ def create_app() -> FastAPI:
     )
     for note in ratelimit.startup_notes(settings):
         log.warning(note)
+    app.add_middleware(text_input.RefuseUnsavableText)
     app.add_middleware(origin.OwnPagesOnly, settings=settings)
     app.add_middleware(admission.ShedWhenBusy, limit=settings.max_in_flight)
     app.state.db = Database(settings.database_url)
