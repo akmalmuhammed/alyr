@@ -14,8 +14,10 @@ import { discovery2 } from "./api2";
 import type { D2Lang } from "./copy";
 import { ThisWeek, type ThisWeekActions } from "./ThisWeek";
 import { ErrorState, LoadingState } from "./States";
+import { oneDay } from "./logic";
+import { focusFor, ownRecords, type OwnRecordsView } from "./ownLogic";
 
-type Load = { kind: "loading" } | { kind: "error"; message: string } | { kind: "ready"; view: ThisWeekView; now: number };
+type Load = { kind: "loading" } | { kind: "error"; message: string } | { kind: "ready"; view: ThisWeekView; now: number; own: OwnRecordsView | null };
 
 /** The classic screens, until their v2 lands (U2): `ui=1` opens them in the classic look. */
 const classic = (view: Parameters<typeof viewHref>[0]) => `${viewHref(view)}${viewHref(view).includes("?") ? "&" : "?"}ui=1`;
@@ -42,9 +44,17 @@ export function LiveThisWeek({ lang, onSearch, tabs, checksHref, proofHref, setu
       const first = plus.asks
         ? plus.asks.open.flatMap((i) => (i.kind === "proposal" ? [i.proposal] : []))[0]
         : waiting.find((p) => p.status === "proposed");
-      const facts = first?.location ? await discovery.facts(lang, first.location.id).catch(() => []) : [];
+      // ALYR's own records, with the last 4 of the weekday the first ask changes when it is an hours ask.
+      const [facts, fp] = await Promise.all([
+        first?.location ? discovery.facts(lang, first.location.id).catch(() => []) : Promise.resolve([]),
+        discovery.firstParty(lang, first?.field === "hours" ? first.id : undefined).catch(() => null),
+      ]);
       const now = Date.now();
-      setLoad({ kind: "ready", now, view: buildThisWeek({ overview: plus.overview, asks: plus.asks, block: plus.checks, waiting, recent: recent.items, checks, facts, team, open, now, lang }) });
+      const firstParty = Object.fromEntries((first ? [first] : []).flatMap((p) => {
+        const focus = focusFor(fp, p, oneDay(p));
+        return focus ? [[p.id, focus]] : [];
+      }));
+      setLoad({ kind: "ready", now, own: ownRecords(fp), view: buildThisWeek({ overview: plus.overview, asks: plus.asks, block: plus.checks, waiting, recent: recent.items, checks, facts, team, open, now, lang, extras: { firstParty } }) });
     } catch (error) {
       setLoad({ kind: "error", message: sayError(error, lang) });
     }
@@ -73,5 +83,5 @@ export function LiveThisWeek({ lang, onSearch, tabs, checksHref, proofHref, setu
     hrefs: { checks: checksHref ?? classic("home"), changes: proofHref ?? classic("proposals"), reports: classic("reports"), settings: classic("settings"), classic: classic("home"), setup: setupHref },
     sayError: (error) => sayError(error, lang),
   };
-  return <ThisWeek lang={lang} view={load.view} actions={actions} now={load.now} tabs={tabs} onCount={onCount} />;
+  return <ThisWeek lang={lang} view={load.view} actions={actions} now={load.now} tabs={tabs} onCount={onCount} own={load.own} />;
 }

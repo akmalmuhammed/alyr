@@ -166,6 +166,14 @@
   --d2-cmdk-list: 440px;
   --d2-bars-width: 440px;
   --d2-bars-height: 104px;
+  /* ALYR's own records (agent P3): the week chart's plot and its column, the busiest day's mark. */
+  --d2-own-plot: 148px;
+  --d2-own-plot-sm: 96px;
+  --d2-own-col: 36px;
+  --d2-own-col-sm: 22px;
+  --d2-own-mark: 3px;
+  --d2-prog-seg: 10px;
+  --d2-ownf-min: 12rem;
   --d2-bar-col: 30px;
   --d2-bar-unit: 8px;
   --d2-when-col: 96px;

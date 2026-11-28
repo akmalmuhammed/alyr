@@ -14,6 +14,9 @@ import { DayBars } from "./DayBars";
 import { ListingMiniature } from "./ListingMiniature";
 import { ChangeLifeTrack } from "./ChangeLifeTrack";
 import { afterFromDraft, draftText, stageOf, type Draft } from "./logic";
+import { OwnChart, ownPoint } from "./OwnRecords";
+import type { OwnRecordsView } from "./ownLogic";
+import { T3 } from "./copy3";
 
 export type Busy = "approve" | "decline" | "undo" | null;
 
@@ -40,6 +43,8 @@ export type AskTicketProps = {
   peeks: number;
   /** When the next check runs, if the API says (workstream D). */
   nextCheckAt: string | null;
+  /** ALYR's own records: an hours ask without its one weekday's bars shows the week instead. */
+  own?: OwnRecordsView | null;
 };
 
 export function AskTicket(props: AskTicketProps) {
@@ -112,7 +117,13 @@ export function AskTicket(props: AskTicketProps) {
                         ? (ask.day ? t.sampleConfirmedDay(ask.day, ask.confirmed.text) : t.sampleConfirmedValue(ask.confirmed.text))
                         : ask.confirmed && ask.confirmed.at ? (ask.day ? t.confirmedDay(ask.day, ask.confirmed.text, day(ask.confirmed.at, lang)) : t.confirmedValue(ask.confirmed.text, day(ask.confirmed.at, lang))) : !ask.firstParty ? p.why : null}</Say>
                     </p>
-                    {ask.firstParty ? <DayBars fp={ask.firstParty} where={ask.where} lang={lang} /> : null}
+                    {ask.firstParty ? <DayBars fp={ask.firstParty} where={ask.where} lang={lang} /> : props.own && props.own.state !== "off" && p.field === "hours" ? (
+                      <div className="d2-own-ticket">
+                        <div className="d2-own-ticket-h"><span>{T3[lang].ownInTicket}</span></div>
+                        <p><Say lang={lang}>{ownPoint(props.own, lang)}</Say></p>
+                        <OwnChart view={props.own} lang={lang} compact />
+                      </div>
+                    ) : null}
                     <div className="d2-t-scope">
                       <span className="d2-chip"><Ic name="calendar" size="sm" />{ask.day ? t.onlyDay(ask.day) : ask.days.length > 1 ? t.daysChange(ask.days.length) : t.onlyField(p.field_label)}</span>
                       <span className="d2-chip"><Ic name="globe" size="sm" />{t.whereChip(ask.where)}</span>

@@ -44,6 +44,9 @@ const DAY_AR: Record<DayKey, string> = {
   sat: "السبت", sun: "الأحد", mon: "الاثنين", tue: "الثلاثاء", wed: "الأربعاء", thu: "الخميس", fri: "الجمعة",
 };
 
+/** A verb that agrees with where: «صفحتك على Google» is feminine, «ملفك التجاري» and «موقعك» masculine. */
+const vAr = (where: WhereKey, fem: string, masc: string) => (where === "google" ? fem : masc);
+
 /** "Friday" or «الجمعة». */
 export const dayName = (day: DayKey, lang: D2Lang): string => (lang === "ar" ? DAY_AR[day] : DAY_EN[day][0]);
 
@@ -191,7 +194,7 @@ export const T = {
     nextCheck: "Next check",
     asksWaiting: "asks waiting",
     asksLabel: (count: number) => `${counted(count, N.ask, "en")} waiting`,
-    latestSent: (field: string, where: WhereKey, time: string) => `Latest: ${field} sent to ${WHERE.en.mid[where]} at ${time}`,
+    latestSent: (field: string, where: WhereKey, time: string) => `Latest: ${field} sent at ${time}`,
     latestMatches: (field: string) => `Latest: ${field} now matches`,
     latestApproved: (field: string) => `Latest: ${field} approved`,
     search: "Search or jump to",
@@ -340,14 +343,14 @@ export const T = {
     askOf: (i: number, of: number) => `القرار ${n(i)} من ${n(of)}`,
     asked: (asked: string, until: string) => `طُرح ${asked}، ينتظر حتى ${until}`,
     askedOnly: (asked: string) => `طُرح ${asked}`,
-    leadClosed: (where: WhereKey, day: DayKey) => ({ pre: `${WHERE.ar.start[where]} تقول إنك `, hl: `مغلق أيام ${DAY_AR[day]}`, post: "." }),
-    leadDayHours: (where: WhereKey, day: DayKey) => ({ pre: `${WHERE.ar.start[where]} تعرض ساعات مختلفة `, hl: `أيام ${DAY_AR[day]}`, post: "." }),
-    leadHours: (where: WhereKey) => ({ pre: `${WHERE.ar.start[where]} تعرض `, hl: "ساعات عمل مختلفة", post: "." }),
-    leadNoHours: (where: WhereKey) => ({ pre: `${WHERE.ar.start[where]} لا تعرض `, hl: "ساعات عمل", post: "." }),
-    leadPhone: (where: WhereKey) => ({ pre: `${WHERE.ar.start[where]} تعرض `, hl: "رقم هاتف مختلفاً", post: "." }),
-    leadName: (where: WhereKey) => ({ pre: `${WHERE.ar.start[where]} تكتب `, hl: "اسمك بصيغة مختلفة", post: "." }),
+    leadClosed: (where: WhereKey, day: DayKey) => ({ pre: `${WHERE.ar.start[where]} ${vAr(where, "تقول", "يقول")} إنك `, hl: `مغلق أيام ${DAY_AR[day]}`, post: "." }),
+    leadDayHours: (where: WhereKey, day: DayKey) => ({ pre: `${WHERE.ar.start[where]} ${vAr(where, "تعرض", "يعرض")} ساعات مختلفة `, hl: `أيام ${DAY_AR[day]}`, post: "." }),
+    leadHours: (where: WhereKey) => ({ pre: `${WHERE.ar.start[where]} ${vAr(where, "تعرض", "يعرض")} `, hl: "ساعات عمل مختلفة", post: "." }),
+    leadNoHours: (where: WhereKey) => ({ pre: `${WHERE.ar.start[where]} ${vAr(where, "لا تعرض", "لا يعرض")} `, hl: "ساعات عمل", post: "." }),
+    leadPhone: (where: WhereKey) => ({ pre: `${WHERE.ar.start[where]} ${vAr(where, "تعرض", "يعرض")} `, hl: "رقم هاتف مختلفاً", post: "." }),
+    leadName: (where: WhereKey) => ({ pre: `${WHERE.ar.start[where]} ${vAr(where, "تكتب", "يكتب")} `, hl: "اسمك بصيغة مختلفة", post: "." }),
     leadNoCategory: (where: WhereKey) => ({ pre: `${WHERE.ar.start[where]} بلا `, hl: "تصنيف رئيسي", post: "." }),
-    leadCategory: (where: WhereKey) => ({ pre: `${WHERE.ar.start[where]} تعرض `, hl: "تصنيفاً رئيسياً مختلفاً", post: "." }),
+    leadCategory: (where: WhereKey) => ({ pre: `${WHERE.ar.start[where]} ${vAr(where, "تعرض", "يعرض")} `, hl: "تصنيفاً رئيسياً مختلفاً", post: "." }),
     leadNoWhatsapp: (where: WhereKey) => ({ pre: `${WHERE.ar.start[where]} بلا `, hl: "رابط واتساب", post: "." }),
     leadWhatsappOther: (where: WhereKey) => ({ pre: `رابط واتساب في ${WHERE.ar.mid[where]} يوصل إلى `, hl: "رقم مختلف", post: "." }),
     leadNoPhone: (where: WhereKey) => ({ pre: `${WHERE.ar.start[where]} بلا `, hl: "رقم هاتف", post: "." }),
@@ -436,7 +439,7 @@ export const T = {
     nextCheck: "الفحص التالي",
     asksWaiting: "بانتظار قرارك",
     asksLabel: (count: number) => `${counted(count, N.ask, "ar")} بانتظار قرارك`,
-    latestSent: (field: string, where: WhereKey, time: string) => `الأحدث: أُرسل ${field} إلى ${WHERE.ar.mid[where]} الساعة ${ar(time)}`,
+    latestSent: (field: string, where: WhereKey, time: string) => `الأحدث: أُرسل ${field} الساعة ${ar(time)}`,
     latestMatches: (field: string) => `الأحدث: ${field} متطابق الآن`,
     latestApproved: (field: string) => `الأحدث: تمت الموافقة على ${field}`,
     search: "ابحث أو انتقل",

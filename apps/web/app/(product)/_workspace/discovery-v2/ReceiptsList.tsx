@@ -6,7 +6,9 @@
 import type { Person, ReceiptRow } from "./adapter";
 import { personFor } from "./adapter";
 import { T, type D2Lang } from "./copy";
-import { allMatch, joinNames, stageOf, type Tally } from "./logic";
+import { allMatch, emptyBefore, joinNames, replyLang, stageOf, type Tally } from "./logic";
+import { T3 } from "./copy3";
+import { bidiValue } from "./screens";
 import { Ic, TickDraw } from "./icons";
 import { Av, Ltr, Say, day, dayTime } from "./parts";
 
@@ -66,11 +68,21 @@ export function ReceiptsList({ lang, rows, people, tally, checkedAt, checksHref,
                 <span className="d2-when"><Say lang={lang}>{day(r.when, lang)}</Say></span>
                 <div>
                   <div className="d2-what"><Say lang={lang}>{t.exactField(r.what, r.where)}</Say></div>
-                  <div className="d2-pair">
-                    {p.before.removed ? <span className="d2-chip d2-chip-from d2-chip-removed" data-tip={t.removedTip}>{r.before}</span> : <span className="d2-chip d2-chip-from"><Ltr>{r.before}</Ltr></span>}
-                    <Ic name="arrow" size="xs" flip className="d2-to" />
-                    <span className="d2-chip d2-chip-to"><Ltr>{r.after}</Ltr></span>
-                  </div>
+                  {p.field === "review_reply" ? (
+                    // A reply is written in the review's language: drawn in its own direction, with its language said.
+                    <div className="d2s-reply">
+                      <div className="d2s-reply-text" lang={replyLang(p, r.after)} dir={replyLang(p, r.after) === "ar" ? "rtl" : "ltr"}>{bidiValue(r.after).text}</div>
+                      <p className="d2s-reply-lang"><Ic name="globe" size="xs" />{T3[lang].replyLang(replyLang(p, r.after))}</p>
+                    </div>
+                  ) : (
+                    <div className="d2-pair">
+                      {emptyBefore(p) ? null : <>
+                        {p.before.removed ? <span className="d2-chip d2-chip-from d2-chip-removed" data-tip={t.removedTip}>{r.before}</span> : <span className="d2-chip d2-chip-from"><Ltr>{r.before}</Ltr></span>}
+                        <Ic name="arrow" size="xs" flip className="d2-to" />
+                      </>}
+                      <span className="d2-chip d2-chip-to"><Ltr>{r.after}</Ltr></span>
+                    </div>
+                  )}
                   <div className="d2-who">
                     {by ? <span className="d2-actor"><Av person={personFor(by, people)} /><Say lang={lang}>{t.approvedSent(by)}</Say></span> : null}
                     {pill}

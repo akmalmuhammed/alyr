@@ -425,3 +425,54 @@
 .d2s-nosource p { font-size: var(--d2-fs-body-sm); line-height: var(--d2-lh-body-sm); color: var(--d2-ink-2); }
 /* A family's check count, once per card (a trade pill shows its own count only when it differs). */
 .d2s-fam-n { display: block; padding: var(--d2-s1) var(--d2-s3) 0; font-size: var(--d2-fs-small); color: var(--d2-ink-2); font-variant-numeric: tabular-nums; }
+
+/* ── Checks: the facts the "Your own data" checks are set against (agent P3) ── */
+.d2s-ownf { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--d2-ownf-min)), 1fr)); gap: var(--d2-s2h); margin-block-end: var(--d2-s3); }
+.d2s-ownf-tile { display: flex; flex-direction: column; align-items: flex-start; gap: var(--d2-s1h); padding: var(--d2-s4); border-radius: var(--d2-r-control); background: var(--d2-well); box-shadow: inset 0 0 0 var(--d2-rule) var(--d2-hair); min-inline-size: 0; }
+.d2s-ownf-k { font-size: var(--d2-fs-small); line-height: var(--d2-lh-small); color: var(--d2-ink-2); }
+.d2s-ownf-v { font-size: var(--d2-fs-body); line-height: var(--d2-lh-body); font-weight: var(--d2-wt-strong); color: var(--d2-ink); overflow-wrap: anywhere; }
+.d2s-ownf-sub { font-size: var(--d2-fs-small); line-height: var(--d2-lh-small); color: var(--d2-ink-2); }
+.d2s-ownf-note { font-size: var(--d2-fs-small); line-height: var(--d2-lh-small); color: var(--d2-ink-2); }
+.d2s-ownf-links { display: flex; flex-wrap: wrap; gap: var(--d2-s3); font-weight: var(--d2-wt-strong); }
+.d2s-ownf-src { margin-block-start: auto; padding-block-start: var(--d2-s1h); display: inline-flex; align-items: center; gap: var(--d2-s1h); font-size: var(--d2-fs-micro); line-height: var(--d2-lh-micro); color: var(--d2-ink-2); }
+.d2s-ownf-only { grid-column: 1 / -1; }
+
+/* ── Proof: a reply to a review, with the review it answers (agent P3) ── */
+.d2s-reply { margin-block-start: var(--d2-s2h); display: grid; gap: var(--d2-s2); max-inline-size: var(--d2-maxch-sub); }
+.d2s-reply-to { display: flex; align-items: center; flex-wrap: wrap; gap: var(--d2-s1h); font-size: var(--d2-fs-small); line-height: var(--d2-lh-small); color: var(--d2-ink-2); }
+.d2s-stars { display: inline-flex; gap: var(--d2-s-1); }
+.d2s-stars i { inline-size: var(--d2-key); block-size: var(--d2-key); border-radius: var(--d2-r-tiny); background: var(--d2-hair); clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+.d2s-stars i[data-on] { background: var(--d2-g-star); }
+.d2s-reply-quote { margin: 0; padding-inline-start: var(--d2-s3); border-inline-start: var(--d2-rule-3) solid var(--d2-hair); font-size: var(--d2-fs-body-sm); line-height: var(--d2-lh-body-sm); color: var(--d2-ink-2); }
+.d2s-reply-text { padding: var(--d2-s3) var(--d2-s4); border-radius: var(--d2-r-control); background: var(--d2-well); box-shadow: inset 0 0 0 var(--d2-rule) var(--d2-hair); font-size: var(--d2-fs-body-sm); line-height: var(--d2-lh-body-sm); color: var(--d2-ink); text-align: start; }
+.d2s-reply-lang { display: inline-flex; align-items: center; gap: var(--d2-s1); font-size: var(--d2-fs-micro); line-height: var(--d2-lh-micro); color: var(--d2-ink-2); }
+
+/* ── Answers while it is still counting (agent P3): progress toward 30, why 30, the next count ── */
+.d2s-ne { margin-block-start: var(--d2-s7); display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: var(--d2-s4); }
+.d2s-ne-prog { padding: var(--d2-s6); border-radius: var(--d2-r-card); background: var(--d2-surface); box-shadow: var(--d2-shadow-card); }
+.d2s-ne-prog h2, .d2s-ne-side h3 { font-size: var(--d2-fs-title); line-height: var(--d2-lh-title); font-weight: var(--d2-wt-label); }
+.d2s-ne-prog ul { margin-block-start: var(--d2-s4); display: grid; gap: var(--d2-s5); }
+.d2s-ne-h, .d2s-ne-f { display: flex; justify-content: space-between; align-items: baseline; gap: var(--d2-s3); }
+.d2s-ne-h span { font-size: var(--d2-fs-small); line-height: var(--d2-lh-small); color: var(--d2-ink-2); }
+.d2s-ne-f { margin-block-start: var(--d2-s1h); font-size: var(--d2-fs-small); line-height: var(--d2-lh-small); color: var(--d2-ink-2); }
+.d2s-ne-track { margin-block-start: var(--d2-s2); display: grid; grid-template-columns: repeat(30, minmax(0, 1fr)); gap: var(--d2-s-1); }
+.d2s-ne-track i { block-size: var(--d2-prog-seg); border-radius: var(--d2-r-tiny); background: var(--d2-tint); box-shadow: inset 0 0 0 var(--d2-rule) var(--d2-hair); }
+.d2s-ne-track i[data-on] { background: var(--d2-carbon); box-shadow: none; }
+.d2s-ne-side { display: grid; gap: var(--d2-s4); align-content: start; }
+.d2s-ne-side > div { padding: var(--d2-s5); border-radius: var(--d2-r-card); background: var(--d2-well); box-shadow: inset 0 0 0 var(--d2-rule) var(--d2-hair); }
+.d2s-ne-side p { margin-block-start: var(--d2-s1h); font-size: var(--d2-fs-body-sm); line-height: var(--d2-lh-body-sm); color: var(--d2-ink-2); }
+@media (max-width: 62rem) { .d2s-ne { grid-template-columns: minmax(0, 1fr); } }
+
+/* ── Checks folded (lead review of #372): names as a list, a summary row per state ── */
+.d2s-names { margin-block-start: var(--d2-s2); display: flex; flex-wrap: wrap; gap: var(--d2-s1h); }
+.d2s-names li { display: inline-flex; align-items: center; min-block-size: var(--d2-chip); padding-inline: var(--d2-s2h); border-radius: var(--d2-r-pill); background: var(--d2-well); box-shadow: inset 0 0 0 var(--d2-rule) var(--d2-hair); font-size: var(--d2-fs-small); line-height: var(--d2-lh-small); font-weight: var(--d2-wt-medium); }
+.d2s-checks > li.d2s-sum { background: var(--d2-well); }
+.d2s-checks > li.d2s-sum .d2s-s { font-weight: var(--d2-wt-medium); }
+.d2s-evs-in { display: inline-flex; flex-wrap: wrap; gap: var(--d2-s1); margin-inline-start: var(--d2-s2); vertical-align: middle; font-weight: var(--d2-wt-body); }
+.d2s-ownf-src > span:last-child { min-inline-size: 0; }
+.d2s-ownf-tile { padding: var(--d2-s3) var(--d2-s4); }
+.d2s-checks > li.d2s-sum { padding-block: var(--d2-s2); }
+.d2s-checks > li[data-kind="differ"] { padding-block: var(--d2-s3); }
+.d2s-names { margin-block-start: var(--d2-s1h); }
+.d2s-evs-icons { display: inline-flex; gap: var(--d2-s1); }
+.d2s-ev.d2s-ev-icon { padding: var(--d2-s1); min-inline-size: var(--d2-chip); justify-content: center; }

@@ -1,11 +1,13 @@
-// The live miniature of the page a change lands on, as customers see it: the place's name, what the
-// live read shows around it (when that read exists, workstream F), and the field being decided with
-// its before struck through and its after behind the highlighter. Hours show the whole week from
-// today, the changed day in focus; another field shows its one row.
+// The live miniature of the page a change lands on, as customers see it NOW: the place's name, what
+// the live read shows around it (when that read exists, workstream F), and the field being decided
+// as it is today ("No hours" when there are none). What Approve would put there is apart, under
+// "After you approve", and only there behind the Volt highlighter (the lead's review of #372).
 
 import { T, wherePage, type D2Lang } from "./copy";
 import type { AskView } from "./adapter";
-import { choiceLabels, spanText, type Draft } from "./logic";
+import { choiceLabels, emptyBefore, noneOf, spanText, type Draft } from "./logic";
+import { T3 } from "./copy3";
+import { Val } from "./frame";
 import type { DayKey } from "../discoveryApi";
 import { Ic } from "./icons";
 import { Hl, Ltr, dayTime } from "./parts";
@@ -14,6 +16,10 @@ import { Hl, Ltr, dayTime } from "./parts";
 export type { Draft } from "./logic";
 
 const ORDER: DayKey[] = ["sat", "sun", "mon", "tue", "wed", "thu", "fri"];
+const SHORT: Record<D2Lang, Record<DayKey, string>> = {
+  en: { sat: "Sat", sun: "Sun", mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri" },
+  ar: { sat: "السبت", sun: "الأحد", mon: "الاثنين", tue: "الثلاثاء", wed: "الأربعاء", thu: "الخميس", fri: "الجمعة" },
+};
 const LONG: Record<D2Lang, Record<DayKey, string>> = {
   en: { sat: "Saturday", sun: "Sunday", mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday" },
   ar: { sat: "السبت", sun: "الأحد", mon: "الاثنين", tue: "الثلاثاء", wed: "الأربعاء", thu: "الخميس", fri: "الجمعة" },
@@ -35,6 +41,7 @@ export function ListingMiniature({ ask, lang, today, settled, readAt, draft, onD
   onDraft?: (draft: Draft) => void;
 }) {
   const t = T[lang];
+  const t3 = T3[lang];
   const { p, listing } = ask;
   const start = ORDER.indexOf(today);
   const week = [...ORDER.slice(start), ...ORDER.slice(0, start)];
@@ -66,18 +73,19 @@ export function ListingMiniature({ ask, lang, today, settled, readAt, draft, onD
       </span>
     );
   };
-  /** One day of a change on several days: the day's before struck (when there was one) and its after. */
-  const dayDiff = (day: DayKey) => {
-    const before = spanText(lineOf(day), lang), after = spanText(afterOf(day), lang);
-    if (settled) return <span className="d2-new"><Ltr>{after}</Ltr></span>;
-    return (
-      <span className="d2-diff">
-        {lineOf(day) ? <><span className="d2-strike"><Ltr>{before}</Ltr></span><Ic name="arrow" size="xs" flip className="d2-to" /></> : null}
-        <span className="d2-new"><Hl><Ltr>{after}</Ltr></Hl></span>
-      </span>
-    );
-  };
   const shownAfter = ask.after;
+  // Nothing is there today: no hours on any day, or an empty field.
+  const nowEmpty = p.field === "hours" ? p.before.lines.length === 0 && !settled : emptyBefore(p);
+  const afterRtl = /[؀-ۿ]/.test(shownAfter);
+  // The hours Approve would put there, days with the same hours run together («Sat–Thu 07:00–22:00»).
+  const afterRuns: { label: string; text: string; from: DayKey; to: DayKey }[] = [];
+  for (const day of ORDER.filter((d) => ask.days.includes(d))) {
+    const text = spanText(afterOf(day), lang);
+    const last = afterRuns[afterRuns.length - 1];
+    const prev = ORDER[ORDER.indexOf(day) - 1];
+    if (last && last.text === text && prev && ask.days.includes(prev) && last.to === prev) { last.to = day; last.label = `${SHORT[lang][last.from]}–${SHORT[lang][day]}`; }
+    else afterRuns.push({ label: SHORT[lang][day], text, from: day, to: day });
+  }
   const choices = choiceLabels(p);
 
   const editor = (d: Draft, set: (draft: Draft) => void) => {
@@ -111,22 +119,12 @@ export function ListingMiniature({ ask, lang, today, settled, readAt, draft, onD
     );
   };
 
-  const diff = (before: string) => (
-    <span className="d2-diff">
-      {draft && onDraft ? editor(draft, onDraft) : (
-        <>
-          {settled ? null : <><span className="d2-strike">{lang === "ar" ? <Ltr>{before}</Ltr> : before}</span><Ic name="arrow" size="xs" flip className="d2-to" /></>}
-          <span className="d2-new">{settled ? <Ltr>{shownAfter}</Ltr> : <Hl><Ltr>{shownAfter}</Ltr></Hl>}</span>
-        </>
-      )}
-    </span>
-  );
-
   return (
     <figure className="d2-object">
       <figcaption className="d2-object-label"><Ic name="eye" size="xs" />{wherePage(ask.where, lang)}</figcaption>
       <div className="d2-listing" role="group" aria-label={t.listingMini}>
-        <p className="d2-listing-name">{ask.place}</p>
+        {/* A name ask: the name customers see now is the listing's name. */}
+        <p className="d2-listing-name">{p.field === "name" ? (settled ? shownAfter : ask.before || ask.place) : ask.place}</p>
         {listing && listing.rating !== null ? (
           <div className="d2-g-rate">
             <span className="d2-g-v">{listing.rating.toFixed(1)}</span>
@@ -136,34 +134,48 @@ export function ListingMiniature({ ask, lang, today, settled, readAt, draft, onD
         ) : null}
         {listing?.category ? <div className="d2-g-cat">{listing.category}</div> : null}
         {listing?.openLine ? <div className="d2-g-open"><b>{t.openNow}</b> · {listing.openLine}</div> : null}
-        {hoursShown ? (
-          <div className={`d2-g-hours${week7 ? " d2-g-week-edit" : ""}`} role="table" aria-label={t.listingHours}>
+        {/* The listing as customers see it now: the value being decided is shown as it is today
+            (or "No hours" when there is none). What Approve would put there is apart, below. */}
+        {hoursShown && !nowEmpty ? (
+          <div className="d2-g-hours" role="table" aria-label={t.listingHours}>
             {week.map((day) => {
-              const focus = ask.days.includes(day);
-              const cls = focus || week7 ? "d2-g-focus" : day === today ? "d2-g-today" : undefined;
+              const changes = ask.days.includes(day);
+              const text = settled ? afterOf(day) : lineOf(day);
               return (
-                <div key={day} role="row" className={cls}>
+                <div key={day} role="row" className={changes && !settled ? "d2-g-focus" : day === today ? "d2-g-today" : undefined}>
                   <span role="cell">{LONG[lang][day]}</span>
-                  {week7 ? <span role="cell">{dayEditor(day)}</span>
-                    : focus && ask.day === day ? <span role="cell">{diff(spanText(lineOf(day), lang))}</span>
-                    : focus ? <span role="cell" className="d2-tnum">{dayDiff(day)}</span>
-                    : <span role="cell" className="d2-tnum"><Ltr>{spanText(lineOf(day) || afterOf(day), lang)}</Ltr></span>}
+                  <span role="cell" className="d2-tnum">{text ? <Ltr>{spanText(text, lang)}</Ltr> : <span className="d2-g-none">{T[lang].closedOption}</span>}</span>
                 </div>
               );
             })}
           </div>
         ) : (
           <div className="d2-g-hours d2-g-field" role="table" aria-label={p.field_label}>
-            <div role="row" className="d2-g-focus">
+            <div role="row" className={settled ? undefined : "d2-g-focus"}>
               <span role="cell">{p.field_label}</span>
-              <span role="cell">{diff(ask.before)}</span>
+              <span role="cell">{settled ? <Val text={shownAfter} /> : nowEmpty ? <span className="d2-g-none">{noneOf(p.field, lang)}</span> : <Val text={ask.before} />}</span>
             </div>
           </div>
-        )}
-        {readAt ? (
+        )}        {readAt ? (
           <div className="d2-g-foot"><span>{t.readLive(dayTime(readAt, lang))}</span>{ask.where === "google" ? <span>{t.notStored}</span> : null}</div>
         ) : null}
       </div>
-    </figure>
+      {settled ? null : (
+        <div className="d2-object-after" aria-label={t3.afterApprove}>
+          <span className="d2-object-after-k"><Ic name="arrow" size="xs" flip />{t3.afterApprove}</span>
+          {draft && onDraft && draft.kind !== "week" ? <div className="d2-object-after-v">{editor(draft, onDraft)}</div>
+            : week7 ? (
+              <div className="d2-g-hours d2-g-week-edit" role="table" aria-label={t.listingHours}>
+                {ORDER.map((day) => <div key={day} role="row"><span role="cell">{LONG[lang][day]}</span><span role="cell">{dayEditor(day)}</span></div>)}
+              </div>
+            ) : hoursShown && !ask.day ? (
+              <ul className="d2-object-after-runs">
+                {afterRuns.map((r) => <li key={r.label}><span>{r.label}</span><Hl><Ltr>{r.text}</Ltr></Hl></li>)}
+              </ul>
+            ) : (
+              <div className="d2-object-after-v" dir={afterRtl ? "rtl" : undefined}>{hoursShown && ask.day ? <span className="d2-object-after-day">{LONG[lang][ask.day]}</span> : null}<Hl><Val text={shownAfter} /></Hl></div>
+            )}
+        </div>
+      )}    </figure>
   );
 }

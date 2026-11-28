@@ -15,12 +15,13 @@ import { T2 } from "./copy2";
 import type { D2Lang } from "./copy";
 import { ScreenFrame, SourceTile, StatePill } from "./frame";
 import { Ltr, Say, dayTime } from "./parts";
+import { T3 } from "./copy3";
 import { answerParas, percentRuns, type AnswersView, type LangTally } from "./screens";
 
 /** The API's sentence with each percent held left to right in its own <bdi> (Arabic keeps «79%» in order). */
 const withPercents = (text: string) => percentRuns(text).map((part, i) => (part.pct ? <Ltr key={i}>{part.text}</Ltr> : <span key={i}>{part.text}</span>));
 
-export function Answers({ lang, view, api, tabs, foot }: { lang: D2Lang; view: AnswersView; api: AnswersAnswer; tabs: ReactNode; foot?: ReactNode }) {
+export function Answers({ lang, view, api, tabs, foot, nextCheckAt = null }: { lang: D2Lang; view: AnswersView; api: AnswersAnswer; tabs: ReactNode; foot?: ReactNode; nextCheckAt?: string | null }) {
   const t = T2[lang];
   const langName = (code: string) => (code === "ar" ? t.langAr : t.langEn);
 
@@ -37,6 +38,7 @@ export function Answers({ lang, view, api, tabs, foot }: { lang: D2Lang; view: A
 
   const topic = t.topic(api.trade, api.city);
   const q = view.quote;
+  if (view.notEnough) return <StillCounting lang={lang} view={view} api={api} tabs={tabs} foot={foot} topic={topic} nextCheckAt={nextCheckAt} />;
   return (
     <ScreenFrame lang={lang} foot={foot}>
       {tabs}
@@ -207,5 +209,94 @@ function Method({ lang, api }: { lang: D2Lang; api: AnswersAnswer }) {
     <div className="d2s-method">
       <b>{t.methodTitle}</b> <Say lang={lang}>{[api.method, api.rule, api.limits, t.notPartOfChecks].filter(Boolean).join(" ")}</Say>
     </div>
+  );
+}
+
+const FLOOR = 30;
+
+/** Under 30 answers per tool and language: a screen of its own, not an error. What is counted so
+ * far toward the 30, why 30 are needed (how far one answer moves a share), and when the next count
+ * is due. No share and no range is drawn (G's rule); the answers themselves stay below. */
+function StillCounting({ lang, view, api, tabs, foot, topic, nextCheckAt }: { lang: D2Lang; view: AnswersView; api: AnswersAnswer; tabs: ReactNode; foot?: ReactNode; topic: string; nextCheckAt: string | null }) {
+  const t = T2[lang];
+  const t3 = T3[lang];
+  const langName = (code: string) => (code === "ar" ? t.langAr : t.langEn);
+  const most = Math.max(1, view.most);
+  const q = view.quote;
+  return (
+    <ScreenFrame lang={lang} foot={foot}>
+      {tabs}
+      <section className="d2-brief">
+        <h1 className="d2-display">{t3.neTitle}</h1>
+        <p className="d2-sub"><Say lang={lang}>{t3.neSub(topic, view.en.counted, view.ar.counted, view.tools.length)}</Say></p>
+      </section>
+
+      <section className="d2s-ne" aria-labelledby="d2s-ne-title">
+        <div className="d2s-ne-prog">
+          <h2 id="d2s-ne-title">{t3.progTitle}</h2>
+          <ul>
+            {view.groups.map((g) => {
+              const name = t.groupName(g.engine_label, g.lang_label || langName(g.lang));
+              const count = Math.min(g.counted, FLOOR);
+              return (
+                <li key={`${g.engine}-${g.lang}`}>
+                  <div className="d2s-ne-h"><b>{name}</b><span className="d2-tnum"><Say lang={lang}>{t3.progRow(g.counted)}</Say></span></div>
+                  <div className="d2s-ne-track" role="img" aria-label={t3.progAria(name, g.counted, g.named)}>
+                    {Array.from({ length: FLOOR }, (_, i) => <i key={i} data-on={i < count ? "" : undefined} />)}
+                  </div>
+                  <div className="d2s-ne-f"><span><Say lang={lang}>{t3.progNamed(g.named)}</Say></span><span><Say lang={lang}>{t3.progLeft(Math.max(0, FLOOR - g.counted))}</Say></span></div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+        <div className="d2s-ne-side">
+          <div>
+            <h3>{t3.whyTitle}</h3>
+            <p><Say lang={lang}>{t3.whyBody(most, Math.round(100 / most))}</Say></p>
+          </div>
+          <div>
+            <h3>{t3.nextTitle}</h3>
+            <p><Say lang={lang}>{nextCheckAt ? t3.nextAt(dayTime(nextCheckAt, lang)) : t3.nextManual}</Say></p>
+          </div>
+        </div>
+      </section>
+
+      <section className="d2s-sec">
+        <h2 className="d2-section">{t3.soFarTitle}</h2>
+        <div className="d2s-dotcards">
+          <DotCard lang={lang} name={t.langEn} tally={view.en} />
+          <DotCard lang={lang} name={t.langAr} tally={view.ar} />
+        </div>
+        {view.askedAt ? <p className="d2-small d2-muted d2s-gap"><Say lang={lang}>{t.dotsNote(dayTime(view.askedAt, lang))}</Say></p> : null}
+        {view.sample && api.sampleNote ? <p className="d2-small d2-muted"><Say lang={lang}>{api.sampleNote}</Say></p> : null}
+      </section>
+
+      <Cited lang={lang} api={api} hosts={view.cited} total={view.counted} />
+
+      {q ? (
+        <section className="d2s-sec">
+          <h2 className="d2-section">{t.quoteTitle}</h2>
+          <blockquote className="d2s-quote" lang={q.lang === "ar" ? "ar" : "en"} dir={q.lang === "ar" ? "rtl" : "ltr"}>
+            <div className="d2s-q-head" lang={lang} dir={lang === "ar" ? "rtl" : "ltr"}>
+              <span><Say lang={lang}>{t.quoteHead(q.said_by || q.engine_label, langName(q.lang), dayTime(view.askedAt, lang))}</Say></span>
+              <span className="d2s-q-tag">{t.thirdParty}</span>
+            </div>
+            <p className="d2s-q-asked" lang={lang} dir={lang === "ar" ? "rtl" : "ltr"}>{t.questionAsked} <bdi>{q.question}</bdi></p>
+            <div className="d2s-q-text">
+              {answerParas(q.text, q.matched).map((para, i) => (
+                <p key={i}>{para.map((part, j) => {
+                  const inner = part.mark ? <mark>{part.text}</mark> : part.text;
+                  return part.strong ? <strong key={j}>{inner}</strong> : <span key={j}>{inner}</span>;
+                })}</p>
+              ))}
+            </div>
+            <div className="d2s-q-foot" lang={lang} dir={lang === "ar" ? "rtl" : "ltr"}><span><Say lang={lang}>{api.quoteNote || t.quoteFoot}</Say></span></div>
+          </blockquote>
+        </section>
+      ) : null}
+
+      <Method lang={lang} api={api} />
+    </ScreenFrame>
   );
 }

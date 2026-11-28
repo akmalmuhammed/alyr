@@ -18,6 +18,7 @@ import { FamilyMiniature } from "./FamilyMiniature";
 import { Ic } from "./icons";
 import { Kbd, Say } from "./parts";
 import { checksFor, families, type KnownFact } from "./screens";
+import { T3 } from "./copy3";
 
 export type SetupStage = "idle" | "saving" | "queued" | "running" | "done";
 export type Choice = { family: string | null; trade: string | null };
@@ -47,6 +48,12 @@ export function Setup({ lang, packs, choice, onChoose, canManage, known, stage, 
   const busy = stage !== "idle" && stage !== "done";
   const count = selected ? checksFor(packs, selected.id, trade?.key ?? null) : 0;
   const focusIndex = Math.max(0, fams.findIndex((f) => f.id === choice.family));
+  // When every kind is checked against the same number, it is said once, not on every card.
+  const famCounts = fams.map((f) => checksFor(packs, f.id, null));
+  const sameCount = famCounts.length > 1 && famCounts.every((x) => x === famCounts[0]) ? famCounts[0] : null;
+  // What ALYR has, apart from the connected source's own tile; and how many places it came from.
+  const facts = known.filter((k) => k.prov !== "source");
+  const from = new Set(facts.map((k) => k.prov)).size;
 
   // Enter starts the check when nothing else has focus (the prototype's shortcut).
   useEffect(() => {
@@ -106,7 +113,7 @@ export function Setup({ lang, packs, choice, onChoose, canManage, known, stage, 
       </ol>
       <section className="d2-brief d2s-setup-brief">
         <h1 className="d2-display">{t.setupTitle}</h1>
-        <p className="d2-sub">{canManage ? t.setupSub : t.setupReadOnly}</p>
+        <p className="d2-sub">{canManage ? t.setupSub : t.setupReadOnly}{sameCount ? <> <Say lang={lang}>{T3[lang].sameCount(sameCount)}</Say></> : null}</p>
       </section>
       {noSource ? (
         <div className="d2s-nosource" role="note">
@@ -132,7 +139,7 @@ export function Setup({ lang, packs, choice, onChoose, canManage, known, stage, 
               >
                 <span className="d2s-stage" aria-hidden="true"><FamilyMiniature id={f.id} lang={lang} /></span>
                 <span className="d2s-fam-title">{f.title}</span>
-                <span className="d2s-fam-n"><Say lang={lang}>{t.checksCount(checksFor(packs, f.id, null))}</Say></span>
+                {sameCount ? null : <span className="d2s-fam-n"><Say lang={lang}>{t.checksCount(checksFor(packs, f.id, null))}</Say></span>}
                 {t.familyBlurb[f.id] ? <span className="d2s-fam-p">{t.familyBlurb[f.id]}</span> : null}
               </button>
               {f.trades.length ? (
@@ -165,7 +172,7 @@ export function Setup({ lang, packs, choice, onChoose, canManage, known, stage, 
             <h2 id="d2s-known-title">{t.knownTitle}</h2>
             <p>{t.knownSub}</p>
           </div>
-          {known.length ? <span className="d2s-srcsum"><Say lang={lang}>{t.knownSum(known.length, new Set(known.map((k) => k.prov)).size)}</Say></span> : null}
+          {facts.length && from ? <span className="d2s-srcsum"><Say lang={lang}>{t.knownSum(facts.length, from)}</Say></span> : null}
         </header>
         {known.length ? (
           <ul className="d2s-facts">

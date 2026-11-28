@@ -21,6 +21,8 @@ import { AgentBar } from "./AgentBar";
 import { CommandMenu, type Command } from "./CommandMenu";
 import { Toast, type ToastData } from "./Toast";
 import { Say, time } from "./parts";
+import { OwnRecords } from "./OwnRecords";
+import type { OwnRecordsView } from "./ownLogic";
 import "./tokens.css";
 import "./discovery-v2.css";
 
@@ -48,7 +50,7 @@ export type ThisWeekActions = {
 
 type ToastState = ToastData & { undoId: string | null };
 
-export function ThisWeek({ lang, view, actions, now, initial, tabs, onCount }: {
+export function ThisWeek({ lang, view, actions, now, initial, tabs, onCount, own = null }: {
   lang: D2Lang;
   view: ThisWeekView;
   actions: ThisWeekActions;
@@ -59,6 +61,8 @@ export function ThisWeek({ lang, view, actions, now, initial, tabs, onCount }: {
   initial?: { overrides?: Record<string, Proposal>; fan?: boolean; sheet?: boolean };
   /** The open asks left, each time it changes: the tab's count is this page's count. */
   onCount?: (count: number) => void;
+  /** ALYR's own records (`GET /first-party`): drawn in an hours ask's ticket, else as a section. */
+  own?: OwnRecordsView | null;
 }) {
   const t = T[lang];
   const [overrides, setOverrides] = useState<Record<string, Proposal>>(initial?.overrides ?? {});
@@ -270,6 +274,8 @@ export function ThisWeek({ lang, view, actions, now, initial, tabs, onCount }: {
 
   const remaining = joinNames([...rest.map((a) => t.waitingName(a.p.field_label, a.where)), ...owner.map((f) => t.ownerName[f.rule_id] ?? f.title.replace(/[.。]$/, ""))], lang, "and");
   const currentDecided = current && currentP && decided.has(current.p.id);
+  // An hours ask carries ALYR's own records in its ticket; the section below would repeat them.
+  const ownInTicket = !!own && own.state !== "off" && !!currentP && currentP.field === "hours" && stageOf(currentP) === "waiting";
   const onItsWay = current && currentP && currentDecided && ["approved", "sent", "live"].includes(stageOf(currentP))
     ? (current.day ? t.afterLeadDay(current.day, current.after, current.where) : t.afterLead(currentP.field_label, current.where)) : "";
 
@@ -287,7 +293,7 @@ export function ThisWeek({ lang, view, actions, now, initial, tabs, onCount }: {
             snoozedUntil={snoozed[current.p.id] ?? null}
             draft={draft} onEdit={actions.changeAfter && draftFor(currentP) ? (on) => setDraft(on ? draftFor(currentP) : null) : undefined}
             onDraft={setDraft} onApprove={() => void approve(current)} onDecline={() => void decline(current)} onUndo={() => void undo(currentP, current.p.id)}
-            onWhy={() => openSheet(current)} error={error} peeks={Math.min(2, rest.length + owner.length)} nextCheckAt={view.nextCheckAt} />
+            onWhy={() => openSheet(current)} error={error} peeks={Math.min(2, rest.length + owner.length)} nextCheckAt={view.nextCheckAt} own={own} />
         ) : view.state === "noConnection" ? (
           <div className="d2-empty d2-nosource">
             <p><b>{t.noSourceTitle}</b> <Say lang={lang}>{t.noSourceBody}</Say></p>
@@ -301,6 +307,8 @@ export function ThisWeek({ lang, view, actions, now, initial, tabs, onCount }: {
           onApprove={(a) => void approve(a)} onDecline={(a) => void decline(a)} onWhy={openSheet} onSkip={(f) => void skip(f)} busyId={busy?.id ?? null} />
         {view.alsoNoticed > 0 ? <p className="d2-small d2-muted d2-also"><Say lang={lang}>{t.waitTurn(view.alsoNoticed)}</Say></p> : null}
 
+        {own && !ownInTicket ? <OwnRecords view={own} lang={lang} /> : null}
+
         <OnlyYouList lang={lang} items={view.onlyYou.filter((o) => !doneIds.has(o.f.id))} busyId={busy?.id ?? null} onDone={actions.markDone ? (f) => void markDone(f) : undefined} />
 
         <ReceiptsList lang={lang} rows={view.receipts.filter((r) => r.kind !== "change" || !asks.some((a) => a.p.id === r.p.id)).map((r) => (r.kind === "change" && overrides[r.p.id] ? { ...r, p: overrides[r.p.id] } : r))}
@@ -312,7 +320,7 @@ export function ThisWeek({ lang, view, actions, now, initial, tabs, onCount }: {
         toast={toastShown ? <Toast toast={toastShown} lang={lang} onUndo={toastUndo} onDismiss={() => setToast(null)} /> : null} />
 
       {sheet ? (
-        <EvidenceSheet ask={sheet} lang={lang} approvers={view.approvers} onClose={closeSheet}
+        <EvidenceSheet ask={sheet} lang={lang} approvers={view.approvers} own={own} onClose={closeSheet}
           onApprove={() => void approve(sheet)} onDecline={() => void decline(sheet)} busy={busy !== null} />
       ) : null}
       {cmdk ? <CommandMenu lang={lang} items={commands} onClose={() => setCmdk(false)} /> : null}

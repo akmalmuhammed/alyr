@@ -7,6 +7,8 @@ import type { Finding } from "../discoveryApi";
 import { T, type D2Lang } from "./copy";
 import { Ic } from "./icons";
 import { Hl, Ltr, Say } from "./parts";
+import { emptyBefore } from "./logic";
+import { EvidenceChip } from "./frame";
 
 export function WaitingFan({ lang, asks, owner, startIndex, of, open, onToggle, onApprove, onDecline, onWhy, onSkip, busyId }: {
   lang: D2Lang;
@@ -42,8 +44,8 @@ export function WaitingFan({ lang, asks, owner, startIndex, of, open, onToggle, 
               <h3 className="d2-t-lead" id={`d2-mini-${a.p.id}`}>{a.lead.pre}{a.lead.hl ? <Hl draw={false}>{a.lead.hl}</Hl> : null}{a.lead.post}</h3>
               <p className="d2-t-support"><Say lang={lang}>{a.p.why}</Say></p>
               <div className="d2-value-diff">
-                <span className="d2-strike"><Ltr>{a.before}</Ltr></span>
-                <Ic name="arrow" size="sm" flip className="d2-to" />
+                {emptyBefore(a.p) ? null : <><span className="d2-strike"><Ltr>{a.before}</Ltr></span>
+                <Ic name="arrow" size="sm" flip className="d2-to" /></>}
                 <span className="d2-new"><Hl draw={false}><Ltr>{a.after}</Ltr></Hl></span>
               </div>
               <div className="d2-t-actions">
@@ -61,6 +63,8 @@ export function WaitingFan({ lang, asks, owner, startIndex, of, open, onToggle, 
             <div className="d2-t-inner">
               <h3 className="d2-t-lead" id={`d2-mini-${f.id}`}><Say lang={lang}>{f.title}</Say></h3>
               <p className="d2-t-support"><Say lang={lang}>{f.what_is_needed || f.why}</Say></p>
+              {/* A first-party ask (a season from ALYR's calendar) shows where it comes from. */}
+              {f.evidence.length ? <div className="d2s-evs">{f.evidence.map((ev, i) => <EvidenceChip key={`${ev.label}-${i}`} ev={ev} lang={lang} />)}</div> : null}
               <div className="d2-t-actions">
                 <span className="d2-small d2-muted d2-grow">{f.what_happens}</span>
                 <button className="d2-btn d2-btn-quiet" type="button" disabled={busyId !== null} onClick={() => onSkip(f)}>{t.notNow}</button>

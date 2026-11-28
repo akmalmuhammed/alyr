@@ -17,8 +17,9 @@ import { Ic } from "./icons";
 import { joinNames, stageOf as stage, whereOf } from "./logic";
 import { Av, Say, day, dayTime } from "./parts";
 import { Mark } from "../shellParts";
-import { beforeAfter } from "./logic";
-import { filterReceipts, type ProofView, type ChangeReceipt, type Receipt, type ReceiptFilter, type ReceiptStatus } from "./screens";
+import { beforeAfter, emptyBefore, replyLang as replyLangOf } from "./logic";
+import { T3 } from "./copy3";
+import { bidiValue, filterReceipts, type ProofView, type ChangeReceipt, type Receipt, type ReceiptFilter, type ReceiptStatus } from "./screens";
 
 export function Proof({ lang, view, tabs, foot, people, sourceKind, onUndo, busyId, initialFilter = "all" }: {
   lang: D2Lang;
@@ -127,6 +128,10 @@ function ReceiptCard({ r, lang, sourceKind, personOf, onUndo, busy }: {
   const p = r.p;
   const where = whereOf(p.target, sourceKind);
   const ba = beforeAfter(p, lang);
+  const t3 = T3[lang];
+  const review = p.field === "review_reply" ? p.context?.review ?? null : null;
+  // The reply is written in the review's language (an Arabic review gets the Arabic reply).
+  const replyLang = replyLangOf(p, ba.after);
   const by = p.decided?.by ?? "";
   const steps: Step[] = [];
   // The loop opens an ask when it becomes one of the three; before that it was only noticed.
@@ -178,11 +183,28 @@ function ReceiptCard({ r, lang, sourceKind, personOf, onUndo, busy }: {
       <div className="d2s-rc-d"><b><Say lang={lang}>{day(r.when, lang)}</Say></b><Say lang={lang}>{t.where[where]}</Say></div>
       <div className="d2s-rc-main">
         <h3><Say lang={lang}>{t1.exactField(p.field_label, where)}</Say></h3>
-        <div className="d2-pair">
-          {p.before.removed ? <span className="d2-chip d2-chip-from d2-chip-removed" data-tip={t1.removedTip}>{ba.before}</span> : <span className="d2-chip d2-chip-from"><Val text={ba.before} /></span>}
-          <Ic name="arrow" size="xs" flip className="d2-to" />
-          <span className="d2-chip d2-chip-to"><Val text={ba.after} /></span>
-        </div>
+        {review ? (
+          // A reply to a review: the review it answers, then the reply in the review's own language.
+          <div className="d2s-reply">
+            <p className="d2s-reply-to">
+              <span className="d2s-stars" aria-hidden="true">{Array.from({ length: 5 }, (_, i) => <i key={i} data-on={i < review.rating ? "" : undefined} />)}</span>
+              <Say lang={lang}>{t3.replyTo(review.rating, "")}</Say>{review.author_name ? <span> · <bdi>{review.author_name}</bdi></span> : null}
+              {review.posted_at ? <span className="d2-muted"> · <Say lang={lang}>{day(review.posted_at, lang)}</Say></span> : null}
+            </p>
+            {review.body ? <blockquote className="d2s-reply-quote" lang={replyLang} dir={replyLang === "ar" ? "rtl" : "ltr"}>{review.body}</blockquote> : null}
+            <div className="d2s-reply-text" lang={replyLang} dir={replyLang === "ar" ? "rtl" : "ltr"}>{bidiValue(ba.after).text}</div>
+            <p className="d2s-reply-lang"><Ic name="globe" size="xs" />{t3.replyLang(replyLang)}</p>
+          </div>
+        ) : (
+          <div className="d2-pair">
+            {/* An empty before is not drawn as a struck-out "None": only what was asked for shows. */}
+            {emptyBefore(p) ? null : <>
+              {p.before.removed ? <span className="d2-chip d2-chip-from d2-chip-removed" data-tip={t1.removedTip}>{ba.before}</span> : <span className="d2-chip d2-chip-from"><Val text={ba.before} /></span>}
+              <Ic name="arrow" size="xs" flip className="d2-to" />
+            </>}
+            <span className="d2-chip d2-chip-to"><Val text={ba.after} /></span>
+          </div>
+        )}
         <Trail steps={steps} lang={lang} />
       </div>
       <div className="d2s-rc-st">

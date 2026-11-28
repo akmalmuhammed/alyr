@@ -154,7 +154,7 @@ export const T2 = {
     dotsAria: (lang: string, named: number, total: number) => `${lang}: ${n(named)} of ${n(total)} answers named your business`,
     dotTip: (tool: string, named: boolean) => `${tool} · ${named ? "named you" : "not named"}`,
     dotsNote: (when: string) => `A filled dot is an answer that named your business. Point at a dot to see which tool. Asked ${when}.`,
-    noneInLang: (lang: string) => `None named your business in ${lang}.`,
+    noneInLang: (lang: string) => `No ${lang} answer named your business yet.`,
     sureTitle: "How sure is this?",
     sureBody: (low: number, high: number, total: number) => `Asked again, the count would likely land between ${n(low)} and ${n(high)} of ${n(total)}.`,
     compareTitle: (day: string) => `Compared with ${day}`,
