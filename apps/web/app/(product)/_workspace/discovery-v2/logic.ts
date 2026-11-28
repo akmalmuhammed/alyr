@@ -73,6 +73,10 @@ export const noneOf = (field: string, lang: D2Lang): string => T3[lang].noneOf[f
  * change then shows only what was asked for, without a struck-through empty chip. */
 export const emptyBefore = (p: Pick<Proposal, "field" | "before" | "after">): boolean => !p.before.removed && !oneDay(p) && empty(p.before.text);
 
+/** The language a review reply is written in: the review's (an Arabic review gets the Arabic reply). */
+export const replyLang = (p: Pick<Proposal, "context">, text: string): "ar" | "en" =>
+  p.context?.review?.language === "ar" || (!p.context?.review?.language && /[؀-ۿ]/.test(text)) ? "ar" : "en";
+
 /** The value being decided, short: «Friday 13:00–22:00» for one day of hours, else the after line. */
 export function exactText(p: Pick<Proposal, "field" | "before" | "after">, lang: D2Lang): string {
   const day = oneDay(p);

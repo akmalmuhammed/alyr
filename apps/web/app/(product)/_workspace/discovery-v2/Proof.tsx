@@ -17,7 +17,7 @@ import { Ic } from "./icons";
 import { joinNames, stageOf as stage, whereOf } from "./logic";
 import { Av, Say, day, dayTime } from "./parts";
 import { Mark } from "../shellParts";
-import { beforeAfter, emptyBefore } from "./logic";
+import { beforeAfter, emptyBefore, replyLang as replyLangOf } from "./logic";
 import { T3 } from "./copy3";
 import { bidiValue, filterReceipts, type ProofView, type ChangeReceipt, type Receipt, type ReceiptFilter, type ReceiptStatus } from "./screens";
 
@@ -131,7 +131,7 @@ function ReceiptCard({ r, lang, sourceKind, personOf, onUndo, busy }: {
   const t3 = T3[lang];
   const review = p.field === "review_reply" ? p.context?.review ?? null : null;
   // The reply is written in the review's language (an Arabic review gets the Arabic reply).
-  const replyLang = review?.language === "ar" || (!review?.language && /[؀-ۿ]/.test(ba.after)) ? "ar" : "en";
+  const replyLang = replyLangOf(p, ba.after);
   const by = p.decided?.by ?? "";
   const steps: Step[] = [];
   // The loop opens an ask when it becomes one of the three; before that it was only noticed.
@@ -188,7 +188,7 @@ function ReceiptCard({ r, lang, sourceKind, personOf, onUndo, busy }: {
           <div className="d2s-reply">
             <p className="d2s-reply-to">
               <span className="d2s-stars" aria-hidden="true">{Array.from({ length: 5 }, (_, i) => <i key={i} data-on={i < review.rating ? "" : undefined} />)}</span>
-              <Say lang={lang}>{t3.replyTo(review.rating, review.author_name)}</Say>
+              <Say lang={lang}>{t3.replyTo(review.rating, "")}</Say>{review.author_name ? <span> · <bdi>{review.author_name}</bdi></span> : null}
               {review.posted_at ? <span className="d2-muted"> · <Say lang={lang}>{day(review.posted_at, lang)}</Say></span> : null}
             </p>
             {review.body ? <blockquote className="d2s-reply-quote" lang={replyLang} dir={replyLang === "ar" ? "rtl" : "ltr"}>{review.body}</blockquote> : null}

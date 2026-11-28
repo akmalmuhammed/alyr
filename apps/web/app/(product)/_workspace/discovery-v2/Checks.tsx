@@ -117,8 +117,8 @@ function Group({ lang, group, rows, hrefs, measured, openKey, own = null }: { la
       </ul>
       {nm > 0 ? (
         <div className="d2s-nm-note">
-          <p><Say lang={lang}>{t.nmNote(nm, measured)}</Say><small>{t.nmWhy}</small></p>
-          {hrefs.connections ? <a className="d2-btn d2-btn-line d2-btn-sm" href={hrefs.connections}>{t.seeConnections}</a> : null}
+          <p><Say lang={lang}>{t.nmNote(nm, measured)}</Say><small>{group.id === "own" ? T3[lang].ownNmWhy : t.nmWhy}</small></p>
+          {hrefs.connections && group.id !== "own" ? <a className="d2-btn d2-btn-line d2-btn-sm" href={hrefs.connections}>{t.seeConnections}</a> : null}
         </div>
       ) : null}
     </section>
@@ -141,7 +141,7 @@ function Row({ lang, row, hrefs, openCard }: { lang: D2Lang; row: CheckRowView; 
       <div className="d2s-row-main">
         <p className="d2s-s">{sentence}</p>
         {row.evidence.length ? (
-          <div className="d2s-evs">{row.evidence.map((ev, i) => <EvidenceChip key={`${ev.label}-${i}`} ev={ev} lang={lang} open={openCard && i === 0} />)}</div>
+          <div className="d2s-evs">{row.evidence.map((ev, i) => <EvidenceChip key={`${ev.label}-${i}`} ev={ev} lang={lang} open={openCard && i === 0} brief={!!row.sentence} />)}</div>
         ) : null}
       </div>
       <span className="d2s-side">

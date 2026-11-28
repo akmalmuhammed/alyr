@@ -354,7 +354,7 @@ button.d2-seg:hover { background: var(--d2-on-carbon-hover); }
 .d2-div { inline-size: var(--d2-rule); block-size: var(--d2-s5h); background: var(--d2-on-carbon-rule); flex: none; }
 .d2-count { display: inline-grid; place-items: center; min-inline-size: var(--d2-count); block-size: var(--d2-count); padding-inline: var(--d2-s1h); border-radius: var(--d2-r-pill); background: var(--d2-chalk); color: var(--d2-carbon); font-weight: var(--d2-wt-mark); font-size: var(--d2-fs-micro); font-variant-numeric: tabular-nums; }
 .d2-latest { min-inline-size: 0; flex: 1; overflow: hidden; }
-.d2-latest > span { overflow: hidden; text-overflow: ellipsis; display: block; }
+.d2-latest > span { overflow: hidden; display: block; white-space: normal; text-wrap: balance; }
 .d2-latest .d2-i { color: var(--d2-ok-on-carbon); }
 .d2-heart { inline-size: var(--d2-dot); block-size: var(--d2-dot); border-radius: 50%; background: var(--d2-ok-on-carbon); box-shadow: 0 0 0 var(--d2-track) var(--d2-ok-on-carbon-soft); }
 .d2-search {

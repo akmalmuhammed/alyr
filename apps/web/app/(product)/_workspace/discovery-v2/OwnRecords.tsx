@@ -68,7 +68,7 @@ export function OwnChart({ view, lang, compact = false }: { view: OwnRecordsView
           </span>
         ))}
       </div>
-      {view.state === "empty" && !compact ? <figcaption className="d2-own-empty"><b>{t.ownEmptyTitle}</b> <span>{t.ownEmptyBody}</span></figcaption> : null}
+      {view.state === "empty" ? <figcaption className="d2-own-empty">{compact ? null : <><b>{t.ownEmptyTitle}</b> </>}<span>{t.ownEmptyBody}</span></figcaption> : null}
     </figure>
   );
 }
