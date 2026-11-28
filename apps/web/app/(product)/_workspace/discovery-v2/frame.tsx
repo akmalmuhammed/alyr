@@ -99,15 +99,16 @@ export function SourceTile({ where }: { where: string }) {
 /** One piece of evidence: a chip that opens a hover card (on hover and on keyboard focus) saying
  * what it says, where it came from and when it was read. */
 /** `brief`: the row already says the sentence, so a chip of words only names where it came from. */
-export function EvidenceChip({ ev, lang, open = false, brief = false }: { ev: Evidence; lang: D2Lang; open?: boolean; brief?: boolean }) {
+/** `icon`: only the source's mark, named for screen readers; the hover card says the rest. */
+export function EvidenceChip({ ev, lang, open = false, brief = false, icon = false }: { ev: Evidence; lang: D2Lang; open?: boolean; brief?: boolean; icon?: boolean }) {
   const t = T2[lang];
   const id = useId();
   const when = ev.seen_at ? (ev.day_only ? t.evDay(day(ev.seen_at, lang)) : t.evRead(dayTime(ev.seen_at, lang))) : "";
   return (
     <span className={`d2s-hc-wrap${open ? " d2s-hc-open" : ""}`}>
-      <button className="d2s-ev" type="button" aria-describedby={id}>
+      <button className={`d2s-ev${icon ? " d2s-ev-icon" : ""}`} type="button" aria-describedby={id} aria-label={icon ? ev.where : undefined}>
         <SourceTile where={ev.where} />
-        {ev.sentence && brief && ev.where ? <span className="d2s-ev-k"><Say lang={lang}>{ev.where}</Say></span> : ev.sentence ? <span className="d2s-ev-k"><Say lang={lang}>{ev.sentence}</Say></span> : <><span className="d2s-ev-k"><Say lang={lang}>{ev.label}</Say></span> <b><Val text={ev.value} /></b></>}
+        {icon ? null : brief && ev.where ? <span className="d2s-ev-k"><Say lang={lang}>{ev.where}</Say></span> : ev.sentence ? <span className="d2s-ev-k"><Say lang={lang}>{ev.sentence}</Say></span> : <><span className="d2s-ev-k"><Say lang={lang}>{ev.label}</Say></span> <b><Val text={ev.value} /></b></>}
       </button>
       <span className="d2s-hc" role="tooltip" id={id}>
         <span className="d2s-hc-k"><SourceTile where={ev.where} />{ev.where}</span>

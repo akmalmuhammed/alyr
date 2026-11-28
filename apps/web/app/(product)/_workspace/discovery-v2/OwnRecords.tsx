@@ -28,7 +28,7 @@ export function OwnSource({ view, lang }: { view: OwnRecordsView; lang: D2Lang }
   return (
     <span className="d2-own-src">
       <span className="d2-own-src-mk" aria-hidden="true"><Mark /></span>
-      <Say lang={lang}>{T3[lang].ownSource(view.source, dayTime(view.readAt, lang))}</Say>
+      <span><Say lang={lang}>{T3[lang].ownSource(view.source, dayTime(view.readAt, lang))}</Say></span>
     </span>
   );
 }

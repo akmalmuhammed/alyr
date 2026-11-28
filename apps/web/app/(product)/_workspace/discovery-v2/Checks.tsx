@@ -15,10 +15,10 @@ import { stepKind } from "../discoveryLogic";
 import { Mark } from "../shellParts";
 import { T2 } from "./copy2";
 import type { D2Lang } from "./copy";
-import { EvidenceChip, Filters, ScreenFrame, SkeletonGroups, StatePill } from "./frame";
+import { EvidenceChip, Filters, ScreenFrame, SkeletonGroups, StatePill, Val } from "./frame";
 import { Ic } from "./icons";
 import { Ltr, Say, dayTime } from "./parts";
-import { bidiValue, filterRows, linesOf, type CheckFilter, type CheckGroup, type CheckLine, type CheckRowView, type ChecksView } from "./screens";
+import { bidiValue, filterRows, linesOf, sentenceList, type CheckFilter, type CheckGroup, type CheckLine, type CheckRowView, type ChecksView } from "./screens";
 
 export type ChecksHrefs = { week: string; setup: string | null; connections: string | null; task: (findingId: string) => string };
 
@@ -90,7 +90,7 @@ export function Checks({ lang, view, tabs, foot, hrefs, nextCheckAt, run, onChec
         view.groups.map((g) => {
           const rows = filterRows(g.rows, filter);
           if (!rows.length) return null;
-          return <Group key={g.id} lang={lang} group={g} rows={rows} hrefs={hrefs} measured={view.tally?.measured ?? 0} openKey={openKey} own={g.id === "own" ? own : null} />;
+          return <Group key={g.id} lang={lang} group={g} rows={rows} hrefs={hrefs} measured={view.tally?.measured ?? 0} openKey={openKey} own={g.id === "own" ? own : null} filter={filter} />;
         })
       )}
 
@@ -99,9 +99,13 @@ export function Checks({ lang, view, tabs, foot, hrefs, nextCheckAt, run, onChec
   );
 }
 
-function Group({ lang, group, rows, hrefs, measured, openKey, own = null }: { lang: D2Lang; group: CheckGroup; rows: CheckRowView[]; hrefs: ChecksHrefs; measured: number; openKey: string | null; own?: FirstPartyAnswer | null }) {
+function Group({ lang, group, rows, hrefs, measured, openKey, own = null, filter }: { lang: D2Lang; group: CheckGroup; rows: CheckRowView[]; hrefs: ChecksHrefs; measured: number; openKey: string | null; own?: FirstPartyAnswer | null; filter: CheckFilter }) {
   const t = T2[lang];
+  const t3 = T3[lang];
   const nm = rows.filter((r) => r.kind === "nm").length;
+  const ok = rows.filter((r) => r.kind === "ok").length;
+  const lines = linesOf(rows);
+  const [opened, setOpened] = useState<{ ok: boolean; nm: boolean }>({ ok: false, nm: false });
   const titleId = `d2s-g-${group.id}`;
   return (
     <section className="d2s-group" aria-labelledby={titleId}>
@@ -111,11 +115,31 @@ function Group({ lang, group, rows, hrefs, measured, openKey, own = null }: { la
       </header>
       {own ? <OwnFacts lang={lang} fp={own} /> : null}
       <ul className="d2s-card d2s-list d2s-checks">
-        {linesOf(rows).map((line) => (line.kind === "differ"
-          ? <Row key={line.row.key} lang={lang} row={line.row} hrefs={hrefs} openCard={line.row.key === openKey} />
-          : <Line key={line.key} lang={lang} line={line} />))}
+        {lines.filter((l) => l.kind === "differ").map((line) => (line.kind === "differ" ? <Row key={line.row.key} lang={lang} row={line.row} hrefs={hrefs} openCard={line.row.key === openKey} /> : null))}
+        {/* Problems first. What matches and what was not measured fold into one row each. */}
+        {(["ok", "nm"] as const).map((kind) => {
+          const mine = lines.filter((l): l is Extract<CheckLine, { kind: "ok" | "nm" }> => l.kind === kind);
+          if (!mine.length) return null;
+          const count = kind === "ok" ? ok : nm;
+          const isOpen = filter === kind || opened[kind];
+          const id = `d2s-fold-${group.id}-${kind}`;
+          return [
+            <li key={`${kind}-sum`} data-kind={kind} className="d2s-sum">
+              <span className={`d2s-cmark d2s-cmark-${kind}`} aria-hidden="true">{kind === "ok" ? <Ic name="check" size="xs" /> : null}</span>
+              <p className="d2s-s"><Say lang={lang}>{kind === "ok" ? t3.sumMatch(count) : t3.sumNm(count)}</Say></p>
+              <span className="d2s-side">
+                {filter === kind ? null : (
+                  <button className="d2-btn d2-btn-quiet d2-btn-sm d2-fold-tg" type="button" aria-expanded={isOpen} aria-controls={id} onClick={() => setOpened((o) => ({ ...o, [kind]: !o[kind] }))}>
+                    {isOpen ? t3.hide : t3.show}<Ic name="down" size="xs" />
+                  </button>
+                )}
+              </span>
+            </li>,
+            isOpen ? mine.map((line) => <Line key={line.key} lang={lang} line={line} />) : null,
+          ];
+        })}
       </ul>
-      {nm > 0 ? (
+      {nm > 0 && (filter === "nm" || opened.nm) ? (
         <div className="d2s-nm-note">
           <p><Say lang={lang}>{t.nmNote(nm, measured)}</Say><small>{group.id === "own" ? T3[lang].ownNmWhy : t.nmWhy}</small></p>
           {hrefs.connections && group.id !== "own" ? <a className="d2-btn d2-btn-line d2-btn-sm" href={hrefs.connections}>{t.seeConnections}</a> : null}
@@ -129,22 +153,29 @@ function Row({ lang, row, hrefs, openCard }: { lang: D2Lang; row: CheckRowView; 
   const t = T2[lang];
   const label = row.place ? t.atPlace(row.label, row.place) : row.label;
   // The API's sentence (what was looked at and what it showed) when it came; else the finding's title.
+  const list = row.sentence ? sentenceList(row.sentence) : null;
   const sentence = row.sentence
-    ? <><b><Say lang={lang}>{bidiValue(row.sentence).text}</Say></b>{row.place ? <> <span className="d2-muted">· <Say lang={lang}>{row.place}</Say></span></> : null}</>
+    ? <><b><Say lang={lang}>{list ? list.head : bidiValue(row.sentence).text}</Say></b>{row.place ? <> <span className="d2-muted">· <Say lang={lang}>{row.place}</Say></span></> : null}</>
     : row.kind === "differ" && row.finding
     ? <><b><Say lang={lang}>{bidiValue(row.finding.title).text}</Say></b>{row.place ? <> <span className="d2-muted">· <Say lang={lang}>{row.place}</Say></span></> : null}</>
     : <Say lang={lang}>{label}</Say>;
   const tone = row.kind === "ok" ? "ok" : row.kind === "differ" ? "warn" : "nm";
+  // With the sentence said, a chip only names where the evidence came from: one chip per source.
+  const evidence = row.sentence ? row.evidence.filter((ev, i, all) => all.findIndex((x) => x.where === ev.where) === i) : row.evidence;
   return (
     <li data-kind={row.kind}>
       <span className={`d2s-cmark d2s-cmark-${row.kind}`} aria-hidden="true">{row.kind === "ok" ? <Ic name="check" size="xs" /> : null}</span>
       <div className="d2s-row-main">
         <p className="d2s-s">{sentence}</p>
-        {row.evidence.length ? (
-          <div className="d2s-evs">{row.evidence.map((ev, i) => <EvidenceChip key={`${ev.label}-${i}`} ev={ev} lang={lang} open={openCard && i === 0} brief={!!row.sentence} />)}</div>
+        {/* Names are a list under the sentence, each in its own direction, never one run of text. */}
+        {list ? <ul className="d2s-names">{list.items.map((item) => <li key={item}><Val text={item} /></li>)}</ul> : null}
+        {!row.sentence && evidence.length ? (
+          <div className="d2s-evs">{evidence.map((ev, i) => <EvidenceChip key={`${ev.label}-${i}`} ev={ev} lang={lang} open={openCard && i === 0} brief={!!row.sentence} />)}</div>
         ) : null}
       </div>
       <span className="d2s-side">
+        {/* The row says the sentence: each source is a mark whose card says what it showed and when. */}
+        {row.sentence && evidence.length ? <span className="d2s-evs-icons">{evidence.map((ev, i) => <EvidenceChip key={`${ev.label}-${i}`} ev={ev} lang={lang} open={openCard && i === 0} icon />)}</span> : null}
         <StatePill tone={tone}>{t.state[row.kind]}</StatePill>
         {row.kind === "differ" && row.askWaiting ? <a className="d2-btn d2-btn-line d2-btn-sm" href={hrefs.week}>{t.seeAsk}</a>
           // A website difference or an owner's task: the steps are on This week, with the exact text.
@@ -197,7 +228,7 @@ export function CheckingCard({ lang, run }: { lang: D2Lang; run: Run }) {
 function OwnFacts({ lang, fp }: { lang: D2Lang; fp: FirstPartyAnswer }) {
   const t3 = T3[lang];
   const totals = windowTotals(fp);
-  const src = (s: FpSource | null) => (s ? <span className="d2s-ownf-src"><span className="d2s-src d2s-src-alyr" aria-hidden="true"><Mark /></span><Say lang={lang}>{s.read_at ? t3.ownSource(s.source_label, dayTime(s.read_at, lang)) : s.source_label}</Say></span> : null);
+  const src = (s: FpSource | null) => (s ? <span className="d2s-ownf-src"><span className="d2s-src d2s-src-alyr" aria-hidden="true"><Mark /></span><span><Say lang={lang}>{s.read_at ? t3.ownSource(s.source_label, dayTime(s.read_at, lang)) : s.source_label}</Say></span></span> : null);
   const name = fp.names ? (lang === "ar" ? fp.names.ar || fp.names.en : fp.names.en || fp.names.ar) : "";
   const other = fp.names ? (lang === "ar" ? (fp.names.ar ? fp.names.en : "") : (fp.names.en ? fp.names.ar : "")) : "";
   return (

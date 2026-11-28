@@ -160,6 +160,22 @@ export function sentenceOf(said: { en: string; ar: string } | undefined, kind: C
   return short && short !== text ? short : text;
 }
 
+/** A sentence that ends in a run of names ("…spelled more than one way across your listings: A; B;
+ * C."), cut into its head and the names, so the names are drawn as a list under the sentence and
+ * never as one bidirectional run (the lead's review of #372). English joins them with "; ", the
+ * Arabic with «، » round isolated names. Null when the sentence holds no such list. */
+export function sentenceList(text: string): { head: string; items: string[] } | null {
+  const at = text.search(/[:：]\s/);
+  if (at < 0) return null;
+  const head = `${text.slice(0, at).trim()}.`;
+  const rest = text.slice(at + 1).trim().replace(/\.$/, "");
+  const isolated = [...rest.matchAll(/\u2068([^\u2069]*)\u2069/g)].map((m) => m[1].trim());
+  // Arabic: only when the rest is nothing but isolated names joined by commas.
+  if (isolated.length >= 2 && rest.replace(/\u2068[^\u2069]*\u2069/g, "").replace(/[،,\s]/g, "") === "") return { head, items: isolated };
+  const parts = rest.split(/;\s+/).map((s) => s.trim()).filter(Boolean);
+  return parts.length >= 2 ? { head, items: parts } : null;
+}
+
 /** What a group draws: each difference on its own (its sentence and evidence), and the checks that
  * match or were not measured once per check, with the places they hold for (56 rows become 16). */
 export type CheckLine =

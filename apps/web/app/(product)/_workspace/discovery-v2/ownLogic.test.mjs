@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { parseChecks, parseFirstParty } from "../discoveryApi.ts";
 import { focusFor, ownRecords, phoneText, windowTotals } from "./ownLogic.ts";
-import { buildChecks, linesOf, sentenceOf } from "./screens.ts";
+import { buildChecks, linesOf, sentenceList, sentenceOf } from "./screens.ts";
 import { beforeAfter, emptyBefore, noneOf } from "./logic.ts";
 import { T3 } from "./copy3.ts";
 
@@ -161,4 +161,15 @@ test("the new words exist in both languages and say nothing ALYR must not say", 
   for (const lang of ["en", "ar"]) for (const line of sample(lang)) assert.equal(/\.\.\.|…/.test(line), false, line);
   assert.equal(sp(T3.en.neSub("car care in Doha", 3, 3, 1)), "A share is named only from 30 answers per answer tool in each language. About car care in Doha, there are 3 answers in English and 3 answers in Arabic so far, from 1 answer tool.");
   assert.equal(sp(T3.en.whyBody(3, 33)), "With 3 answers, one answer more or less moves a share by 33 points. With 30, it moves it by about 3, so a share starts to say something.");
+});
+
+test("a sentence ending in names is cut into its head and a list, in both languages", () => {
+  assert.deepEqual(sentenceList("Your business name is spelled more than one way across your listings: Nuqta Car Care (West Bay); NUQTA CAR CARE W.L.L. (Al Sadd)."),
+    { head: "Your business name is spelled more than one way across your listings.", items: ["Nuqta Car Care (West Bay)", "NUQTA CAR CARE W.L.L. (Al Sadd)"] });
+  assert.deepEqual(sentenceList("اسم منشأتك مكتوب بأكثر من صيغة في صفحاتها: \u2068Nuqta Car Care (West Bay)\u2069، \u2068Nuqta Car Wash - Wakra (Al Wakra)\u2069."),
+    { head: "اسم منشأتك مكتوب بأكثر من صيغة في صفحاتها.", items: ["Nuqta Car Care (West Bay)", "Nuqta Car Wash - Wakra (Al Wakra)"] });
+  // One item after a colon, or a date with a comma, is a sentence, not a list.
+  assert.equal(sentenceList("By ALYR's calendar, a season is close: Qatar National Day, 18 Dec 2026."), null);
+  assert.equal(sentenceList("حسب تقويم ALYR، يقترب موسم: اليوم الوطني لقطر، 18 ديسمبر 2026."), null);
+  assert.equal(sentenceList("Your Google listing shows opening hours."), null);
 });

@@ -22,8 +22,8 @@ export const Ltr = ({ children }: { children: ReactNode }) => <bdi dir="ltr" cla
 
 // A run that reads left to right inside Arabic: digits, Latin words and what holds them together
 // (a time's colon, a range's dash, a phone number's plus and spaces, a percent, a question mark
-// that belongs to an English question). It starts and ends on a letter, digit, «%», «?» or «!».
-const LTR_RUN = /[A-Za-z0-9+#@][A-Za-z0-9+#@&'’:.,/%?!\-–_  ⁠]*[A-Za-z0-9%?!]|[A-Za-z0-9]/g;
+// that belongs to an English question, the brackets of a Latin name such as «Nuqta Car Care (West Bay)»). It starts and ends on a letter, digit, «%», «?» or «!».
+const LTR_RUN = /[A-Za-z0-9+#@][A-Za-z0-9+#@&'’:.,/%?!\-–_()[\]  ⁠]*[A-Za-z0-9%?!)\]]|[A-Za-z0-9]/g;
 const ISOLATES = /[⁦-⁩]/g;
 
 /** A sentence cut into its Arabic parts and its left-to-right runs (counts, dates, times, Latin

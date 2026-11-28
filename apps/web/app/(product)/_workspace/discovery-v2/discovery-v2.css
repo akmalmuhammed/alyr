@@ -552,3 +552,14 @@ button.d2-seg:hover { background: var(--d2-on-carbon-hover); }
 .d2-fold-tg { display: inline-flex; align-items: center; gap: var(--d2-s1); }
 .d2-fold-tg[aria-expanded="true"] .d2-i { transform: rotate(180deg); }
 .d2-fold-body { padding-block: 0 var(--d2-s5); display: flex; align-items: flex-end; justify-content: space-between; gap: var(--d2-s4); flex-wrap: wrap; }
+
+/* ── The miniature: the listing now, and apart from it what Approve would put there (lead review of #372) ── */
+.d2-g-none { color: var(--d2-ink-2); }
+.d2-object-after { margin-block-start: var(--d2-s3); padding: var(--d2-s3) var(--d2-s4); border-radius: var(--d2-r-listing); background: var(--d2-surface); box-shadow: var(--d2-shadow-listing); }
+.d2-object-after-k { display: inline-flex; align-items: center; gap: var(--d2-s1h); font-size: var(--d2-fs-small); line-height: var(--d2-lh-small); color: var(--d2-ink-2); font-weight: var(--d2-wt-medium); }
+.d2-object-after-v { margin-block-start: var(--d2-s2); display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--d2-s2); font-weight: var(--d2-wt-strong); overflow-wrap: anywhere; }
+.d2-object-after-day { font-weight: var(--d2-wt-body); color: var(--d2-ink-2); }
+.d2-object-after-runs { margin-block-start: var(--d2-s2); display: grid; gap: var(--d2-s1h); }
+.d2-object-after-runs li { display: flex; justify-content: space-between; align-items: baseline; gap: var(--d2-s3); font-variant-numeric: tabular-nums; }
+.d2-object-after-runs li > span { color: var(--d2-ink-2); }
+.d2-object-after-runs .d2-hl { font-weight: var(--d2-wt-strong); }
