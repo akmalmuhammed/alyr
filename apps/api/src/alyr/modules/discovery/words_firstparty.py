@@ -399,6 +399,10 @@ def _iso(text: str, lang: str) -> str:
     return f"{_ISOLATE[0]}{text}{_ISOLATE[1]}" if lang == "ar" else text
 
 
+# Evidence of these checks that is a phone number (`words.evidence_view` writes it out).
+PHONE_LABELS = frozenset({"fp_confirmed_whatsapp"})
+
+
 def phone_shown(number: str, lang: str) -> str:
     """A phone number inside a sentence on a screen: written as people write it, through
     `proposal_words.format_number` (+974 5555 0112), held together by no-break spaces so it never

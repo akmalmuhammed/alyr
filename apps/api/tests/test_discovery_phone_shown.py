@@ -58,10 +58,10 @@ def test_check_sentences_never_quote_a_raw_number(lang):
 
 @pytest.mark.parametrize("lang", ["en", "ar"])
 def test_phone_evidence_and_changes_are_written_as_people_write_them(lang):
-    for label in sorted(words.PHONE_LABELS):
+    for label in sorted(words.PHONE_LABELS | fpw.PHONE_LABELS):
         item = {"label": label, "value": "+97455550112", "where": "listing",
                 "seen_at": "2026-11-26T06:00:00+00:00", "source": "sample"}
-        assert words.evidence_view(item, lang)["value"] == f"+974{NB}5555{NB}0112"
+        assert words.evidence_view(item, lang)["value"] == "+974 5555 0112"
     change = {"field": "phone", "before": {"phone": "+97455550129"}, "after": {"phone": "55550112"}}
     said = pw.change_lines(change, lang)
     assert said["before"]["text"] == "+974 5555 0129"

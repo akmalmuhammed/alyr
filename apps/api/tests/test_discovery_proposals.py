@@ -108,7 +108,7 @@ def test_a_conflict_proposes_only_what_differs_from_the_confirmed_fact(shop):
     assert web["after"]["text"].startswith("Sat to Thu 07:00")
     assert web["before"]["text"] == "Sat to Thu 07:00 to 20:00; Fri 13:00 to 20:00"
     phone = step("phone_conflict", "Al Wakra")
-    assert (phone["before"]["text"], phone["after"]["text"]) == ("+974 5555 0129", "+97455550112")
+    assert (phone["before"]["text"], phone["after"]["text"]) == ("+974 5555 0129", "+974 5555 0112")
     name = find(shop.owner, "name_conflict", "Al Wakra")
     assert (name["before"]["text"], name["after"]["text"]) == (
         "Nuqta Car Wash - Wakra", "Nuqta Car Care - Wakra")

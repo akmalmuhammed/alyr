@@ -603,16 +603,17 @@ def value_text(value: str, lang: str) -> str:
 
 
 # Evidence that is a phone number: shown as people write it (+974 5555 0112), never as stored.
-PHONE_LABELS = frozenset(
-    {"listing_phone", "website_phone", "expected_whatsapp", "fp_confirmed_whatsapp"})
+# The first-party checks name theirs in `words_firstparty.PHONE_LABELS`.
+PHONE_LABELS = frozenset({"listing_phone", "website_phone", "expected_whatsapp"})
 
 
 def _phone_value(label: str, value: str) -> str:
-    if label not in PHONE_LABELS or value.startswith("~"):
-        return value
+    from alyr.modules.discovery import words_firstparty
     from alyr.modules.discovery.proposal_words import format_number
 
-    return format_number(value, "\u00a0")
+    if value.startswith("~") or label not in PHONE_LABELS | words_firstparty.PHONE_LABELS:
+        return value
+    return format_number(value)
 
 
 def evidence_view(item: dict, lang: str) -> dict:
