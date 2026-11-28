@@ -101,7 +101,7 @@ test("the week's receipts are the sent changes and the owner's own fixes, newest
   assert.deepEqual(v.receipts.map((r) => (r.kind === "change" ? r.p.id : r.f.id)), ["p-category", "p-name", "f-site-phone", "f-site-hours"]);
   const change = v.receipts[0];
   assert.equal(change.kind, "change");
-  assert.deepEqual([change.before, change.after, change.where], ["None", "Car wash", "google"]);
+  assert.deepEqual([change.before, change.after, change.where], ["No category", "Car wash", "google"]);
 });
 
 test("the states: no connection, no check-up yet, nothing this week", () => {

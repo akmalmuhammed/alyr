@@ -57,7 +57,7 @@ test("the exact change is the one day and its new hours, else the after line", (
   assert.equal(exactText(ar.waiting[0], "ar"), "الجمعة ⁦13:00–22:00⁩");
   assert.equal(exactText(phone, "en"), "+974 5555 0101");
   assert.deepEqual(beforeAfter(hours, "en"), { before: "Closed", after: "13:00–22:00" });
-  assert.deepEqual(beforeAfter({ ...phone, before: { text: "none", lines: [] } }, "en"), { before: "None", after: "+974 5555 0101" });
+  assert.deepEqual(beforeAfter({ ...phone, before: { text: "none", lines: [] } }, "en"), { before: "No phone number", after: "+974 5555 0101" });
 });
 
 test("the tally counts measured checks only, and nothing without a finished check-up", () => {

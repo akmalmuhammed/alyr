@@ -8,7 +8,9 @@
 // (the existing endpoint) and shows it running in a Carbon card over a still skeleton.
 
 import { useState, type ReactNode } from "react";
-import type { Run } from "../discoveryApi";
+import type { FirstPartyAnswer, FpSource, Run } from "../discoveryApi";
+import { T3 } from "./copy3";
+import { phoneText, windowTotals } from "./ownLogic";
 import { stepKind } from "../discoveryLogic";
 import { Mark } from "../shellParts";
 import { T2 } from "./copy2";
@@ -20,7 +22,7 @@ import { bidiValue, filterRows, linesOf, type CheckFilter, type CheckGroup, type
 
 export type ChecksHrefs = { week: string; setup: string | null; connections: string | null; task: (findingId: string) => string };
 
-export function Checks({ lang, view, tabs, foot, hrefs, nextCheckAt, run, onCheckAgain, busy, error, initialFilter = "all", openFirstCard = false }: {
+export function Checks({ lang, view, tabs, foot, hrefs, nextCheckAt, run, onCheckAgain, busy, error, initialFilter = "all", openFirstCard = false, own = null }: {
   lang: D2Lang;
   view: ChecksView;
   tabs: ReactNode;
@@ -36,6 +38,8 @@ export function Checks({ lang, view, tabs, foot, hrefs, nextCheckAt, run, onChec
   initialFilter?: CheckFilter;
   /** For the preview: the first evidence chip's hover card shown open. */
   openFirstCard?: boolean;
+  /** ALYR's own records (`GET /first-party`): the facts the "Your own data" group is checked with. */
+  own?: FirstPartyAnswer | null;
 }) {
   const t = T2[lang];
   const [filter, setFilter] = useState<CheckFilter>(initialFilter);
@@ -86,7 +90,7 @@ export function Checks({ lang, view, tabs, foot, hrefs, nextCheckAt, run, onChec
         view.groups.map((g) => {
           const rows = filterRows(g.rows, filter);
           if (!rows.length) return null;
-          return <Group key={g.id} lang={lang} group={g} rows={rows} hrefs={hrefs} measured={view.tally?.measured ?? 0} openKey={openKey} />;
+          return <Group key={g.id} lang={lang} group={g} rows={rows} hrefs={hrefs} measured={view.tally?.measured ?? 0} openKey={openKey} own={g.id === "own" ? own : null} />;
         })
       )}
 
@@ -95,7 +99,7 @@ export function Checks({ lang, view, tabs, foot, hrefs, nextCheckAt, run, onChec
   );
 }
 
-function Group({ lang, group, rows, hrefs, measured, openKey }: { lang: D2Lang; group: CheckGroup; rows: CheckRowView[]; hrefs: ChecksHrefs; measured: number; openKey: string | null }) {
+function Group({ lang, group, rows, hrefs, measured, openKey, own = null }: { lang: D2Lang; group: CheckGroup; rows: CheckRowView[]; hrefs: ChecksHrefs; measured: number; openKey: string | null; own?: FirstPartyAnswer | null }) {
   const t = T2[lang];
   const nm = rows.filter((r) => r.kind === "nm").length;
   const titleId = `d2s-g-${group.id}`;
@@ -105,6 +109,7 @@ function Group({ lang, group, rows, hrefs, measured, openKey }: { lang: D2Lang; 
         <h2 id={titleId}>{group.title}</h2>
         <p>{t.groupSub[group.id]} · <span className="d2-tnum"><Say lang={lang}>{t.groupTally(group.matched, group.differ)}</Say></span></p>
       </header>
+      {own ? <OwnFacts lang={lang} fp={own} /> : null}
       <ul className="d2s-card d2s-list d2s-checks">
         {linesOf(rows).map((line) => (line.kind === "differ"
           ? <Row key={line.row.key} lang={lang} row={line.row} hrefs={hrefs} openCard={line.row.key === openKey} />
@@ -123,7 +128,10 @@ function Group({ lang, group, rows, hrefs, measured, openKey }: { lang: D2Lang; 
 function Row({ lang, row, hrefs, openCard }: { lang: D2Lang; row: CheckRowView; hrefs: ChecksHrefs; openCard: boolean }) {
   const t = T2[lang];
   const label = row.place ? t.atPlace(row.label, row.place) : row.label;
-  const sentence = row.kind === "differ" && row.finding
+  // The API's sentence (what was looked at and what it showed) when it came; else the finding's title.
+  const sentence = row.sentence
+    ? <><b><Say lang={lang}>{bidiValue(row.sentence).text}</Say></b>{row.place ? <> <span className="d2-muted">· <Say lang={lang}>{row.place}</Say></span></> : null}</>
+    : row.kind === "differ" && row.finding
     ? <><b><Say lang={lang}>{bidiValue(row.finding.title).text}</Say></b>{row.place ? <> <span className="d2-muted">· <Say lang={lang}>{row.place}</Say></span></> : null}</>
     : <Say lang={lang}>{label}</Say>;
   const tone = row.kind === "ok" ? "ok" : row.kind === "differ" ? "warn" : "nm";
@@ -157,7 +165,7 @@ function Line({ lang, line }: { lang: D2Lang; line: Extract<CheckLine, { kind: "
     <li data-kind={line.kind}>
       <span className={`d2s-cmark d2s-cmark-${line.kind}`} aria-hidden="true">{line.kind === "ok" ? <Ic name="check" size="xs" /> : null}</span>
       <div className="d2s-row-main">
-        <p className="d2s-s"><Say lang={lang}>{line.label}</Say>{places ? <> <span className="d2-muted">· <Say lang={lang}>{places}</Say></span></> : null}</p>
+        <p className="d2s-s"><Say lang={lang}>{line.sentence ? bidiValue(line.sentence).text : line.label}</Say>{places ? <> <span className="d2-muted">· <Say lang={lang}>{places}</Say></span></> : null}</p>
       </div>
       <span className="d2s-side"><StatePill tone={line.kind === "ok" ? "ok" : "nm"}>{t.state[line.kind]}</StatePill></span>
     </li>
@@ -181,5 +189,51 @@ export function CheckingCard({ lang, run }: { lang: D2Lang; run: Run }) {
       {names.length ? <ul>{names.map((name) => <li key={name}><span className="d2s-ch-d"><Ic name="check" size="xs" /></span><Ltr>{name}</Ltr></li>)}</ul> : null}
       <p>{t.checkingBody}</p>
     </section>
+  );
+}
+
+/** What the "Your own data" checks are set against: ALYR's own records, each with where it came
+ * from and when it was read. Staff see the counts alone (the API leaves the rest out). */
+function OwnFacts({ lang, fp }: { lang: D2Lang; fp: FirstPartyAnswer }) {
+  const t3 = T3[lang];
+  const totals = windowTotals(fp);
+  const src = (s: FpSource | null) => (s ? <span className="d2s-ownf-src"><span className="d2s-src d2s-src-alyr" aria-hidden="true"><Mark /></span><Say lang={lang}>{s.read_at ? t3.ownSource(s.source_label, dayTime(s.read_at, lang)) : s.source_label}</Say></span> : null);
+  const name = fp.names ? (lang === "ar" ? fp.names.ar || fp.names.en : fp.names.en || fp.names.ar) : "";
+  const other = fp.names ? (lang === "ar" ? (fp.names.ar ? fp.names.en : "") : (fp.names.en ? fp.names.ar : "")) : "";
+  return (
+    <div className="d2s-ownf" role="group" aria-label={t3.factsTitle}>
+      <div className="d2s-ownf-tile">
+        <span className="d2s-ownf-k">{t3.fActivity}</span>
+        <b className="d2s-ownf-v">{totals ? <Say lang={lang}>{t3.weekTotals(totals.orders, totals.bookings, fp.window?.weeks ?? 4)}</Say> : t3.fNotOn}</b>
+        {fp.activity && !fp.covered && totals ? <small className="d2s-ownf-note">{t3.ownPartial}</small> : null}
+        {src(fp.activity)}
+      </div>
+      {fp.links && (fp.links.booking || fp.links.order) ? (
+        <div className="d2s-ownf-tile">
+          <span className="d2s-ownf-k">{t3.fPages}</span>
+          <span className="d2s-ownf-links">
+            {fp.links.booking ? <a className="d2-link" href={fp.links.booking} target="_blank" rel="noreferrer">{t3.fBookingPage}</a> : null}
+            {fp.links.order ? <a className="d2-link" href={fp.links.order} target="_blank" rel="noreferrer">{t3.fOrderPage}</a> : null}
+          </span>
+          {src(fp.links)}
+        </div>
+      ) : null}
+      {fp.whatsapp ? (
+        <div className="d2s-ownf-tile">
+          <span className="d2s-ownf-k">{t3.fWhatsapp}</span>
+          <b className="d2s-ownf-v"><Ltr>{phoneText(fp.whatsapp.number)}</Ltr></b>
+          {src(fp.whatsapp)}
+        </div>
+      ) : null}
+      {name ? (
+        <div className="d2s-ownf-tile">
+          <span className="d2s-ownf-k">{t3.fNames}</span>
+          <b className="d2s-ownf-v"><bdi>{name}</bdi></b>
+          {other ? <small className="d2s-ownf-sub" lang={lang === "ar" ? "en" : "ar"} dir={lang === "ar" ? "ltr" : "rtl"}>{other}</small> : null}
+          {src(fp.names)}
+        </div>
+      ) : null}
+      {fp.counts_only ? <p className="d2-small d2-muted d2s-ownf-only">{t3.countsOnly}</p> : null}
+    </div>
   );
 }

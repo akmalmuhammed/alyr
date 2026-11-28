@@ -187,7 +187,10 @@ export type CheckState = "pass" | "fail" | "not_measured";
 export type MarkKind = CheckState | "fixed";
 /** `pack`: the pack that brought the check into the last check-up ("core" before any); `first_party`: it reads ALYR's own records. */
 export type CheckRule = { id: string; part: PartKey; label: string; pack: string; first_party: boolean };
-export type ChecksRow = { checks: Record<string, CheckState>; fixed: string[] };
+/** A check as a whole sentence in both languages (`GET /checks` rows, agent C3): what was looked at
+ * and what it showed; a difference quotes its evidence. */
+export type CheckSentence = { en: string; ar: string };
+export type ChecksRow = { checks: Record<string, CheckState>; fixed: string[]; sentences?: Record<string, CheckSentence> };
 export type ChecksPlace = ChecksRow & { id: string; name: string };
 export type ChecksAnswer = {
   run_id: string | null; finished_at: string | null; measured: boolean;
@@ -221,6 +224,39 @@ export type Place = {
   managers: Manager[] | null;
 };
 export type Connection = { kind: string; on: boolean; observed_on: string | null; days_old: number | null; old: boolean };
+
+// What ALYR's own records say (`GET /first-party`, Discovery 2.0, agent C3): counts only, never a
+// customer and never money. Each fact says where it came from and when it was read.
+export type FpSource = { source: string; source_label: string; read_at: string | null };
+/** One day in the shop's time zone. `null`: that product is not switched on, so nothing was counted. */
+export type FpDay = { date: string; weekday: DayKey; orders: number | null; bookings: number | null };
+export type FpHours = { orders: number[] | null; bookings: number[] | null };
+export type FpActivity = FpSource & {
+  /** Which of the two are counted at all. */
+  orders: boolean; bookings: boolean;
+  days: FpDay[];
+  /** Per weekday, 24 counts each, summed over the weeks. */
+  hours: Partial<Record<DayKey, FpHours>>;
+};
+export type FpLinks = FpSource & { booking: string | null; order: string | null; whatsapp: string | null };
+export type FpWhatsapp = FpSource & { number: string };
+export type FpNames = FpSource & { en: string; ar: string };
+/** The last weeks of the one weekday a `set_hours` proposal changes (`?proposal_id=`). */
+export type FpFocus = { proposal_id: string; day: DayKey | null; weeks: { date: string; orders: number | null; bookings: number | null }[] };
+export type FirstPartyAnswer = {
+  read_at: string | null;
+  timezone: string;
+  window: { from: string; to: string; weeks: number } | null;
+  /** ALYR held orders or bookings from before the window began: every day is a real count. */
+  covered: boolean;
+  /** Staff: the counts alone; the pages, the number and the names are null. */
+  counts_only: boolean;
+  activity: FpActivity | null;
+  links: FpLinks | null;
+  whatsapp: FpWhatsapp | null;
+  names: FpNames | null;
+  focus: FpFocus | null;
+};
 
 // ── errors ──────────────────────────────────────────────
 
@@ -631,7 +667,15 @@ function parseChecksRow(raw: unknown, known: ReadonlySet<string>): ChecksRow {
   }
   // "Fixed" is only believed of a check that passes now.
   const fixed = arr(r.fixed).map((x) => str(x)).filter((rule) => checks[rule] === "pass");
-  return { checks, fixed };
+  // A sentence is kept only for a check the row has, and only when both languages came.
+  const sentences: Record<string, CheckSentence> = {};
+  for (const [rule, said] of Object.entries(rec(r.sentences))) {
+    const s = rec(said);
+    const en = str(s.sentence_en).trim(), ar = str(s.sentence_ar).trim();
+    if (checks[rule] && en && ar) sentences[rule] = { en, ar };
+  }
+  // Absent when the API sent none (an older API): the row then has no `sentences` at all.
+  return Object.keys(sentences).length ? { checks, fixed, sentences } : { checks, fixed };
 }
 
 /** `GET /checks`. When nothing was measured there are no places, whatever the answer carries. */
@@ -690,6 +734,74 @@ export function parseConnection(raw: unknown): Connection {
   const on = source.on === true || source.status === "on" || (kind !== "" && source.on !== false && source.status !== "off");
   const days = num(r.days_old);
   return { kind: on ? kind : "", on, observed_on: strOrNull(r.observed_on), days_old: days, old: r.old === true };
+}
+
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+/** A count, or null when it was not counted (a product that is off). A negative or a fraction is not a count. */
+function countOrNull(value: unknown): number | null {
+  const n = num(value);
+  return n === null || n < 0 ? null : Math.floor(n);
+}
+function fpSource(r: Record<string, unknown>): FpSource {
+  return { source: str(r.source), source_label: str(r.source_label), read_at: strOrNull(r.read_at) };
+}
+function fpHours(raw: unknown): number[] | null {
+  if (!Array.isArray(raw) || raw.length !== 24) return null;
+  return raw.map((x) => countOrNull(x) ?? 0);
+}
+
+/** `GET /first-party`. Only the fields named here are read: a key the API might add (or a money
+ * figure it must never send) is never carried into the screens. A day without a date is left out. */
+export function parseFirstParty(raw: unknown): FirstPartyAnswer {
+  const r = rec(raw);
+  const w = rec(r.window);
+  const from = str(w.from), to = str(w.to);
+  const a = r.activity && typeof r.activity === "object" ? rec(r.activity) : null;
+  const activity: FpActivity | null = a ? {
+    ...fpSource(a),
+    orders: a.orders === true, bookings: a.bookings === true,
+    days: arr(a.days).flatMap((d) => {
+      const v = rec(d);
+      const date = str(v.date);
+      if (!ISO_DAY.test(date)) return [];
+      return [{
+        date, weekday: oneOf(v.weekday, DAYS, "sat"),
+        // A product that is off is never a zero: its count stays null.
+        orders: a.orders === true ? countOrNull(v.orders) : null,
+        bookings: a.bookings === true ? countOrNull(v.bookings) : null,
+      }];
+    }),
+    hours: Object.fromEntries(DAYS.flatMap((day) => {
+      const h = rec(rec(a.hours)[day]);
+      return Object.keys(h).length ? [[day, { orders: fpHours(h.orders), bookings: fpHours(h.bookings) }]] : [];
+    })),
+  } : null;
+  const l = r.links && typeof r.links === "object" ? rec(r.links) : null;
+  const wa = r.whatsapp && typeof r.whatsapp === "object" ? rec(r.whatsapp) : null;
+  const nm = r.names && typeof r.names === "object" ? rec(r.names) : null;
+  const f = r.focus && typeof r.focus === "object" ? rec(r.focus) : null;
+  const countsOnly = r.counts_only === true;
+  return {
+    read_at: strOrNull(r.read_at),
+    timezone: str(r.timezone) || "Asia/Qatar",
+    window: ISO_DAY.test(from) && ISO_DAY.test(to) ? { from, to, weeks: count(w.weeks) || 4 } : null,
+    covered: r.covered === true,
+    counts_only: countsOnly,
+    activity,
+    // Staff are given the counts alone, whatever else an answer carries.
+    links: l && !countsOnly ? { ...fpSource(l), booking: strOrNull(l.booking), order: strOrNull(l.order), whatsapp: strOrNull(l.whatsapp) } : null,
+    whatsapp: wa && !countsOnly && str(wa.number) ? { ...fpSource(wa), number: str(wa.number) } : null,
+    names: nm && !countsOnly && (str(nm.en) || str(nm.ar)) ? { ...fpSource(nm), en: str(nm.en), ar: str(nm.ar) } : null,
+    focus: f && str(f.proposal_id) ? {
+      proposal_id: str(f.proposal_id),
+      day: f.day === null || f.day === undefined ? null : oneOf(f.day, DAYS, "sat"),
+      weeks: arr(f.weeks).flatMap((x) => {
+        const v = rec(x);
+        const date = str(v.date);
+        return ISO_DAY.test(date) ? [{ date, orders: countOrNull(v.orders), bookings: countOrNull(v.bookings) }] : [];
+      }),
+    } : null,
+  };
 }
 
 // ── calling ─────────────────────────────────────────────
@@ -759,6 +871,10 @@ export const discovery = {
   /** Every place against every check, from the last finished check-up. */
   checks: (lang: Lang) => call(`/checks${q({ lang })}`, parseChecks),
   connection: () => call("/connection", parseConnection),
+  /** What ALYR's own records say: counts by day and hour over 4 weeks, the business's pages, its
+   * confirmed WhatsApp number and names. With `proposalId`, the last 4 of the weekday that hours
+   * proposal changes (`focus`). */
+  firstParty: (lang: Lang, proposalId?: string) => call(`/first-party${q({ lang, proposal_id: proposalId })}`, parseFirstParty),
   setConnection: (kind: string, on: boolean) => call("/connection", parseConnection, "PUT", { kind, on }),
 
   // Phase 2 (spec 066 "Routes").

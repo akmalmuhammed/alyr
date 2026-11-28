@@ -5,7 +5,7 @@
 // endpoints as actions. Nothing here invents a value: what the API does not send is absent.
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { discovery, type Fact, type Finding, type Place, type Proposal, type Run, type TeamMember } from "../discoveryApi";
+import { discovery, type Fact, type Finding, type FirstPartyAnswer, type Place, type Proposal, type Run, type TeamMember } from "../discoveryApi";
 import { sayError } from "../discoveryLogic";
 import { approversOf } from "./adapter";
 import { discovery2, type AnswersAnswer, type Pack } from "./api2";
@@ -57,6 +57,8 @@ function useToast() {
 export function LiveChecks({ lang, tabs, foot, hrefs }: { lang: D2Lang; tabs: ReactNode; foot: Foot; hrefs: ChecksHrefs }) {
   const t2 = T2[lang];
   const [load, setLoad] = useState<Load<ChecksView>>({ kind: "loading" });
+  const [own, setOwn] = useState<FirstPartyAnswer | null>(null);
+  const [nextCheck, setNextCheck] = useState<string | null>(null);
   const [run, setRun] = useState<Run | null>(null);
   const [error, setError] = useState("");
   const { toast, show, hide } = useToast();
@@ -65,15 +67,16 @@ export function LiveChecks({ lang, tabs, foot, hrefs }: { lang: D2Lang; tabs: Re
 
   const read = useCallback(async (): Promise<ChecksView | null> => {
     try {
-      const [plus, checks, findings, packs, waiting] = await Promise.all([
+      const [plus, checks, findings, packs, waiting, fp] = await Promise.all([
         discovery2.overview(lang),
         discovery.checks(lang).catch(() => null),
         discovery.findings(lang, { status: "open" }).catch(() => ({ items: [] })),
         discovery2.packs(lang).catch((): Pack[] => []),
         discovery.proposals(lang, { status: "proposed" }).catch(() => ({ items: [] as Proposal[] })),
+        discovery.firstParty(lang).catch(() => null),
       ]);
-      const view = buildChecks({ checks, findings: findings.items, packs, block: plus.checks, waiting: waiting.items, titles: { core: t2.groupCore, own: t2.groupOwn } });
-      if (alive.current) setLoad({ kind: "ready", value: view });
+      const view = buildChecks({ checks, findings: findings.items, packs, block: plus.checks, waiting: waiting.items, titles: { core: t2.groupCore, own: t2.groupOwn }, lang });
+      if (alive.current) { setOwn(fp); setNextCheck(plus.asks?.nextCheckAt ?? null); setLoad({ kind: "ready", value: view }); }
       return view;
     } catch (e) {
       if (alive.current) setLoad({ kind: "error", message: sayError(e, lang) });
@@ -106,7 +109,7 @@ export function LiveChecks({ lang, tabs, foot, hrefs }: { lang: D2Lang; tabs: Re
   if (load.kind === "loading") return <LoadingScreen lang={lang} tabs={tabs} />;
   if (load.kind === "error") return <ErrorScreen lang={lang} tabs={tabs} message={load.message} onRetry={() => { setLoad({ kind: "loading" }); void read(); }} />;
   return (
-    <Checks lang={lang} view={load.value} tabs={tabs} hrefs={hrefs} nextCheckAt={null} run={run} onCheckAgain={() => void checkAgain()} busy={!!run} error={error}
+    <Checks lang={lang} view={load.value} own={own} tabs={tabs} hrefs={hrefs} nextCheckAt={nextCheck} run={run} onCheckAgain={() => void checkAgain()} busy={!!run} error={error}
       foot={foot(toast ? <Toast toast={toast} lang={lang} onUndo={() => {}} onDismiss={hide} /> : null)} />
   );
 }
@@ -167,8 +170,13 @@ export function LiveProof({ lang, tabs, foot, onChanged }: { lang: D2Lang; tabs:
 
 export function LiveAnswers({ lang, tabs, foot }: { lang: D2Lang; tabs: ReactNode; foot: Foot }) {
   const [load, setLoad] = useState<Load<AnswersAnswer>>({ kind: "loading" });
+  const [nextCheckAt, setNextCheckAt] = useState<string | null>(null);
   const read = useCallback(async () => {
-    try { setLoad({ kind: "ready", value: await discovery2.answers(lang) }); }
+    try {
+      const [answers, plus] = await Promise.all([discovery2.answers(lang), discovery2.overview(lang).catch(() => null)]);
+      setNextCheckAt(plus?.asks?.nextCheckAt ?? null);
+      setLoad({ kind: "ready", value: answers });
+    }
     catch (e) { setLoad({ kind: "error", message: sayError(e, lang) }); }
   }, [lang]);
   useEffect(() => {
@@ -177,7 +185,7 @@ export function LiveAnswers({ lang, tabs, foot }: { lang: D2Lang; tabs: ReactNod
   }, [read]);
   if (load.kind === "loading") return <LoadingScreen lang={lang} tabs={tabs} />;
   if (load.kind === "error") return <ErrorScreen lang={lang} tabs={tabs} message={load.message} onRetry={() => { setLoad({ kind: "loading" }); void read(); }} />;
-  return <Answers lang={lang} view={buildAnswers(load.value)} api={load.value} tabs={tabs} foot={foot(null)} />;
+  return <Answers lang={lang} view={buildAnswers(load.value)} api={load.value} tabs={tabs} foot={foot(null)} nextCheckAt={nextCheckAt} />;
 }
 
 // ── Set up ─────────────────────────────────────────────

@@ -8,11 +8,16 @@ import { personFor, type AskView, type Person } from "./adapter";
 import { T, dayName, type D2Lang } from "./copy";
 import { Ic } from "./icons";
 import { Av, Avs, Hl, Kbd, Ltr, Say, day, dayTime } from "./parts";
+import { OwnChart, OwnSource, ownPoint } from "./OwnRecords";
+import { emptyBefore } from "./logic";
+import type { OwnRecordsView } from "./ownLogic";
 
-export function EvidenceSheet({ ask, lang, approvers, onClose, onApprove, onDecline, busy }: {
+export function EvidenceSheet({ ask, lang, approvers, own = null, onClose, onApprove, onDecline, busy }: {
   ask: AskView;
   lang: D2Lang;
   approvers: Person[];
+  /** ALYR's own records: the week, for an hours ask without its one weekday's bars. */
+  own?: OwnRecordsView | null;
   onClose: () => void;
   onApprove: () => void;
   onDecline: () => void;
@@ -35,7 +40,9 @@ export function EvidenceSheet({ ask, lang, approvers, onClose, onApprove, onDecl
   const jump = (id: string) => ref.current?.querySelector(`#${id}`)?.scrollIntoView({ block: "start" });
 
   const publicEv = p.evidence.filter((e) => e.where);
-  const kinds = (ask.confirmed ? 1 : 0) + (ask.firstParty ? 1 : 0) + (publicEv.length ? 1 : 0);
+  // In ALYR: the one weekday's bars, or else the week of ALYR's own records for an hours ask.
+  const week = !ask.firstParty && own && own.state !== "off" && p.field === "hours" ? own : null;
+  const kinds = (ask.confirmed ? 1 : 0) + (ask.firstParty || week ? 1 : 0) + (publicEv.length ? 1 : 0);
   const names = approvers.map((a) => `${a.name}${t.roles[a.role] ? ` (${t.roles[a.role]})` : ""}`);
   const who = names.length > 1 ? `${names.slice(0, -1).join(t.listSep)}${t.or}${names[names.length - 1]}` : names[0] ?? "";
   const fp = ask.firstParty;
@@ -58,8 +65,8 @@ export function EvidenceSheet({ ask, lang, approvers, onClose, onApprove, onDecl
           <div className="d2-exact-lab">{t.exactLabel}</div>
           <div className="d2-exact-row">
             <span className="d2-strong">{ask.day ? t.exactDay(ask.day, ask.where) : t.exactField(p.field_label, ask.where)}</span>
-            <span className="d2-strike"><Ltr>{ask.before}</Ltr></span>
-            <Ic name="arrow" size="sm" flip className="d2-to" />
+            {emptyBefore(p) ? null : <><span className="d2-strike"><Ltr>{ask.before}</Ltr></span>
+            <Ic name="arrow" size="sm" flip className="d2-to" /></>}
             <span className="d2-strong"><Hl draw={false}><Ltr>{ask.after}</Ltr></Hl></span>
           </div>
           {ask.day ? <p className="d2-small d2-muted">{t.onlyLine(ask.day)}</p> : null}
@@ -102,6 +109,16 @@ export function EvidenceSheet({ ask, lang, approvers, onClose, onApprove, onDecl
                   ))}
                 </div>
                 {fp.countedAt ? <p className="d2-src">{t.countedFrom(dayTime(fp.countedAt, lang))}</p> : null}
+              </div>
+            </div>
+          ) : week ? (
+            <div className="d2-ev">
+              <span className="d2-ev-ic d2-ev-alyr"><Av tone="alyr" /></span>
+              <div>
+                <div className="d2-ev-k">{t.evAlyr}</div>
+                <p><Say lang={lang}>{ownPoint(week, lang)}</Say></p>
+                <OwnChart view={week} lang={lang} compact />
+                <p className="d2-src"><OwnSource view={week} lang={lang} /></p>
               </div>
             </div>
           ) : null}

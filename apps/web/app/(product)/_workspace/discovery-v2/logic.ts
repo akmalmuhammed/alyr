@@ -5,6 +5,7 @@
 import type { ChecksAnswer, ChecksRow, DayKey, LifeState, Proposal, Side } from "../discoveryApi.ts";
 import { isolate } from "../../../_ui/format.ts";
 import { T, type D2Lang, type WhereKey } from "./copy.ts";
+import { T3 } from "./copy3.ts";
 
 export type LeadParts = { pre: string; hl: string; post: string };
 
@@ -65,6 +66,13 @@ export function leadFor(p: Pick<Proposal, "field" | "before" | "after" | "title"
   }
 }
 
+/** What an empty value is called, by its field («No category», «No reply»): never a bare "None". */
+export const noneOf = (field: string, lang: D2Lang): string => T3[lang].noneOf[field] ?? T3[lang].noneOther;
+
+/** The before was empty (no value, not a value removed after 30 days): a receipt or the exact
+ * change then shows only what was asked for, without a struck-through empty chip. */
+export const emptyBefore = (p: Pick<Proposal, "field" | "before" | "after">): boolean => !p.before.removed && !oneDay(p) && empty(p.before.text);
+
 /** The value being decided, short: «Friday 13:00–22:00» for one day of hours, else the after line. */
 export function exactText(p: Pick<Proposal, "field" | "before" | "after">, lang: D2Lang): string {
   const day = oneDay(p);
@@ -78,12 +86,12 @@ const dayAr = (d: DayKey) => ({ sat: "السبت", sun: "الأحد", mon: "ال
  * Google text was removed after 30 days says so («Removed after 30 days»), never "None" or empty. */
 export function beforeAfter(p: Pick<Proposal, "field" | "before" | "after">, lang: D2Lang): { before: string; after: string } {
   if (p.before.removed || p.after.removed) {
-    const side = (x: Side) => (x.removed ? T[lang].removedText : x.text || T[lang].none);
+    const side = (x: Side) => (x.removed ? T[lang].removedText : x.text || noneOf(p.field, lang));
     return { before: side(p.before), after: side(p.after) };
   }
   const day = oneDay(p);
   if (day) return { before: spanText(lineOf(p.before, day), lang), after: spanText(lineOf(p.after, day), lang) };
-  return { before: empty(p.before.text) ? T[lang].none : p.before.text, after: p.after.text };
+  return { before: empty(p.before.text) ? noneOf(p.field, lang) : p.before.text, after: p.after.text };
 }
 
 // ── Change it (the loop, agent D: `POST /proposals/{id}/change`) ──

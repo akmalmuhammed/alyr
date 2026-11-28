@@ -3,11 +3,12 @@
 // `node --test`. Nothing here invents a value: a check that was not measured is never a match or a
 // difference and is left out of every "N of M"; a count is only ever a count of what the API sent.
 
-import { DAYS, type CheckState, type ChecksAnswer, type DayKey, type Evidence, type Fact, type Finding, type Place, type Proposal } from "../discoveryApi.ts";
+import { DAYS, type CheckState, type ChecksAnswer, type ChecksRow, type DayKey, type Evidence, type Fact, type Finding, type Place, type Proposal } from "../discoveryApi.ts";
 import type { AnswerGroup, AnswerItem, AnswersAnswer, ChecksBlock, CitedHost, Pack } from "./api2.ts";
 import type { D2Lang } from "./copy.ts";
 import { T2 } from "./copy2.ts";
 import { stageOf, tally, type Tally } from "./logic.ts";
+import { phoneText } from "./ownLogic.ts";
 
 // ── values in either language ──────────────────────────
 
@@ -42,6 +43,10 @@ export type CheckRowView = {
   evidence: Evidence[];
   /** A change waits for approval on This week. */
   askWaiting: boolean;
+  /** The check as a whole sentence in the reader's language (`GET /checks`, agent C3), or null
+   * from an older API (the label is drawn then). Not measured: what was looked at, without the
+   * trailing "Not measured" the state pill already says. */
+  sentence: string | null;
 };
 export type GroupId = "core" | "own" | "family";
 export type CheckGroup = { id: GroupId; title: string; rows: CheckRowView[]; matched: number; differ: number; notMeasured: number };
@@ -75,6 +80,8 @@ export function buildChecks(input: {
   block: ChecksBlock | null;
   waiting: readonly Proposal[];
   titles: { core: string; own: string };
+  /** The language of the sentences; English when absent. */
+  lang?: D2Lang;
 }): ChecksView {
   const { checks, findings, packs, block } = input;
   const fam = packs.find((p) => p.kind === "family" && p.id === block?.family) ?? null;
@@ -102,7 +109,8 @@ export function buildChecks(input: {
     open.find((f) => f.rule_id === rule && (f.location?.id ?? null) === placeId) ?? (placeId === null || !many ? open.find((f) => f.rule_id === rule) ?? null : null);
 
   const rows: CheckRowView[] = [];
-  const add = (placeId: string | null, placeName: string | null, states: Record<string, CheckState>) => {
+  const lang = input.lang ?? "en";
+  const add = (placeId: string | null, placeName: string | null, states: Record<string, CheckState>, said: ChecksRow["sentences"]) => {
     for (const rule of checks.rules) {
       const state = states[rule.id];
       if (!state) continue;
@@ -112,11 +120,12 @@ export function buildChecks(input: {
         key: `${placeId ?? "business"}:${rule.id}`, ruleId: rule.id, label: label.get(rule.id) ?? rule.id,
         place: many ? placeName : null, kind, finding, evidence: finding?.evidence ?? [],
         askWaiting: !!finding && (finding.proposals_waiting > 0 || waitingFindings.has(finding.id)),
+        sentence: sentenceOf(said?.[rule.id], kind, lang),
       });
     }
   };
-  if (checks.business) add(null, null, checks.business.checks);
-  for (const p of checks.places) add(p.id, p.name, p.checks);
+  if (checks.business) add(null, null, checks.business.checks, checks.business.sentences);
+  for (const p of checks.places) add(p.id, p.name, p.checks, p.sentences);
 
   const groupOf = (rule: string): GroupId => (own.has(rule) ? "own" : famRules.has(rule) ? "family" : "core");
   const groups: CheckGroup[] = (["core", "own", "family"] as GroupId[]).flatMap((id) => {
@@ -139,20 +148,33 @@ export function buildChecks(input: {
   return { ...base, state: "content", tally: t, groups, counts };
 }
 
+// The API ends a check it could not measure with ": Not measured." («: لم يُقَس.»); the row's pill says it.
+const NM_TAIL = /\s*[:：]\s*(Not measured|لم يُقَس)\.?\s*$/u;
+
+/** A check's sentence in the reader's language, or null. */
+export function sentenceOf(said: { en: string; ar: string } | undefined, kind: CheckKind, lang: D2Lang): string | null {
+  const text = said ? (lang === "ar" ? said.ar : said.en) : "";
+  if (!text) return null;
+  if (kind !== "nm") return text;
+  const short = text.replace(NM_TAIL, "");
+  return short && short !== text ? short : text;
+}
+
 /** What a group draws: each difference on its own (its sentence and evidence), and the checks that
  * match or were not measured once per check, with the places they hold for (56 rows become 16). */
 export type CheckLine =
   | { kind: "differ"; row: CheckRowView }
-  | { kind: "ok" | "nm"; key: string; ruleId: string; label: string; places: string[] };
+  | { kind: "ok" | "nm"; key: string; ruleId: string; label: string; sentence: string | null; places: string[] };
 
 export function linesOf(rows: readonly CheckRowView[]): CheckLine[] {
   const out: CheckLine[] = [];
   for (const row of rows) {
     if (row.kind === "differ") { out.push({ kind: "differ", row }); continue; }
-    const key = `${row.kind}:${row.ruleId}`;
+    // The same sentence at several places is one line; a sentence that differs by place is its own.
+    const key = `${row.kind}:${row.ruleId}:${row.sentence ?? ""}`;
     const same = out.find((l): l is Extract<CheckLine, { kind: "ok" | "nm" }> => l.kind !== "differ" && l.key === key);
     if (same) { if (row.place) same.places.push(row.place); continue; }
-    out.push({ kind: row.kind, key, ruleId: row.ruleId, label: row.label, places: row.place ? [row.place] : [] });
+    out.push({ kind: row.kind, key, ruleId: row.ruleId, label: row.label, sentence: row.sentence, places: row.place ? [row.place] : [] });
   }
   return out;
 }
@@ -388,9 +410,9 @@ export function knownFacts(input: { place: Place | null; facts: readonly Fact[];
     out.push({ key: "name", label: t.fName, value: main, sub: other && other !== main ? other : undefined, subLang: input.lang === "ar" ? "en" : "ar", prov: confirmed("name") ? who("name") : "alyr" });
   }
   const wa = factText(confirmed("whatsapp")) || place?.whatsapp_e164 || "";
-  if (wa) out.push({ key: "whatsapp", label: t.fWhatsapp, value: wa, prov: confirmed("whatsapp") ? who("whatsapp") : "alyr", ltr: true });
+  if (wa) out.push({ key: "whatsapp", label: t.fWhatsapp, value: phoneText(wa), prov: confirmed("whatsapp") ? who("whatsapp") : "alyr", ltr: true });
   const phone = factText(confirmed("phone"));
-  if (phone) out.push({ key: "phone", label: t.fPhone, value: phone, prov: who("phone"), ltr: true });
+  if (phone) out.push({ key: "phone", label: t.fPhone, value: phoneText(phone), prov: who("phone"), ltr: true });
   const hours = confirmed("hours");
   if (hours) {
     const lines = hoursLines(hours.value, input.lang);
