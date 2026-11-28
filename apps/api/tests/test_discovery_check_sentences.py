@@ -94,8 +94,8 @@ def test_core_differences_quote_their_evidence(lang):
         text = cs.sentence(rule_id, "fail", evidence(outcome), lang)
         clean(text, lang)
         assert text != cs.DIFFERS[rule_id][1 if lang == "ar" else 0], rule_id
-    assert "4444 1111" in cs.sentence("phone_conflict", "fail", evidence(cases["phone_conflict"]),
-                                      lang)
+    quoted = cs.sentence("phone_conflict", "fail", evidence(cases["phone_conflict"]), lang)
+    assert "4444\u00a01111" in quoted  # the number held together (test_discovery_phone_shown.py)
     photos = cs.sentence("photos_few", "fail", evidence(cases["photos_few"]), lang)
     assert ("2 photos" if lang == "en" else "صورتان") in photos
 

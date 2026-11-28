@@ -5,7 +5,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { parseChecks, parseFirstParty } from "../discoveryApi.ts";
-import { focusFor, ownRecords, phoneText, windowTotals } from "./ownLogic.ts";
+import { focusFor, ownRecords, windowTotals } from "./ownLogic.ts";
 import { buildChecks, linesOf, sentenceList, sentenceOf } from "./screens.ts";
 import { beforeAfter, emptyBefore, noneOf } from "./logic.ts";
 import { T3 } from "./copy3.ts";
@@ -98,11 +98,6 @@ test("an hours ask gets its weekday's bars only for itself and only for one day"
   assert.equal(focusFor(fp, p, "thu"), null);
   assert.equal(focusFor(fp, p, null), null);
   assert.equal(focusFor(fp, { ...p, before: { text: "", lines: [], removed: false } }, "fri").listingSaidClosed, false);
-});
-
-test("phone numbers are written as people write them", () => {
-  assert.equal(phoneText("+97455550150"), "+974 5555 0150");
-  assert.equal(phoneText("+971501234567"), "+971501234567");
 });
 
 const CHECKS = {

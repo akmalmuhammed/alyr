@@ -476,3 +476,15 @@
 .d2s-names { margin-block-start: var(--d2-s1h); }
 .d2s-evs-icons { display: inline-flex; gap: var(--d2-s1); }
 .d2s-ev.d2s-ev-icon { padding: var(--d2-s1); min-inline-size: var(--d2-chip); justify-content: center; }
+
+/* ── Checks under 2,000 px at 1440 (agent P4): one summary row, matches and not measured side by side ── */
+.d2s-checks > li.d2s-sum { grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--d2-ownf-min)), 1fr)); gap: var(--d2-s2) var(--d2-s6); align-items: center; }
+.d2s-sum-cell { display: flex; align-items: center; gap: var(--d2-s3h); min-inline-size: 0; }
+.d2s-sum-cell .d2s-s { flex: 1; min-inline-size: 0; }
+.d2s-sum-cell + .d2s-sum-cell { padding-inline-start: var(--d2-s6); box-shadow: inset var(--d2-rule) 0 0 var(--d2-hair); }
+[dir="rtl"] .d2s-sum-cell + .d2s-sum-cell { box-shadow: inset calc(-1 * var(--d2-rule)) 0 0 var(--d2-hair); }
+.d2s-checks > li:has(> .d2s-names-wide) { row-gap: var(--d2-s1h); }
+.d2s-names.d2s-names-wide { grid-column: 2 / -1; margin-block-start: 0; }
+.d2s-group + .d2s-group { margin-block-start: var(--d2-s8); }
+/* Checks ends on its rule line: the agent bar below needs no second gap of its own. */
+.d2-col:has(.d2s-checks) { padding-block-end: var(--d2-s4); }

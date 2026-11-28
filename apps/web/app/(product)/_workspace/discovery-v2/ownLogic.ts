@@ -95,9 +95,3 @@ export function focusFor(fp: FirstPartyAnswer | null, p: Pick<Proposal, "id" | "
   };
 }
 
-/** A number as people write it: «+974 5555 0150» for Qatar (8 digits after +974), else as stored. */
-export function phoneText(raw: string): string {
-  const digits = raw.replace(/[^\d+]/g, "");
-  const qa = /^\+974(\d{4})(\d{4})$/.exec(digits);
-  return qa ? `+974 ${qa[1]} ${qa[2]}` : raw;
-}

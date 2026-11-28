@@ -225,7 +225,7 @@ def _phone_conflict(evidence, lang):
     if not listing or not website or listing.startswith("~") or website.startswith("~"):
         return None
     return _pick(PHONE_DIFFER, lang).format(
-        listing=_iso(listing, lang), website=_iso(website, lang))
+        listing=fpw.phone_shown(listing, lang), website=fpw.phone_shown(website, lang))
 
 
 def _name_conflict(evidence, lang):
@@ -263,7 +263,8 @@ def _whatsapp_link(evidence, lang):
             sentences.append(_pick(WHATSAPP_NONE[where], lang))
         elif isinstance(value, str) and value and not value.startswith("~"):
             shown = fpw.link_shown(value)
-            sentences.append(_pick(WHATSAPP_OTHER[where], lang).format(shown=_iso(shown, lang)))
+            sentences.append(
+                _pick(WHATSAPP_OTHER[where], lang).format(shown=fpw.phone_shown(shown, lang)))
     return " ".join(sentences) or None
 
 

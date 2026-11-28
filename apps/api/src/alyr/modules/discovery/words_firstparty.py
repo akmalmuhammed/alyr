@@ -399,6 +399,15 @@ def _iso(text: str, lang: str) -> str:
     return f"{_ISOLATE[0]}{text}{_ISOLATE[1]}" if lang == "ar" else text
 
 
+def phone_shown(number: str, lang: str) -> str:
+    """A phone number inside a sentence on a screen: written as people write it, through
+    `proposal_words.format_number` (+974 5555 0112), held together by no-break spaces so it never
+    breaks across lines, and isolated in Arabic so it reads left to right."""
+    from alyr.modules.discovery.proposal_words import format_number
+
+    return _iso(format_number(number, "\u00a0"), lang)
+
+
 def _quotable(value) -> bool:
     """A stored value a sentence may quote: text, and not Google's text removed after 30 days."""
     return isinstance(value, str) and bool(value) and value != "~removed"
@@ -471,7 +480,8 @@ def _number_sentence(evidence: list[dict], lang: str) -> str | None:
                 and item.get("where") in SEEN_ON and _quotable(item.get("value"))):
             sentences.append(_pick(NUMBER_DIFFERS, lang).format(
                 where=_pick(SEEN_ON[item["where"]], lang),
-                shown=_iso(link_shown(item["value"]), lang), confirmed=_iso(confirmed, lang)))
+                shown=phone_shown(link_shown(item["value"]), lang),
+                confirmed=phone_shown(confirmed, lang)))
     return " ".join(dict.fromkeys(sentences)) or None
 
 

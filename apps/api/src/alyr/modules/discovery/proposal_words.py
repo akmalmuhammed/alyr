@@ -18,6 +18,7 @@ from zoneinfo import ZoneInfo
 
 from alyr.core.words import CHANGES, counted
 from alyr.modules.discovery.connectors.base import WEEK
+from alyr.modules.discovery.normalize import phone_key
 
 RLM = "‏"  # keeps a line of Arabic running right to left next to digits and Latin
 
@@ -451,7 +452,7 @@ def value_text(field: str, value: dict | None, lang: str) -> str:
            "review_reply": "reply"}[field]
     found = (value.get(key) or "").strip()
     if found:
-        return found
+        return format_number(found) if field == "phone" else found
     return pick(NONE_TEXT["review_reply" if field == "review_reply" else "default"], lang)
 
 
@@ -500,11 +501,14 @@ def failure(code: str | None, target: str, lang: str, *, short: bool = False) ->
     return " ".join(part for part in (reason, pick(NOTHING_CHANGED, lang), tail) if part)
 
 
-def format_number(e164: str) -> str:
-    """+97455550150 as +974 5555 0150 (Qatar's numbers in groups of four); any other as given."""
-    if e164.startswith("+974") and len(e164) == 12:
-        return f"+974 {e164[4:8]} {e164[8:]}"
-    return e164
+def format_number(number: str, space: str = " ") -> str:
+    """A Qatar number however it is written ("+97455550150", "00974 5555 0150", "55550150") as
+    +974 5555 0150, in groups of four joined by `space` (a no-break space inside a sentence on a
+    screen, so the number never breaks across lines); any other as given."""
+    key = phone_key(number)
+    if key.startswith("974") and len(key) == 11:
+        return f"+974{space}{key[3:7]}{space}{key[7:]}"
+    return number
 
 
 def reply_text(rating: int, language: str, whatsapp_e164: str | None) -> tuple[str, str]:
