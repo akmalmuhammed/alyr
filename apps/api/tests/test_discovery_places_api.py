@@ -28,7 +28,13 @@ BASE = "/api/discovery/google-place"
 
 @pytest.fixture(autouse=True)
 def no_network(monkeypatch):
-    def refuse(*args, **kwargs):
+    real_getaddrinfo = socket.getaddrinfo
+
+    def refuse(host=None, *args, **kwargs):
+        # The test database is on this machine ("localhost" in CI): looking it up is not an
+        # outbound call. Every other name is refused.
+        if host in ("localhost", "127.0.0.1", "::1"):
+            return real_getaddrinfo(host, *args, **kwargs)
         raise AssertionError("a real outbound call was made")
 
     async def refuse_async(*args, **kwargs):

@@ -255,7 +255,7 @@ def test_a_phone_is_changed_to_a_valid_number_only_and_not_to_what_it_shows(shop
     assert change(shop.owner, p, {"phone": "+974 5555 0112"}, expect=422)["code"] == (
         "nothing_to_change")
     done = change(shop.owner, p, {"phone": "+974 5555 0177"})
-    assert done["after"]["text"] == "+97455550177" and done["approved_as"] == "edited"
+    assert done["after"]["text"] == "+974 5555 0177" and done["approved_as"] == "edited"
     assert facts_of(shop.owner, "Al Wakra")["phone"]["value"] == {"phone": "+97455550177"}
 
 

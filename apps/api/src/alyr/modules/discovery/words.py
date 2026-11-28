@@ -602,6 +602,20 @@ def value_text(value: str, lang: str) -> str:
     return value
 
 
+# Evidence that is a phone number: shown as people write it (+974 5555 0112), never as stored.
+# The first-party checks name theirs in `words_firstparty.PHONE_LABELS`.
+PHONE_LABELS = frozenset({"listing_phone", "website_phone", "expected_whatsapp"})
+
+
+def _phone_value(label: str, value: str) -> str:
+    from alyr.modules.discovery import words_firstparty
+    from alyr.modules.discovery.proposal_words import format_number
+
+    if value.startswith("~") or label not in PHONE_LABELS | words_firstparty.PHONE_LABELS:
+        return value
+    return format_number(value)
+
+
 def evidence_view(item: dict, lang: str) -> dict:
     """One piece of stored evidence as the reader sees it: `{label, value, where, seen_at}`,
     all plain text."""
@@ -622,7 +636,7 @@ def evidence_view(item: dict, lang: str) -> dict:
         sentence = pick(MISSING_ANY, lang).format(label=label)
     return {
         "label": label,
-        "value": value_text(item["value"], lang),
+        "value": _phone_value(item["label"], value_text(item["value"], lang)),
         # A whole sentence when the evidence found nothing; "" otherwise.
         "sentence": sentence,
         "where": where,

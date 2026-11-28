@@ -8,7 +8,7 @@ import type { AnswerGroup, AnswerItem, AnswersAnswer, ChecksBlock, CitedHost, Pa
 import type { D2Lang } from "./copy.ts";
 import { T2 } from "./copy2.ts";
 import { stageOf, tally, type Tally } from "./logic.ts";
-import { phoneText } from "./ownLogic.ts";
+import { formatPhone } from "../orders/logic.ts";
 
 // ── values in either language ──────────────────────────
 
@@ -193,6 +193,16 @@ export function linesOf(rows: readonly CheckRowView[]): CheckLine[] {
     out.push({ kind: row.kind, key, ruleId: row.ruleId, label: row.label, sentence: row.sentence, places: row.place ? [row.place] : [] });
   }
   return out;
+}
+
+/** Place names said without the business name they all share: "Nuqta Car Care - Al Wakra" reads
+ * "Al Wakra" when every place on the page starts "Nuqta Car Care - " (the shop's name is in the
+ * sidebar and on every row). Any other set of names is said in full. */
+export function placeNamer(places: readonly (string | null)[]): (place: string) => string {
+  const named = [...new Set(places.filter((p): p is string => !!p))];
+  const head = named[0]?.split(" - ")[0] ?? "";
+  const shared = named.length > 1 && !!head && named.every((p) => p.startsWith(`${head} - `) && p.length > head.length + 3);
+  return shared ? (p) => (p.startsWith(`${head} - `) ? p.slice(head.length + 3) : p) : (p) => p;
 }
 
 /** Rows a filter shows; a group with none is not drawn. */
@@ -426,9 +436,9 @@ export function knownFacts(input: { place: Place | null; facts: readonly Fact[];
     out.push({ key: "name", label: t.fName, value: main, sub: other && other !== main ? other : undefined, subLang: input.lang === "ar" ? "en" : "ar", prov: confirmed("name") ? who("name") : "alyr" });
   }
   const wa = factText(confirmed("whatsapp")) || place?.whatsapp_e164 || "";
-  if (wa) out.push({ key: "whatsapp", label: t.fWhatsapp, value: phoneText(wa), prov: confirmed("whatsapp") ? who("whatsapp") : "alyr", ltr: true });
+  if (wa) out.push({ key: "whatsapp", label: t.fWhatsapp, value: formatPhone(wa), prov: confirmed("whatsapp") ? who("whatsapp") : "alyr", ltr: true });
   const phone = factText(confirmed("phone"));
-  if (phone) out.push({ key: "phone", label: t.fPhone, value: phoneText(phone), prov: who("phone"), ltr: true });
+  if (phone) out.push({ key: "phone", label: t.fPhone, value: formatPhone(phone), prov: who("phone"), ltr: true });
   const hours = confirmed("hours");
   if (hours) {
     const lines = hoursLines(hours.value, input.lang);

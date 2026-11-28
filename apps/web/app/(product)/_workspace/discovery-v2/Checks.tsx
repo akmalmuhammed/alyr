@@ -10,7 +10,8 @@
 import { useState, type ReactNode } from "react";
 import type { FirstPartyAnswer, FpSource, Run } from "../discoveryApi";
 import { T3 } from "./copy3";
-import { phoneText, windowTotals } from "./ownLogic";
+import { windowTotals } from "./ownLogic";
+import { formatPhone } from "../orders/logic";
 import { stepKind } from "../discoveryLogic";
 import { Mark } from "../shellParts";
 import { T2 } from "./copy2";
@@ -18,7 +19,7 @@ import type { D2Lang } from "./copy";
 import { EvidenceChip, Filters, ScreenFrame, SkeletonGroups, StatePill, Val } from "./frame";
 import { Ic } from "./icons";
 import { Ltr, Say, dayTime } from "./parts";
-import { bidiValue, filterRows, linesOf, sentenceList, type CheckFilter, type CheckGroup, type CheckLine, type CheckRowView, type ChecksView } from "./screens";
+import { bidiValue, filterRows, linesOf, placeNamer, sentenceList, type CheckFilter, type CheckGroup, type CheckLine, type CheckRowView, type ChecksView } from "./screens";
 
 export type ChecksHrefs = { week: string; setup: string | null; connections: string | null; task: (findingId: string) => string };
 
@@ -44,6 +45,7 @@ export function Checks({ lang, view, tabs, foot, hrefs, nextCheckAt, run, onChec
   const t = T2[lang];
   const [filter, setFilter] = useState<CheckFilter>(initialFilter);
   const kindWords = t.kindOf(view.tradeTitle ?? view.familyTitle ?? "");
+  const placeName = placeNamer(view.groups.flatMap((g) => g.rows.map((r) => r.place)));
   const openKey = openFirstCard ? view.groups.flatMap((g) => filterRows(g.rows, filter)).find((r) => r.evidence.length)?.key ?? null : null;
 
   return (
@@ -90,7 +92,7 @@ export function Checks({ lang, view, tabs, foot, hrefs, nextCheckAt, run, onChec
         view.groups.map((g) => {
           const rows = filterRows(g.rows, filter);
           if (!rows.length) return null;
-          return <Group key={g.id} lang={lang} group={g} rows={rows} hrefs={hrefs} measured={view.tally?.measured ?? 0} openKey={openKey} own={g.id === "own" ? own : null} filter={filter} />;
+          return <Group key={g.id} lang={lang} group={g} rows={rows} placeName={placeName} hrefs={hrefs} measured={view.tally?.measured ?? 0} openKey={openKey} own={g.id === "own" ? own : null} filter={filter} />;
         })
       )}
 
@@ -99,12 +101,13 @@ export function Checks({ lang, view, tabs, foot, hrefs, nextCheckAt, run, onChec
   );
 }
 
-function Group({ lang, group, rows, hrefs, measured, openKey, own = null, filter }: { lang: D2Lang; group: CheckGroup; rows: CheckRowView[]; hrefs: ChecksHrefs; measured: number; openKey: string | null; own?: FirstPartyAnswer | null; filter: CheckFilter }) {
+function Group({ lang, group, rows, placeName, hrefs, measured, openKey, own = null, filter }: { lang: D2Lang; group: CheckGroup; rows: CheckRowView[]; placeName: (place: string) => string; hrefs: ChecksHrefs; measured: number; openKey: string | null; own?: FirstPartyAnswer | null; filter: CheckFilter }) {
   const t = T2[lang];
   const t3 = T3[lang];
   const nm = rows.filter((r) => r.kind === "nm").length;
   const ok = rows.filter((r) => r.kind === "ok").length;
   const lines = linesOf(rows);
+  const kinds = (["ok", "nm"] as const).filter((kind) => lines.some((l) => l.kind === kind));
   const [opened, setOpened] = useState<{ ok: boolean; nm: boolean }>({ ok: false, nm: false });
   const titleId = `d2s-g-${group.id}`;
   return (
@@ -115,29 +118,32 @@ function Group({ lang, group, rows, hrefs, measured, openKey, own = null, filter
       </header>
       {own ? <OwnFacts lang={lang} fp={own} /> : null}
       <ul className="d2s-card d2s-list d2s-checks">
-        {lines.filter((l) => l.kind === "differ").map((line) => (line.kind === "differ" ? <Row key={line.row.key} lang={lang} row={line.row} hrefs={hrefs} openCard={line.row.key === openKey} /> : null))}
-        {/* Problems first. What matches and what was not measured fold into one row each. */}
-        {(["ok", "nm"] as const).map((kind) => {
-          const mine = lines.filter((l): l is Extract<CheckLine, { kind: "ok" | "nm" }> => l.kind === kind);
-          if (!mine.length) return null;
-          const count = kind === "ok" ? ok : nm;
-          const isOpen = filter === kind || opened[kind];
-          const id = `d2s-fold-${group.id}-${kind}`;
-          return [
-            <li key={`${kind}-sum`} data-kind={kind} className="d2s-sum">
-              <span className={`d2s-cmark d2s-cmark-${kind}`} aria-hidden="true">{kind === "ok" ? <Ic name="check" size="xs" /> : null}</span>
-              <p className="d2s-s"><Say lang={lang}>{kind === "ok" ? t3.sumMatch(count) : t3.sumNm(count)}</Say></p>
-              <span className="d2s-side">
-                {filter === kind ? null : (
-                  <button className="d2-btn d2-btn-quiet d2-btn-sm d2-fold-tg" type="button" aria-expanded={isOpen} aria-controls={id} onClick={() => setOpened((o) => ({ ...o, [kind]: !o[kind] }))}>
-                    {isOpen ? t3.hide : t3.show}<Ic name="down" size="xs" />
-                  </button>
-                )}
-              </span>
-            </li>,
-            isOpen ? mine.map((line) => <Line key={line.key} lang={lang} line={line} />) : null,
-          ];
-        })}
+        {lines.filter((l) => l.kind === "differ").map((line) => (line.kind === "differ" ? <Row key={line.row.key} lang={lang} row={line.row} placeName={placeName} hrefs={hrefs} openCard={line.row.key === openKey} /> : null))}
+        {/* Problems first. What matches and what was not measured fold into one summary row,
+            side by side; each opens its own lines under it. */}
+        {kinds.length ? (
+          <li key="sum" className="d2s-sum">
+            {kinds.map((kind) => {
+              const count = kind === "ok" ? ok : nm;
+              const isOpen = filter === kind || opened[kind];
+              const id = `d2s-fold-${group.id}-${kind}`;
+              return (
+                <span key={kind} className="d2s-sum-cell" data-kind={kind}>
+                  <span className={`d2s-cmark d2s-cmark-${kind}`} aria-hidden="true">{kind === "ok" ? <Ic name="check" size="xs" /> : null}</span>
+                  <p className="d2s-s" id={`${id}-said`}><Say lang={lang}>{kind === "ok" ? t3.sumMatch(count) : t3.sumNm(count)}</Say></p>
+                  {filter === kind ? null : (
+                    <button className="d2-btn d2-btn-quiet d2-btn-sm d2-fold-tg" type="button" aria-expanded={isOpen} aria-controls={id} aria-describedby={`${id}-said`} onClick={() => setOpened((o) => ({ ...o, [kind]: !o[kind] }))}>
+                      {isOpen ? t3.hide : t3.show}<Ic name="down" size="xs" />
+                    </button>
+                  )}
+                </span>
+              );
+            })}
+          </li>
+        ) : null}
+        {kinds.map((kind) => (filter === kind || opened[kind]
+          ? lines.filter((l): l is Extract<CheckLine, { kind: "ok" | "nm" }> => l.kind === kind).map((line) => <Line key={line.key} lang={lang} line={line} />)
+          : null))}
       </ul>
       {nm > 0 && (filter === "nm" || opened.nm) ? (
         <div className="d2s-nm-note">
@@ -149,15 +155,16 @@ function Group({ lang, group, rows, hrefs, measured, openKey, own = null, filter
   );
 }
 
-function Row({ lang, row, hrefs, openCard }: { lang: D2Lang; row: CheckRowView; hrefs: ChecksHrefs; openCard: boolean }) {
+function Row({ lang, row, placeName, hrefs, openCard }: { lang: D2Lang; row: CheckRowView; placeName: (place: string) => string; hrefs: ChecksHrefs; openCard: boolean }) {
   const t = T2[lang];
-  const label = row.place ? t.atPlace(row.label, row.place) : row.label;
+  const place = row.place ? placeName(row.place) : null;
+  const label = place ? t.atPlace(row.label, place) : row.label;
   // The API's sentence (what was looked at and what it showed) when it came; else the finding's title.
   const list = row.sentence ? sentenceList(row.sentence) : null;
   const sentence = row.sentence
-    ? <><b><Say lang={lang}>{list ? list.head : bidiValue(row.sentence).text}</Say></b>{row.place ? <> <span className="d2-muted">· <Say lang={lang}>{row.place}</Say></span></> : null}</>
+    ? <><b><Say lang={lang}>{list ? list.head : bidiValue(row.sentence).text}</Say></b>{place ? <> <span className="d2-muted">· <Say lang={lang}>{place}</Say></span></> : null}</>
     : row.kind === "differ" && row.finding
-    ? <><b><Say lang={lang}>{bidiValue(row.finding.title).text}</Say></b>{row.place ? <> <span className="d2-muted">· <Say lang={lang}>{row.place}</Say></span></> : null}</>
+    ? <><b><Say lang={lang}>{bidiValue(row.finding.title).text}</Say></b>{place ? <> <span className="d2-muted">· <Say lang={lang}>{place}</Say></span></> : null}</>
     : <Say lang={lang}>{label}</Say>;
   const tone = row.kind === "ok" ? "ok" : row.kind === "differ" ? "warn" : "nm";
   // With the sentence said, a chip only names where the evidence came from: one chip per source.
@@ -167,8 +174,6 @@ function Row({ lang, row, hrefs, openCard }: { lang: D2Lang; row: CheckRowView; 
       <span className={`d2s-cmark d2s-cmark-${row.kind}`} aria-hidden="true">{row.kind === "ok" ? <Ic name="check" size="xs" /> : null}</span>
       <div className="d2s-row-main">
         <p className="d2s-s">{sentence}</p>
-        {/* Names are a list under the sentence, each in its own direction, never one run of text. */}
-        {list ? <ul className="d2s-names">{list.items.map((item) => <li key={item}><Val text={item} /></li>)}</ul> : null}
         {!row.sentence && evidence.length ? (
           <div className="d2s-evs">{evidence.map((ev, i) => <EvidenceChip key={`${ev.label}-${i}`} ev={ev} lang={lang} open={openCard && i === 0} brief={!!row.sentence} />)}</div>
         ) : null}
@@ -181,6 +186,9 @@ function Row({ lang, row, hrefs, openCard }: { lang: D2Lang; row: CheckRowView; 
           // A website difference or an owner's task: the steps are on This week, with the exact text.
           : row.kind === "differ" && row.finding && (row.finding.kind === "owner" || row.finding.website_steps.length > 0) ? <a className="d2-btn d2-btn-line d2-btn-sm" href={hrefs.week}>{t.openTask}</a> : null}
       </span>
+      {/* Names are a list under the sentence, each in its own direction, never one run of text;
+          the list takes the row's whole width, under the actions too. */}
+      {list ? <ul className="d2s-names d2s-names-wide">{list.items.map((item) => <li key={item}><Val text={item} /></li>)}</ul> : null}
     </li>
   );
 }
@@ -252,7 +260,7 @@ function OwnFacts({ lang, fp }: { lang: D2Lang; fp: FirstPartyAnswer }) {
       {fp.whatsapp ? (
         <div className="d2s-ownf-tile">
           <span className="d2s-ownf-k">{t3.fWhatsapp}</span>
-          <b className="d2s-ownf-v"><Ltr>{phoneText(fp.whatsapp.number)}</Ltr></b>
+          <b className="d2s-ownf-v"><Ltr>{formatPhone(fp.whatsapp.number)}</Ltr></b>
           {src(fp.whatsapp)}
         </div>
       ) : null}

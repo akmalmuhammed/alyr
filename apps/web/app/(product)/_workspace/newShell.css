@@ -38,7 +38,8 @@
 
 .ns-foot { display: flex; align-items: center; gap: var(--u-sp-8); padding: var(--u-sp-12) var(--u-sp-4) var(--u-sp-4); border-block-start: var(--rule-hairline) solid var(--line); margin-block-start: var(--u-sp-8); }
 .ns-me { display: grid; flex: 1; min-inline-size: 0; line-height: var(--u-lh-title); }
-.ns-me b { font-weight: 600; font-size: var(--u-fs-body); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The whole name, on two lines when it is long; never cut with "…" (Arabic never is). */
+.ns-me b { font-weight: 600; font-size: var(--u-fs-body); overflow-wrap: break-word; text-wrap: balance; }
 .ns-me small { color: var(--text-muted); font-size: var(--u-fs-cap); }
 .ns-langmark { font-size: var(--u-fs-body); font-weight: 600; }
 
