@@ -7,7 +7,7 @@ import { useEffect, useRef, type KeyboardEvent } from "react";
 import { personFor, type AskView, type Person } from "./adapter";
 import { T, dayName, type D2Lang } from "./copy";
 import { Ic } from "./icons";
-import { Av, Avs, Hl, Kbd, Ltr, day, dayTime } from "./parts";
+import { Av, Avs, Hl, Kbd, Ltr, Say, day, dayTime } from "./parts";
 
 export function EvidenceSheet({ ask, lang, approvers, onClose, onApprove, onDecline, busy }: {
   ask: AskView;
@@ -45,12 +45,12 @@ export function EvidenceSheet({ ask, lang, approvers, onClose, onApprove, onDecl
       <div className="d2-scrim" onClick={onClose} aria-hidden="true" />
       <div className="d2-sheet" role="dialog" aria-modal="true" aria-labelledby="d2-why-title" ref={ref} onKeyDown={trap}>
         <div className="d2-sheet-head">
-          <span className="d2-crumb">{t.sheetCrumb(ask.index, ask.of)}</span>
+          <span className="d2-crumb"><Say lang={lang}>{t.sheetCrumb(ask.index, ask.of)}</Say></span>
           <span className="d2-sheet-close"><Kbd>{t.esc}</Kbd><button ref={closeRef} className="d2-icon-btn" type="button" onClick={onClose} aria-label={t.close}><Ic name="x" /></button></span>
         </div>
         <h2 className="d2-sheet-title" id="d2-why-title">{ask.lead.pre}{ask.lead.hl}{ask.lead.post}</h2>
         <nav className="d2-segm" aria-label={t.sheetNav}>
-          <button type="button" onClick={() => jump("d2-w-ev")}>{t.sheetEvidence}{kinds ? <span className="d2-n">{kinds}</span> : null}</button>
+          <button type="button" onClick={() => jump("d2-w-ev")}>{t.sheetEvidence}{kinds ? <bdi className="d2-n">{kinds}</bdi> : null}</button>
           <button type="button" onClick={() => jump("d2-w-where")}>{t.sheetWhere}</button>
           <button type="button" onClick={() => jump("d2-w-after")}>{t.sheetAfter}</button>
         </nav>
@@ -71,12 +71,12 @@ export function EvidenceSheet({ ask, lang, approvers, onClose, onApprove, onDecl
             <div className="d2-ev">
               <span className="d2-ev-ic"><Ic name="person" /></span>
               <div>
-                <div className="d2-ev-k">{t.evYou}</div>
+                <div className="d2-ev-k">{ask.confirmed.sample ? t.evSample : t.evYou}</div>
                 <p>{ask.day ? <>{dayName(ask.day, lang)} <Ltr>{ask.confirmed.text}</Ltr></> : <Ltr>{ask.confirmed.text}</Ltr>}</p>
-                {ask.confirmed.at ? (
+                {ask.confirmed.at && !ask.confirmed.sample ? (
                   <p className="d2-src">
                     {ask.confirmed.by ? <Av person={personFor(ask.confirmed.by, approvers)} size="sm" /> : null}
-                    {ask.confirmed.by ? t.confirmedBy(ask.confirmed.by, dayTime(ask.confirmed.at, lang)) : t.confirmedWhen(dayTime(ask.confirmed.at, lang))}
+                    <Say lang={lang}>{ask.confirmed.by ? t.confirmedBy(ask.confirmed.by, dayTime(ask.confirmed.at, lang)) : t.confirmedWhen(dayTime(ask.confirmed.at, lang))}</Say>
                   </p>
                 ) : null}
               </div>
@@ -87,7 +87,7 @@ export function EvidenceSheet({ ask, lang, approvers, onClose, onApprove, onDecl
               <span className="d2-ev-ic d2-ev-alyr"><Av tone="alyr" /></span>
               <div>
                 <div className="d2-ev-k">{t.evAlyr}</div>
-                <p>{t.firstPartyLine(fp.weeks.reduce((a, w) => a + w.orders, 0), fp.weeks.reduce((a, w) => a + w.bookings, 0), fp.weeks.length, fp.day)}</p>
+                <p><Say lang={lang}>{t.firstPartyLine(fp.weeks.reduce((a, w) => a + w.orders, 0), fp.weeks.reduce((a, w) => a + w.bookings, 0), fp.weeks.length, fp.day)}</Say></p>
                 <div className="d2-smx" style={{ ["--d2-cols" as string]: fp.weeks.length }}>
                   {fp.weeks.map((w) => (
                     <div className="d2-smx-day" key={w.date}>
@@ -110,8 +110,8 @@ export function EvidenceSheet({ ask, lang, approvers, onClose, onApprove, onDecl
               <span className="d2-ev-ic"><Ic name="globe" /></span>
               <div>
                 <div className="d2-ev-k">{t.evPublic}</div>
-                {publicEv.map((e, i) => <p key={`${e.label}-${i}`}>{e.where}: {e.label ? `${e.label} ` : ""}<Ltr>{e.value}</Ltr></p>)}
-                {publicEv[0].seen_at ? <p className="d2-src">{t.readAt(publicEv[0].day_only ? day(publicEv[0].seen_at, lang) : dayTime(publicEv[0].seen_at, lang))}{ask.where === "google" ? ` · ${t.notStored}` : ""}</p> : null}
+                {publicEv.map((e, i) => <p key={`${e.label}-${i}`}><Say lang={lang}>{e.where}</Say>{": "}{e.sentence ? <Say lang={lang}>{e.sentence}</Say> : <>{e.label ? <Say lang={lang}>{`${e.label}: `}</Say> : null}<Ltr>{e.value}</Ltr></>}</p>)}
+                {publicEv[0].seen_at ? <p className="d2-src"><Say lang={lang}>{`${t.readAt(publicEv[0].day_only ? day(publicEv[0].seen_at, lang) : dayTime(publicEv[0].seen_at, lang))}${ask.where === "google" ? ` · ${t.notStored}` : ""}`}</Say></p> : null}
               </div>
             </div>
           ) : null}
@@ -120,10 +120,10 @@ export function EvidenceSheet({ ask, lang, approvers, onClose, onApprove, onDecl
         <section id="d2-w-where">
           <h3>{t.whereTitle}</h3>
           <dl className="d2-dl">
-            <dt>{t.changesOn}</dt><dd>{t.changesOnText(ask.where, ask.place)}</dd>
-            {who ? <><dt>{t.whoApproves}</dt><dd><Avs people={approvers} size="md" />{t.whoText(who)}</dd></> : null}
-            {p.expires_at ? <><dt>{t.expires}</dt><dd>{t.expiresText(day(p.expires_at, lang))}</dd></> : null}
-            {ask.alsoFixes ? <><dt>{t.alsoFixes}</dt><dd>{t.alsoFixesText(ask.alsoFixes.checks, ask.alsoFixes.from, ask.alsoFixes.to, ask.alsoFixes.of)}</dd></> : null}
+            <dt>{t.changesOn}</dt><dd><Say lang={lang}>{t.changesOnText(ask.where, ask.place)}</Say></dd>
+            {who ? <><dt>{t.whoApproves}</dt><dd><Avs people={approvers} size="md" /><Say lang={lang}>{t.whoText(who)}</Say></dd></> : null}
+            {p.expires_at ? <><dt>{t.expires}</dt><dd><Say lang={lang}>{t.expiresText(day(p.expires_at, lang))}</Say></dd></> : null}
+            {ask.alsoFixes ? <><dt>{t.alsoFixes}</dt><dd><Say lang={lang}>{t.alsoFixesText(ask.alsoFixes.checks, ask.alsoFixes.from, ask.alsoFixes.to, ask.alsoFixes.of)}</Say></dd></> : null}
           </dl>
         </section>
 
@@ -134,9 +134,9 @@ export function EvidenceSheet({ ask, lang, approvers, onClose, onApprove, onDecl
           </ol>
         </section>
 
-        {p.rule ? <p className="d2-rule">{t.byRule(p.rule)}</p> : null}
+        {p.rule ? <p className="d2-rule"><Say lang={lang}>{t.byRule(p.rule)}</Say></p> : null}
         <div className="d2-t-actions d2-sheet-foot">
-          <button className="d2-btn d2-btn-approve d2-cut-control" type="button" onClick={onApprove} disabled={!p.can.approve || busy}><span>{t.approveExact(ask.exact)}</span><Kbd>{t.keyA}</Kbd></button>
+          <button className="d2-btn d2-btn-approve d2-cut-control" type="button" onClick={onApprove} disabled={!p.can.approve || busy}><span><Say lang={lang}>{t.approveExact(ask.exact)}</Say></span><Kbd>{t.keyA}</Kbd></button>
           <button className="d2-btn d2-btn-text" type="button" onClick={onDecline} disabled={!p.can.decline || busy}>{t.notNow}</button>
         </div>
       </div>

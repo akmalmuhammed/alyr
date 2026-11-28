@@ -20,6 +20,36 @@ export function Hl({ children, draw = true, off = false }: { children: ReactNode
 /** A Latin or numeric run inside an Arabic sentence keeps its order. */
 export const Ltr = ({ children }: { children: ReactNode }) => <bdi dir="ltr" className="d2-ltr">{children}</bdi>;
 
+// A run that reads left to right inside Arabic: digits, Latin words and what holds them together
+// (a time's colon, a range's dash, a phone number's plus and spaces, a percent, a question mark
+// that belongs to an English question). It starts and ends on a letter, digit, «%», «?» or «!».
+const LTR_RUN = /[A-Za-z0-9+#@][A-Za-z0-9+#@&'’:.,/%?!\-–_  ⁠]*[A-Za-z0-9%?!]|[A-Za-z0-9]/g;
+const ISOLATES = /[⁦-⁩]/g;
+
+/** A sentence cut into its Arabic parts and its left-to-right runs (counts, dates, times, Latin
+ * names, URLs). The directional isolates a copy string may carry are dropped: the <bdi> does it. */
+export function bidiParts(text: string): { text: string; ltr: boolean }[] {
+  const plain = text.replace(ISOLATES, "");
+  const out: { text: string; ltr: boolean }[] = [];
+  let at = 0;
+  for (const m of plain.matchAll(LTR_RUN)) {
+    const start = m.index ?? 0;
+    if (start > at) out.push({ text: plain.slice(at, start), ltr: false });
+    out.push({ text: m[0], ltr: true });
+    at = start + m[0].length;
+  }
+  if (at < plain.length) out.push({ text: plain.slice(at), ltr: false });
+  return out;
+}
+
+/** A sentence as the page draws it: in Arabic every count, date, time and Latin run sits in its own
+ * <bdi> (so «95%», «Doha?» and «13:00–22:00» keep their order); English is drawn as it is. */
+export function Say({ lang, children }: { lang: D2Lang; children: string | null | undefined }) {
+  const text = children ?? "";
+  if (lang !== "ar" || !text) return <>{text}</>;
+  return <>{bidiParts(text).map((p, i) => (p.ltr ? <bdi key={i} dir="ltr">{p.text}</bdi> : <span key={i}>{p.text}</span>))}</>;
+}
+
 export function Kbd({ children, onCarbon = false }: { children: ReactNode; onCarbon?: boolean }) {
   return <kbd className={`d2-kbd${onCarbon ? " d2-kbd-carbon" : ""}`} aria-hidden="true">{children}</kbd>;
 }

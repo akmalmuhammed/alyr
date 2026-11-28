@@ -165,6 +165,27 @@ test("Change it starts from the proposed value and sends the whole week with onl
   assert.equal(draftFor({ ...hours, edit: null }), null, "not drawn where the API does not allow it");
 });
 
+test("Change it for hours that differ on several days: the whole week, each day editable", async () => {
+  const { afterFromDraft, draftFor, draftText } = await import("./logic.ts");
+  const line = (day, text) => ({ day, text });
+  const days = ["sat", "sun", "mon", "tue", "wed", "thu", "fri"];
+  const many = { ...hours,
+    before: { text: "None", lines: [], removed: false },
+    after: { text: "Sat to Thu 07:00 to 22:00; Fri 13:00 to 22:00", lines: days.map((d) => line(d, d === "fri" ? "13:00–22:00" : "07:00–22:00")), removed: false } };
+  const d = draftFor(many);
+  assert.equal(d.kind, "week");
+  assert.deepEqual(d.days.fri, { open: "13:00", close: "22:00" });
+  assert.deepEqual(d.days.sat, { open: "07:00", close: "22:00" });
+  const edited = { ...d, days: { ...d.days, fri: { open: "14:00", close: "23:00" }, sun: null } };
+  const week = afterFromDraft(many, edited);
+  assert.deepEqual(week.fri, ["14:00", "23:00"]);
+  assert.equal(week.sun, null, "a day marked closed is sent as closed");
+  assert.equal(Object.keys(week).length, 7);
+  assert.equal(afterFromDraft(many, { ...d, days: { ...d.days, mon: { open: "22:00", close: "07:00" } } }), null);
+  assert.equal(draftText(many, edited, "en"), "these hours");
+  assert.equal(draftText(many, edited, "ar"), "هذه الساعات");
+});
+
 test("the life of a change follows the loop: Google's review, refused, changed back", () => {
   const at = "2026-11-12T07:00:00Z";
   const sent = { status: "applied", verification: "pending", decided: null, applied_at: at };

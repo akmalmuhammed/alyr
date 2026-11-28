@@ -14,7 +14,7 @@ import type { AnswerGroup, AnswersAnswer, CitedHost } from "./api2";
 import { T2 } from "./copy2";
 import type { D2Lang } from "./copy";
 import { ScreenFrame, SourceTile, StatePill } from "./frame";
-import { Ltr, dayTime } from "./parts";
+import { Ltr, Say, dayTime } from "./parts";
 import { answerParas, percentRuns, type AnswersView, type LangTally } from "./screens";
 
 /** The API's sentence with each percent held left to right in its own <bdi> (Arabic keeps «79%» in order). */
@@ -29,7 +29,7 @@ export function Answers({ lang, view, api, tabs, foot }: { lang: D2Lang; view: A
     return (
       <ScreenFrame lang={lang} foot={foot}>
         {tabs}
-        <section className="d2-brief"><h1 className="d2-display">{title}</h1><p className="d2-sub">{body}</p></section>
+        <section className="d2-brief"><h1 className="d2-display">{title}</h1><p className="d2-sub"><Say lang={lang}>{body}</Say></p></section>
         {api.rule ? <Method lang={lang} api={api} /> : null}
       </ScreenFrame>
     );
@@ -41,14 +41,14 @@ export function Answers({ lang, view, api, tabs, foot }: { lang: D2Lang; view: A
     <ScreenFrame lang={lang} foot={foot}>
       {tabs}
       <section className="d2-brief">
-        <h1 className="d2-display">{t.answersTitle(view.named, view.counted)}</h1>
-        <p className="d2-sub">{t.answersSub(topic, view.named, view.counted, view.en.named, view.en.counted, view.ar.named, view.ar.counted)}</p>
+        <h1 className="d2-display"><Say lang={lang}>{t.answersTitle(view.named, view.counted)}</Say></h1>
+        <p className="d2-sub"><Say lang={lang}>{t.answersSub(topic, view.named, view.counted, view.en.named, view.en.counted, view.ar.named, view.ar.counted)}</Say></p>
         <div className="d2s-dotcards">
           <DotCard lang={lang} name={t.langEn} tally={view.en} />
           <DotCard lang={lang} name={t.langAr} tally={view.ar} />
         </div>
-        {view.askedAt ? <p className="d2-small d2-muted d2s-gap">{t.dotsNote(dayTime(view.askedAt, lang))}</p> : null}
-        {view.sample && api.sampleNote ? <p className="d2-small d2-muted">{api.sampleNote}</p> : null}
+        {view.askedAt ? <p className="d2-small d2-muted d2s-gap"><Say lang={lang}>{t.dotsNote(dayTime(view.askedAt, lang))}</Say></p> : null}
+        {view.sample && api.sampleNote ? <p className="d2-small d2-muted"><Say lang={lang}>{api.sampleNote}</Say></p> : null}
       </section>
 
       {view.groups.length ? (
@@ -59,13 +59,14 @@ export function Answers({ lang, view, api, tabs, foot }: { lang: D2Lang; view: A
               {view.notEnough ? (
                 <div className="d2s-enough" role="note">
                   <b>{t.notEnoughTitle}</b>
-                  <p>{t.notEnoughBody(view.most)}</p>
+                  <p><Say lang={lang}>{t.notEnoughBody(view.most)}</Say></p>
                 </div>
               ) : null}
               <ul className="d2s-rg">
                 {view.groups.map((g) => <RangeRow key={`${g.engine}-${g.lang}`} lang={lang} g={g} name={t.groupName(g.engine_label, g.lang_label || langName(g.lang))} />)}
               </ul>
-              {api.rangeNote ? <p className="d2-small d2-muted">{api.rangeNote}</p> : null}
+              {/* G's rule: no percentage and no range under the 30-answer floor. */}
+              {api.rangeNote && !view.notEnough ? <p className="d2-small d2-muted"><Say lang={lang}>{api.rangeNote}</Say></p> : null}
             </div>
           </div>
         </section>
@@ -93,7 +94,7 @@ export function Answers({ lang, view, api, tabs, foot }: { lang: D2Lang; view: A
           <h2 className="d2-section">{t.quoteTitle}</h2>
           <blockquote className="d2s-quote" lang={q.lang === "ar" ? "ar" : "en"} dir={q.lang === "ar" ? "rtl" : "ltr"}>
             <div className="d2s-q-head" lang={lang} dir={lang === "ar" ? "rtl" : "ltr"}>
-              <span>{t.quoteHead(q.said_by || q.engine_label, langName(q.lang), dayTime(view.askedAt, lang))}</span>
+              <span><Say lang={lang}>{t.quoteHead(q.said_by || q.engine_label, langName(q.lang), dayTime(view.askedAt, lang))}</Say></span>
               <span className="d2s-q-tag">{t.thirdParty}</span>
             </div>
             <p className="d2s-q-asked" lang={lang} dir={lang === "ar" ? "rtl" : "ltr"}>{t.questionAsked} <bdi>{q.question}</bdi></p>
@@ -105,7 +106,7 @@ export function Answers({ lang, view, api, tabs, foot }: { lang: D2Lang; view: A
                 })}</p>
               ))}
             </div>
-            <div className="d2s-q-foot" lang={lang} dir={lang === "ar" ? "rtl" : "ltr"}><span>{api.quoteNote || t.quoteFoot}</span></div>
+            <div className="d2s-q-foot" lang={lang} dir={lang === "ar" ? "rtl" : "ltr"}><span><Say lang={lang}>{api.quoteNote || t.quoteFoot}</Say></span></div>
           </blockquote>
         </section>
       ) : null}
@@ -119,7 +120,7 @@ function DotCard({ lang, name, tally }: { lang: D2Lang; name: string; tally: Lan
   const t = T2[lang];
   return (
     <div className="d2s-dotcard" role="img" aria-label={t.dotsAria(name, tally.named, tally.counted)}>
-      <header><b>{name}</b><span className="d2-tnum">{t.namedOf(tally.named, tally.counted)}</span></header>
+      <header><b>{name}</b><span className="d2-tnum"><Say lang={lang}>{t.namedOf(tally.named, tally.counted)}</Say></span></header>
       <div className="d2s-dd">{tally.dots.map((d, i) => <i key={i} className={d.named ? "d2s-y" : undefined} data-tip={t.dotTip(d.tool, d.named)} />)}</div>
       {tally.counted > 0 && tally.named === 0 ? <p className="d2s-note">{t.noneInLang(name)}</p> : null}
     </div>
@@ -133,7 +134,7 @@ function Meter({ lang, name, tally }: { lang: D2Lang; name: string; tally: LangT
     <span className="d2s-dmeter" role="img" aria-label={t.dotsAria(name, tally.named, tally.counted)}>
       <span className="d2s-ml">{name}</span>
       <span className="d2s-dm">{tally.dots.map((d, i) => <i key={i} className={d.named ? "d2s-y" : undefined} />)}</span>
-      <b className="d2-tnum">{t.meterOf(tally.named, tally.counted)}</b>
+      <b className="d2-tnum"><Say lang={lang}>{t.meterOf(tally.named, tally.counted)}</Say></b>
     </span>
   );
 }
@@ -147,9 +148,10 @@ function RangeRow({ lang, g, name }: { lang: D2Lang; g: AnswerGroup; name: strin
     <li>
       <div className="d2s-rg-h">
         <b>{name}</b>
-        <span className="d2-tnum">{t.meterOf(g.named, g.counted)}</span>
+        <span className="d2-tnum"><Say lang={lang}>{t.meterOf(g.named, g.counted)}</Say></span>
       </div>
-      {g.range ? (
+      {/* No percentage and no range under the floor of 30 answers (G's rule): the count only. */}
+      {g.range && g.counted >= 30 ? (
         <>
           <div className="d2s-rg-bar" role="img" aria-label={t.sureAria(name, g.named, g.counted, g.range.low, g.range.high)} data-tip={t.rangeScale}>
             <span className="d2s-rg-band" style={{ insetInlineStart: `${g.range.low}%`, inlineSize: `${Math.max(0, g.range.high - g.range.low)}%` }} />
@@ -161,7 +163,7 @@ function RangeRow({ lang, g, name }: { lang: D2Lang; g: AnswerGroup; name: strin
           </p>
         </>
       ) : null}
-      {g.change.reason ? <p className="d2s-rg-r">{withPercents(g.change.reason)}</p> : null}
+      {g.change.reason ? <p className="d2s-rg-r">{lang === "ar" ? <Say lang={lang}>{g.change.reason}</Say> : withPercents(g.change.reason)}</p> : null}
     </li>
   );
 }
@@ -181,13 +183,13 @@ function Cited({ lang, api, hosts, total }: { lang: D2Lang; api: AnswersAnswer; 
               <li key={h.host}>
                 <SourceTile where={title} />
                 <div>
-                  <b>{title}</b>
+                  <b><Say lang={lang}>{title}</Say></b>
                   <small><Ltr>{h.host}</Ltr>{h.engineLabels.length ? <> · {t.citedTools(h.engineLabels.join(lang === "ar" ? "، " : ", "))}</> : null}</small>
                 </div>
                 <div className="d2s-cites">
                   <span className="d2s-meter"><i style={{ inlineSize: `${total ? Math.min(100, (h.answers / total) * 100) : 0}%` }} /></span>
-                  <span className="d2-tnum">{t.citedOf(h.answers, total)}</span>
-                  {without ? <small>{without}</small> : null}
+                  <span className="d2-tnum"><Say lang={lang}>{t.citedOf(h.answers, total)}</Say></span>
+                  {without ? <small><Say lang={lang}>{without}</Say></small> : null}
                 </div>
                 <StatePill tone={h.check === "matches" ? "ok" : h.check === "differs" ? "warn" : "nm"}>{h.check_label || t.citedState[h.check]}</StatePill>
               </li>
@@ -203,7 +205,7 @@ function Method({ lang, api }: { lang: D2Lang; api: AnswersAnswer }) {
   const t = T2[lang];
   return (
     <div className="d2s-method">
-      <b>{t.methodTitle}</b> {api.method} {api.rule} {api.limits} {t.notPartOfChecks}
+      <b>{t.methodTitle}</b> <Say lang={lang}>{[api.method, api.rule, api.limits, t.notPartOfChecks].filter(Boolean).join(" ")}</Say>
     </div>
   );
 }

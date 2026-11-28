@@ -48,22 +48,20 @@ def rows(sql: str, *args):
 # ── what a check-up prepares, and from what ─────────────────────────────────────────────
 
 
-def test_a_first_check_up_prepares_ten_changes_each_from_one_rule_and_a_confirmed_fact(shop):
+def test_a_first_check_up_prepares_six_changes_each_from_one_rule_and_a_confirmed_fact(shop):
     live = proposals(shop.owner, "live")
+    # P2 (DECISIONS #8): ALYR writes nothing to a website, so the sample's four website changes
+    # (hours and phone conflicts, two WhatsApp links) are the owner's steps, not proposals.
     assert sorted(p["rule_id"] for p in live) == sorted(
-        ["hours_missing", "hours_conflict", "phone_conflict", "category_missing", "name_conflict",
-         "whatsapp_link_missing", "whatsapp_link_missing", "review_unanswered"] + [
-         "review_unanswered"] * 2)
+        ["hours_missing", "category_missing", "name_conflict"] + ["review_unanswered"] * 3)
+    assert all(p["target"] == "listing" for p in live)
     assert all(p["status"] == "proposed" and p["proposer"] == "engine" for p in live)
     # The six types, from the right rules, on the right target
     shape = {(p["rule_id"], p["type"], p["target"], p["field"]) for p in live}
     assert shape == {
         ("hours_missing", "set_hours", "listing", "hours"),
-        ("hours_conflict", "set_hours", "website", "hours"),
-        ("phone_conflict", "set_phone", "website", "phone"),
         ("category_missing", "set_category", "listing", "category"),
         ("name_conflict", "set_name", "listing", "name"),
-        ("whatsapp_link_missing", "add_whatsapp_link", "website", "whatsapp_link"),
         ("review_unanswered", "reply_to_review", "listing", "review_reply"),
     }
     # None for the rules that need the owner, Google or a change of process
@@ -99,19 +97,28 @@ def test_the_hours_proposal_is_the_example_of_the_spec(shop):
 
 
 def test_a_conflict_proposes_only_what_differs_from_the_confirmed_fact(shop):
-    web = find(shop.owner, "hours_conflict", "Industrial Area")
-    assert web["target"] == "website" and web["after"]["text"].startswith("Sat to Thu 07:00")
+    # P2: the same differences on a website are the owner's steps, with the same exact text.
+    def step(rule, area):
+        found = [f for f in findings(shop.owner) if f["rule_id"] == rule
+                 and f["location"]["name"].endswith(area)]
+        assert len(found) == 1 and len(found[0]["website_steps"]) == 1, (rule, area)
+        return found[0]["website_steps"][0]
+
+    web = step("hours_conflict", "Industrial Area")
+    assert web["after"]["text"].startswith("Sat to Thu 07:00")
     assert web["before"]["text"] == "Sat to Thu 07:00 to 20:00; Fri 13:00 to 20:00"
-    phone = find(shop.owner, "phone_conflict", "Al Wakra")
+    phone = step("phone_conflict", "Al Wakra")
     assert (phone["before"]["text"], phone["after"]["text"]) == ("+974 5555 0129", "+97455550112")
     name = find(shop.owner, "name_conflict", "Al Wakra")
     assert (name["before"]["text"], name["after"]["text"]) == (
         "Nuqta Car Wash - Wakra", "Nuqta Car Care - Wakra")
-    link = find(shop.owner, "whatsapp_link_missing", "Al Sadd")
+    link = step("whatsapp_link_missing", "Al Sadd")
     assert (link["before"]["text"], link["after"]["text"]) == (
         "none", "https://wa.me/97455550150")
-    wrong = find(shop.owner, "whatsapp_link_missing", "Industrial Area")
+    wrong = step("whatsapp_link_missing", "Industrial Area")
     assert wrong["before"]["text"] == "https://wa.me/97455550999"
+    # the listing matches the confirmed phone at Al Wakra: nothing to propose there
+    assert [p for p in proposals(shop.owner, "live") if p["rule_id"] == "phone_conflict"] == []
 
 
 def test_review_replies_are_a_fixed_text_chosen_by_stars_with_no_word_of_the_review(shop):
@@ -413,7 +420,7 @@ def test_a_check_up_that_no_longer_finds_the_problem_closes_the_waiting_change(s
 
 def test_skipping_or_marking_done_closes_the_waiting_change_with_its_reason(shop):
     one = find(shop.owner, "category_missing", "Al Wakra")
-    two = find(shop.owner, "phone_conflict", "Al Wakra")
+    two = find(shop.owner, "name_conflict", "Al Wakra")  # P2: the website phone is no proposal
     for p, status, reason in ((one, "skipped", "finding_skipped"),
                               (two, "owner_done", "finding_done")):
         answer = shop.owner.post(f"{BASE}/findings/{p['finding_id']}/status",
@@ -428,17 +435,17 @@ def test_skipping_or_marking_done_closes_the_waiting_change_with_its_reason(shop
 
 
 def test_a_different_value_replaces_a_waiting_change_as_superseded(shop):
-    p = find(shop.owner, "phone_conflict", "Al Wakra")
+    # P2: the listing's category (the website phone this used is no longer a proposal)
+    p = find(shop.owner, "category_missing", "Al Wakra")
     changed = shop.owner.put(f"{BASE}/facts", json={
-        "location_id": place_id(shop.owner, "Al Wakra"), "key": "phone",
-        "value": {"phone": "+97455550199"}})
+        "location_id": place_id(shop.owner, "Al Wakra"), "key": "category",
+        "value": {"category": "Car detailing"}})
     assert changed.status_code == 200, changed.text
     old = get(shop.owner, p["id"])
     assert (old["status"], old["expire_reason"]) == ("expired", "superseded")
-    new = find(shop.owner, "phone_conflict", "Al Wakra", target="website", status="live")
-    assert new["after"]["text"] == "+97455550199" and new["change_hash"] != p["change_hash"]
-    # the listing differs from the new number too: a second proposal, for the listing
-    assert find(shop.owner, "phone_conflict", "Al Wakra", target="listing", status="live")
+    assert old["closed_at"] is not None
+    new = find(shop.owner, "category_missing", "Al Wakra", target="listing", status="live")
+    assert new["after"]["text"] == "Car detailing" and new["change_hash"] != p["change_hash"]
 
 
 # ── idempotent preparing ────────────────────────────────────────────────────────────────
@@ -473,9 +480,10 @@ def test_a_finding_says_what_can_be_done_about_it(shop):
     items = {f["rule_id"]: f for f in findings(shop.owner)}
     one = lambda rule: shop.owner.get(f"{BASE}/findings/{items[rule]['id']}").json()  # noqa: E731
     assert items["hours_missing"]["kind"] == "agent"
-    # with a connector that writes it all, three more findings are ALYR's after approval
+    # with a connector that writes the listing, two more findings are ALYR's after approval;
+    # the WhatsApp link is on the website, which ALYR never writes (P2): the owner's
     assert [items[r]["kind"] for r in ("name_conflict", "whatsapp_link_missing",
-                                       "review_unanswered")] == ["agent"] * 3
+                                       "review_unanswered")] == ["agent", "owner", "agent"]
     assert items["listing_missing"]["kind"] == "owner" and items["rating_low"]["kind"] == "process"
     hours = one("hours_missing")
     assert [p["rule_id"] for p in hours["proposals"]] == ["hours_missing"]
@@ -506,7 +514,7 @@ def test_with_a_connector_that_cannot_write_a_finding_keeps_its_phase_one_kind(
 
 
 def test_a_declined_change_is_not_asked_again_for_14_days(shop):
-    p = find(shop.owner, "whatsapp_link_missing", "Al Sadd")
+    p = find(shop.owner, "name_conflict", "Al Wakra")  # P2: still found at stage 1, on the listing
     shop.owner.post(f"{BASE}/proposals/{p['id']}/decline")
     run_check_up(shop.owner)  # stage 1: that finding is still open
     assert [x for x in proposals(shop.owner, "live") if x["change_hash"] == p["change_hash"]] == []
@@ -519,7 +527,7 @@ def test_a_declined_change_is_not_asked_again_for_14_days(shop):
 
 
 def test_an_expired_by_time_or_undone_or_unconfirmed_change_is_not_asked_again(shop):
-    p = find(shop.owner, "whatsapp_link_missing", "Al Sadd")
+    p = find(shop.owner, "name_conflict", "Al Wakra")  # P2: still found at stage 1, on the listing
     # Discovery 2.0: only an open ask's 14 days run (an "Also noticed" one waits its turn)
     owner_sql("update discovery_proposals set proposed_at = now() - interval '15 days', "
               "opened_at = now() - interval '15 days', "
@@ -574,7 +582,7 @@ def test_every_route_answers_not_found_for_another_shops_ids(client_factory, mon
     # nothing was touched, and the lists show only their own
     assert get(mine.owner, p["id"])["status"] == "proposed"
     theirs_ids = {x["id"] for x in proposals(theirs.owner)}
-    assert p["id"] not in theirs_ids and len(theirs_ids) == 10
+    assert p["id"] not in theirs_ids and len(theirs_ids) == 6  # P2: no website proposals
     assert theirs.owner.get(f"{BASE}/facts", params={"location_id": other}).json() == {"items": []}
     assert {x["location_id"] for x in theirs.owner.get(f"{BASE}/facts").json()["items"]} == {
         place_id(theirs.owner, a) for a in ("West Bay", "Al Wakra", "Lusail", "Al Sadd",
@@ -604,7 +612,7 @@ def test_a_shop_with_discovery_off_answers_module_off_on_every_new_route(
 def test_the_overview_says_what_waits_and_the_next_change(shop):
     overview = shop.owner.get(f"{BASE}/overview").json()
     block = overview["proposals"]
-    assert (block["waiting"], block["approved"], block["failed"]) == (10, 0, 0)
+    assert (block["waiting"], block["approved"], block["failed"]) == (6, 0, 0)  # P2: no website
     assert block["next"]["severity"] == "high" and block["next"]["status"] == "proposed"
     assert overview["next"]["proposals"][0]["status"] == "proposed"
     # The Phase 1 shape is untouched
@@ -614,18 +622,18 @@ def test_the_overview_says_what_waits_and_the_next_change(shop):
 
 def test_the_list_filters_and_counts(shop):
     answer = shop.owner.get(f"{BASE}/proposals").json()
-    assert answer["waiting"] == 10 and answer["counts"]["proposed"] == 10
+    assert answer["waiting"] == 6 and answer["counts"]["proposed"] == 6  # P2: no website
     assert set(answer["counts"]) == {"proposed", "approved", "declined", "expired", "applied",
                                      "failed", "undone"}
     p = find(shop.owner, "category_missing", "Al Wakra")
     approve(shop.owner, p)
-    assert len(proposals(shop.owner, "done")) == 1 and len(proposals(shop.owner, "live")) == 9
+    assert len(proposals(shop.owner, "done")) == 1 and len(proposals(shop.owner, "live")) == 5
     shop.owner.post(f"{BASE}/proposals/{find(shop.owner, 'hours_missing', 'Al Sadd')['id']}"
                     "/decline")
     assert len(proposals(shop.owner, "closed")) == 1
-    assert len(proposals(shop.owner, "all")) == 10
+    assert len(proposals(shop.owner, "all")) == 6
     assert len(proposals(shop.owner, "declined")) == 1
-    assert len(proposals(shop.owner, "all", location_id=place_id(shop.owner, "Al Wakra"))) == 3
+    assert len(proposals(shop.owner, "all", location_id=place_id(shop.owner, "Al Wakra"))) == 2
     assert shop.owner.get(f"{BASE}/proposals", params={"status": "nope"}).status_code == 422
     # newest first
     stamps = [p["proposed_at"] for p in proposals(shop.owner, "all")]

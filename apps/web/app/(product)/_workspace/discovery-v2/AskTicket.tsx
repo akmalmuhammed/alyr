@@ -9,7 +9,7 @@ import type { AskView, Person } from "./adapter";
 import type { Proposal, DayKey } from "../discoveryApi";
 import { T, type D2Lang } from "./copy";
 import { Ic } from "./icons";
-import { Avs, Hl, Kbd, day, time } from "./parts";
+import { Avs, Hl, Kbd, Say, day, time } from "./parts";
 import { DayBars } from "./DayBars";
 import { ListingMiniature } from "./ListingMiniature";
 import { ChangeLifeTrack } from "./ChangeLifeTrack";
@@ -64,7 +64,7 @@ export function AskTicket(props: AskTicketProps) {
       <article className={`d2-ticket d2-cut${after ? " d2-approved" : ""}${editing ? " d2-editing" : ""}`} id="d2-ask" aria-labelledby="d2-ask-title" tabIndex={-1}>
         {props.snoozedUntil ? (
           <div className="d2-snoozed" role="status">
-            <p><b>{t.notNowTitle}</b> <span className="d2-muted">{t.notNowBody(day(new Date(props.snoozedUntil).toISOString(), lang))}</span></p>
+            <p><b>{t.notNowTitle}</b> <span className="d2-muted"><Say lang={lang}>{t.notNowBody(day(new Date(props.snoozedUntil).toISOString(), lang))}</Say></span></p>
           </div>
         ) : undone ? (
           <div className="d2-snoozed" role="status">
@@ -74,15 +74,15 @@ export function AskTicket(props: AskTicketProps) {
           <>
             <header className="d2-t-meta">
               {kind}
-              <span className="d2-dot" aria-hidden="true">·</span><span>{t.askOf(ask.index, ask.of)}</span>
-              {asked ? <><span className="d2-dot" aria-hidden="true">·</span><span>{asked}</span></> : null}
+              <span className="d2-dot" aria-hidden="true">·</span><span><Say lang={lang}>{t.askOf(ask.index, ask.of)}</Say></span>
+              {asked ? <><span className="d2-dot" aria-hidden="true">·</span><span><Say lang={lang}>{asked}</Say></span></> : null}
             </header>
             <div className="d2-t-body">
               <div className="d2-t-text">
                 {after ? (
                   <div className="d2-after">
                     <div className="d2-stamp d2-cut-stamp"><Ic name="check" size="sm" />{t.approved}{p.decided ? <small>{t.stampBy(p.decided.by, time(p.decided.at, lang))}</small> : null}</div>
-                    <h2 className="d2-t-lead" id="d2-ask-title">{ask.day ? t.afterLeadDay(ask.day, ask.after, ask.where) : t.afterLead(p.field_label, ask.where)}</h2>
+                    <h2 className="d2-t-lead" id="d2-ask-title"><Say lang={lang}>{ask.day ? t.afterLeadDay(ask.day, ask.after, ask.where) : t.afterLead(p.field_label, ask.where)}</Say></h2>
                     <p className="d2-t-support">{stage === "failed" ? t.failed(p.failure?.message ?? "") : p.life && (p.life.state === "rejected" || p.life.state === "changed_back") && p.life.text ? p.life.text : t.afterSupport(ask.where)}</p>
                     {p.approved_as === "edited" ? <p className="d2-small d2-muted">{t.editedNote}</p> : null}
                     <ChangeLifeTrack p={p} where={ask.where} lang={lang} nextCheckAt={props.nextCheckAt} />
@@ -92,7 +92,7 @@ export function AskTicket(props: AskTicketProps) {
                           <button className="d2-btn d2-btn-line d2-btn-sm" type="button" onClick={props.onUndo} disabled={props.busy === "undo"} data-tip={t.undoTip(ask.before, ask.where)}>
                             <Ic name="undo" size="sm" flip />{t.undo}
                           </button>
-                          <span className="d2-small d2-muted">{t.undoUntil(day(p.undo_until, lang), ask.before, ask.where)}</span>
+                          <span className="d2-small d2-muted"><Say lang={lang}>{t.undoUntil(day(p.undo_until, lang), ask.before, ask.where)}</Say></span>
                         </>
                       ) : stage === "approved" ? <span className="d2-small d2-muted">{t.undoWhenSent}</span> : null}
                     </div>
@@ -108,7 +108,9 @@ export function AskTicket(props: AskTicketProps) {
                         const s = t.firstParty(o, b, fp.weeks.length, fp.day);
                         return <>{s.pre}<b>{s.strong}</b>{s.post} </>;
                       })() : null}
-                      {ask.confirmed && ask.confirmed.at ? (ask.day ? t.confirmedDay(ask.day, ask.confirmed.text, day(ask.confirmed.at, lang)) : t.confirmedValue(ask.confirmed.text, day(ask.confirmed.at, lang))) : !ask.firstParty ? p.why : null}
+                      <Say lang={lang}>{ask.confirmed?.sample
+                        ? (ask.day ? t.sampleConfirmedDay(ask.day, ask.confirmed.text) : t.sampleConfirmedValue(ask.confirmed.text))
+                        : ask.confirmed && ask.confirmed.at ? (ask.day ? t.confirmedDay(ask.day, ask.confirmed.text, day(ask.confirmed.at, lang)) : t.confirmedValue(ask.confirmed.text, day(ask.confirmed.at, lang))) : !ask.firstParty ? p.why : null}</Say>
                     </p>
                     {ask.firstParty ? <DayBars fp={ask.firstParty} where={ask.where} lang={lang} /> : null}
                     <div className="d2-t-scope">
@@ -142,7 +144,7 @@ export function AskTicket(props: AskTicketProps) {
               ) : (
                 <span>
                   {t.nothingUntil(ask.where)}
-                  {p.undo_window_days ? <><span className="d2-sep"> · </span>{t.undoFor(p.undo_window_days)}</> : null}
+                  {p.undo_window_days ? <><span className="d2-sep"> · </span><Say lang={lang}>{t.undoFor(p.undo_window_days)}</Say></> : null}
                   {names.length ? <><span className="d2-sep"> · </span><Avs people={approvers} tips={(a) => t.personTip(a.name, t.roles[a.role] ?? "")} /> {t.canApprove(nameList)}</> : null}
                 </span>
               )}

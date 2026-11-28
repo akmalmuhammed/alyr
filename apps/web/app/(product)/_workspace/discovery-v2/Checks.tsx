@@ -15,8 +15,8 @@ import { T2 } from "./copy2";
 import type { D2Lang } from "./copy";
 import { EvidenceChip, Filters, ScreenFrame, SkeletonGroups, StatePill } from "./frame";
 import { Ic } from "./icons";
-import { Ltr, dayTime } from "./parts";
-import { bidiValue, filterRows, type CheckFilter, type CheckGroup, type CheckRowView, type ChecksView } from "./screens";
+import { Ltr, Say, dayTime } from "./parts";
+import { bidiValue, filterRows, linesOf, type CheckFilter, type CheckGroup, type CheckLine, type CheckRowView, type ChecksView } from "./screens";
 
 export type ChecksHrefs = { week: string; setup: string | null; connections: string | null; task: (findingId: string) => string };
 
@@ -48,10 +48,10 @@ export function Checks({ lang, view, tabs, foot, hrefs, nextCheckAt, run, onChec
       <section className="d2-brief">
         {view.tally ? (
           <>
-            <h1 className="d2-display">{t.checksTitle(view.tally.matched, view.tally.measured)}</h1>
+            <h1 className="d2-display"><Say lang={lang}>{t.checksTitle(view.tally.matched, view.tally.measured)}</Say></h1>
             <p className="d2-sub">
-              {t.differSub(view.tally.measured - view.tally.matched)}{" "}
-              {view.checkedAt ? t.checkedFor(dayTime(view.checkedAt, lang), kindWords) : null}
+              <Say lang={lang}>{t.differSub(view.tally.measured - view.tally.matched)}</Say>{" "}
+              {view.checkedAt ? <Say lang={lang}>{t.checkedFor(dayTime(view.checkedAt, lang), kindWords)}</Say> : null}
               {hrefs.setup ? <> <a className="d2-link" href={hrefs.setup}>{t.changeKind}</a></> : null}
             </p>
           </>
@@ -66,10 +66,10 @@ export function Checks({ lang, view, tabs, foot, hrefs, nextCheckAt, run, onChec
       <div className="d2s-toolbar">
         {view.tally ? (
           <Filters label={t.filtersLabel} value={filter} onChange={setFilter}
-            items={(["all", "differ", "ok", "nm"] as const).map((key) => ({ key, label: t.filters[key], count: view.counts[key] }))} />
+            items={(["all", "differ", "ok", "nm"] as const).map((key) => ({ key, label: t.filters[key], count: key === "all" ? null : view.counts[key] }))} />
         ) : <span />}
         <div className="d2s-toolbar-end">
-          {nextCheckAt ? <span>{t.nextCheck(dayTime(nextCheckAt, lang))}</span> : null}
+          {nextCheckAt ? <span><Say lang={lang}>{t.nextCheck(dayTime(nextCheckAt, lang))}</Say></span> : null}
           <button className="d2-btn d2-btn-line d2-btn-sm" type="button" onClick={onCheckAgain} disabled={busy || !!run} data-tip={t.checkAgainTip}>
             <Ic name="refresh" size="sm" />{t.checkAgain}
           </button>
@@ -103,14 +103,16 @@ function Group({ lang, group, rows, hrefs, measured, openKey }: { lang: D2Lang; 
     <section className="d2s-group" aria-labelledby={titleId}>
       <header className="d2s-group-head">
         <h2 id={titleId}>{group.title}</h2>
-        <p>{t.groupSub[group.id]} · <span className="d2-tnum">{t.groupTally(group.matched, group.differ)}</span></p>
+        <p>{t.groupSub[group.id]} · <span className="d2-tnum"><Say lang={lang}>{t.groupTally(group.matched, group.differ)}</Say></span></p>
       </header>
       <ul className="d2s-card d2s-list d2s-checks">
-        {rows.map((r) => <Row key={r.key} lang={lang} row={r} hrefs={hrefs} openCard={r.key === openKey} />)}
+        {linesOf(rows).map((line) => (line.kind === "differ"
+          ? <Row key={line.row.key} lang={lang} row={line.row} hrefs={hrefs} openCard={line.row.key === openKey} />
+          : <Line key={line.key} lang={lang} line={line} />))}
       </ul>
       {nm > 0 ? (
         <div className="d2s-nm-note">
-          <p>{t.nmNote(nm, measured)}<small>{t.nmWhy}</small></p>
+          <p><Say lang={lang}>{t.nmNote(nm, measured)}</Say><small>{t.nmWhy}</small></p>
           {hrefs.connections ? <a className="d2-btn d2-btn-line d2-btn-sm" href={hrefs.connections}>{t.seeConnections}</a> : null}
         </div>
       ) : null}
@@ -122,8 +124,8 @@ function Row({ lang, row, hrefs, openCard }: { lang: D2Lang; row: CheckRowView; 
   const t = T2[lang];
   const label = row.place ? t.atPlace(row.label, row.place) : row.label;
   const sentence = row.kind === "differ" && row.finding
-    ? <><b>{bidiValue(row.finding.title).text}</b>{row.place ? <> <span className="d2-muted">· {row.place}</span></> : null}</>
-    : label;
+    ? <><b><Say lang={lang}>{bidiValue(row.finding.title).text}</Say></b>{row.place ? <> <span className="d2-muted">· <Say lang={lang}>{row.place}</Say></span></> : null}</>
+    : <Say lang={lang}>{label}</Say>;
   const tone = row.kind === "ok" ? "ok" : row.kind === "differ" ? "warn" : "nm";
   return (
     <li data-kind={row.kind}>
@@ -137,8 +139,27 @@ function Row({ lang, row, hrefs, openCard }: { lang: D2Lang; row: CheckRowView; 
       <span className="d2s-side">
         <StatePill tone={tone}>{t.state[row.kind]}</StatePill>
         {row.kind === "differ" && row.askWaiting ? <a className="d2-btn d2-btn-line d2-btn-sm" href={hrefs.week}>{t.seeAsk}</a>
-          : row.kind === "differ" && row.finding && row.finding.kind === "owner" ? <a className="d2-btn d2-btn-line d2-btn-sm" href={hrefs.task(row.finding.id)}>{t.openTask}</a> : null}
+          // A website difference or an owner's task: the steps are on This week, with the exact text.
+          : row.kind === "differ" && row.finding && (row.finding.kind === "owner" || row.finding.website_steps.length > 0) ? <a className="d2-btn d2-btn-line d2-btn-sm" href={hrefs.week}>{t.openTask}</a> : null}
       </span>
+    </li>
+  );
+}
+
+/** A check that matches (or was not measured) at one or more places: drawn once, with the places. */
+function Line({ lang, line }: { lang: D2Lang; line: Extract<CheckLine, { kind: "ok" | "nm" }> }) {
+  const t = T2[lang];
+  // "Nuqta Car Care - West Bay, Nuqta Car Care - Al Wakra" says the business once: West Bay, Al Wakra.
+  const head = line.places[0]?.split(" - ")[0] ?? "";
+  const short = line.places.length > 1 && line.places.every((p) => p.startsWith(`${head} - `)) ? line.places.map((p) => p.slice(head.length + 3)) : line.places;
+  const places = short.length > 4 ? t.placesMore(short.slice(0, 4), short.length - 4) : short.join(lang === "ar" ? "، " : ", ");
+  return (
+    <li data-kind={line.kind}>
+      <span className={`d2s-cmark d2s-cmark-${line.kind}`} aria-hidden="true">{line.kind === "ok" ? <Ic name="check" size="xs" /> : null}</span>
+      <div className="d2s-row-main">
+        <p className="d2s-s"><Say lang={lang}>{line.label}</Say>{places ? <> <span className="d2-muted">· <Say lang={lang}>{places}</Say></span></> : null}</p>
+      </div>
+      <span className="d2s-side"><StatePill tone={line.kind === "ok" ? "ok" : "nm"}>{t.state[line.kind]}</StatePill></span>
     </li>
   );
 }

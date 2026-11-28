@@ -1,13 +1,13 @@
 // ALYR's voice on the page: a Carbon bar at the foot with the next check (when the API says it),
 // how many asks wait (a link to the first), the latest receipt, and "Search or jump to · Ctrl K",
-// which opens a menu of screens and actions. It answers nothing: there is no chat box. The toast
-// lane sits just above it, so a toast never covers the page.
+// which opens a menu of screens and actions. It answers nothing: there is no chat box. A toast
+// takes the bar's middle while it shows, so it never covers the page.
 
 import type { ReactNode } from "react";
 import { Mark } from "../shellParts";
 import { T, type D2Lang } from "./copy";
 import { Ic } from "./icons";
-import { Kbd, Ltr, dayTime } from "./parts";
+import { Kbd, Ltr, Say, dayTime } from "./parts";
 
 export function AgentBar({ lang, asks, latest, nextCheckAt, onSearch, onAsks, toast }: {
   lang: D2Lang;
@@ -21,7 +21,6 @@ export function AgentBar({ lang, asks, latest, nextCheckAt, onSearch, onAsks, to
   const t = T[lang];
   return (
     <div className="d2-foot">
-      <div className="d2-toast-lane">{toast}</div>
       <div className="d2-agentbar d2-on-carbon" role="region" aria-label={t.agent}>
         <span className="d2-mark"><Mark /><b>{t.agent}</b></span>
         {nextCheckAt ? (
@@ -31,12 +30,17 @@ export function AgentBar({ lang, asks, latest, nextCheckAt, onSearch, onAsks, to
           </>
         ) : null}
         <button className="d2-seg" type="button" onClick={onAsks}>
-          <span className="d2-count">{asks.toLocaleString("en")}</span> <span>{t.asksWaiting}</span>
+          <bdi className="d2-count">{asks.toLocaleString("en")}</bdi> <span>{t.asksWaiting}</span>
         </button>
-        {latest ? (
+        {toast ? (
           <>
             <span className="d2-div" aria-hidden="true" />
-            <span className="d2-seg d2-latest"><Ic name="check" size="sm" /><span>{latest}</span></span>
+            <div className="d2-bar-toast">{toast}</div>
+          </>
+        ) : latest ? (
+          <>
+            <span className="d2-div" aria-hidden="true" />
+            <span className="d2-seg d2-latest"><Ic name="check" size="sm" /><span><Say lang={lang}>{latest}</Say></span></span>
           </>
         ) : <span className="d2-latest" />}
         <button className="d2-search" type="button" onClick={onSearch} aria-haspopup="dialog" aria-keyshortcuts="Control+K">

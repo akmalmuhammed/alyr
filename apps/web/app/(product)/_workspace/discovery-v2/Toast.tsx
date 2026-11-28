@@ -4,7 +4,7 @@
 
 import { T, type D2Lang } from "./copy";
 import { Ic } from "./icons";
-import { Kbd } from "./parts";
+import { Kbd, Say } from "./parts";
 
 export type ToastData = { id: number; title: string; body: string; undo: boolean };
 
@@ -13,7 +13,7 @@ export function Toast({ toast, lang, onUndo, onDismiss }: { toast: ToastData; la
   return (
     <div className="d2-toast" role="status" key={toast.id}>
       <span className="d2-tk"><Ic name="check" size="sm" /></span>
-      <div className="d2-tx"><b>{toast.title}</b><small>{toast.body}</small></div>
+      <div className="d2-tx"><b><Say lang={lang}>{toast.title}</Say></b><small><Say lang={lang}>{toast.body}</Say></small></div>
       {toast.undo ? (
         <button className="d2-tbtn" type="button" onClick={onUndo} aria-keyshortcuts="Control+Z"><Ic name="undo" size="sm" flip />{t.undo}<Kbd onCarbon>{t.toastUndoKey}</Kbd></button>
       ) : null}

@@ -200,11 +200,17 @@ def test_a_proposal_waits_for_its_fact_and_appears_when_it_is_confirmed(shop):
 
 def test_nothing_is_proposed_from_what_google_or_the_website_show(shop):
     """The "after" is always the confirmed fact: the website's hours at the Industrial Area differ
-    from the listing's, and the proposal sets the website to the confirmed ones, not the reverse."""
-    p = find(shop.owner, "hours_conflict", "Industrial Area")
-    assert p["target"] == "website" and p["after"]["text"].endswith("Fri 13:00 to 22:00")
+    from the listing's, and the website step sets them to the confirmed ones, not the reverse.
+    P2: ALYR writes nothing to a website (fix #4), so that side is the owner's step."""
+    def step():
+        found = [f for f in findings(shop.owner) if f["rule_id"] == "hours_conflict"
+                 and f["location"]["name"].endswith("Industrial Area")]
+        return found[0]["website_steps"][0]
+
+    assert step()["after"]["text"].endswith("Fri 13:00 to 22:00")
     put(shop.owner, "Industrial Area", "hours", WEEK | {"sat": ["08:00", "20:00"]})
-    both = [x for x in proposals(shop.owner, "live") if x["rule_id"] == "hours_conflict"]
-    assert sorted(x["target"] for x in both) == ["listing", "website"]
-    assert all(x["after"]["text"].startswith("Sat 08:00 to 20:00; Sun to Thu 07:00") for x in both)
+    listing = [x for x in proposals(shop.owner, "live") if x["rule_id"] == "hours_conflict"]
+    assert [x["target"] for x in listing] == ["listing"]
+    texts = [listing[0]["after"]["text"], step()["after"]["text"]]
+    assert all(t.startswith("Sat 08:00 to 20:00; Sun to Thu 07:00") for t in texts)
     assert facts_module.KEYS == ("hours", "phone", "category", "name", "whatsapp")

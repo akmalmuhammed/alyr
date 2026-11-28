@@ -183,6 +183,8 @@
   --d2-pill: 26px;
   --d2-stamp: 40px;
   --d2-bar: 56px;
+  /* The workspace shell's top bar, above every Discovery page. */
+  --d2-shell-top: 52px;
   --d2-seg: 40px;
   --d2-tab: 36px;
   --d2-kbd: 20px;

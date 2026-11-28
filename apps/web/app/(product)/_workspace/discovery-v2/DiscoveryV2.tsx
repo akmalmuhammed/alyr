@@ -37,6 +37,11 @@ export function DiscoveryV2({ lang, page, go, canManage, onSearch }: {
   const [hasRun, setHasRun] = useState(true);
   const [first, setFirst] = useState<PageKey | null>(null);
 
+  // The tab's count and the bar on the other pages: read again after a decision there (Undo on Proof).
+  const recount = useCallback(async () => {
+    try { const plus = await discovery2.overview(lang); setWaiting(plus.asks ? plus.asks.open.length : plus.overview.proposals?.waiting ?? 0); } catch { /* the count stays */ }
+  }, [lang]);
+
   useEffect(() => {
     let live = true;
     (async () => {
@@ -63,6 +68,12 @@ export function DiscoveryV2({ lang, page, go, canManage, onSearch }: {
   }, [lang, canManage]);
 
   const shown: PageKey = page ?? first ?? "week";
+  // Each page change reads the count again: a check-up or a decision elsewhere may have changed it.
+  useEffect(() => {
+    if (shown === "week") return;
+    const id = setTimeout(() => { void recount(); }, 0);
+    return () => clearTimeout(id);
+  }, [shown, recount]);
   const tabs = shown === "setup" && !hasRun ? null : <Tabs lang={lang} current={shown === "setup" ? null : shown} waiting={waiting} hrefOf={pageHref} onGo={go} />;
   const foot = useCallback((toast: ReactNode) => (
     <AgentBar lang={lang} asks={waiting} latest="" nextCheckAt={nextCheckAt} onSearch={onSearch ?? (() => {})} onAsks={() => go("week")} toast={toast} />
@@ -79,10 +90,10 @@ export function DiscoveryV2({ lang, page, go, canManage, onSearch }: {
     case "answers":
       return <LiveAnswers lang={lang} tabs={tabs} foot={foot} />;
     case "proof":
-      return <LiveProof lang={lang} tabs={tabs} foot={foot} />;
+      return <LiveProof lang={lang} tabs={tabs} foot={foot} onChanged={() => void recount()} />;
     case "setup":
       return <LiveSetup lang={lang} canManage={canManage} tabs={tabs} onDone={() => go("checks")} />;
     default:
-      return <LiveThisWeek lang={lang} onSearch={onSearch} tabs={tabs} checksHref={pageHref("checks")} proofHref={pageHref("proof")} />;
+      return <LiveThisWeek lang={lang} onSearch={onSearch} tabs={tabs} checksHref={pageHref("checks")} proofHref={pageHref("proof")} setupHref={canManage ? pageHref("setup") : undefined} onCount={setWaiting} />;
   }
 }

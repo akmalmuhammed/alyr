@@ -376,6 +376,36 @@ VALUES: dict[str, tuple[str, str]] = {
     "~removed": ("Removed after 30 days (Google's terms)", "حُذف بعد 30 يومًا (وفق شروط Google)"),
 }
 
+# A piece of evidence that found nothing is said as a whole sentence, never as a label followed by
+# "None" (QA, Discovery 2.0): (label, marker) -> (English, Arabic).
+MISSING: dict[tuple[str, str], tuple[str, str]] = {
+    ("website_whatsapp", "~none"): (
+        "Your website has no WhatsApp link.", "لا يوجد رابط واتساب في موقعك."),
+    ("listing_whatsapp", "~none"): (
+        "The listing has no WhatsApp link.", "لا يوجد رابط واتساب على الصفحة."),
+    ("listing_hours", "~none"): (
+        "The listing shows no opening hours.", "لا تعرض الصفحة ساعات العمل."),
+    ("website_hours", "~none"): (
+        "Your website shows no opening hours.", "لا يعرض موقعك ساعات العمل."),
+    ("listing_phone", "~none"): (
+        "The listing shows no phone number.", "لا تعرض الصفحة رقم هاتف."),
+    ("website_phone", "~none"): (
+        "Your website shows no phone number.", "لا يعرض موقعك رقم هاتف."),
+    ("categories", "~none"): (
+        "The listing has no main category.", "لا تصنيف رئيسياً على الصفحة."),
+    ("listing_status", "~not_found"): (
+        "No listing was found for this place.", "لم يُعثر على صفحة لهذا الفرع."),
+    ("claimed", "~no"): (
+        "The listing is not claimed by the business.", "الصفحة غير موثّقة باسم المنشأة."),
+    ("website_location", "~not_listed"): (
+        "Your website does not list this place.", "لا يذكر موقعك هذا الفرع."),
+    ("website_location", "~no_page"): (
+        "Your website lists this place, with no page of its own.",
+        "يذكر موقعك هذا الفرع، بلا صفحة خاصة به."),
+}
+# Any other label with nothing found: a sentence of its own, never "label None".
+MISSING_ANY = ("Nothing was found for: {label}.", "لم يُعثر على شيء لـ: {label}.")
+
 # code -> (English, Arabic). `status` is the route's choice (errors.py).
 ERRORS: dict[str, tuple[str, str]] = {
     "module_off": (
@@ -395,7 +425,11 @@ ERRORS: dict[str, tuple[str, str]] = {
         "A check-up was started a moment ago. Try again later.",
         "بدأ فحص قبل لحظات. حاول مرة أخرى لاحقاً.",
     ),
-    "no_connection": ("Turn on Discovery first.", "فعّل الاكتشاف أولاً."),
+    # Discovery is on but no source is connected (QA): say so, with the one next step.
+    "no_connection": (
+        "No source is connected yet. Connect one in Setup, then check again.",
+        "لا مصدر مربوطاً بعد. اربط مصدراً من الإعداد، ثم افحص مجدداً.",
+    ),
     "no_locations": ("Add at least one place first.", "أضف فرعاً واحداً على الأقل أولاً."),
     "too_many_locations": ("A business can have at most 50 places.", "الحد الأقصى لعدد الفروع 50."),
     "name_required": ("Every place needs a name.", "لكل فرع اسم لا بد منه."),
@@ -580,9 +614,17 @@ def evidence_view(item: dict, lang: str) -> dict:
     elif item.get("source") == "manual":
         # Whose look it was and which day: "Google listing (recorded by ALYR on 20 Nov 2026)".
         where = f"{where} ({pick(MANUAL_NOTE, lang).format(day=date_text(item['seen_at'], lang))})"
+    label = pick(LABELS.get(item["label"], (item["label"], item["label"])), lang)
+    sentence = ""
+    if (item["label"], item["value"]) in MISSING:
+        sentence = pick(MISSING[(item["label"], item["value"])], lang)
+    elif item["value"] in ("~none", "~not_found"):
+        sentence = pick(MISSING_ANY, lang).format(label=label)
     return {
-        "label": pick(LABELS.get(item["label"], (item["label"], item["label"])), lang),
+        "label": label,
         "value": value_text(item["value"], lang),
+        # A whole sentence when the evidence found nothing; "" otherwise.
+        "sentence": sentence,
         "where": where,
         "seen_at": item["seen_at"],
         # A recorded observation is a day, not a moment (its `seen_at` is noon of that day): the
