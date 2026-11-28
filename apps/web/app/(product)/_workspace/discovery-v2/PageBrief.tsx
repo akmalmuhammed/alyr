@@ -7,7 +7,7 @@ import { T, type D2Lang } from "./copy";
 import type { PreviousTally, ViewState } from "./adapter";
 import type { Tally } from "./logic";
 import { Ic } from "./icons";
-import { day, time } from "./parts";
+import { Say, day, time } from "./parts";
 
 export type PageBriefProps = {
   lang: D2Lang;
@@ -40,13 +40,13 @@ export function PageBrief(props: PageBriefProps) {
   const delta = tally && previous && previous.matched !== tally.matched ? (previous.matched < tally.matched ? t.upFrom(previous.matched, day(previous.at, lang)) : t.downFrom(previous.matched, day(previous.at, lang))) : null;
   return (
     <section className="d2-brief">
-      <h1 className="d2-display">{title}</h1>
-      <p className="d2-sub">{sub}</p>
+      <h1 className="d2-display"><Say lang={lang}>{title}</Say></h1>
+      <p className="d2-sub"><Say lang={lang}>{sub}</Say></p>
       {match && tally ? (
         <p className="d2-figline">
-          <span>{match.pre}<span className="d2-big"><CountUp from={previous?.matched ?? tally.matched} to={tally.matched} />{match.of}</span>{match.post}</span>
-          {delta ? <span className={`d2-delta${previous && previous.matched > tally.matched ? " d2-delta-down" : ""}`}><Ic name="up" size="xs" className={previous && previous.matched > tally.matched ? "d2-down" : undefined} />{delta}</span> : null}
-          {tally.notMeasured > 0 ? <span className="d2-meta">{t.notMeasured(tally.notMeasured)}</span> : null}
+          <span>{match.pre}<span className="d2-big"><CountUp from={previous?.matched ?? tally.matched} to={tally.matched} /><Say lang={lang}>{match.of}</Say></span>{match.post}</span>
+          {delta ? <span className={`d2-delta${previous && previous.matched > tally.matched ? " d2-delta-down" : ""}`}><Ic name="up" size="xs" className={previous && previous.matched > tally.matched ? "d2-down" : undefined} /><Say lang={lang}>{delta}</Say></span> : null}
+          {tally.notMeasured > 0 ? <span className="d2-meta"><Say lang={lang}>{t.notMeasured(tally.notMeasured)}</Say></span> : null}
         </p>
       ) : null}
     </section>
@@ -68,5 +68,5 @@ function CountUp({ from, to }: { from: number; to: number }) {
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
   }, [from, to]);
-  return <span className="d2-count-up">{shown.toLocaleString("en")}</span>;
+  return <bdi className="d2-count-up">{shown.toLocaleString("en")}</bdi>;
 }

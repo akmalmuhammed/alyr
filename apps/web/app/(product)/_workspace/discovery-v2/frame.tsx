@@ -11,7 +11,7 @@ import { Mark } from "../shellParts";
 import { T2 } from "./copy2";
 import type { D2Lang } from "./copy";
 import { Ic } from "./icons";
-import { Ltr, day, dayTime } from "./parts";
+import { Ltr, Say, day, dayTime } from "./parts";
 import { bidiValue } from "./screens";
 import "./tokens.css";
 import "./discovery-v2.css";
@@ -50,7 +50,7 @@ export function Tabs({ lang, current, waiting, hrefOf, onGo }: {
       {TAB_KEYS.map((tab) => (
         <a key={tab} href={hrefOf(tab)} aria-current={current === tab ? "page" : undefined} onClick={click(tab)}>
           {t.tabs[tab]}
-          {tab === "week" && waiting > 0 ? <span className="d2s-n" data-tip={t.waitingTip(waiting)}>{waiting.toLocaleString("en")}</span> : null}
+          {tab === "week" && waiting > 0 ? <bdi className="d2s-n" data-tip={t.waitingTip(waiting)}>{waiting.toLocaleString("en")}</bdi> : null}
         </a>
       ))}
     </nav>
@@ -67,7 +67,7 @@ export function Val({ text }: { text: string }) {
 /** A segmented control of filters, each with its count; `aria-pressed` on the one shown. */
 export function Filters<K extends string>({ label, items, value, onChange }: {
   label: string;
-  items: readonly { key: K; label: string; count: number }[];
+  items: readonly { key: K; label: string; count: number | null }[];
   value: K;
   onChange: (key: K) => void;
 }) {
@@ -75,7 +75,7 @@ export function Filters<K extends string>({ label, items, value, onChange }: {
     <div className="d2s-filters" role="group" aria-label={label}>
       {items.map((item) => (
         <button key={item.key} type="button" aria-pressed={value === item.key} onClick={() => onChange(item.key)}>
-          {item.label} <span className="d2s-n">{item.count.toLocaleString("en")}</span>
+          {item.label}{item.count !== null ? <> <bdi className="d2s-n">{item.count.toLocaleString("en")}</bdi></> : null}
         </button>
       ))}
     </div>
@@ -106,11 +106,11 @@ export function EvidenceChip({ ev, lang, open = false }: { ev: Evidence; lang: D
     <span className={`d2s-hc-wrap${open ? " d2s-hc-open" : ""}`}>
       <button className="d2s-ev" type="button" aria-describedby={id}>
         <SourceTile where={ev.where} />
-        <span className="d2s-ev-k">{ev.label}</span> <b><Val text={ev.value} /></b>
+        {ev.sentence ? <span className="d2s-ev-k"><Say lang={lang}>{ev.sentence}</Say></span> : <><span className="d2s-ev-k"><Say lang={lang}>{ev.label}</Say></span> <b><Val text={ev.value} /></b></>}
       </button>
       <span className="d2s-hc" role="tooltip" id={id}>
         <span className="d2s-hc-k"><SourceTile where={ev.where} />{ev.where}</span>
-        <span className="d2s-hc-v"><Val text={ev.value} /></span>
+        <span className="d2s-hc-v">{ev.sentence ? <Say lang={lang}>{ev.sentence}</Say> : <Val text={ev.value} />}</span>
         <span className="d2s-hc-d">{ev.label}</span>
         {when ? <span className="d2s-hc-s"><Ic name="clock" size="xs" />{when}</span> : null}
       </span>

@@ -55,7 +55,7 @@ def test_switched_on_it_starts_one_check_up_after_six_in_the_morning_and_never_t
     assert sweep_at(shop, midday().replace(hour=3, minute=5))["scheduled"] == 1  # 06:05
     assert [(r["trigger"], r["status"]) for r in runs(shop)] == [("schedule", "done")]
     # it ran (jobs run in the API's process here) and prepared changes
-    assert len(proposals(shop.owner, "live")) == 10
+    assert len(proposals(shop.owner, "live")) == 6  # P2: no website changes (fix #4)
     # the last finished one is under a week old: nothing starts
     assert sweep_at(shop, midday())["scheduled"] == 0 and len(runs(shop)) == 1
     owner_sql("update discovery_runs set finished_at = now() - interval '8 days' "

@@ -148,10 +148,11 @@ def _index(location: Location, ordinal: int) -> int:
     return ordinal
 
 
-# Everything the sample can change, and everything it can put back (spec 066).
+# Everything the sample can change, and everything it can put back (spec 066). Only the listing:
+# ALYR never writes to an owner's own website (DECISIONS #8), so the sample does not either. A
+# website difference is a step the owner takes (`proposals.website_steps`).
 WRITES = frozenset({
-    ("listing", "hours"), ("website", "hours"), ("listing", "phone"), ("website", "phone"),
-    ("listing", "category"), ("listing", "name"), ("website", "whatsapp_link"),
+    ("listing", "hours"), ("listing", "phone"), ("listing", "category"), ("listing", "name"),
     ("listing", "review_reply"),
 })
 # A fictional owner may take back what they approved for a week.

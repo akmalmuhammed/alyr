@@ -90,21 +90,36 @@ export function beforeAfter(p: Pick<Proposal, "field" | "before" | "after">, lan
 
 /** What the person is changing before approving: one day's hours, a phone number, or one of the
  * values the owner confirmed (by its place in `edit.options`). */
+/** One day of a week being changed: its hours, or null for closed. */
+export type DayHours = { open: string; close: string } | null;
 export type Draft =
   | { kind: "hours"; day: DayKey; open: string; close: string }
+  /** Hours that change on more than one day: the whole week, each day editable. */
+  | { kind: "week"; days: Record<DayKey, DayHours> }
   | { kind: "phone"; phone: string }
   | { kind: "choice"; index: number };
 
 const optionText = (o: Record<string, string>) => Object.values(o)[0] ?? "";
 
+const pad = (t: string) => (/^\d:/.test(t) ? `0${t}` : t);
+const WEEK: DayKey[] = ["sat", "sun", "mon", "tue", "wed", "thu", "fri"];
+
 /** Where "Change it" starts: the proposed value. Null when the API does not let this proposal be
- * changed, or (hours) when more than one day changes: the screen then does not draw Change it. */
+ * changed. Hours that change on one day edit that day; on several days, the whole week. */
 export function draftFor(p: Pick<Proposal, "edit" | "field" | "before" | "after">): Draft | null {
   const edit = p.edit;
   if (!edit) return null;
   if (edit.kind === "hours") {
     const day = oneDay(p);
-    if (!day) return null;
+    if (!day) {
+      if (p.after.lines.length !== 7) return null;
+      const days = {} as Record<DayKey, DayHours>;
+      for (const d of WEEK) {
+        const hit = TIME.exec(lineOf(p.after, d));
+        days[d] = hit ? { open: pad(hit[1]), close: pad(hit[2]) } : null;
+      }
+      return { kind: "week", days };
+    }
     const hit = TIME.exec(lineOf(p.after, day));
     return { kind: "hours", day, open: hit?.[1] ?? "", close: hit?.[2] ?? "" };
   }
@@ -113,11 +128,21 @@ export function draftFor(p: Pick<Proposal, "edit" | "field" | "before" | "after"
   return { kind: "choice", index: Math.max(0, at) };
 }
 
-const pad = (t: string) => (/^\d:/.test(t) ? `0${t}` : t);
-
 /** The changed value in the API's plain shape, or null when it is not complete or not valid
  * (hours: the whole week, every other day as proposed; the changed day opens before it closes). */
 export function afterFromDraft(p: Pick<Proposal, "edit" | "after">, draft: Draft): Record<string, unknown> | null {
+  if (draft.kind === "week") {
+    const week: Record<string, [string, string] | null> = {};
+    for (const d of WEEK) {
+      const v = draft.days[d];
+      if (v === undefined) return null;
+      if (v === null) { week[d] = null; continue; }
+      const open = pad(v.open), close = pad(v.close);
+      if (!open || !close || open >= close) return null;
+      week[d] = [open, close];
+    }
+    return week;
+  }
   if (draft.kind === "hours") {
     const open = pad(draft.open), close = pad(draft.close);
     if (!open || !close || open >= close) return null;
@@ -140,6 +165,7 @@ export function afterFromDraft(p: Pick<Proposal, "edit" | "after">, draft: Draft
 
 /** The changed value in words, for the Approve button ("Approve Friday 13:30–22:00"). */
 export function draftText(p: Pick<Proposal, "edit">, draft: Draft, lang: D2Lang): string {
+  if (draft.kind === "week") return T[lang].theseHours;
   if (draft.kind === "hours") {
     const span = `${draft.open}–${draft.close}`;
     return `${lang === "ar" ? dayAr(draft.day) : dayEn(draft.day)} ${lang === "ar" ? isolate(span) : span}`;

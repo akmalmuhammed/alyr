@@ -61,7 +61,8 @@ def score(client) -> int:
 
 
 def test_an_approved_change_is_applied_and_the_next_check_up_confirms_it(shop):
-    p = find(shop.owner, "whatsapp_link_missing", "Al Sadd")
+    # P2: the listing's name (the sample no longer writes the website's WhatsApp link, fix #4)
+    p = find(shop.owner, "name_conflict", "Al Wakra")
     before = score(shop.owner)
     approve(shop.owner, p)
     done = get(shop.owner, p["id"])
@@ -71,13 +72,13 @@ def test_an_approved_change_is_applied_and_the_next_check_up_confirms_it(shop):
         done["applied_at"]) == timedelta(days=7)
     [override] = state(shop)
     assert (override["field"], override["target"], override["proposal_id"]) == (
-        "whatsapp_link", "website", UUID(p["id"]))
-    assert json.loads(override["value"])["url"] == "https://wa.me/97455550150"
+        "name", "listing", UUID(p["id"]))
+    assert json.loads(override["value"])["name"] == "Nuqta Car Care - Wakra"
     # Applied, not fixed: the finding waits for a check-up to measure it
-    assert finding_status(shop.owner, "whatsapp_link_missing", "Al Sadd") == "owner_done"
+    assert finding_status(shop.owner, "name_conflict") == "owner_done"
 
-    run_check_up(shop.owner)  # the sample is at stage 1: the script alone would not fix this link
-    assert finding_status(shop.owner, "whatsapp_link_missing", "Al Sadd") == "verified"
+    run_check_up(shop.owner)  # the sample is at stage 1: the script alone would not fix the name
+    assert finding_status(shop.owner, "name_conflict") == "verified"
     confirmed = get(shop.owner, p["id"])
     assert confirmed["verification"] == "confirmed" and confirmed["status"] == "applied"
     assert [h["event"] for h in confirmed["history"]] == [
@@ -93,7 +94,7 @@ def test_the_score_is_higher_than_a_shop_at_the_same_stage_with_no_approval(
         client_factory, monkeypatch):
     with_it = prepared_shop(client_factory, monkeypatch)
     without = prepared_shop(client_factory, monkeypatch)
-    approve(with_it.owner, find(with_it.owner, "whatsapp_link_missing", "Al Sadd"))
+    # P2: the website's WhatsApp link is no longer a proposal (fix #4): the name only
     approve(with_it.owner, find(with_it.owner, "name_conflict", "Al Wakra"))
     for client in (with_it.owner, without.owner):
         # The same first check-up. 77, not 74, since the first-party checks are scored (#366): the
@@ -102,9 +103,9 @@ def test_the_score_is_higher_than_a_shop_at_the_same_stage_with_no_approval(
         run_check_up(client)
     # Both at stage 1; the script fixes the same things in each; the approvals add two more.
     # (86, 88), not (84, 86): the first-party checks that pass are scored too.
-    assert (score(without.owner), score(with_it.owner)) == (86, 88)
-    assert finding_status(without.owner, "whatsapp_link_missing", "Al Sadd") == "open"
-    assert finding_status(with_it.owner, "whatsapp_link_missing", "Al Sadd") == "verified"
+    # (86, 87): one approval, not two: the website's WhatsApp link is no proposal (P2, fix #4)
+    assert (score(without.owner), score(with_it.owner)) == (86, 87)
+    assert finding_status(without.owner, "name_conflict") == "open"
     assert finding_status(with_it.owner, "name_conflict") == "verified"
 
 
@@ -140,7 +141,7 @@ def test_a_review_reply_is_written_to_the_review_and_taken_back_with_it(shop):
 
 
 def test_undo_puts_the_old_value_back_and_the_next_check_up_finds_the_problem_again(shop):
-    p = find(shop.owner, "whatsapp_link_missing", "Al Sadd")
+    p = find(shop.owner, "name_conflict", "Al Wakra")  # P2: a listing change (fix #4)
     approve(shop.owner, p)
     answer = shop.owner.post(f"{BASE}/proposals/{p['id']}/undo")
     assert answer.status_code == 200
@@ -148,18 +149,18 @@ def test_undo_puts_the_old_value_back_and_the_next_check_up_finds_the_problem_ag
     assert (body["status"], body["already"], body["undone"]["by"]) == ("undone", False, "Owner")
     assert body["undone"]["channel"] == "portal" and body["can"]["undo"] is False
     assert state(shop) == []
-    assert finding_status(shop.owner, "whatsapp_link_missing", "Al Sadd") == "open"
+    assert finding_status(shop.owner, "name_conflict") == "open"
     again = shop.owner.post(f"{BASE}/proposals/{p['id']}/undo")
     assert again.status_code == 200 and again.json()["already"] is True
     assert len(activity(shop, "proposal.undo", p["id"])) == 1
     run_check_up(shop.owner)
-    assert finding_status(shop.owner, "whatsapp_link_missing", "Al Sadd") == "open"
+    assert finding_status(shop.owner, "name_conflict") == "open"
     # not asked again at once: the undone change is in its 14-day cool-off
     assert [x for x in proposals(shop.owner, "live") if x["change_hash"] == p["change_hash"]] == []
 
 
 def test_undo_is_refused_past_the_window_and_when_it_changed_again(shop):
-    p = find(shop.owner, "whatsapp_link_missing", "Al Sadd")
+    p = find(shop.owner, "category_missing", "Al Wakra")  # P2: a listing change (fix #4)
     q = find(shop.owner, "name_conflict", "Al Wakra")
     approve(shop.owner, p)
     approve(shop.owner, q)
@@ -228,10 +229,10 @@ def test_a_failed_change_may_be_tried_three_times_in_all(shop):
 
 
 def test_a_change_that_is_already_true_is_recorded_and_written_by_nothing(shop):
-    p = find(shop.owner, "whatsapp_link_missing", "Al Sadd")
+    p = find(shop.owner, "name_conflict", "Al Wakra")  # P2: a listing change (fix #4)
     owner_sql("insert into discovery_sample_state (tenant_id, location_id, target, field, value) "
-              "values ($1, $2, 'website', 'whatsapp_link', $3)", shop.tenant_id,
-              UUID(place_id(shop.owner, "Al Sadd")), '{"url": "https://wa.me/97455550150"}')
+              "values ($1, $2, 'listing', 'name', $3)", shop.tenant_id,
+              UUID(place_id(shop.owner, "Al Wakra")), '{"name": "Nuqta Car Care - Wakra"}')
     approve(shop.owner, p)
     done = get(shop.owner, p["id"])
     assert done["status"] == "applied" and done["can"]["undo"] is False
@@ -342,14 +343,14 @@ def test_a_connection_that_was_switched_off_fails_the_change_as_connector_off(sh
 
 
 def test_a_check_up_that_does_not_confirm_an_applied_change_says_so_and_waits_14_days(shop):
-    p = find(shop.owner, "whatsapp_link_missing", "Al Sadd")
+    p = find(shop.owner, "name_conflict", "Al Wakra")  # P2: a listing change (fix #4)
     approve(shop.owner, p)
     owner_sql("delete from discovery_sample_state where tenant_id = $1", shop.tenant_id)
     run_check_up(shop.owner)
     again = get(shop.owner, p["id"])
     assert again["verification"] == "not_confirmed"
     assert again["history"][-1]["text"] == "Applied, but the next check-up still found it."
-    assert finding_status(shop.owner, "whatsapp_link_missing", "Al Sadd") == "open"
+    assert finding_status(shop.owner, "name_conflict") == "open"
     assert [x for x in proposals(shop.owner, "live") if x["change_hash"] == p["change_hash"]] == []
 
 

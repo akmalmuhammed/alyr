@@ -43,7 +43,7 @@ function proposal(over: Partial<Proposal> & Pick<Proposal, "id" | "field" | "fie
     decided: null, undone: null, applied_at: null, undo_until: null, failure: null, verification: null, sample: false,
     can: { approve: true, decline: true, undo: false }, already: false,
     queue: "open", opened_at: iso("2026-11-12T06:40:00Z"), approved_as: null, edited_from: null, life: null, life_history: [], receipt: null,
-    undo_window_days: 7, next_check_at: null, verified_at: null, edit: null, also_fixes: null, expire_reason: "",
+    undo_window_days: 7, next_check_at: null, verified_at: null, edit: null, also_fixes: null, expire_reason: "", closed_at: null,
     ...over,
   };
 }
@@ -52,7 +52,7 @@ function finding(over: Partial<Finding> & Pick<Finding, "id" | "title">): Findin
   return {
     rule_id: "whatsapp_link_missing", kind: "owner", severity: "medium", status: "open", why: "", what_happens: "", what_is_needed: "",
     evidence: [], location: { id: LOCATION_ID, name: PLACE.en }, first_seen_at: iso("2026-11-12T06:40:00Z"), last_seen_at: iso("2026-11-12T06:40:00Z"),
-    steps: [], proposals: [], needs_fact: null, can_propose: false, proposals_waiting: 0,
+    steps: [], proposals: [], needs_fact: null, can_propose: false, proposals_waiting: 0, website_steps: [],
     ...over,
   };
 }
@@ -82,8 +82,8 @@ export function fixture(lang: D2Lang, source: "google" | "sample" = "google"): F
     edit: { kind: "hours", step_minutes: 30 },
     also_fixes: { checks: 2, rules: ["hours_vs_activity"], from: 10, to: 12, of: 14 },
     evidence: [
-      { label: ar ? "الجمعة" : "Friday", value: ar ? "مغلق" : "Closed", where: ar ? "صفحة Google" : "Google page", seen_at: iso("2026-11-12T06:40:00Z"), day_only: false },
-      { label: ar ? "الجمعة" : "Friday", value: "13:00–22:00", where: ar ? "موقعك" : "Your website", seen_at: iso("2026-11-12T06:40:00Z"), day_only: false },
+      { label: ar ? "الجمعة" : "Friday", value: ar ? "مغلق" : "Closed", where: ar ? "صفحة Google" : "Google page", seen_at: iso("2026-11-12T06:40:00Z"), day_only: false, sentence: "" },
+      { label: ar ? "الجمعة" : "Friday", value: "13:00–22:00", where: ar ? "موقعك" : "Your website", seen_at: iso("2026-11-12T06:40:00Z"), day_only: false, sentence: "" },
     ],
   });
   const phone = proposal({

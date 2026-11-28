@@ -78,6 +78,23 @@ test("checks: several places name the place on each row", () => {
   assert.ok(v.groups[0].rows.every((r) => r.place === "West Bay" || r.place === "Lusail"));
 });
 
+test("checks: a match or a not measured is drawn once per check, with its places", async () => {
+  const { linesOf } = await import("./screens.ts");
+  const c = checksFixture("en");
+  const two = { ...c, business: null, places: [{ id: "a", name: "West Bay", ...c.business }, { id: "b", name: "Lusail", ...c.business }] };
+  const v = checks({ checks: two });
+  const lines = linesOf(v.groups[0].rows);
+  const ok = lines.filter((l) => l.kind === "ok");
+  assert.ok(ok.every((l) => l.places.length === 2));
+  assert.equal(lines.filter((l) => l.kind === "differ").length, v.groups[0].rows.filter((r) => r.kind === "differ").length);
+});
+
+test("checks: the headline counts what the overview counts", () => {
+  const block = { run_id: "r", family: null, trade: null, matched: 42, measured: 55, not_measured: 22, total: 77, previous: null };
+  const v = checks({ block });
+  assert.deepEqual([v.tally.matched, v.tally.measured, v.tally.notMeasured], [42, 55, 22]);
+});
+
 test("familyRules: a trade's overlay adds its rules", () => {
   const packs = packsFixture("en").map((p) => (p.id === "health" ? { ...p, rules: ["x_rule"] } : p));
   assert.ok(familyRules(packs, "appointments", "clinic").has("x_rule"));
@@ -115,7 +132,7 @@ test("proof: receipts newest first, counted by kind", () => {
   const f = proofFixture("en");
   const v = buildProof(f.proposals, f.done);
   assert.equal(v.receipts.length, 6);
-  assert.deepEqual(v.counts, { all: 6, approved: 2, you: 2, undone: 1, expired: 1, declined: 0 });
+  assert.deepEqual(v.counts, { all: 6, approved: 2, you: 2, fixed: 0, changed: 0, undone: 1, expired: 1, declined: 0 });
   assert.equal(v.matches, 4);
   assert.deepEqual(v.deciders, ["Hana", "Omar"]);
   assert.equal(v.byYou, true);
@@ -132,6 +149,43 @@ test("proof: an ask still waiting is not a receipt; statuses follow the life of 
   assert.equal(receiptOf({ ...p, verification: "not_confirmed" }).status, "notMatching");
   assert.equal(receiptOf({ ...p, status: "failed" }).status, "failed");
   assert.equal(receiptOf({ ...p, status: "declined" }).kind, "declined");
+});
+
+test("proof: an expired receipt is dated when it closed, never a future expiry date", () => {
+  const f = proofFixture("en");
+  const v = buildProof(f.proposals, f.done);
+  const expired = v.receipts.find((r) => r.kind === "expired");
+  assert.equal(Date.parse(expired.when), Date.parse("2026-10-29T06:10:00Z"));
+});
+
+test("proof: only an ask that ran out of time is Expired; the others say what happened", () => {
+  const f = proofFixture("en");
+  const base = f.proposals.find((p) => p.status === "expired");
+  const future = "2027-01-01T00:00:00Z";
+  const as = (reason, extra = {}) => ({ ...base, id: `p-${reason}`, expire_reason: reason, expires_at: future, closed_at: "2026-11-01T00:00:00Z", ...extra });
+  // fixed by the next check
+  assert.equal(receiptOf(as("finding_gone")).kind, "fixed");
+  assert.equal(receiptOf(as("finding_gone")).status, "fixed");
+  // replaced by a newer check, or done by the owner (that finding has its own receipt): not drawn
+  assert.equal(receiptOf(as("superseded")), null);
+  assert.equal(receiptOf(as("finding_done")), null);
+  // set aside by a person
+  assert.equal(receiptOf(as("finding_skipped")).kind, "declined");
+  // "Change it": the approval of the changed value carries the receipt
+  const edited = as("edited");
+  const next = { ...f.proposals[0], id: "p-next", edited_from: edited.id, approved_as: "edited" };
+  const v = buildProof([edited, next], []);
+  assert.deepEqual(v.receipts.map((r) => r.id), ["p-next"]);
+  // without the new one in the list, it says it was changed
+  assert.equal(buildProof([edited], []).receipts[0].kind, "changed");
+  // no receipt is ever dated in the future of when it closed
+  for (const r of [as("finding_gone"), as("finding_skipped"), as("time")].map(receiptOf)) assert.equal(r.when, "2026-11-01T00:00:00Z");
+});
+
+test("proof: a receipt with no close date falls back to when it was asked, not to its expiry", () => {
+  const base = proofFixture("en").proposals.find((p) => p.status === "expired");
+  const r = receiptOf({ ...base, closed_at: null, expires_at: "2027-01-01T00:00:00Z" });
+  assert.equal(r.when, base.proposed_at);
 });
 
 // ── Answers ────────────────────────────────────────────

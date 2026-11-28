@@ -262,7 +262,7 @@ def test_a_whole_phase_two_flow_with_no_receiver_makes_no_http_call_and_sends_no
     for name in ("send", "deliver", "gave_up"):
         monkeypatch.setattr(Outbound, name, refuse_async)
     shop = prepared_shop(client_factory, monkeypatch)
-    approve(shop.owner, find(shop.owner, "whatsapp_link_missing", "Al Sadd"))
+    approve(shop.owner, find(shop.owner, "hours_missing", "Al Sadd"))  # P2: listing (fix #4)
     approve(shop.owner, find(shop.owner, "name_conflict", "Al Wakra"))
     shop.owner.post("/api/discovery/proposals/"
                     f"{find(shop.owner, 'category_missing', 'Al Wakra')['id']}/decline")

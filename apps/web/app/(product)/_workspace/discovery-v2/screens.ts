@@ -80,7 +80,12 @@ export function buildChecks(input: {
   const fam = packs.find((p) => p.kind === "family" && p.id === block?.family) ?? null;
   const trade = fam?.trades.find((t) => t.key === block?.trade) ?? null;
   const base = { checkedAt: checks?.finished_at ?? null, family: fam?.id ?? null, familyTitle: fam?.title ?? null, tradeTitle: trade?.title ?? null };
-  const t = tally(checks);
+  // One count across the screens (This week's headline, the tab, Checks): the overview's own, the
+  // checks that apply to this business with "Not measured" left out; summed from the rows only when
+  // the API sends no block.
+  const t = block && block.run_id && block.measured > 0
+    ? { matched: block.matched, measured: block.measured, notMeasured: block.not_measured, total: block.total }
+    : tally(checks);
   if (!checks || !checks.measured || !t) {
     return { ...base, state: "notMeasured", tally: null, groups: [], counts: { all: 0, differ: 0, ok: 0, nm: 0 } };
   }
@@ -134,27 +139,59 @@ export function buildChecks(input: {
   return { ...base, state: "content", tally: t, groups, counts };
 }
 
+/** What a group draws: each difference on its own (its sentence and evidence), and the checks that
+ * match or were not measured once per check, with the places they hold for (56 rows become 16). */
+export type CheckLine =
+  | { kind: "differ"; row: CheckRowView }
+  | { kind: "ok" | "nm"; key: string; ruleId: string; label: string; places: string[] };
+
+export function linesOf(rows: readonly CheckRowView[]): CheckLine[] {
+  const out: CheckLine[] = [];
+  for (const row of rows) {
+    if (row.kind === "differ") { out.push({ kind: "differ", row }); continue; }
+    const key = `${row.kind}:${row.ruleId}`;
+    const same = out.find((l): l is Extract<CheckLine, { kind: "ok" | "nm" }> => l.kind !== "differ" && l.key === key);
+    if (same) { if (row.place) same.places.push(row.place); continue; }
+    out.push({ kind: row.kind, key, ruleId: row.ruleId, label: row.label, places: row.place ? [row.place] : [] });
+  }
+  return out;
+}
+
 /** Rows a filter shows; a group with none is not drawn. */
 export const filterRows = (rows: readonly CheckRowView[], filter: CheckFilter): CheckRowView[] =>
   filter === "all" ? [...rows] : rows.filter((r) => r.kind === filter);
 
 // ── Proof ──────────────────────────────────────────────
 
-export type ReceiptKind = "approved" | "you" | "undone" | "expired" | "declined";
+export type ReceiptKind = "approved" | "you" | "fixed" | "changed" | "undone" | "expired" | "declined";
 export type ReceiptFilter = "all" | ReceiptKind;
-export type ReceiptStatus = "matches" | "sent" | "notMatching" | "approved" | "failed" | "undone" | "expired" | "declined" | "youMatches" | "youPending";
+export type ReceiptStatus = "matches" | "sent" | "notMatching" | "approved" | "failed" | "undone" | "expired" | "declined" | "fixed" | "changed" | "youMatches" | "youPending";
 
-/** A receipt of a proposal (approved, undone, expired or not now). */
+/** A receipt of a proposal (approved, undone, expired, fixed, changed or not now). */
 export type ChangeReceipt = { kind: Exclude<ReceiptKind, "you">; id: string; p: Proposal; status: ReceiptStatus; when: string | null };
 export type Receipt = ChangeReceipt | { kind: "you"; id: string; f: Finding; status: ReceiptStatus; when: string | null };
 
-/** Where a proposal is on the receipts: approved (with its life), undone, expired or not now. */
+/** Where a proposal is on the receipts. An ask that closed without a decision is dated when it
+ * closed (`closed_at`), never by its expiry date, and says why it closed: only one whose 14 days ran
+ * out is "Expired"; one the next check found fixed is "fixed"; one a person set aside reads as not
+ * now; one approved with a changed value is "changed" (its new approval carries the receipt, see
+ * `buildProof`). One a newer check replaced, or the owner marked done (that finding has its own
+ * receipt), is not drawn. */
 export function receiptOf(p: Proposal): Receipt | null {
   const stage = stageOf(p);
   if (stage === "waiting") return null;
-  const when = p.undone?.at ?? p.applied_at ?? p.decided?.at ?? (stage === "expired" ? p.expires_at : null) ?? p.proposed_at;
+  if (stage === "expired") {
+    const when = p.closed_at ?? p.proposed_at;
+    switch (p.expire_reason) {
+      case "superseded": case "finding_done": return null;
+      case "finding_gone": return { kind: "fixed", id: p.id, p, status: "fixed", when };
+      case "finding_skipped": return { kind: "declined", id: p.id, p, status: "declined", when };
+      case "edited": return { kind: "changed", id: p.id, p, status: "changed", when };
+      default: return { kind: "expired", id: p.id, p, status: "expired", when };
+    }
+  }
+  const when = p.undone?.at ?? p.applied_at ?? p.decided?.at ?? p.proposed_at;
   if (stage === "undone") return { kind: "undone", id: p.id, p, status: "undone", when };
-  if (stage === "expired") return { kind: "expired", id: p.id, p, status: "expired", when };
   if (stage === "declined") return { kind: "declined", id: p.id, p, status: "declined", when };
   const status: ReceiptStatus = stage === "live" ? "matches" : stage === "notLive" ? "notMatching" : stage === "sent" ? "sent" : stage === "failed" ? "failed" : "approved";
   return { kind: "approved", id: p.id, p, status, when };
@@ -175,12 +212,15 @@ export type ProofView = {
 const ms = (iso: string | null) => (iso ? Date.parse(iso) || 0 : 0);
 
 export function buildProof(proposals: readonly Proposal[], doneFindings: readonly Finding[]): ProofView {
-  const fromProposals = proposals.map(receiptOf).filter((r): r is Receipt => r !== null);
+  // "Change it" closes the ask shown and approves a new one with the changed value: one receipt.
+  const replaced = new Set(proposals.map((p) => p.edited_from).filter((id): id is string => !!id));
+  const fromProposals = proposals.filter((p) => !replaced.has(p.id)).map(receiptOf).filter((r): r is Receipt => r !== null);
   const yours: Receipt[] = doneFindings
-    .filter((f) => f.kind === "owner" && (f.status === "owner_done" || f.status === "verified"))
+    // Done by the owner: marked done (a website step is one), or an owner's task the check then saw.
+    .filter((f) => f.status === "owner_done" || (f.status === "verified" && f.kind === "owner"))
     .map((f) => ({ kind: "you", id: f.id, f, status: f.status === "verified" ? "youMatches" : "youPending", when: f.last_seen_at }));
   const receipts = [...fromProposals, ...yours].sort((a, b) => ms(b.when) - ms(a.when));
-  const counts: Record<ReceiptFilter, number> = { all: receipts.length, approved: 0, you: 0, undone: 0, expired: 0, declined: 0 };
+  const counts: Record<ReceiptFilter, number> = { all: receipts.length, approved: 0, you: 0, fixed: 0, changed: 0, undone: 0, expired: 0, declined: 0 };
   for (const r of receipts) counts[r.kind] += 1;
   const deciders: string[] = [];
   for (const r of [...receipts].reverse()) {
@@ -190,7 +230,7 @@ export function buildProof(proposals: readonly Proposal[], doneFindings: readonl
   const oldest = receipts.length ? receipts[receipts.length - 1].when : null;
   return {
     receipts, counts, since: oldest,
-    matches: receipts.filter((r) => r.status === "matches" || r.status === "youMatches").length,
+    matches: receipts.filter((r) => r.status === "matches" || r.status === "youMatches" || r.status === "fixed").length,
     deciders, byYou: counts.you > 0,
   };
 }
@@ -302,7 +342,8 @@ export function checksFor(packs: readonly Pack[], family: string, trade: string 
 export const families = (packs: readonly Pack[]): Pack[] => packs.filter((p) => p.kind === "family");
 
 /** One tile of "What ALYR already has": where it came from is said beside it. */
-export type KnownFact = { key: string; label: string; value: string; sub?: string; subLang?: "en" | "ar"; prov: "you" | "alyr" | "source"; ltr?: boolean };
+/** `prov`: "you" only for what a person confirmed; "sample" for what only the fictional sample wrote. */
+export type KnownFact = { key: string; label: string; value: string; sub?: string; subLang?: "en" | "ar"; prov: "you" | "sample" | "alyr" | "source"; ltr?: boolean };
 
 const DAY_SHORT: Record<D2Lang, Record<DayKey, string>> = {
   en: { sat: "Sat", sun: "Sun", mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri" },
@@ -339,23 +380,24 @@ export function knownFacts(input: { place: Place | null; facts: readonly Fact[];
   const t = T2[input.lang];
   const out: KnownFact[] = [];
   const confirmed = (key: string) => input.facts.find((f) => f.key === key && !f.default);
+  const who = (key: string): KnownFact["prov"] => (confirmed(key)?.source === "sample" ? "sample" : "you");
   const { place } = input;
   if (place && (place.name || place.name_ar)) {
     const main = input.lang === "ar" ? place.name_ar || place.name : place.name || place.name_ar;
     const other = input.lang === "ar" ? (place.name_ar ? place.name : "") : (place.name ? place.name_ar : "");
-    out.push({ key: "name", label: t.fName, value: main, sub: other && other !== main ? other : undefined, subLang: input.lang === "ar" ? "en" : "ar", prov: confirmed("name") ? "you" : "alyr" });
+    out.push({ key: "name", label: t.fName, value: main, sub: other && other !== main ? other : undefined, subLang: input.lang === "ar" ? "en" : "ar", prov: confirmed("name") ? who("name") : "alyr" });
   }
   const wa = factText(confirmed("whatsapp")) || place?.whatsapp_e164 || "";
-  if (wa) out.push({ key: "whatsapp", label: t.fWhatsapp, value: wa, prov: confirmed("whatsapp") ? "you" : "alyr", ltr: true });
+  if (wa) out.push({ key: "whatsapp", label: t.fWhatsapp, value: wa, prov: confirmed("whatsapp") ? who("whatsapp") : "alyr", ltr: true });
   const phone = factText(confirmed("phone"));
-  if (phone) out.push({ key: "phone", label: t.fPhone, value: phone, prov: "you", ltr: true });
+  if (phone) out.push({ key: "phone", label: t.fPhone, value: phone, prov: who("phone"), ltr: true });
   const hours = confirmed("hours");
   if (hours) {
     const lines = hoursLines(hours.value, input.lang);
-    out.push({ key: "hours", label: t.fHours, value: lines[0], sub: lines.slice(1).join(" · ") || undefined, subLang: input.lang, prov: "you", ltr: true });
+    out.push({ key: "hours", label: t.fHours, value: lines[0], sub: lines.slice(1).join(" · ") || undefined, subLang: input.lang, prov: who("hours"), ltr: true });
   }
   const category = factText(confirmed("category"));
-  if (category) out.push({ key: "category", label: t.fCategory, value: category, prov: "you" });
+  if (category) out.push({ key: "category", label: t.fCategory, value: category, prov: who("category") });
   const source = t.sourceKinds[input.sourceKind.startsWith("google") ? "google" : input.sourceKind];
   if (source) out.push({ key: "source", label: t.fSource, value: source, prov: "source" });
   return out;

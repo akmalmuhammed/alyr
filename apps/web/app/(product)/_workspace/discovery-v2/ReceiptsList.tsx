@@ -8,7 +8,7 @@ import { personFor } from "./adapter";
 import { T, type D2Lang } from "./copy";
 import { allMatch, joinNames, stageOf, type Tally } from "./logic";
 import { Ic, TickDraw } from "./icons";
-import { Av, Ltr, day, dayTime } from "./parts";
+import { Av, Ltr, Say, day, dayTime } from "./parts";
 
 export function ReceiptsList({ lang, rows, people, tally, checkedAt, checksHref, onUndo, busyId }: {
   lang: D2Lang;
@@ -28,11 +28,11 @@ export function ReceiptsList({ lang, rows, people, tally, checkedAt, checksHref,
   return (
     <section className="d2-since" aria-labelledby="d2-since-title">
       <div className="d2-since-head">
-        <h2 className="d2-section" id="d2-since-title">{matched ? <TickDraw /> : null}{t.since(rows.length)}{matched ? ` ${t.allMatch}` : ""}</h2>
+        <h2 className="d2-section" id="d2-since-title">{matched ? <TickDraw /> : null}<Say lang={lang}>{`${t.since(rows.length)}${matched ? ` ${t.allMatch}` : ""}`}</Say></h2>
         {whoPeople.length ? (
           <span className="d2-who-sum">
             <span className="d2-avs">{whoPeople.map((p) => <Av key={p.name} person={p} tip={p.name} />)}<Av tone="alyr" tip={t.sentByAlyr} /></span>
-            {joinNames([...whoPeople.map((p) => p.name), "ALYR"], lang, "and")}
+            <Say lang={lang}>{joinNames([...whoPeople.map((p) => p.name), "ALYR"], lang, "and")}</Say>
           </span>
         ) : null}
       </div>
@@ -42,9 +42,9 @@ export function ReceiptsList({ lang, rows, people, tally, checkedAt, checksHref,
             if (r.kind === "you") {
               return (
                 <li key={r.f.id}>
-                  <span className="d2-when">{day(r.when, lang)}</span>
+                  <span className="d2-when"><Say lang={lang}>{day(r.when, lang)}</Say></span>
                   <div>
-                    <div className="d2-what">{r.f.title}</div>
+                    <div className="d2-what"><Say lang={lang}>{r.f.title}</Say></div>
                     <div className="d2-who">
                       <span className="d2-actor"><Av tone="you" />{t.doneByYou}</span>
                       <span className={`d2-pill${r.f.status === "verified" ? " d2-pill-ok" : ""}`}>{r.f.status === "verified" ? <><Ic name="check" size="xs" />{t.matchesNow}</> : t.pendingCheck}</span>
@@ -63,16 +63,16 @@ export function ReceiptsList({ lang, rows, people, tally, checkedAt, checksHref,
               : <span className="d2-pill">{t.pendingCheck}</span>;
             return (
               <li key={p.id}>
-                <span className="d2-when">{day(r.when, lang)}</span>
+                <span className="d2-when"><Say lang={lang}>{day(r.when, lang)}</Say></span>
                 <div>
-                  <div className="d2-what">{t.exactField(r.what, r.where)}</div>
+                  <div className="d2-what"><Say lang={lang}>{t.exactField(r.what, r.where)}</Say></div>
                   <div className="d2-pair">
                     {p.before.removed ? <span className="d2-chip d2-chip-from d2-chip-removed" data-tip={t.removedTip}>{r.before}</span> : <span className="d2-chip d2-chip-from"><Ltr>{r.before}</Ltr></span>}
                     <Ic name="arrow" size="xs" flip className="d2-to" />
                     <span className="d2-chip d2-chip-to"><Ltr>{r.after}</Ltr></span>
                   </div>
                   <div className="d2-who">
-                    {by ? <span className="d2-actor"><Av person={personFor(by, people)} />{t.approvedSent(by)}</span> : null}
+                    {by ? <span className="d2-actor"><Av person={personFor(by, people)} /><Say lang={lang}>{t.approvedSent(by)}</Say></span> : null}
                     {pill}
                   </div>
                 </div>
@@ -80,7 +80,7 @@ export function ReceiptsList({ lang, rows, people, tally, checkedAt, checksHref,
                   {p.can.undo && p.undo_until ? (
                     <>
                       <button className="d2-undo" type="button" onClick={() => onUndo(r)} disabled={busyId !== null} data-tip={t.undoTip(r.before, r.where)}><Ic name="undo" size="xs" flip />{t.undo}</button>
-                      <small>{t.untilDate(day(p.undo_until, lang))}</small>
+                      <small><Say lang={lang}>{t.untilDate(day(p.undo_until, lang))}</Say></small>
                     </>
                   ) : null}
                 </div>
@@ -90,10 +90,10 @@ export function ReceiptsList({ lang, rows, people, tally, checkedAt, checksHref,
         </ul>
       ) : null}
       <p className="d2-statusline">
-        {checkedAt ? <span>{t.checkedAt(dayTime(checkedAt, lang))}</span> : null}
-        {tally ? <><span className="d2-sep" aria-hidden="true">·</span><span>{t.matchLine(tally.matched, tally.measured)}</span></> : null}
-        {tally && tally.notMeasured ? <><span className="d2-sep" aria-hidden="true">·</span><span>{t.notMeasuredLine(tally.notMeasured)}</span></> : null}
-        {tally ? <><span className="d2-sep" aria-hidden="true">·</span><a className="d2-link" href={checksHref}>{t.seeAll(tally.total)}</a></> : null}
+        {checkedAt ? <span><Say lang={lang}>{t.checkedAt(dayTime(checkedAt, lang))}</Say></span> : null}
+        {tally ? <><span className="d2-sep" aria-hidden="true">·</span><span><Say lang={lang}>{t.matchLine(tally.matched, tally.measured)}</Say></span></> : null}
+        {tally && tally.notMeasured ? <><span className="d2-sep" aria-hidden="true">·</span><span><Say lang={lang}>{t.notMeasuredLine(tally.notMeasured)}</Say></span></> : null}
+        {tally ? <><span className="d2-sep" aria-hidden="true">·</span><a className="d2-link" href={checksHref}>{t.seeAll}</a></> : null}
       </p>
     </section>
   );

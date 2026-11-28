@@ -15,11 +15,12 @@ import { PageBrief } from "./PageBrief";
 import { AskTicket, type Busy } from "./AskTicket";
 import { WaitingFan } from "./WaitingFan";
 import { ReceiptsList } from "./ReceiptsList";
+import { OnlyYouList } from "./OnlyYou";
 import { EvidenceSheet } from "./EvidenceSheet";
 import { AgentBar } from "./AgentBar";
 import { CommandMenu, type Command } from "./CommandMenu";
 import { Toast, type ToastData } from "./Toast";
-import { time } from "./parts";
+import { Say, time } from "./parts";
 import "./tokens.css";
 import "./discovery-v2.css";
 
@@ -30,12 +31,16 @@ export type ThisWeekActions = {
   /** Read one proposal again (after Approve, until it is sent). */
   read: (p: Proposal) => Promise<Proposal>;
   skip: (f: Finding) => Promise<void>;
+  /** "I changed it": the owner made a change only they can make (a website step). */
+  markDone?: (f: Finding) => Promise<void>;
+  /** Read the page again after a decision, so every count (headline, tab, bar) is the API's. */
+  refresh?: () => void;
   /** "Change it": approve a changed value (`POST /proposals/{id}/change`). The answer is a new
    * proposal. Drawn only where the proposal's `edit` allows it. */
   changeAfter?: (p: Proposal, after: Record<string, unknown>) => Promise<Proposal>;
   /** The workspace's own search palette; absent in the preview, which opens its own menu. */
   onSearch?: () => void;
-  hrefs: { checks: string; changes: string; reports: string; settings: string; classic: string };
+  hrefs: { checks: string; changes: string; reports: string; settings: string; classic: string; setup?: string };
   sayError: (error: unknown) => string;
   /** How long to wait between reads after Approve (ms). */
   pollMs?: number;
@@ -43,7 +48,7 @@ export type ThisWeekActions = {
 
 type ToastState = ToastData & { undoId: string | null };
 
-export function ThisWeek({ lang, view, actions, now, initial, tabs }: {
+export function ThisWeek({ lang, view, actions, now, initial, tabs, onCount }: {
   lang: D2Lang;
   view: ThisWeekView;
   actions: ThisWeekActions;
@@ -52,6 +57,8 @@ export function ThisWeek({ lang, view, actions, now, initial, tabs }: {
   tabs?: ReactNode;
   /** For previews and tests: proposals as they are after a decision in this visit. */
   initial?: { overrides?: Record<string, Proposal>; fan?: boolean; sheet?: boolean };
+  /** The open asks left, each time it changes: the tab's count is this page's count. */
+  onCount?: (count: number) => void;
 }) {
   const t = T[lang];
   const [overrides, setOverrides] = useState<Record<string, Proposal>>(initial?.overrides ?? {});
@@ -68,13 +75,28 @@ export function ThisWeek({ lang, view, actions, now, initial, tabs }: {
   const lastFocus = useRef<HTMLElement | null>(null);
   const pollMs = actions.pollMs ?? 2500;
 
-  const current = view.asks[0] ?? null;
+  // After a decision the page reads the API again (`actions.refresh`): a decided ask leaves the
+  // API's open asks and the next one may open. The tickets keep their order in this visit, so the
+  // decided one stays in place with its life, and a newly opened ask joins behind.
+  const [seen, setSeen] = useState<{ view: ThisWeekView; asks: AskView[] }>({ view, asks: view.asks });
+  let shownAsks = seen.asks;
+  if (seen.view !== view) {
+    const fresh = new Map(view.asks.map((a) => [a.p.id, a]));
+    shownAsks = [...seen.asks.map((a) => fresh.get(a.p.id) ?? a), ...view.asks.filter((a) => !seen.asks.some((b) => b.p.id === a.p.id))];
+    setSeen({ view, asks: shownAsks });
+  }
+  const live = new Set([...view.asks.map((a) => a.p.id), ...view.owner.map((f) => f.id)]);
+  const asks = shownAsks.filter((a) => live.has(a.p.id) || decided.has(a.p.id)).map((a, i, all) => ({ ...a, index: i + 1, of: all.length + view.owner.length }));
+  const current = asks[0] ?? null;
   const currentP = current ? overrides[current.p.id] ?? current.p : null;
-  const rest = view.asks.slice(1).filter((a) => !decided.has(a.p.id));
+  const rest = asks.slice(1).filter((a) => !decided.has(a.p.id));
   const owner = view.owner.filter((f) => !decided.has(f.id));
-  /** The one count of the page: open asks not yet decided in this visit (headline, ticket, tab, bar). */
-  const leftCount = Math.max(0, view.total - decided.size);
+  /** The one count of the page (headline, ticket, tab, bar): the API's open asks, less those decided
+   * in this visit that the API has not been read again for. */
+  const leftCount = Math.max(0, view.total - [...decided].filter((id) => live.has(id)).length);
+  const shownDecided = asks.filter((a) => decided.has(a.p.id)).length + view.owner.filter((f) => decided.has(f.id)).length;
   const today = dayKeyAt(now);
+  useEffect(() => { onCount?.(leftCount); }, [leftCount, onCount]);
 
   const showToast = useCallback((data: Omit<ToastState, "id">) => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -119,6 +141,7 @@ export function ThisWeek({ lang, view, actions, now, initial, tabs }: {
       setDraft(null);
       setSheet(null);
       showToast({ title: t.toastApproved(next.decided?.by ?? ""), body: t.toastSending(ask.exact, ask.where), undo: next.can.undo, undoId: ask.p.id });
+      actions.refresh?.();
     } catch (e) {
       setError(actions.sayError(e));
     } finally {
@@ -138,6 +161,7 @@ export function ThisWeek({ lang, view, actions, now, initial, tabs }: {
       setSheet(null);
       setDraft(null);
       showToast({ title: t.toastNotNow, body: t.toastNotNowBody, undo: false, undoId: null });
+      actions.refresh?.();
     } catch (e) {
       setError(actions.sayError(e));
     } finally {
@@ -155,6 +179,7 @@ export function ThisWeek({ lang, view, actions, now, initial, tabs }: {
       const ask = view.asks.find((a) => a.p.id === key);
       const row = view.receipts.find((r): r is Extract<ReceiptRow, { kind: "change" }> => r.kind === "change" && r.p.id === key);
       showToast({ title: t.toastUndone, body: t.toastUndoneBody(ask?.before ?? row?.before ?? p.before.text, where), undo: false, undoId: null });
+      actions.refresh?.();
     } catch (e) {
       showToast({ title: t.toastUndone, body: actions.sayError(e), undo: false, undoId: null });
     } finally {
@@ -165,8 +190,17 @@ export function ThisWeek({ lang, view, actions, now, initial, tabs }: {
   const skip = useCallback(async (f: Finding) => {
     if (busy) return;
     setBusy({ id: f.id, kind: "decline" });
-    try { await actions.skip(f); setDecided((d) => new Set(d).add(f.id)); showToast({ title: t.toastNotNow, body: t.toastNotNowBody, undo: false, undoId: null }); }
+    try { await actions.skip(f); setDecided((d) => new Set(d).add(f.id)); showToast({ title: t.toastNotNow, body: t.toastNotNowBody, undo: false, undoId: null }); actions.refresh?.(); }
     catch (e) { showToast({ title: t.toastNotNow, body: actions.sayError(e), undo: false, undoId: null }); }
+    finally { setBusy(null); }
+  }, [busy, actions, showToast, t]);
+
+  const [doneIds, setDoneIds] = useState<Set<string>>(() => new Set());
+  const markDone = useCallback(async (f: Finding) => {
+    if (busy || !actions.markDone) return;
+    setBusy({ id: f.id, kind: "decline" });
+    try { await actions.markDone(f); setDoneIds((d) => new Set(d).add(f.id)); showToast({ title: t.toastDone, body: t.toastDoneBody, undo: false, undoId: null }); actions.refresh?.(); }
+    catch (e) { showToast({ title: t.toastDone, body: actions.sayError(e), undo: false, undoId: null }); }
     finally { setBusy(null); }
   }, [busy, actions, showToast, t]);
 
@@ -244,7 +278,7 @@ export function ThisWeek({ lang, view, actions, now, initial, tabs }: {
       <div className="d2-col">
         {tabs}
         {view.sample ? <p className="d2-sr">{t.sample}</p> : null}
-        <PageBrief lang={lang} state={view.state} count={view.total} decided={decided.size} remaining={remaining} onItsWay={onItsWay}
+        <PageBrief lang={lang} state={view.state} count={leftCount + shownDecided} decided={shownDecided} remaining={remaining} onItsWay={onItsWay}
           checkedAt={view.checkedAt} recordedOn={view.recordedOn} sample={view.sample} tally={view.tally} previous={view.previous} />
 
         {current && currentP ? (
@@ -254,16 +288,22 @@ export function ThisWeek({ lang, view, actions, now, initial, tabs }: {
             draft={draft} onEdit={actions.changeAfter && draftFor(currentP) ? (on) => setDraft(on ? draftFor(currentP) : null) : undefined}
             onDraft={setDraft} onApprove={() => void approve(current)} onDecline={() => void decline(current)} onUndo={() => void undo(currentP, current.p.id)}
             onWhy={() => openSheet(current)} error={error} peeks={Math.min(2, rest.length + owner.length)} nextCheckAt={view.nextCheckAt} />
+        ) : view.state === "noConnection" ? (
+          <div className="d2-empty d2-nosource">
+            <p><b>{t.noSourceTitle}</b> <Say lang={lang}>{t.noSourceBody}</Say></p>
+            {actions.hrefs.setup ? <a className="d2-btn d2-btn-line" href={actions.hrefs.setup}>{t.noSourceAction}</a> : null}
+          </div>
         ) : view.state !== "content" || !view.total ? (
-          <div className="d2-empty"><p>{t.emptyBody}</p></div>
+          <div className="d2-empty"><p><Say lang={lang}>{t.emptyBody}</Say></p></div>
         ) : null}
 
-        <WaitingFan lang={lang} asks={rest} owner={owner} startIndex={2} of={view.total} open={fan} onToggle={() => setFan((v) => !v)}
+        <WaitingFan lang={lang} asks={rest} owner={owner} startIndex={2} of={current?.of ?? view.total} open={fan} onToggle={() => setFan((v) => !v)}
           onApprove={(a) => void approve(a)} onDecline={(a) => void decline(a)} onWhy={openSheet} onSkip={(f) => void skip(f)} busyId={busy?.id ?? null} />
-        {view.alsoNoticed > 0 ? <p className="d2-small d2-muted d2-also">{t.alsoNoticed(view.alsoNoticed)}</p> : null}
-        {view.ownerOnly > 0 ? <p className="d2-small d2-muted d2-also"><a className="d2-link" href={actions.hrefs.checks}>{t.ownerOnly(view.ownerOnly)}</a></p> : null}
+        {view.alsoNoticed > 0 ? <p className="d2-small d2-muted d2-also"><Say lang={lang}>{t.waitTurn(view.alsoNoticed)}</Say></p> : null}
 
-        <ReceiptsList lang={lang} rows={view.receipts.map((r) => (r.kind === "change" && overrides[r.p.id] ? { ...r, p: overrides[r.p.id] } : r))}
+        <OnlyYouList lang={lang} items={view.onlyYou.filter((o) => !doneIds.has(o.f.id))} busyId={busy?.id ?? null} onDone={actions.markDone ? (f) => void markDone(f) : undefined} />
+
+        <ReceiptsList lang={lang} rows={view.receipts.filter((r) => r.kind !== "change" || !asks.some((a) => a.p.id === r.p.id)).map((r) => (r.kind === "change" && overrides[r.p.id] ? { ...r, p: overrides[r.p.id] } : r))}
           people={view.approvers} tally={view.tally} checkedAt={view.checkedAt} checksHref={actions.hrefs.checks}
           onUndo={(r) => void undo(r.p, r.p.id)} busyId={busy?.id ?? null} />
       </div>

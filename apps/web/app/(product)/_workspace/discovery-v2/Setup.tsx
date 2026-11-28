@@ -16,13 +16,13 @@ import type { D2Lang } from "./copy";
 import { ScreenFrame, Val } from "./frame";
 import { FamilyMiniature } from "./FamilyMiniature";
 import { Ic } from "./icons";
-import { Kbd } from "./parts";
+import { Kbd, Say } from "./parts";
 import { checksFor, families, type KnownFact } from "./screens";
 
 export type SetupStage = "idle" | "saving" | "queued" | "running" | "done";
 export type Choice = { family: string | null; trade: string | null };
 
-export function Setup({ lang, packs, choice, onChoose, canManage, known, stage, error, onCheckNow, tabs, google }: {
+export function Setup({ lang, packs, choice, onChoose, canManage, known, stage, error, onCheckNow, tabs, google, noSource = false, connectHref = null }: {
   lang: D2Lang;
   packs: Pack[];
   choice: Choice;
@@ -35,6 +35,9 @@ export function Setup({ lang, packs, choice, onChoose, canManage, known, stage, 
   tabs?: ReactNode;
   /** The Google Maps link of each place (`GoogleMapsLink`), when the live read is on. */
   google?: ReactNode;
+  /** Discovery is on and no source is connected: said plainly, with the one next step. */
+  noSource?: boolean;
+  connectHref?: string | null;
 }) {
   const t = T2[lang];
   const fams = families(packs);
@@ -73,7 +76,7 @@ export function Setup({ lang, packs, choice, onChoose, canManage, known, stage, 
       <div className="d2s-actionbar d2-on-carbon" role="region" aria-label={t.barAria}>
         <span className="d2s-ch-mk" aria-hidden="true"><Mark /></span>
         <div className="d2s-ab-sum">
-          <b>{selected ? t.barTitle(t.kindLine(selected.title, trade?.title ?? null), t.checksCount(count)) : t.barPick}</b>
+          <b><Say lang={lang}>{selected ? t.barTitle(t.kindLine(selected.title, trade?.title ?? null), t.checksCount(count)) : t.barPick}</Say></b>
           <div className="d2s-ab-as">{t.promises.map((p) => <span key={p}><Ic name="check" size="xs" />{p}</span>)}</div>
           {error ? <p className="d2s-ab-err" role="alert">{error}</p> : null}
         </div>
@@ -105,6 +108,13 @@ export function Setup({ lang, packs, choice, onChoose, canManage, known, stage, 
         <h1 className="d2-display">{t.setupTitle}</h1>
         <p className="d2-sub">{canManage ? t.setupSub : t.setupReadOnly}</p>
       </section>
+      {noSource ? (
+        <div className="d2s-nosource" role="note">
+          <span className="d2s-caution-ic"><Ic name="alert" size="sm" /></span>
+          <div><b>{t.noSourceTitle}</b><p>{t.noSourceBody}</p></div>
+          {connectHref ? <a className="d2-btn d2-btn-line d2-btn-sm" href={connectHref}>{t.noSourceAction}</a> : null}
+        </div>
+      ) : null}
 
       <div className="d2s-families" role="radiogroup" aria-label={t.familyGroup} aria-readonly={!canManage || undefined}>
         {fams.map((f, i) => {
@@ -122,18 +132,21 @@ export function Setup({ lang, packs, choice, onChoose, canManage, known, stage, 
               >
                 <span className="d2s-stage" aria-hidden="true"><FamilyMiniature id={f.id} lang={lang} /></span>
                 <span className="d2s-fam-title">{f.title}</span>
+                <span className="d2s-fam-n"><Say lang={lang}>{t.checksCount(checksFor(packs, f.id, null))}</Say></span>
                 {t.familyBlurb[f.id] ? <span className="d2s-fam-p">{t.familyBlurb[f.id]}</span> : null}
               </button>
               {f.trades.length ? (
                 <div className="d2s-trades" role="group" aria-label={`${t.tradeGroup}: ${f.title}`}>
                   {f.trades.map((tr) => {
                     const n = checksFor(packs, f.id, tr.key);
+                    // A trade's count is drawn only where it differs from its family's (QA: every pill said 17).
+                    const own = n !== checksFor(packs, f.id, null);
                     const pressed = on && choice.trade === tr.key;
                     return (
                       <button key={tr.key} className="d2s-pill" type="button" aria-pressed={pressed} disabled={!canManage || busy}
                         data-tip={t.tradeTip(n, tr.title)}
                         onClick={() => onChoose({ family: f.id, trade: pressed ? null : tr.key })}>
-                        {tr.title}<span className="d2s-n">{n.toLocaleString("en")}</span>
+                        {tr.title}{own ? <bdi className="d2s-n">{n.toLocaleString("en")}</bdi> : null}
                       </button>
                     );
                   })}
@@ -152,7 +165,7 @@ export function Setup({ lang, packs, choice, onChoose, canManage, known, stage, 
             <h2 id="d2s-known-title">{t.knownTitle}</h2>
             <p>{t.knownSub}</p>
           </div>
-          {known.length ? <span className="d2s-srcsum">{t.knownSum(known.length, new Set(known.map((k) => k.prov)).size)}</span> : null}
+          {known.length ? <span className="d2s-srcsum"><Say lang={lang}>{t.knownSum(known.length, new Set(known.map((k) => k.prov)).size)}</Say></span> : null}
         </header>
         {known.length ? (
           <ul className="d2s-facts">
@@ -160,7 +173,7 @@ export function Setup({ lang, packs, choice, onChoose, canManage, known, stage, 
               <li key={k.key}>
                 <span className="d2s-lab">{k.label}<span className={`d2s-prov${k.prov === "alyr" ? " d2s-prov-alyr" : ""}`}>
                   {k.prov === "you" ? <span className="d2s-pi"><Ic name="person" size="xs" /></span> : k.prov === "alyr" ? <span className="d2s-pi d2s-pi-alyr"><Mark /></span> : <span className="d2s-pi"><Ic name="globe" size="xs" /></span>}
-                  {k.prov === "you" ? t.provYou : k.prov === "alyr" ? t.provAlyr : t.provSource}
+                  {k.prov === "you" ? t.provYou : k.prov === "sample" ? t.provSample : k.prov === "alyr" ? t.provAlyr : t.provSource}
                 </span></span>
                 <span className="d2s-val">
                   {k.ltr ? <Val text={k.value} /> : k.value}

@@ -39,10 +39,49 @@ export function ListingMiniature({ ask, lang, today, settled, readAt, draft, onD
   const start = ORDER.indexOf(today);
   const week = [...ORDER.slice(start), ...ORDER.slice(0, start)];
   const lineOf = (day: DayKey) => p.before.lines.find((l) => l.day === day)?.text ?? "";
+  const afterOf = (day: DayKey) => p.after.lines.find((l) => l.day === day)?.text ?? "";
+  const hoursShown = p.field === "hours" && (p.before.lines.length > 0 || p.after.lines.length > 0);
+  const week7 = draft?.kind === "week" && onDraft ? draft : null;
+
+  /** Change it for a whole week: each day's opening and closing, or Closed. */
+  const dayEditor = (day: DayKey) => {
+    if (!week7 || !onDraft) return null;
+    const v = week7.days[day];
+    const set = (next: { open: string; close: string } | null) => onDraft({ kind: "week", days: { ...week7.days, [day]: next } });
+    return (
+      <span className="d2-edit" dir="ltr">
+        <select className="d2-select" aria-label={t.opens(LONG[lang][day])} value={v ? v.open : ""}
+          onChange={(e) => set(e.target.value ? { open: e.target.value, close: v?.close ?? "22:00" } : null)}>
+          <option value="">{t.closedOption}</option>
+          {HALF_HOURS.map((h) => <option key={h}>{h}</option>)}
+        </select>
+        {v ? (
+          <>
+            {" – "}
+            <select className="d2-select" aria-label={t.closes(LONG[lang][day])} value={v.close} onChange={(e) => set({ open: v.open, close: e.target.value })}>
+              {HALF_HOURS.map((h) => <option key={h}>{h}</option>)}
+            </select>
+          </>
+        ) : null}
+      </span>
+    );
+  };
+  /** One day of a change on several days: the day's before struck (when there was one) and its after. */
+  const dayDiff = (day: DayKey) => {
+    const before = spanText(lineOf(day), lang), after = spanText(afterOf(day), lang);
+    if (settled) return <span className="d2-new"><Ltr>{after}</Ltr></span>;
+    return (
+      <span className="d2-diff">
+        {lineOf(day) ? <><span className="d2-strike"><Ltr>{before}</Ltr></span><Ic name="arrow" size="xs" flip className="d2-to" /></> : null}
+        <span className="d2-new"><Hl><Ltr>{after}</Ltr></Hl></span>
+      </span>
+    );
+  };
   const shownAfter = ask.after;
   const choices = choiceLabels(p);
 
   const editor = (d: Draft, set: (draft: Draft) => void) => {
+    if (d.kind === "week") return null;
     if (d.kind === "hours") {
       return (
         <span className="d2-edit" dir="ltr">
@@ -97,15 +136,18 @@ export function ListingMiniature({ ask, lang, today, settled, readAt, draft, onD
         ) : null}
         {listing?.category ? <div className="d2-g-cat">{listing.category}</div> : null}
         {listing?.openLine ? <div className="d2-g-open"><b>{t.openNow}</b> · {listing.openLine}</div> : null}
-        {p.field === "hours" && p.before.lines.length ? (
-          <div className="d2-g-hours" role="table" aria-label={t.listingHours}>
+        {hoursShown ? (
+          <div className={`d2-g-hours${week7 ? " d2-g-week-edit" : ""}`} role="table" aria-label={t.listingHours}>
             {week.map((day) => {
               const focus = ask.days.includes(day);
-              const cls = focus ? "d2-g-focus" : day === today ? "d2-g-today" : undefined;
+              const cls = focus || week7 ? "d2-g-focus" : day === today ? "d2-g-today" : undefined;
               return (
                 <div key={day} role="row" className={cls}>
                   <span role="cell">{LONG[lang][day]}</span>
-                  {focus && ask.day === day ? <span role="cell">{diff(spanText(lineOf(day), lang))}</span> : <span role="cell" className="d2-tnum"><Ltr>{spanText(focus && settled ? (p.after.lines.find((l) => l.day === day)?.text ?? "") : lineOf(day), lang)}</Ltr></span>}
+                  {week7 ? <span role="cell">{dayEditor(day)}</span>
+                    : focus && ask.day === day ? <span role="cell">{diff(spanText(lineOf(day), lang))}</span>
+                    : focus ? <span role="cell" className="d2-tnum">{dayDiff(day)}</span>
+                    : <span role="cell" className="d2-tnum"><Ltr>{spanText(lineOf(day) || afterOf(day), lang)}</Ltr></span>}
                 </div>
               );
             })}

@@ -57,7 +57,8 @@ def the_person(shop, channel: str, role: str = "owner") -> Caller:
 
 
 def test_owner_and_admin_see_every_places_proposals_a_branch_manager_only_their_own(shop):
-    assert len(proposals(shop.owner)) == len(proposals(shop.admin)) == 10
+    # P2: six, not ten: the sample's website changes are the owner's steps (fix #4)
+    assert len(proposals(shop.owner)) == len(proposals(shop.admin)) == 6
     mine = proposals(shop.manager)
     assert mine and {p["location"]["name"] for p in mine} == {"Nuqta Car Care - Al Sadd"}
     answer = shop.manager.get(f"{BASE}/proposals", params={"status": "all"}).json()
@@ -129,7 +130,8 @@ def test_the_engine_and_the_agent_door_cannot_confirm_a_fact(shop):
 
 def test_who_may_prepare_a_change(shop):
     wakra = by_rule(findings(shop.owner))["category_missing"][0]
-    sadd = by_rule(findings(shop.owner))["whatsapp_link_missing"]
+    # P2: Al Sadd's hours (its WhatsApp link is on the website, the owner's step: fix #4)
+    sadd = by_rule(findings(shop.owner))["hours_missing"]
     sadd = next(f for f in sadd if f["location"]["name"].endswith("Al Sadd"))
     assert shop.owner.post(f"{BASE}/findings/{wakra['id']}/proposals").status_code == 200
     assert shop.admin.post(f"{BASE}/findings/{wakra['id']}/proposals").status_code == 200
@@ -141,7 +143,8 @@ def test_who_may_prepare_a_change(shop):
 
 
 def test_the_engine_prepares_and_the_agent_door_prepares_as_agent_never_approving(shop):
-    sadd = next(f for f in by_rule(findings(shop.owner))["whatsapp_link_missing"]
+    # P2: Al Sadd's hours (its WhatsApp link is on the website, the owner's step: fix #4)
+    sadd = next(f for f in by_rule(findings(shop.owner))["hours_missing"]
                 if f["location"]["name"].endswith("Al Sadd"))
     owner_sql("delete from discovery_proposals where tenant_id = $1 and finding_id = $2",
               shop.tenant_id, UUID(sadd["id"]))
@@ -176,8 +179,10 @@ def test_the_engine_prepares_and_the_agent_door_prepares_as_agent_never_approvin
 def test_who_may_approve(shop):
     sadd = find(shop.owner, "hours_missing", "Al Sadd")
     wakra = find(shop.owner, "category_missing", "Al Wakra")
-    lusail = find(shop.owner, "name_conflict", "Al Wakra")
-    industrial = find(shop.owner, "hours_conflict", "Industrial Area")
+    # P2: a review reply for the admin, and Al Wakra's name as the place the manager does not
+    # manage (Industrial Area's change was on the website, the owner's step: fix #4)
+    lusail = [p for p in proposals(shop.owner, "live") if p["rule_id"] == "review_unanswered"][0]
+    industrial = find(shop.owner, "name_conflict", "Al Wakra")
     body = lambda p: {"change_hash": p["change_hash"]}  # noqa: E731
     assert approve(shop.owner, wakra)["status"] == "approved"
     assert approve(shop.admin, lusail)["status"] == "approved"
@@ -200,7 +205,8 @@ def test_an_owner_approves_only_their_own_shops_proposal(client_factory, monkeyp
 
 
 def test_a_branch_manager_declines_and_undoes_their_own_place_and_no_other(shop):
-    mine = find(shop.owner, "whatsapp_link_missing", "Al Sadd")
+    # P2: a review reply at Al Sadd (its WhatsApp link is the owner's website step: fix #4)
+    mine = [p for p in proposals(shop.owner, "live") if p["rule_id"] == "review_unanswered"][0]
     other = find(shop.owner, "category_missing", "Al Wakra")
     approve(shop.manager, mine)
     assert shop.manager.post(f"{BASE}/proposals/{mine['id']}/undo").json()["status"] == "undone"

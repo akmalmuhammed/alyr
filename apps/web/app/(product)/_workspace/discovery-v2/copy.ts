@@ -64,7 +64,7 @@ const WHERE = {
 
 export const T = {
   en: {
-    sample: "Sample screen of a fictional car care business. The names and numbers are made up; they are not ALYR's results.",
+    sample: "Sample screen: a fictional car care business. Its names and numbers are made up.",
     region: "Discovery, this week",
     // The brief
     needs: (count: number) => (count === 0 ? "Nothing needs you this week." : count === 1 ? "One thing needs you this week." : count === 2 ? "Two things need you this week." : `${cap(count)} things need you this week.`),
@@ -154,7 +154,7 @@ export const T = {
     undoWhenSent: "Undo opens once the change is sent.",
     // The receipt line
     nothingUntil: (where: WhereKey) => `Nothing changes on ${WHERE.en.mid[where]} until you tap Approve`,
-    canApprove: (names: string) => `${names} can approve`,
+    canApprove: (names: string) => `${names} can approve`,
     approvedIn: (by: string) => `Approved by ${by} in the workspace`,
     noCustomers: "Nothing is sent to your customers",
     // Not now
@@ -185,7 +185,7 @@ export const T = {
     checkedAt: (when: string) => `Checked ${when}`,
     matchLine: (matched: number, measured: number) => `${n(matched)} of ${n(measured)} checks match`,
     notMeasuredLine: (count: number) => `${n(count)} not measured`,
-    seeAll: (count: number) => `See all ${counted(count, N.check, "en")}`,
+    seeAll: "See all checks",
     // Agent bar
     agent: "ALYR",
     nextCheck: "Next check",
@@ -279,12 +279,32 @@ export const T = {
     // Polish pass (agent P): the loop's words
     removedText: "Removed after 30 days",
     removedTip: "Google's text is kept at most 30 days, then removed. What ALYR sent stays.",
-    alsoNoticed: (count: number) => (count === 1
-      ? "Also noticed: one more change waits its turn. ALYR asks it when one of these closes."
-      : `Also noticed: ${n(count)} more changes wait their turn. ALYR asks one when one of these closes.`),
+    waitTurn: (count: number) => (count === 1
+      ? "One more change waits its turn. ALYR asks it when one of these closes."
+      : `${n(count)} more changes wait their turn. ALYR asks one when one of these closes.`),
     undoFor: (days: number) => (days === 1 ? "Undo for 1 day after it is sent" : `Undo for ${n(days)} days after it is sent`),
     editedNote: "Approved with a changed value",
-    ownerOnly: (count: number) => `Also noticed: ${counted(count, N.thing, "en")} only you can change, listed on Checks.`,
+    onlyYou: (count: number) => (count === 1 ? "1 more thing only you can change" : `${n(count)} more things only you can change`),
+    onlyYouSub: "ALYR does not write to your website or change these for you. Copy the exact text, change it on your page, then mark it done. The next check looks.",
+    onWebsite: "You change this on your website",
+    onYourOwn: "You change this yourself",
+    exactText: "The exact text",
+    copy: "Copy",
+    copied: "Copied",
+    copyAria: (field: string) => `Copy the new ${lowerWords(field)}`,
+    markChanged: "I changed it",
+    showAll: (count: number) => `Show all ${count.toLocaleString("en")}`,
+    showFewer: "Show fewer",
+    toastDone: "Marked as done",
+    toastDoneBody: "The next check looks at your page and shows what it sees.",
+    sampleConfirmedDay: (day: DayKey, span: string) => `The sample business confirmed ${DAY_EN[day][0]} hours of ${span}.`,
+    sampleConfirmedValue: (value: string) => `The sample business confirmed ${value}.`,
+    evSample: "The sample business confirmed",
+    theseHours: "these hours",
+    closedOption: "Closed",
+    noSourceTitle: "Discovery is on. No source is connected yet.",
+    noSourceBody: "ALYR checks only what a connected source shows. Connect one in Setup to start.",
+    noSourceAction: "Open Setup",
     editHoursLabel: (day: string) => `${day} hours`,
     editPhoneLabel: "New phone number",
     editChoiceLabel: "Choose the value",
@@ -298,7 +318,7 @@ export const T = {
     declinedReason: "Declined",
   },
   ar: {
-    sample: "شاشة مثال لنشاط عناية بالسيارات وهمي. الأسماء والأرقام مختلقة، وليست نتائج ALYR.",
+    sample: "شاشة مثال: نشاط وهمي للعناية بالسيارات. أسماؤه وأرقامه مختلقة.",
     region: "الاكتشاف، هذا الأسبوع",
     needs: (count: number) => (count === 0 ? "لا شيء يحتاجك هذا الأسبوع." : count === 1 ? "أمر واحد يحتاجك هذا الأسبوع." : count === 2 ? "أمران يحتاجانك هذا الأسبوع." : `${counted(count, N.thing, "ar")} تحتاجك هذا الأسبوع.`),
     left: (count: number) => (count === 0 ? "لا شيء آخر يحتاجك هذا الأسبوع." : count === 1 ? "أمر واحد متبقٍّ هذا الأسبوع." : count === 2 ? "أمران متبقيان هذا الأسبوع." : `${counted(count, N.thing, "ar")} متبقية هذا الأسبوع.`),
@@ -384,7 +404,7 @@ export const T = {
     undoTip: (before: string, where: WhereKey) => `يعيد «${ar(before)}» على ${WHERE.ar.mid[where]}`,
     undoWhenSent: "يتاح التراجع بعد إرسال التغيير.",
     nothingUntil: (where: WhereKey) => `لا يتغيّر شيء على ${WHERE.ar.mid[where]} حتى تضغط موافق`,
-    canApprove: (names: string) => `يمكن لـ${names} الموافقة`,
+    canApprove: (names: string) => `يمكن لـ${names} الموافقة`,
     approvedIn: (by: string) => `بموافقة ${by} في مساحة العمل`,
     noCustomers: "لا يُرسَل شيء إلى عملائك",
     notNowTitle: "ليس الآن. لن يتغيّر شيء.",
@@ -411,7 +431,7 @@ export const T = {
     checkedAt: (when: string) => `فُحص ${when}`,
     matchLine: (matched: number, measured: number) => `تتطابق ${n(matched)} من ${n(measured)}`,
     notMeasuredLine: (count: number) => `${counted(count, N.check, "ar")} لم يُقَس`,
-    seeAll: (count: number) => `عرض الفحوصات كلها (${n(count)})`,
+    seeAll: "اعرض الفحوصات كلها",
     agent: "ALYR",
     nextCheck: "الفحص التالي",
     asksWaiting: "بانتظار قرارك",
@@ -500,12 +520,32 @@ export const T = {
     // Polish pass (agent P): the loop's words
     removedText: "حُذف بعد 30 يومًا",
     removedTip: "يُحتفظ بنص Google مدة 30 يومًا على الأكثر ثم يُحذف. ويبقى ما أرسلته ALYR.",
-    alsoNoticed: (count: number) => (count === 1
-      ? "لوحظ أيضًا: تغيير آخر ينتظر دوره. تسأل عنه ALYR حين يُغلق أحد هذه القرارات."
-      : `لوحظ أيضًا ما ينتظر دوره: ${counted(count, N.change, "ar")}. تسأل ALYR عن واحد منها حين يُغلق أحد هذه القرارات.`),
+    waitTurn: (count: number) => (count === 1
+      ? "تغيير آخر ينتظر دوره. تسأل عنه ALYR حين يُغلق أحد هذه القرارات."
+      : `تنتظر دورها ${counted(count, N.change, "ar")} أخرى. تسأل ALYR عن واحد منها حين يُغلق أحد هذه القرارات.`),
     undoFor: (days: number) => (days === 1 ? "يمكن التراجع خلال يوم واحد بعد الإرسال" : `يمكن التراجع خلال ${counted(days, { en: ["day", "days"], ar: ["يوم واحد", "يومين", "أيام", "يوماً"] }, "ar")} بعد الإرسال`),
     editedNote: "اعتُمد بقيمة معدّلة",
-    ownerOnly: (count: number) => `لوحظ أيضًا ما لا يغيّره إلا أنت: ${counted(count, N.thing, "ar")}، تجدها في الفحوصات.`,
+    onlyYou: (count: number) => (count === 1 ? "أمر آخر لا يغيّره إلا أنت" : count === 2 ? "أمران آخران لا يغيّرهما إلا أنت" : count <= 10 ? `${n(count)} أمور أخرى لا يغيّرها إلا أنت` : `${n(count)} أمراً آخر لا يغيّره إلا أنت`),
+    onlyYouSub: "لا تكتب ALYR في موقعك ولا تغيّر هذه نيابةً عنك. انسخ النص كما هو، وغيّره في صفحتك، ثم علّمه منجزاً. ويراه الفحص التالي.",
+    onWebsite: "تغيّر هذا بنفسك في موقعك",
+    onYourOwn: "تغيّر هذا بنفسك",
+    exactText: "النص كما هو",
+    copy: "نسخ",
+    copied: "نُسخ",
+    copyAria: (field: string) => `انسخ ${field} الجديد`,
+    markChanged: "غيّرته",
+    showAll: (count: number) => `اعرض الكل: ${count.toLocaleString("en")}`,
+    showFewer: "اعرض أقل",
+    toastDone: "عُلّم منجزاً",
+    toastDoneBody: "يطّلع الفحص التالي على صفحتك ويُظهر ما يراه.",
+    sampleConfirmedDay: (day: DayKey, span: string) => `أكّد النشاط المثال ساعات ${DAY_AR[day]} ${ar(span)}.`,
+    sampleConfirmedValue: (value: string) => `أكّد النشاط المثال ${ar(value)}.`,
+    evSample: "أكّده النشاط المثال",
+    theseHours: "هذه الساعات",
+    closedOption: "مغلق",
+    noSourceTitle: "الاكتشاف مفعّل، ولا مصدر مربوطاً بعد.",
+    noSourceBody: "لا تفحص ALYR إلا ما يعرضه مصدر مربوط. اربط مصدراً من الإعداد لتبدأ.",
+    noSourceAction: "افتح الإعداد",
     editHoursLabel: (day: string) => `ساعات ${day}`,
     editPhoneLabel: "رقم الهاتف الجديد",
     editChoiceLabel: "اختر القيمة",
